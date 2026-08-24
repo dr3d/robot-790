@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.env
+.pio/
+firmware/**/.pio/
+firmware/**/include/*_private.h
+firmware/esp32-face/include/reachy_config_private.h
+firmware/esp32-cam/include/cam_config_private.h
+firmware/esp32-chassis/include/chassis_config_private.h
+
