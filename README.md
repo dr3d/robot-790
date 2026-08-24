@@ -29,6 +29,7 @@ intent instead of micromanaging displays or motors.
 - `firmware/esp32-chassis`: ESP32 tracked chassis firmware.
 - `firmware/esp32-cam`: ESP32 camera firmware.
 - `src/robot_790d`: first-pass daemon/client package for semantic face cues.
+- `src/robot_790_tts`: local OpenAI-compatible Qwen3-TTS speech endpoint.
 
 The copied firmware still contains some Reachy-oriented names internally. That
 is intentional for the first move: preserve the stable working hardware before
@@ -63,6 +64,50 @@ cd firmware\esp32-face
 pio run
 pio run -t upload --upload-port COM27
 ```
+
+## Local Speech
+
+Robot 790 includes a local Qwen3-TTS endpoint so the project can speak without
+depending on Hugging Face Spaces, Pollen services, or the Reachy Mini app.
+
+Install the speech server dependencies:
+
+```powershell
+pip install -e .[tts]
+```
+
+Run a mock endpoint first:
+
+```powershell
+.\scripts\start_qwen3_tts.ps1 -Mock
+```
+
+Then check it:
+
+```powershell
+curl http://127.0.0.1:8000/health
+curl -X POST http://127.0.0.1:8000/v1/audio/speech `
+  -H "Content-Type: application/json" `
+  -o samples\speech.wav `
+  -d '{"input":"Robot 790 is online.","voice":"Aiden","response_format":"wav"}'
+```
+
+For real synthesis, install a CUDA-capable PyTorch environment plus `qwen-tts`,
+then start without `-Mock`:
+
+```powershell
+.\scripts\start_qwen3_tts.ps1 -Voice Aiden -HostAddress 127.0.0.1 -Port 8000
+```
+
+The endpoint is intentionally OpenAI-shaped:
+
+- `GET /health`
+- `GET /v1/voices`
+- `GET /v1/models`
+- `POST /v1/audio/speech`
+
+Settings can be provided with environment variables; see
+`qwen3_tts.example.env`.
 
 ## Behavior Model
 
@@ -103,4 +148,3 @@ openings for eyes and mouth. The current electronics vocabulary is:
 
 Longer term, a Jetson Nano or similar host can run local voice, vision, and the
 behavior daemon while ESP32 boards remain dedicated device controllers.
-

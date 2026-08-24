@@ -7,10 +7,12 @@ __pycache__/
 dist/
 build/
 .env
+qwen3_tts.env
+*.log
+samples/
 .pio/
 firmware/**/.pio/
 firmware/**/include/*_private.h
 firmware/esp32-face/include/reachy_config_private.h
 firmware/esp32-cam/include/cam_config_private.h
 firmware/esp32-chassis/include/chassis_config_private.h
-
