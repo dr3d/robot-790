@@ -109,6 +109,58 @@ The endpoint is intentionally OpenAI-shaped:
 Settings can be provided with environment variables; see
 `qwen3_tts.example.env`.
 
+## Realtime Voice
+
+The target shape is close to Hugging Face's realtime voice demo: microphone
+audio enters a realtime server, VAD finds speech turns, STT creates text, an
+LLM decides what to say, TTS streams audio back, and tool calls can actuate the
+robot face.
+
+Install the optional realtime stack:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e .[realtime]
+```
+
+Start a `/v1/realtime` server for browser clients:
+
+```powershell
+.\scripts\start_realtime_server.ps1
+```
+
+That exposes the default endpoint at:
+
+```text
+ws://127.0.0.1:8765/v1/realtime
+```
+
+For the packaged all-local microphone/speaker loop, attach Robot 790's face
+tool module:
+
+```powershell
+.\scripts\start_realtime_local.ps1 -FaceUrl "http://esp32-eyes.local/"
+```
+
+The tool module is `robot_790d.realtime_tools`. It currently exposes:
+
+- `set_robot_mode`: maps voice turn states to `idle`, `listening`, `thinking`,
+  `speaking`, or `sleeping`.
+- `play_face_beat`: lets an agent trigger a named firmware beat.
+
+For a fully local LLM, run an OpenAI-compatible server such as llama.cpp or
+vLLM, then pass backend arguments through `-ExtraArgs`:
+
+```powershell
+.\scripts\start_realtime_server.ps1 -ExtraArgs @(
+  "--llm_backend", "responses-api",
+  "--responses_api_base_url", "http://127.0.0.1:8080/v1",
+  "--responses_api_api_key", "",
+  "--model_name", "local"
+)
+```
+
+The same `-ExtraArgs` pattern works for `start_realtime_local.ps1`.
+
 ## Behavior Model
 
 The first daemon layer speaks in coarse robot states:
