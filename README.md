@@ -134,6 +134,14 @@ That exposes the default endpoint at:
 ws://127.0.0.1:8765/v1/realtime
 ```
 
+The launcher defaults to four realtime session pipelines and sends TTS one
+sentence batch at a time. For smoother but slightly slower speech, raise the
+batch size:
+
+```powershell
+.\scripts\start_realtime_server.ps1 -StreamBatchSentences 2
+```
+
 For the packaged all-local microphone/speaker loop, attach Robot 790's face
 tool module:
 
