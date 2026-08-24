@@ -919,7 +919,7 @@ bool mouthStatusNeedsFullPaint = true;
 bool mouthStatusDotDrawn = false;
 int16_t mouthStatusDotX = 120;
 int16_t mouthStatusDotY = 120;
-char mouthStatusLastValues[4][24] = {{0}};
+char mouthStatusLastValues[3][24] = {{0}};
 #else
 #define REACHY_MOUTH_STATUS_DISPLAY 0
 #endif
@@ -2542,8 +2542,9 @@ void renderAuxDisplay(uint32_t now) {
 #if REACHY_MOUTH_STATUS_DISPLAY
 constexpr int16_t MOUTH_STATUS_ROW_X = 34;
 constexpr int16_t MOUTH_STATUS_ROW_W = 172;
-constexpr int16_t MOUTH_STATUS_ROW_H = 42;
-constexpr int16_t MOUTH_STATUS_ROW_Y[4] = {20, 70, 120, 170};
+constexpr int16_t MOUTH_STATUS_ROW_COUNT = 3;
+constexpr int16_t MOUTH_STATUS_ROW_H = 54;
+constexpr int16_t MOUTH_STATUS_ROW_Y[MOUTH_STATUS_ROW_COUNT] = {28, 93, 158};
 
 void printMouthStatusText(int16_t x, int16_t y, const char *text, uint16_t color, uint8_t size = 1) {
   frame.setTextSize(size);
@@ -2573,13 +2574,13 @@ void drawMouthStatusRow(uint8_t row, const char *label, const char *value) {
   const int16_t y = MOUTH_STATUS_ROW_Y[row];
   const int16_t w = MOUTH_STATUS_ROW_W;
   const int16_t h = MOUTH_STATUS_ROW_H;
-  frame.fillRect(x + 10, y + 18, w - 20, h - 22, panel);
-  printCenteredMouthStatusText(x + 10, y + 5, w - 20, label, rgb(106, 138, 158), 1);
-  printCenteredMouthStatusText(x + 10, y + 18, w - 20, value, rgb(218, 235, 232), strlen(value) > 13 ? 1 : 2);
+  frame.fillRect(x + 10, y + 19, w - 20, h - 24, panel);
+  printCenteredMouthStatusText(x + 10, y + 6, w - 20, label, rgb(106, 138, 158), 1);
+  printCenteredMouthStatusText(x + 10, y + 23, w - 20, value, rgb(218, 235, 232), strlen(value) > 13 ? 1 : 2);
 }
 
 void drawMouthStatusRows() {
-  for (uint8_t i = 0; i < 4; ++i) {
+  for (uint8_t i = 0; i < MOUTH_STATUS_ROW_COUNT; ++i) {
     drawMouthStatusRowShell(i);
   }
 }
@@ -2593,13 +2594,13 @@ void renderMouthStatusDisplay(uint32_t now) {
   const uint16_t dot = rgb(88, 228, 126);
   const Mood mood = currentMood(now);
   const MouthShape mouth = activeMouthShape(now);
-  const char *labels[4] = {"EYES", "MOUTH", "MOOD", "BEAT"};
-  const char *values[4] = {eyeStyleName(eyeRenderStyle), mouthShapeName(mouth), moodName(mood), idleBeatName(idleDirector.beat)};
+  const char *labels[MOUTH_STATUS_ROW_COUNT] = {"MOOD", "MOUTH", "BEAT"};
+  const char *values[MOUTH_STATUS_ROW_COUNT] = {moodName(mood), mouthShapeName(mouth), idleBeatName(idleDirector.beat)};
   const int16_t nextDotX = maxi16(10, mini16(120 + int16_t(clampf(gazeState.now.x / MAX_GAZE_X_PX, -1.0f, 1.0f) * 96.0f), 230));
   const int16_t nextDotY = maxi16(10, mini16(120 - int16_t(clampf(gazeState.now.y / MAX_GAZE_Y_PX, -1.0f, 1.0f) * 96.0f), 230));
   const bool dotMoved = !mouthStatusDotDrawn || abs(nextDotX - mouthStatusDotX) >= 3 || abs(nextDotY - mouthStatusDotY) >= 3;
   bool statusDirty = mouthStatusNeedsFullPaint;
-  for (uint8_t i = 0; i < 4; ++i) {
+  for (uint8_t i = 0; i < MOUTH_STATUS_ROW_COUNT; ++i) {
     if (strncmp(mouthStatusLastValues[i], values[i], sizeof(mouthStatusLastValues[i])) != 0) {
       statusDirty = true;
     }
@@ -2611,7 +2612,7 @@ void renderMouthStatusDisplay(uint32_t now) {
   frame.fillCircle(120, 120, 118, rgb(5, 12, 18));
   frame.drawCircle(120, 120, 116, line);
   drawMouthStatusRows();
-  for (uint8_t i = 0; i < 4; ++i) {
+  for (uint8_t i = 0; i < MOUTH_STATUS_ROW_COUNT; ++i) {
     drawMouthStatusRow(i, labels[i], values[i]);
     strncpy(mouthStatusLastValues[i], values[i], sizeof(mouthStatusLastValues[i]) - 1);
     mouthStatusLastValues[i][sizeof(mouthStatusLastValues[i]) - 1] = '\0';

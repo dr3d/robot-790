@@ -6,6 +6,7 @@ from typing import Any
 
 from robot_790d.behavior import BehaviorDaemon
 from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, FaceSettings
+from robot_790d.memory import forget_fact, remember_fact
 from robot_790d.state import Affect, RobotMode
 
 try:
@@ -58,6 +59,46 @@ TOOLS: list[dict[str, object]] = [
             "additionalProperties": False,
         },
     },
+    {
+        "type": "function",
+        "name": "remember_fact",
+        "description": (
+            "Persist one named fact only when the user explicitly asks Robot 790 to remember it. "
+            "Use stable facts such as names, preferences, projects, or robot setup details. "
+            "Do not save passwords, addresses, payment data, medical details, or fleeting chatter."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Short snake_case memory key, such as user_name or current_project.",
+                },
+                "fact": {
+                    "type": "string",
+                    "description": "One short sentence containing the fact to remember.",
+                },
+            },
+            "required": ["name", "fact"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "forget_fact",
+        "description": "Remove one named persistent fact when the user explicitly asks Robot 790 to forget it.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Short snake_case memory key to remove.",
+                }
+            },
+            "required": ["name"],
+            "additionalProperties": False,
+        },
+    },
 ]
 
 
@@ -69,6 +110,10 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_set_robot_mode, parsed)
     elif name == "play_face_beat":
         result = await asyncio.to_thread(_play_face_beat, parsed)
+    elif name == "remember_fact":
+        result = await asyncio.to_thread(_remember_fact, parsed)
+    elif name == "forget_fact":
+        result = await asyncio.to_thread(_forget_fact, parsed)
     else:
         result = {"status": "error", "error": f"Unknown Robot 790 tool: {name}"}
 
@@ -108,6 +153,31 @@ def _play_face_beat(arguments: dict[str, object]) -> dict[str, object]:
         face.close()
 
     return {"status": "ok", "tool": "play_face_beat", "beat": beat_name, "face": result}
+
+
+def _remember_fact(arguments: dict[str, object]) -> dict[str, object]:
+    name = str(arguments.get("name", "")).strip()
+    fact = str(arguments.get("fact", "")).strip()
+    if not name:
+        return {"status": "error", "error": "Missing required argument: name"}
+    if not fact:
+        return {"status": "error", "error": "Missing required argument: fact"}
+
+    stored = remember_fact(os.getenv("ROBOT_790_INSTANCE_PATH"), name, fact)
+    if stored is None:
+        return {"status": "error", "error": "Memory fact was empty or invalid"}
+    return {"status": "ok", "tool": "remember_fact", "name": stored.name, "fact": stored.fact}
+
+
+def _forget_fact(arguments: dict[str, object]) -> dict[str, object]:
+    name = str(arguments.get("name", "")).strip()
+    if not name:
+        return {"status": "error", "error": "Missing required argument: name"}
+
+    removed = forget_fact(os.getenv("ROBOT_790_INSTANCE_PATH"), name)
+    if removed is None:
+        return {"status": "error", "error": f"No memory fact named '{name}'"}
+    return {"status": "ok", "tool": "forget_fact", "name": removed.name, "removed": removed.fact}
 
 
 def _build_daemon() -> tuple[BehaviorDaemon, Esp32FaceClient]:

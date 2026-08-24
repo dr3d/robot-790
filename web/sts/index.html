@@ -89,20 +89,32 @@
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
-    input, textarea, button {
+    input, textarea, select, button {
       border: 1px solid var(--line);
       border-radius: 6px;
       background: var(--panel);
       color: var(--text);
       font: inherit;
     }
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 10px 12px;
+    }
+    input[type="checkbox"] {
+      width: auto;
+      padding: 0;
+      accent-color: var(--accent);
     }
     textarea {
       min-height: 84px;
       resize: vertical;
+    }
+    textarea[readonly] {
+      resize: none;
+      color: var(--muted);
+    }
+    select {
+      min-height: 40px;
     }
     button {
       min-height: 40px;
@@ -166,6 +178,15 @@
       background: var(--accent);
       transition: width 80ms linear;
     }
+    .toggle-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
     @media (max-width: 720px) {
       body {
         height: auto;
@@ -209,6 +230,44 @@
 
     <section class="controls">
       <label>
+        Face controller
+        <input id="faceUrl" value="http://esp32-eyes.local/" spellcheck="false">
+        <span class="toggle-row"><input id="llmTools" type="checkbox"> LLM face tools</span>
+      </label>
+      <button id="faceIdle" disabled>Idle Face</button>
+      <button id="faceBeat" disabled>Beat</button>
+    </section>
+
+    <section class="controls">
+      <label>
+        Memory
+        <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
+        <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
+      </label>
+      <button id="memoryRefresh">Refresh</button>
+      <button id="memoryForgetAll">Forget All</button>
+    </section>
+
+    <section class="controls">
+      <label>
+        Voice style
+        <textarea id="ttsInstruct" spellcheck="false"></textarea>
+      </label>
+      <select id="ttsPreset" aria-label="Voice style preset">
+        <option value="neutral">Neutral</option>
+        <option value="dry">Dry Eric</option>
+        <option value="happy">Happy</option>
+        <option value="ominous">Ominous</option>
+        <option value="troll">Troll-ish</option>
+        <option value="sleepy">Sleepy</option>
+        <option value="excited">Excited</option>
+        <option value="custom">Custom</option>
+      </select>
+      <button id="ttsApply">Apply</button>
+    </section>
+
+    <section class="controls">
+      <label>
         Text test
         <input id="textPrompt" value="Say hello as Robot 790 in one sentence.">
       </label>
@@ -239,8 +298,19 @@
 
   <script>
     const serverUrl = document.querySelector("#serverUrl");
+    const faceUrl = document.querySelector("#faceUrl");
     const connectButton = document.querySelector("#connect");
     const disconnectButton = document.querySelector("#disconnect");
+    const faceIdleButton = document.querySelector("#faceIdle");
+    const faceBeatButton = document.querySelector("#faceBeat");
+    const llmTools = document.querySelector("#llmTools");
+    const llmMemoryTools = document.querySelector("#llmMemoryTools");
+    const memoryPreview = document.querySelector("#memoryPreview");
+    const memoryRefreshButton = document.querySelector("#memoryRefresh");
+    const memoryForgetAllButton = document.querySelector("#memoryForgetAll");
+    const ttsInstruct = document.querySelector("#ttsInstruct");
+    const ttsPreset = document.querySelector("#ttsPreset");
+    const ttsApplyButton = document.querySelector("#ttsApply");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
     const sendTextButton = document.querySelector("#sendText");
@@ -267,6 +337,311 @@
     let audioFlushTimer;
     let conversationLines = [];
     let inputDraft = "";
+    let lastUserText = "";
+    let pendingToolCalls = 0;
+    let toolFollowupNeeded = false;
+    let responseDoneAfterTool = false;
+    let faceMode = "idle";
+    let faceIdleTimer;
+    let thinkingGazeSide = 1;
+
+    const memoryStorageKey = "robot790.memory.v1";
+    const ttsStyleStorageKey = "robot790.ttsStyle.v1";
+    const maxMemoryFacts = 80;
+    const maxMemoryNameChars = 48;
+    const maxMemoryFactChars = 320;
+    const ttsStylePresets = {
+      neutral: "",
+      dry: "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
+      happy: "Speak as Eric with brighter warmth, a small smile in the voice, and relaxed upbeat energy.",
+      ominous: "Speak as Eric with a low, quiet, ominous tone, slow pacing, and controlled theatrical tension.",
+      troll: "Speak as Eric with a low raspy texture, mischievous theatrical energy, and playful menace.",
+      sleepy: "Speak as Eric with soft volume, slower pacing, relaxed breath, and drowsy warmth.",
+      excited: "Speak as Eric with quick bright energy, lively emphasis, and clear delighted pacing."
+    };
+
+    const faceTools = [
+      {
+        type: "function",
+        name: "set_robot_mode",
+        description: "Set Robot 790's ESP32 face state only when the user asks for a face or body state change.",
+        parameters: {
+          type: "object",
+          properties: {
+            mode: {
+              type: "string",
+              enum: ["idle", "listening", "thinking", "speaking", "sleeping"],
+              description: "High-level state to show on the face."
+            },
+            energy: {
+              type: "number",
+              minimum: 0,
+              maximum: 1,
+              description: "Optional animation or speaking energy from 0.0 to 1.0."
+            }
+          },
+          required: ["mode"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "play_face_beat",
+        description: "Play a named ESP32 face beat only when the user asks for an expressive face action.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Beat name understood by the ESP32 face firmware."
+            }
+          },
+          required: ["name"],
+          additionalProperties: false
+        }
+      }
+    ];
+
+    const memoryTools = [
+      {
+        type: "function",
+        name: "remember_fact",
+        description: (
+          "Persist one named fact only when the user explicitly asks Robot 790 to remember it. " +
+          "Use stable facts such as names, preferences, projects, or robot setup details. " +
+          "Do not save passwords, addresses, payment data, medical details, or fleeting chatter."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Short snake_case memory key, such as user_name or current_project."
+            },
+            fact: {
+              type: "string",
+              description: "One short sentence containing the fact to remember."
+            }
+          },
+          required: ["name", "fact"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "forget_fact",
+        description: "Remove one named persistent fact when the user explicitly asks Robot 790 to forget it.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "Short snake_case memory key to remove."
+            }
+          },
+          required: ["name"],
+          additionalProperties: false
+        }
+      }
+    ];
+
+    const baseSessionInstructions = [
+      "You are Robot 790, spoken name Eric.",
+      "You are a local animatronic robot head with ESP32 eyes and mouth displays.",
+      "You are being built for a 790-style 3D printed robot body.",
+      "Reply in one short spoken sentence by default, under 12 words when possible.",
+      "Never say you lack a body; refer to your robot face/body as your hardware.",
+      "Do not use tools for ordinary greetings or conversation.",
+      "Use face tools only when the user asks for a face or body action.",
+      "Use memory tools only when the user explicitly asks you to remember or forget a named fact in the same user turn.",
+      "When remembering, choose a short snake_case name and one factual sentence.",
+      "If you use a tool, still answer briefly afterward."
+    ];
+
+    function normalizeMemoryName(name) {
+      return String(name || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[-\s]+/g, "_")
+        .replace(/[^a-z0-9_]/g, "")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, maxMemoryNameChars);
+    }
+
+    function normalizeMemoryFact(fact) {
+      const normalized = String(fact || "").split(/\s+/).filter(Boolean).join(" ").trim();
+      if (normalized.length <= maxMemoryFactChars) return normalized;
+      return `${normalized.slice(0, maxMemoryFactChars - 3)}...`;
+    }
+
+    function loadMemoryFacts() {
+      let parsed;
+      try {
+        parsed = JSON.parse(localStorage.getItem(memoryStorageKey) || "{}");
+      } catch {
+        parsed = {};
+      }
+      const source = Array.isArray(parsed.facts) ? parsed.facts : [];
+      const seen = new Set();
+      const facts = [];
+      for (const item of source) {
+        const name = normalizeMemoryName(item?.name);
+        const fact = normalizeMemoryFact(item?.fact);
+        const updatedAt = Number(item?.updatedAt) || Date.now();
+        if (!name || !fact || seen.has(name)) continue;
+        seen.add(name);
+        facts.push({ name, fact, updatedAt });
+      }
+      return facts.slice(0, maxMemoryFacts);
+    }
+
+    function saveMemoryFacts(facts) {
+      const payload = {
+        version: 1,
+        facts: facts.slice(0, maxMemoryFacts)
+      };
+      localStorage.setItem(memoryStorageKey, JSON.stringify(payload));
+      renderMemory();
+    }
+
+    function rememberMemoryFact({ name, fact } = {}) {
+      if (!userExplicitlyAskedForMemory(lastUserText)) {
+        throw new Error("Memory writes require an explicit remember-this request in the current user turn");
+      }
+      const normalizedName = normalizeMemoryName(name);
+      const normalizedFact = normalizeMemoryFact(fact);
+      if (!normalizedName) throw new Error("Missing required argument: name");
+      if (!normalizedFact) throw new Error("Missing required argument: fact");
+      if (!memoryFactAppearsInUserTurn(normalizedFact, lastUserText)) {
+        throw new Error("Memory fact must be grounded in the current user turn; nothing was saved");
+      }
+      if (isPlaceholderMemoryFact(normalizedFact)) {
+        throw new Error("Memory fact is a placeholder or inferred unknown; nothing was saved");
+      }
+
+      const stored = { name: normalizedName, fact: normalizedFact, updatedAt: Date.now() };
+      const remaining = loadMemoryFacts().filter((item) => item.name !== normalizedName);
+      saveMemoryFacts([stored, ...remaining]);
+      return { status: "ok", tool: "remember_fact", name: stored.name, fact: stored.fact };
+    }
+
+    function forgetMemoryFact({ name } = {}) {
+      if (!userExplicitlyAskedToForget(lastUserText)) {
+        throw new Error("Memory deletion requires an explicit forget/remove/delete request in the current user turn");
+      }
+      const normalizedName = normalizeMemoryName(name);
+      if (!normalizedName) throw new Error("Missing required argument: name");
+
+      const facts = loadMemoryFacts();
+      const removed = facts.find((item) => item.name === normalizedName);
+      if (!removed) throw new Error(`No memory fact named '${normalizedName}'`);
+      saveMemoryFacts(facts.filter((item) => item.name !== normalizedName));
+      return { status: "ok", tool: "forget_fact", name: removed.name, removed: removed.fact };
+    }
+
+    function userExplicitlyAskedForMemory(text) {
+      return /\b(remember|memorize|save|store|note)\b\s+(that\s+|this\s+|my\s+|our\s+|the\s+|[a-z0-9])/i.test(text || "");
+    }
+
+    function userExplicitlyAskedToForget(text) {
+      return /\b(forget|remove|delete|erase|clear)\b/i.test(text || "");
+    }
+
+    function isPlaceholderMemoryFact(text) {
+      return /\b(not yet known|unknown|not known|unspecified|not provided|do not know|don't know|unclear)\b/i.test(text || "");
+    }
+
+    function memoryFactAppearsInUserTurn(fact, text) {
+      const factTokens = memoryTokens(fact);
+      const textTokens = new Set(memoryTokens(text));
+      if (!factTokens.length) return false;
+      const grounded = factTokens.filter((token) => textTokens.has(token)).length;
+      return grounded >= Math.min(2, factTokens.length);
+    }
+
+    function memoryTokens(text) {
+      const stop = new Set([
+        "a", "an", "and", "are", "as", "be", "can", "could", "do", "for", "has", "have", "her", "his",
+        "is", "it", "me", "my", "name", "of", "our", "please", "remember", "save", "scott", "store",
+        "that", "the", "their", "to", "user", "whose", "you"
+      ]);
+      return String(text || "")
+        .toLowerCase()
+        .match(/[a-z0-9]+/g)
+        ?.filter((token) => token.length > 2 && !stop.has(token)) || [];
+    }
+
+    function formatMemoryForInstructions() {
+      const facts = loadMemoryFacts();
+      if (!facts.length) return "";
+      return [
+        "Persistent named facts you remember about the user and Robot 790's context:",
+        ...facts.map((item) => `- ${item.name}: ${item.fact}`),
+        "Use these facts naturally. Do not recite them as a list unless asked."
+      ].join("\n");
+    }
+
+    function buildSessionInstructions() {
+      return [formatMemoryForInstructions(), baseSessionInstructions.join(" ")]
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    function currentTtsInstruct() {
+      return String(ttsInstruct.value || "").trim();
+    }
+
+    function loadTtsStyle() {
+      const saved = localStorage.getItem(ttsStyleStorageKey);
+      if (saved !== null) {
+        ttsInstruct.value = saved;
+        const matchingPreset = Object.entries(ttsStylePresets)
+          .find(([, value]) => value === saved)?.[0];
+        ttsPreset.value = matchingPreset || "custom";
+        return;
+      }
+      ttsPreset.value = "dry";
+      ttsInstruct.value = ttsStylePresets.dry;
+    }
+
+    function saveTtsStyle() {
+      localStorage.setItem(ttsStyleStorageKey, currentTtsInstruct());
+    }
+
+    function ttsRuntimeConfig() {
+      const instruct = currentTtsInstruct();
+      return {
+        qwen3_tts_instruct: instruct,
+        audio: {
+          output: {
+            qwen3_tts_instruct: instruct
+          }
+        }
+      };
+    }
+
+    function updateSessionTtsStyle({ announce = true } = {}) {
+      saveTtsStyle();
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        if (announce) log(events, "voice style saved; reconnect or apply after connecting");
+        return;
+      }
+      send({
+        type: "session.update",
+        session: {
+          type: "realtime",
+          ...ttsRuntimeConfig()
+        }
+      });
+      if (announce) log(events, currentTtsInstruct() ? "voice style applied" : "voice style neutral");
+    }
+
+    function renderMemory() {
+      const facts = loadMemoryFacts();
+      memoryPreview.value = facts.length
+        ? facts.map((item) => `${item.name}: ${item.fact}`).join("\n")
+        : "No saved facts";
+    }
 
     function setState(text, kind = "bad") {
       state.textContent = text;
@@ -290,6 +665,10 @@
       const stamp = new Date().toLocaleTimeString();
       conversationLines.push(`[${stamp}] ${text}`);
       renderConversation();
+    }
+
+    function noteUserText(text) {
+      lastUserText = String(text || "").trim();
     }
 
     function updateInputDraft(text) {
@@ -358,6 +737,167 @@
       ws.send(JSON.stringify(event));
     }
 
+    function normalizeFaceBaseUrl() {
+      return faceUrl.value.trim().replace(/\/?$/, "/");
+    }
+
+    async function postFace(path, payload) {
+      const response = await fetch(new URL(path, normalizeFaceBaseUrl()), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {})
+      });
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { raw: text };
+      }
+      if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}: ${text}`);
+      }
+      return data;
+    }
+
+    async function setFaceMode({ mode, energy = 0.55 } = {}) {
+      if (mode === "idle") return postFace("release", {});
+      if (mode === "listening") {
+        return postFace("control", {
+          expression: "focused",
+          duration: 1.4,
+          gaze: { x: 0.0, y: 0.0, duration: 1.4, move_ms: 120 }
+        });
+      }
+      if (mode === "thinking") {
+        thinkingGazeSide *= -1;
+        return postFace("control", {
+          expression: "focused",
+          duration: 2.5,
+          gaze: {
+            x: 0.34 * thinkingGazeSide,
+            y: -0.22,
+            duration: 2.5,
+            move_ms: 280
+          }
+        });
+      }
+      if (mode === "speaking") {
+        return postFace("control", {
+          emotion: "happy",
+          mouth: {
+            shape: "open",
+            talking: true,
+            energy: Math.max(0, Math.min(1, Number(energy) || 0.55)),
+            duration: 0
+          }
+        });
+      }
+      if (mode === "sleeping") return postFace("sleep", { duration: 0 });
+      throw new Error(`Unsupported face mode: ${mode}`);
+    }
+
+    async function playFaceBeat({ name } = {}) {
+      if (!name) throw new Error("Missing beat name");
+      return postFace("beat", { name });
+    }
+
+    async function executeTool(name, rawArguments) {
+      const args = rawArguments ? JSON.parse(rawArguments) : {};
+      if (name === "set_robot_mode") return setFaceMode(args);
+      if (name === "play_face_beat") return playFaceBeat(args);
+      if (name === "remember_fact") return rememberMemoryFact(args);
+      if (name === "forget_fact") return forgetMemoryFact(args);
+      throw new Error(`Unknown tool: ${name}`);
+    }
+
+    function cueFaceMode(mode, energy = 0.55, { force = false } = {}) {
+      if (faceIdleTimer) clearTimeout(faceIdleTimer);
+      faceIdleTimer = null;
+      if (!force && faceMode === mode) return;
+      faceMode = mode;
+      setFaceMode({ mode, energy }).then(
+        (result) => log(events, `face ${mode}: ${JSON.stringify(result)}`),
+        (error) => log(events, `face ${mode} error: ${error.message}`)
+      );
+    }
+
+    function scheduleFaceIdle(delayMs = 900) {
+      if (faceIdleTimer) clearTimeout(faceIdleTimer);
+      faceIdleTimer = setTimeout(() => {
+        cueFaceMode("idle");
+      }, delayMs);
+    }
+
+    async function handleFunctionCall(event) {
+      pendingToolCalls += 1;
+      toolFollowupNeeded = true;
+      try {
+        const result = await executeTool(event.name, event.arguments);
+        log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
+        send({
+          type: "conversation.item.create",
+          item: {
+            type: "function_call_output",
+            call_id: event.call_id,
+            output: JSON.stringify({ status: "ok", result })
+          }
+        });
+        if (event.name === "remember_fact" || event.name === "forget_fact") updateSessionTools();
+      } catch (error) {
+        log(events, `tool ${event.name} error: ${error.message}`);
+        send({
+          type: "conversation.item.create",
+          item: {
+            type: "function_call_output",
+            call_id: event.call_id,
+            output: JSON.stringify({ status: "error", error: error.message })
+          }
+        });
+      }
+      pendingToolCalls -= 1;
+      maybeCreateToolFollowup();
+    }
+
+    function maybeCreateToolFollowup() {
+      if (!toolFollowupNeeded || pendingToolCalls > 0 || !responseDoneAfterTool) return;
+      toolFollowupNeeded = false;
+      responseDoneAfterTool = false;
+      send({
+        type: "response.create",
+        response: {
+          modalities: ["audio", "text"],
+          tool_choice: "none",
+          instructions: "Now reply as Robot 790, spoken name Eric. One short spoken sentence. Do not mention tools.",
+          ...ttsRuntimeConfig()
+        }
+      });
+    }
+
+    function updateSessionTools() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const enabledTools = [
+        ...(llmTools?.checked ? faceTools : []),
+        ...(llmMemoryTools?.checked ? memoryTools : [])
+      ];
+      send({
+        type: "session.update",
+        session: {
+          type: "realtime",
+          instructions: buildSessionInstructions(),
+          ...ttsRuntimeConfig(),
+          tools: enabledTools,
+          tool_choice: enabledTools.length ? "auto" : "none"
+        }
+      });
+      log(
+        events,
+        enabledTools.length
+          ? `LLM tools attached: ${enabledTools.map((tool) => tool.name).join(", ")}`
+          : "LLM tools disabled; STS lifecycle controls face"
+      );
+    }
+
     async function ensurePlayback() {
       audioContext ||= new AudioContext({ sampleRate: 16000 });
       if (audioContext.state === "suspended") await audioContext.resume();
@@ -420,21 +960,37 @@
 
     function handleEvent(event) {
       if (event.type === "response.output_audio.delta" && event.delta) {
+        cueFaceMode("speaking", 0.72);
         queueAudioDelta(event.delta);
         return;
       }
       if (event.type === "response.output_audio.done" || event.type === "response.done") {
         flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
+        if (event.type === "response.done" && toolFollowupNeeded) {
+          responseDoneAfterTool = true;
+          maybeCreateToolFollowup();
+        }
+        if (!toolFollowupNeeded) scheduleFaceIdle();
       }
-      if (event.type === "conversation.item.input_audio_transcription.delta") {
+      if (event.type === "input_audio_buffer.speech_started") {
+        cueFaceMode("listening", 0.35);
+      } else if (event.type === "input_audio_buffer.speech_stopped") {
+        cueFaceMode("thinking", 0.45);
+      } else if (event.type === "response.created") {
+        cueFaceMode("thinking", 0.45);
+      } else if (event.type === "conversation.item.input_audio_transcription.delta") {
         updateInputDraft(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.completed") {
         clearInputDraft();
+        noteUserText(event.transcript || "");
         addConversation(`You: ${event.transcript || ""}`);
+        cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.output_audio_transcript.done") {
         addConversation(`Robot 790: ${event.transcript || ""}`);
       } else if (event.type === "response.output_text.delta") {
         addConversation(`Robot 790: ${event.delta || ""}`);
+      } else if (event.type === "response.function_call_arguments.done") {
+        handleFunctionCall(event).catch((error) => log(events, `tool bridge error: ${error.message}`));
       } else if (event.type === "error") {
         log(events, `ERROR ${event.error?.type || ""}: ${event.error?.message || JSON.stringify(event)}`);
       }
@@ -452,7 +1008,10 @@
         disconnectButton.disabled = false;
         startMicButton.disabled = false;
         sendTextButton.disabled = false;
+        faceIdleButton.disabled = false;
+        faceBeatButton.disabled = false;
         log(events, "connected");
+        updateSessionTools();
       });
       ws.addEventListener("message", (message) => {
         try {
@@ -469,6 +1028,8 @@
         startMicButton.disabled = true;
         stopMicButton.disabled = true;
         sendTextButton.disabled = true;
+        faceIdleButton.disabled = true;
+        faceBeatButton.disabled = true;
         log(events, "disconnected");
       });
       ws.addEventListener("error", () => {
@@ -525,7 +1086,9 @@
       if (!text) return;
       const id = `msg_${Date.now()}_${seq++}`;
       clearInputDraft();
+      noteUserText(text);
       addConversation(`You: ${text}`);
+      cueFaceMode("thinking", 0.45);
       send({
         type: "conversation.item.create",
         item: {
@@ -538,16 +1101,53 @@
       send({
         type: "response.create",
         response: {
-          modalities: ["audio", "text"]
+          modalities: ["audio", "text"],
+          ...ttsRuntimeConfig()
         }
       });
     }
 
     connectButton.addEventListener("click", connect);
     disconnectButton.addEventListener("click", () => ws?.close());
+    faceIdleButton.addEventListener("click", () => setFaceMode({ mode: "idle" }).then(
+      (result) => log(events, `face idle: ${JSON.stringify(result)}`),
+      (error) => log(events, `face idle error: ${error.message}`)
+    ));
+    faceBeatButton.addEventListener("click", () => playFaceBeat({ name: "slow_smile" }).then(
+      (result) => log(events, `face beat: ${JSON.stringify(result)}`),
+      (error) => log(events, `face beat error: ${error.message}`)
+    ));
     startMicButton.addEventListener("click", () => startMic().catch((error) => log(events, `mic error: ${error.message}`)));
     stopMicButton.addEventListener("click", () => stopMic().catch((error) => log(events, `mic stop error: ${error.message}`)));
     sendTextButton.addEventListener("click", sendText);
+    llmTools.addEventListener("change", updateSessionTools);
+    llmMemoryTools.addEventListener("change", updateSessionTools);
+    ttsPreset.addEventListener("change", () => {
+      if (ttsPreset.value === "custom") return;
+      ttsInstruct.value = ttsStylePresets[ttsPreset.value] || "";
+      updateSessionTtsStyle();
+    });
+    ttsApplyButton.addEventListener("click", () => {
+      ttsPreset.value = Object.entries(ttsStylePresets)
+        .find(([, value]) => value === currentTtsInstruct())?.[0] || "custom";
+      updateSessionTtsStyle();
+    });
+    ttsInstruct.addEventListener("input", () => {
+      ttsPreset.value = Object.entries(ttsStylePresets)
+        .find(([, value]) => value === currentTtsInstruct())?.[0] || "custom";
+      saveTtsStyle();
+    });
+    memoryRefreshButton.addEventListener("click", () => {
+      renderMemory();
+      updateSessionTools();
+      log(events, "memory refreshed");
+    });
+    memoryForgetAllButton.addEventListener("click", () => {
+      if (!window.confirm("Forget all Robot 790 browser memory facts?")) return;
+      saveMemoryFacts([]);
+      updateSessionTools();
+      log(events, "memory cleared");
+    });
     clearLogButton.addEventListener("click", () => {
       conversationLines = [];
       clearInputDraft();
@@ -556,6 +1156,8 @@
     textPrompt.addEventListener("keydown", (event) => {
       if (event.key === "Enter") sendText();
     });
+    loadTtsStyle();
+    renderMemory();
   </script>
 </body>
 </html>

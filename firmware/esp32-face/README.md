@@ -89,10 +89,11 @@ Aux display roles:
 | `REACHY_AUX_ROLE_MOUTH_ONLY` | `2` | rectangular mouth only; GPIO17 can become a slow status display |
 
 When `REACHY_MOUTH_STATUS_WHEN_AUX_MOUTH` is enabled, the round GPIO17 display
-shows four centered single-column rows: eyes, mouth, mood, and idle beat. The
-Wi-Fi address is intentionally omitted; a small green gaze-focus circle floats
-over the status rows. This status view is composed offscreen and pushed as a
-single frame so gaze-dot motion does not visibly clear and redraw the text rows.
+shows three larger centered single-column rows: mood, mouth, and idle beat. The
+eye style and Wi-Fi address are intentionally omitted; a small green gaze-focus
+circle floats over the status rows. This status view is composed offscreen and
+pushed as a single frame so gaze-dot motion does not visibly clear and redraw
+the text rows.
 
 ## Wi-Fi Setup
 

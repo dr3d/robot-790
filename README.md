@@ -62,8 +62,12 @@ Build the face firmware:
 ```powershell
 cd firmware\esp32-face
 pio run
-pio run -t upload --upload-port COM27
+pio device list
+pio run -t upload --upload-port COM8
 ```
+
+Use the COM port reported for your ESP32-S3; `COM8` is the current board on
+this workstation.
 
 ## Local Speech
 
@@ -85,6 +89,7 @@ Run a mock endpoint first:
 Then check it:
 
 ```powershell
+mkdir samples
 curl http://127.0.0.1:8000/health
 curl -X POST http://127.0.0.1:8000/v1/audio/speech `
   -H "Content-Type: application/json" `
@@ -154,6 +159,36 @@ The tool module is `robot_790d.realtime_tools`. It currently exposes:
 - `set_robot_mode`: maps voice turn states to `idle`, `listening`, `thinking`,
   `speaking`, or `sleeping`.
 - `play_face_beat`: lets an agent trigger a named firmware beat.
+- `remember_fact`: saves or updates one persistent named fact.
+- `forget_fact`: removes one persistent named fact by name.
+
+The browser STS page sends a compact Robot 790/Eric identity instruction with
+`session.update` when it connects. Its deterministic lifecycle drives the face
+by default: user speech cues listening, transcription/LLM work cues thinking,
+audio output cues speaking, and response completion releases the face to idle.
+Listening uses a focused centered gaze, thinking alternates a small side glance,
+and speaking drives the mouth/talking state.
+The `Voice style` control sends a `qwen3_tts_instruct` runtime hint to Qwen3-TTS
+and stores the current style in browser `localStorage` under
+`robot790.ttsStyle.v1`. Presets include neutral, dry Eric, happy, ominous,
+troll-ish, sleepy, and excited. CustomVoice models still anchor to the selected
+speaker, so this should be treated as performance direction rather than a hard
+guarantee of a totally different voice.
+The optional `LLM face tools` checkbox exposes `set_robot_mode` and
+`play_face_beat` to the model for experiments. Tool calls are executed in the
+page by posting to the configured ESP32 face URL, which defaults to
+`http://esp32-eyes.local/`.
+
+The `LLM memory tools` checkbox is disabled by default on the STS page. When
+enabled, it exposes `remember_fact` and `forget_fact` so explicit current-turn
+instructions such as "remember my name as Dave" or "forget user_name" can update
+persistent named facts. The page refuses inferred placeholder facts such as
+"not yet known" and rejects facts that are not grounded in the current user turn.
+The current browser STS path stores those facts in browser `localStorage` under
+`robot790.memory.v1` and injects them into session instructions on connect,
+refresh, and memory updates. The Python daemon path stores the same named-fact
+shape in `memory.v1.json`; set `ROBOT_790_MEMORY_PATH` for an exact file path,
+or `ROBOT_790_INSTANCE_PATH` for an instance directory.
 
 For a fully local LLM, run an OpenAI-compatible server such as llama.cpp or
 vLLM, then pass backend arguments through `-ExtraArgs`:
@@ -179,8 +214,39 @@ the realtime server:
 That launcher uses one realtime pipeline by default, the
 local
 `C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice`
-model, the CUDA `torch` backend, and the `Eric` speaker. Increase
-`-NumPipelines` only after checking VRAM and latency.
+model, the CUDA `torch` backend, the `Eric` speaker, and the local
+`qwen3.5-4b` LLM through LM Studio's Chat Completions endpoint. Reasoning is
+disabled with `reasoning_effort=none`, and spoken LLM output is capped at 48
+tokens by default to keep turns realtime-friendly. Increase `-NumPipelines`
+only after checking VRAM and latency.
+The launcher sets a dry Eric TTS instruction by default. Override it at launch
+with:
+
+```powershell
+.\scripts\start_realtime_eric_qwen3.ps1 -TtsInstruct "Speak as Eric with a low raspy texture, mischievous theatrical energy, and playful menace."
+```
+
+The browser page can also change `qwen3_tts_instruct` live for the active
+session. This works through the project-owned realtime entrypoint
+`robot_790d.realtime_entry`, which applies a small runtime patch to the upstream
+`speech-to-speech` Qwen3-TTS handler without editing the installed dependency.
+
+The launcher reads its system prompt from:
+
+```text
+prompts\robot-790-reachy-no-tools.md
+```
+
+That prompt is adapted from the Reachy Mini conversation app's default profile
+body. It keeps the spoken Robot 790 identity, brevity rules, and sparse
+face/memory tool guidance, while leaving Reachy SDK movement instructions out
+of this repo's first pass.
+
+To try another local model without editing the script:
+
+```powershell
+.\scripts\start_realtime_eric_qwen3.ps1 -LlmModel "qwen/qwen3.5-9b"
+```
 
 To try the larger local CustomVoice model:
 
