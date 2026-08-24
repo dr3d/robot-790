@@ -24,7 +24,7 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
 DEFAULT_LANGUAGE = "English"
-DEFAULT_VOICE = "Aiden"
+DEFAULT_VOICE = "Eric"
 SUPPORTED_VOICES = ("Aiden", "Ryan", "Dylan", "Eric", "Ono_Anna", "Serena", "Sohee", "Uncle_Fu", "Vivian")
 
 

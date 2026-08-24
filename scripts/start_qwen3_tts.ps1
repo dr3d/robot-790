@@ -1,7 +1,7 @@
 param(
-    [string] $Voice = "Aiden",
+    [string] $Voice = "Eric",
     [int] $Port = 8000,
-    [string] $Model = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+    [string] $Model = "C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice",
     [string] $HostAddress = "127.0.0.1",
     [string] $HfHome = "",
     [switch] $Mock
@@ -32,4 +32,3 @@ $env:QWEN_TTS_MOCK = if ($Mock) { "1" } else { "0" }
 Write-Host "Starting Robot 790 Qwen3-TTS on http://$HostAddress`:$Port with voice $Voice"
 Write-Host "HF_HOME=$env:HF_HOME"
 & $Python -m robot_790_tts.server
-

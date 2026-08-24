@@ -89,14 +89,14 @@ curl http://127.0.0.1:8000/health
 curl -X POST http://127.0.0.1:8000/v1/audio/speech `
   -H "Content-Type: application/json" `
   -o samples\speech.wav `
-  -d '{"input":"Robot 790 is online.","voice":"Aiden","response_format":"wav"}'
+  -d '{"input":"Robot 790 is online.","voice":"Eric","response_format":"wav"}'
 ```
 
 For real synthesis, install a CUDA-capable PyTorch environment plus `qwen-tts`,
 then start without `-Mock`:
 
 ```powershell
-.\scripts\start_qwen3_tts.ps1 -Voice Aiden -HostAddress 127.0.0.1 -Port 8000
+.\scripts\start_qwen3_tts.ps1 -Voice Eric -HostAddress 127.0.0.1 -Port 8000
 ```
 
 The endpoint is intentionally OpenAI-shaped:
@@ -168,6 +168,25 @@ vLLM, then pass backend arguments through `-ExtraArgs`:
 ```
 
 The same `-ExtraArgs` pattern works for `start_realtime_local.ps1`.
+
+For the Windows RTX 5090 bring-up path, use Eric through Qwen3-TTS directly in
+the realtime server:
+
+```powershell
+.\scripts\start_realtime_eric_qwen3.ps1
+```
+
+That launcher uses one realtime pipeline by default, the
+local
+`C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice`
+model, the CUDA `torch` backend, and the `Eric` speaker. Increase
+`-NumPipelines` only after checking VRAM and latency.
+
+To try the larger local CustomVoice model:
+
+```powershell
+.\scripts\start_realtime_eric_qwen3.ps1 -TtsModel "C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-1.7B-CustomVoice"
+```
 
 ## Behavior Model
 
