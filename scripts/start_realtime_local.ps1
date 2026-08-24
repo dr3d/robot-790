@@ -13,7 +13,9 @@ if (-not (Test-Path $SpeechToSpeech)) {
 }
 
 $env:ROBOT_790_FACE_URL = $FaceUrl
+$env:PYTHONIOENCODING = "utf-8"
 
 Write-Host "Starting Robot 790 local realtime voice loop"
 Write-Host "Face URL: $env:ROBOT_790_FACE_URL"
-& $SpeechToSpeech local --tool-module robot_790d.realtime_tools @ExtraArgs
+Write-Host "Note: installed speech-to-speech CLI does not support --tool-module; face tools are not attached in this mode."
+& $SpeechToSpeech --mode local @ExtraArgs

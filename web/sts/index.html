@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robot 790 STS</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101114;
+      --panel: #191b20;
+      --line: #30343b;
+      --text: #f2f4f8;
+      --muted: #aeb6c2;
+      --accent: #60d394;
+      --warn: #ffcf5a;
+      --bad: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(980px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--bad);
+      box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.16);
+    }
+    .dot.ok {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(96, 211, 148, 0.16);
+    }
+    .dot.warn {
+      background: var(--warn);
+      box-shadow: 0 0 0 3px rgba(255, 207, 90, 0.16);
+    }
+    section {
+      border-top: 1px solid var(--line);
+      padding: 18px 0;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input, textarea, button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+    }
+    textarea {
+      min-height: 84px;
+      resize: vertical;
+    }
+    button {
+      min-height: 40px;
+      padding: 0 14px;
+      cursor: pointer;
+    }
+    button.primary {
+      border-color: rgba(96, 211, 148, 0.55);
+      background: #1d2b24;
+    }
+    button.danger {
+      border-color: rgba(255, 107, 107, 0.55);
+      background: #2d1f21;
+    }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .log {
+      height: 320px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .meters {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+    }
+    .bar {
+      flex: 1;
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #242830;
+    }
+    .bar > span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--accent);
+      transition: width 80ms linear;
+    }
+    @media (max-width: 720px) {
+      header, .controls, .grid {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+      header { display: grid; }
+      .status { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Robot 790 STS</h1>
+      <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
+    </header>
+
+    <section class="controls">
+      <label>
+        Realtime server
+        <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
+      </label>
+      <button id="connect" class="primary">Connect</button>
+      <button id="disconnect" class="danger" disabled>Disconnect</button>
+    </section>
+
+    <section class="controls">
+      <label>
+        Text test
+        <input id="textPrompt" value="Say hello as Robot 790 in one sentence.">
+      </label>
+      <button id="sendText" disabled>Send Text</button>
+      <button id="clearLog">Clear</button>
+    </section>
+
+    <section class="controls">
+      <div class="meters">
+        <span>Mic</span>
+        <div class="bar"><span id="level"></span></div>
+      </div>
+      <button id="startMic" disabled>Start Mic</button>
+      <button id="stopMic" disabled>Stop Mic</button>
+    </section>
+
+    <section class="grid">
+      <div>
+        <label>Conversation</label>
+        <div id="conversation" class="log"></div>
+      </div>
+      <div>
+        <label>Events</label>
+        <div id="events" class="log"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const serverUrl = document.querySelector("#serverUrl");
+    const connectButton = document.querySelector("#connect");
+    const disconnectButton = document.querySelector("#disconnect");
+    const startMicButton = document.querySelector("#startMic");
+    const stopMicButton = document.querySelector("#stopMic");
+    const sendTextButton = document.querySelector("#sendText");
+    const clearLogButton = document.querySelector("#clearLog");
+    const textPrompt = document.querySelector("#textPrompt");
+    const state = document.querySelector("#state");
+    const dot = document.querySelector("#dot");
+    const level = document.querySelector("#level");
+    const conversation = document.querySelector("#conversation");
+    const events = document.querySelector("#events");
+
+    let ws;
+    let audioContext;
+    let micContext;
+    let micStream;
+    let micSource;
+    let micProcessor;
+    let playbackTime = 0;
+    let seq = 0;
+
+    function setState(text, kind = "bad") {
+      state.textContent = text;
+      dot.className = `dot ${kind === "ok" ? "ok" : kind === "warn" ? "warn" : ""}`;
+    }
+
+    function log(target, text) {
+      const stamp = new Date().toLocaleTimeString();
+      target.textContent += `[${stamp}] ${text}\n`;
+      target.scrollTop = target.scrollHeight;
+    }
+
+    function b64ToBytes(b64) {
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    function bytesToB64(bytes) {
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary);
+    }
+
+    function pcm16ToFloat32(bytes) {
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const output = new Float32Array(bytes.byteLength / 2);
+      for (let i = 0; i < output.length; i += 1) {
+        const sample = view.getInt16(i * 2, true);
+        output[i] = Math.max(-1, Math.min(1, sample / 32768));
+      }
+      return output;
+    }
+
+    function float32ToPcm16(float32) {
+      const bytes = new Uint8Array(float32.length * 2);
+      const view = new DataView(bytes.buffer);
+      for (let i = 0; i < float32.length; i += 1) {
+        const sample = Math.max(-1, Math.min(1, float32[i]));
+        view.setInt16(i * 2, sample < 0 ? sample * 32768 : sample * 32767, true);
+      }
+      return bytes;
+    }
+
+    function resample(input, fromRate, toRate) {
+      if (fromRate === toRate) return input;
+      const ratio = fromRate / toRate;
+      const output = new Float32Array(Math.floor(input.length / ratio));
+      for (let i = 0; i < output.length; i += 1) {
+        const pos = i * ratio;
+        const left = Math.floor(pos);
+        const right = Math.min(input.length - 1, left + 1);
+        const frac = pos - left;
+        output[i] = input[left] * (1 - frac) + input[right] * frac;
+      }
+      return output;
+    }
+
+    function send(event) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify(event));
+    }
+
+    async function ensurePlayback() {
+      audioContext ||= new AudioContext({ sampleRate: 16000 });
+      if (audioContext.state === "suspended") await audioContext.resume();
+    }
+
+    async function playPcm16(b64) {
+      await ensurePlayback();
+      const samples = pcm16ToFloat32(b64ToBytes(b64));
+      const buffer = audioContext.createBuffer(1, samples.length, 16000);
+      buffer.copyToChannel(samples, 0);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      const now = audioContext.currentTime;
+      playbackTime = Math.max(playbackTime, now + 0.03);
+      source.start(playbackTime);
+      playbackTime += buffer.duration;
+    }
+
+    function handleEvent(event) {
+      if (event.type === "response.output_audio.delta" && event.delta) {
+        playPcm16(event.delta).catch((error) => log(events, `audio playback error: ${error.message}`));
+        return;
+      }
+      if (event.type === "conversation.item.input_audio_transcription.delta") {
+        log(conversation, `You ... ${event.delta || ""}`);
+      } else if (event.type === "conversation.item.input_audio_transcription.completed") {
+        log(conversation, `You: ${event.transcript || ""}`);
+      } else if (event.type === "response.output_audio_transcript.done") {
+        log(conversation, `Robot 790: ${event.transcript || ""}`);
+      } else if (event.type === "response.output_text.delta") {
+        log(conversation, `Robot 790: ${event.delta || ""}`);
+      } else if (event.type === "error") {
+        log(events, `ERROR ${event.error?.type || ""}: ${event.error?.message || JSON.stringify(event)}`);
+      }
+      log(events, event.type || JSON.stringify(event));
+    }
+
+    async function connect() {
+      if (ws && ws.readyState === WebSocket.OPEN) return;
+      setState("Connecting", "warn");
+      await ensurePlayback();
+      ws = new WebSocket(serverUrl.value.trim());
+      ws.addEventListener("open", () => {
+        setState("Connected", "ok");
+        connectButton.disabled = true;
+        disconnectButton.disabled = false;
+        startMicButton.disabled = false;
+        sendTextButton.disabled = false;
+        log(events, "connected");
+      });
+      ws.addEventListener("message", (message) => {
+        try {
+          handleEvent(JSON.parse(message.data));
+        } catch (error) {
+          log(events, `bad event: ${error.message}`);
+        }
+      });
+      ws.addEventListener("close", () => {
+        setState("Disconnected");
+        connectButton.disabled = false;
+        disconnectButton.disabled = true;
+        startMicButton.disabled = true;
+        stopMicButton.disabled = true;
+        sendTextButton.disabled = true;
+        log(events, "disconnected");
+      });
+      ws.addEventListener("error", () => {
+        setState("Socket error");
+        log(events, "websocket error");
+      });
+    }
+
+    async function startMic() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        }
+      });
+      micContext = new AudioContext();
+      micSource = micContext.createMediaStreamSource(micStream);
+      micProcessor = micContext.createScriptProcessor(2048, 1, 1);
+      micProcessor.onaudioprocess = (event) => {
+        const input = event.inputBuffer.getChannelData(0);
+        let peak = 0;
+        for (const sample of input) peak = Math.max(peak, Math.abs(sample));
+        level.style.width = `${Math.min(100, peak * 180)}%`;
+        const pcm16 = float32ToPcm16(resample(input, micContext.sampleRate, 16000));
+        send({ type: "input_audio_buffer.append", audio: bytesToB64(pcm16) });
+      };
+      micSource.connect(micProcessor);
+      micProcessor.connect(micContext.destination);
+      startMicButton.disabled = true;
+      stopMicButton.disabled = false;
+      log(events, "mic started");
+    }
+
+    async function stopMic() {
+      if (micProcessor) micProcessor.disconnect();
+      if (micSource) micSource.disconnect();
+      if (micStream) micStream.getTracks().forEach((track) => track.stop());
+      if (micContext) await micContext.close();
+      micProcessor = null;
+      micSource = null;
+      micStream = null;
+      micContext = null;
+      level.style.width = "0";
+      startMicButton.disabled = !(ws && ws.readyState === WebSocket.OPEN);
+      stopMicButton.disabled = true;
+      log(events, "mic stopped");
+    }
+
+    function sendText() {
+      const text = textPrompt.value.trim();
+      if (!text) return;
+      const id = `msg_${Date.now()}_${seq++}`;
+      log(conversation, `You: ${text}`);
+      send({
+        type: "conversation.item.create",
+        item: {
+          id,
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text }]
+        }
+      });
+      send({
+        type: "response.create",
+        response: {
+          modalities: ["audio", "text"]
+        }
+      });
+    }
+
+    connectButton.addEventListener("click", connect);
+    disconnectButton.addEventListener("click", () => ws?.close());
+    startMicButton.addEventListener("click", () => startMic().catch((error) => log(events, `mic error: ${error.message}`)));
+    stopMicButton.addEventListener("click", () => stopMic().catch((error) => log(events, `mic stop error: ${error.message}`)));
+    sendTextButton.addEventListener("click", sendText);
+    clearLogButton.addEventListener("click", () => {
+      conversation.textContent = "";
+      events.textContent = "";
+    });
+    textPrompt.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") sendText();
+    });
+  </script>
+</body>
+</html>

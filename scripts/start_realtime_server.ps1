@@ -13,5 +13,7 @@ if (-not (Test-Path $SpeechToSpeech)) {
     throw "Missing speech-to-speech in the project venv. Install it with: .\.venv\Scripts\python.exe -m pip install -e .[realtime]"
 }
 
+$env:PYTHONIOENCODING = "utf-8"
+
 Write-Host "Starting Robot 790 realtime server at ws://$HostAddress`:$Port/v1/realtime"
-& $SpeechToSpeech serve --host $HostAddress --port $Port @ExtraArgs
+& $SpeechToSpeech --mode realtime --ws_host $HostAddress --ws_port $Port @ExtraArgs
