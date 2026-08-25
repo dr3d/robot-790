@@ -139,19 +139,49 @@ void drawEye(Arduino_GFX *gfx, int pupilX, int pupilY, bool left)
 {
   constexpr int cx = FACE_EYE_WIDTH / 2;
   constexpr int cy = FACE_EYE_HEIGHT / 2;
+  const uint16_t sclera = 0xE73C;
+  const uint16_t scleraShadow = 0xBDF7;
+  const uint16_t irisOuter = 0x01EC;
+  const uint16_t irisMid = 0x04F3;
+  const uint16_t irisInner = 0x3E3F;
+  const uint16_t limbal = 0x0188;
+  const uint16_t pupil = BLACK;
+  const int ix = cx + pupilX;
+  const int iy = cy + pupilY;
+
   gfx->fillScreen(BLACK);
-  gfx->fillCircle(cx, cy, 112, WHITE);
-  gfx->fillCircle(cx, cy, 108, 0xDFF7);
-  gfx->fillCircle(cx + pupilX, cy + pupilY, 45, 0x05B7);
-  gfx->fillCircle(cx + pupilX, cy + pupilY, 26, BLACK);
-  gfx->fillCircle(cx + pupilX - 12, cy + pupilY - 15, 8, WHITE);
-  gfx->drawCircle(cx, cy, 113, 0x39E7);
-  gfx->drawCircle(cx, cy, 114, 0x18E3);
-  if (left) {
-    gfx->fillTriangle(6, 34, 74, 8, 27, 72, BLACK);
-  } else {
-    gfx->fillTriangle(FACE_EYE_WIDTH - 6, 34, FACE_EYE_WIDTH - 74, 8, FACE_EYE_WIDTH - 27, 72, BLACK);
+  gfx->fillCircle(cx, cy, 114, 0x18E3);
+  gfx->fillCircle(cx, cy, 110, sclera);
+  gfx->fillCircle(cx, cy + 8, 102, WHITE);
+  gfx->fillCircle(cx, cy + 30, 84, scleraShadow);
+  gfx->fillCircle(cx, cy + 22, 84, WHITE);
+
+  gfx->fillCircle(ix, iy, 52, limbal);
+  gfx->fillCircle(ix, iy, 46, irisOuter);
+  gfx->fillCircle(ix, iy, 36, irisMid);
+  gfx->fillCircle(ix, iy, 24, irisInner);
+  for (int a = 0; a < 360; a += 24) {
+    const float r = a * 0.0174533f;
+    const int x1 = ix + static_cast<int>(cosf(r) * 12.0f);
+    const int y1 = iy + static_cast<int>(sinf(r) * 12.0f);
+    const int x2 = ix + static_cast<int>(cosf(r) * 46.0f);
+    const int y2 = iy + static_cast<int>(sinf(r) * 46.0f);
+    gfx->drawLine(x1, y1, x2, y2, 0x03AE);
   }
+  gfx->fillCircle(ix, iy, 25, pupil);
+  gfx->fillCircle(ix - 13, iy - 17, 8, WHITE);
+  gfx->fillCircle(ix + 10, iy - 6, 4, 0xBDF7);
+
+  gfx->fillRect(0, 0, FACE_EYE_WIDTH, 32, BLACK);
+  gfx->fillRect(0, FACE_EYE_HEIGHT - 24, FACE_EYE_WIDTH, 24, BLACK);
+  if (left) {
+    gfx->fillTriangle(0, 32, 78, 18, 0, 78, BLACK);
+    gfx->fillTriangle(FACE_EYE_WIDTH, 20, FACE_EYE_WIDTH - 50, 31, FACE_EYE_WIDTH, 76, BLACK);
+  } else {
+    gfx->fillTriangle(FACE_EYE_WIDTH, 32, FACE_EYE_WIDTH - 78, 18, FACE_EYE_WIDTH, 78, BLACK);
+    gfx->fillTriangle(0, 20, 50, 31, 0, 76, BLACK);
+  }
+  gfx->drawCircle(cx, cy, 114, 0x39E7);
 }
 
 void drawEyeTestPattern(Arduino_GFX *gfx, const char *label, uint16_t color)
@@ -190,7 +220,7 @@ void drawEyesTestPattern(const String &target = "both")
 #endif
 }
 
-void drawEyesFrame()
+void drawEyesFrame(const String &target = "both")
 {
 #if FACE_EXTERNAL_EYES_ENABLED
   if (!eyesOk) {
@@ -201,10 +231,14 @@ void drawEyesFrame()
   const int y = static_cast<int>(sinf(t * 0.53f + 1.4f) * 16.0f);
   digitalWrite(FACE_EYE_LEFT_CS, HIGH);
   digitalWrite(FACE_EYE_RIGHT_CS, HIGH);
-  drawEye(leftEye, x, y, true);
-  digitalWrite(FACE_EYE_LEFT_CS, HIGH);
-  digitalWrite(FACE_EYE_RIGHT_CS, HIGH);
-  drawEye(rightEye, x, y, false);
+  if (target == "both" || target == "left") {
+    drawEye(leftEye, x, y, true);
+    digitalWrite(FACE_EYE_LEFT_CS, HIGH);
+    digitalWrite(FACE_EYE_RIGHT_CS, HIGH);
+  }
+  if (target == "both" || target == "right") {
+    drawEye(rightEye, x, y, false);
+  }
   digitalWrite(FACE_EYE_LEFT_CS, HIGH);
   digitalWrite(FACE_EYE_RIGHT_CS, HIGH);
 #endif
@@ -233,7 +267,7 @@ void initEyes()
   eyesOk = leftOk && rightOk;
   Serial.printf("external_eyes=%s left=%d right=%d\n", eyesOk ? "ok" : "missing", leftOk, rightOk);
   if (eyesOk) {
-    drawEyesTestPattern();
+    drawEyesFrame();
   }
 #else
   eyesOk = false;
@@ -424,12 +458,12 @@ void handleEyes()
   if (server.hasArg("animate")) {
     eyesAnimate = server.arg("animate") == "1" || server.arg("animate") == "true";
   }
-  const String pattern = server.hasArg("pattern") ? server.arg("pattern") : "test";
+  const String pattern = server.hasArg("pattern") ? server.arg("pattern") : "eye";
   const String target = server.hasArg("target") ? server.arg("target") : "both";
-  if (pattern == "gaze") {
-    drawEyesFrame();
-  } else {
+  if (pattern == "test") {
     drawEyesTestPattern(target);
+  } else {
+    drawEyesFrame(target);
   }
   server.send(200, "text/plain", eyesOk ? "ok\n" : "eyes unavailable\n");
 }
