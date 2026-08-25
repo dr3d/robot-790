@@ -21,6 +21,8 @@ Arduino_DataBus *displayBus = new Arduino_ESP32SPI(
     FACE_LCD_DC, FACE_LCD_CS, FACE_LCD_SCLK, FACE_LCD_MOSI, FACE_LCD_MISO);
 Arduino_GFX *display = new Arduino_ST7789(
     displayBus, FACE_LCD_RST, FACE_LCD_ROTATION, true, FACE_LCD_WIDTH, FACE_LCD_HEIGHT);
+Arduino_Canvas *mouthFrame = new Arduino_Canvas(
+    FACE_LCD_HEIGHT, FACE_LCD_WIDTH, display);
 
 #if FACE_EXTERNAL_EYES_ENABLED
 Arduino_DataBus *leftEyeBus = new Arduino_ESP32SPI(
@@ -43,6 +45,7 @@ AccelData accel = {};
 GyroData gyro = {};
 
 bool displayOk = false;
+bool mouthFrameOk = false;
 bool eyesOk = false;
 bool touchSeen = false;
 bool imuOk = false;
@@ -73,6 +76,11 @@ constexpr uint32_t API_DEFAULT_MOOD_MS = 3500;
 constexpr uint32_t API_DEFAULT_EXPR_MS = 8000;
 constexpr uint32_t API_DEFAULT_GAZE_HOLD_MS = 1200;
 constexpr uint32_t API_DEFAULT_GAZE_MOVE_MS = 160;
+constexpr uint32_t API_DEFAULT_MOUTH_MS = 2500;
+constexpr uint32_t MOUTH_TRANSITION_MS = 220;
+constexpr uint32_t MOUTH_TALK_ATTACK_MS = 90;
+constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
+constexpr uint32_t MOUTH_FRAME_MS = 80;
 constexpr uint32_t EYE_FRAME_MS = 50;
 
 uint16_t rgb(uint8_t r, uint8_t g, uint8_t b)
@@ -185,6 +193,24 @@ enum class EyeRenderStyle : uint8_t {
   Sleepy
 };
 
+enum class MouthStyle : uint8_t {
+  Human,
+  Robot
+};
+
+enum class MouthShape : uint8_t {
+  Neutral,
+  Smile,
+  SmirkLeft,
+  SmirkRight,
+  Open,
+  Wide,
+  Frown,
+  Grimace,
+  Sneer,
+  Sleep
+};
+
 enum class IdleBeat : uint8_t {
   None,
   Inspect,
@@ -254,6 +280,36 @@ struct ApiState {
   uint32_t gazeUntil = 0;
 };
 
+struct MouthPose {
+  MouthPose() = default;
+  MouthPose(float openValue, float widthValue, float curveValue, float skewValue, float teethValue, float tensionValue)
+    : open(openValue), width(widthValue), curve(curveValue), skew(skewValue), teeth(teethValue), tension(tensionValue) {}
+
+  float open = 0.0f;
+  float width = 0.0f;
+  float curve = 0.0f;
+  float skew = 0.0f;
+  float teeth = 0.0f;
+  float tension = 0.0f;
+};
+
+struct MouthState {
+  MouthStyle style = MouthStyle::Human;
+  MouthShape shape = MouthShape::Neutral;
+  MouthShape renderedShape = MouthShape::Neutral;
+  bool overrideShape = false;
+  bool talking = false;
+  bool poseInitialized = false;
+  uint32_t overrideUntil = 0;
+  uint32_t poseStarted = 0;
+  uint32_t talkUpdated = 0;
+  float energy = 0.45f;
+  float talkLevel = 0.0f;
+  MouthPose poseFrom;
+  MouthPose poseTo;
+  MouthPose poseNow;
+};
+
 struct IdleDirector {
   bool active = false;
   IdleBeat beat = IdleBeat::None;
@@ -268,11 +324,137 @@ MoodState moodState;
 GazeState gazeState;
 BlinkState blinkState;
 ApiState apiState;
+MouthState mouthState;
 IdleDirector idleDirector;
 EyeRenderStyle eyeRenderStyle = EyeRenderStyle::Robot;
 float pupilRadius = 15.5f;
 uint32_t lastUpdate = 0;
 uint32_t lastEyeFrame = 0;
+uint32_t lastMouthFrame = 0;
+
+const char FACE_UI_HTML[] PROGMEM = R"FACEUI(
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Robot 790 Face Brain</title>
+<style>
+:root{color-scheme:dark;--bg:#08090d;--panel:#141720;--panel2:#10131a;--line:#2a3140;--text:#eef2f6;--muted:#9aa6b2;--accent:#55c7ff;--ok:#68d391;--warn:#f6ad55;--bad:#fc8181}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}h1{font-size:20px;margin:0 0 4px}p{margin:0;color:var(--muted)}button,select,input{font:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:12px}.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}.card h2{font-size:15px;margin:0 0 10px}
+.row{display:grid;grid-template-columns:95px 1fr;align-items:center;gap:8px;margin:8px 0}.row label{color:var(--muted)}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button{border:1px solid var(--line);background:#202633;color:var(--text);border-radius:7px;padding:7px 10px;cursor:pointer}button:hover{border-color:var(--accent)}button.primary{background:#0f3f5b;border-color:#217aa8}button.warn{background:#46301a;border-color:#8a5c24}
+select,input{width:100%;min-width:0;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:7px;padding:7px}input[type=range]{padding:0}.status{white-space:pre-wrap;background:#07080b;border:1px solid var(--line);border-radius:8px;padding:10px;min-height:180px;color:#cbd5df;font:12px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 9px;color:var(--muted)}.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div><h1>Robot 790 Face Brain</h1><p>Direct ESP32-S3 test panel for external eyes, built-in mouth, gaze, and idle beats.</p></div>
+<div class="pill"><span id="dot" class="dot"></span><span id="summary">connecting</span></div>
+</header>
+<section class="grid">
+<div class="card">
+<h2>Eyes</h2>
+<div class="row"><label for="style">Style</label><select id="style"></select></div>
+<div class="actions"><button class="primary" data-post="/style" data-select="style" data-key="name">Apply Style</button></div>
+<div class="row"><label for="mood">Mood</label><select id="mood"></select></div>
+<div class="row"><label for="moodDur">Duration s</label><input id="moodDur" type="number" min="0" step="0.1" value="4"></div>
+<div class="actions">
+<button data-post="/mood" data-select="mood" data-key="name" data-duration="moodDur">Mood</button>
+<button data-post="/expression" data-select="mood" data-key="name" data-duration="moodDur">Expression</button>
+</div>
+</div>
+<div class="card">
+<h2>Mouth</h2>
+<div class="row"><label for="mouthStyle">Style</label><select id="mouthStyle"></select></div>
+<div class="row"><label for="mouthShape">Shape</label><select id="mouthShape"></select></div>
+<div class="row"><label for="energy">Energy</label><input id="energy" type="range" min="0" max="1" step="0.05" value="0.65"></div>
+<div class="row"><label for="mouthDur">Duration s</label><input id="mouthDur" type="number" min="0" step="0.1" value="0"></div>
+<div class="actions">
+<button class="primary" id="mouthApply">Apply</button>
+<button id="mouthTalk">Talk</button>
+<button id="mouthStop">Stop Talk</button>
+<button id="mouthAuto">Auto</button>
+</div>
+</div>
+<div class="card">
+<h2>Gaze</h2>
+<div class="row"><label for="gx">X left/right</label><input id="gx" type="range" min="-1" max="1" step="0.05" value="0"></div>
+<div class="row"><label for="gy">Y up/down</label><input id="gy" type="range" min="-1" max="1" step="0.05" value="0"></div>
+<div class="row"><label for="gdur">Hold s</label><input id="gdur" type="number" min="0" step="0.1" value="0"></div>
+<div class="row"><label for="gmove">Move ms</label><input id="gmove" type="number" min="0" step="10" value="180"></div>
+<div class="actions">
+<button class="primary" id="gazeApply">Apply Gaze</button>
+<button id="gazeCenter">Center</button>
+<button id="gazeAuto">Auto</button>
+</div>
+</div>
+<div class="card">
+<h2>Idle Beats</h2>
+<div class="row"><label for="beat">Beat</label><select id="beat"></select></div>
+<div class="actions">
+<button class="primary" data-post="/beat" data-select="beat" data-key="name">Play Beat</button>
+<button id="idleOn">Idle On</button>
+<button id="idleOff">Idle Off</button>
+</div>
+</div>
+<div class="card">
+<h2>Quick Actions</h2>
+<div class="actions">
+<button id="blink">Blink</button>
+<button id="doubleBlink">Double Blink</button>
+<button id="winkL">Wink L</button>
+<button id="winkR">Wink R</button>
+<button class="warn" id="sleep">Sleep</button>
+<button class="primary" id="release">Release</button>
+</div>
+</div>
+<div class="card">
+<h2>Status</h2>
+<div id="status" class="status">loading...</div>
+<div class="actions"><button id="refresh">Refresh</button></div>
+</div>
+</section>
+</main>
+<script>
+const fallback={style:["friendly","classic","cartoony","robot","sinister","sleepy"],mood:["calm","curious","surprised","suspicious","afraid","angry","sleepy","sleep","goofy","robotic","wonder","glitchy","happy","delighted","bashful","bored","focused","confused","proud","mischief","affection"],beat:["slow_smile","affection","inspect","thoughtful","daydream","mischief","confused","focus_lock","double_take","goofy","drowsy","robot_scan","wary","startle"],mouthStyle:["human","robot"],mouthShape:["neutral","smile","smirk_left","smirk_right","open","wide","frown","grimace","sneer","sleep"]};
+const $=id=>document.getElementById(id);
+function fill(id,values){$(id).innerHTML=values.map(v=>'<option value="'+v+'">'+v+'</option>').join("")}
+async function values(path,key,id){try{const r=await fetch(path);const j=await r.json();fill(id,j[key]||fallback[id])}catch(e){fill(id,fallback[id])}}
+async function post(path,payload={}){const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const j=await r.json().catch(()=>({ok:false,error:"bad json"}));if(!r.ok||j.ok===false)throw new Error(j.error||r.statusText);render(j);return j}
+function number(id){return Number($(id).value)}
+function render(j){if(!j||!j.ok)return;const mouth=j.mouth||{};$("dot").className="dot ok";$("summary").textContent=(j.mood||"?")+" / "+(j.style||"?")+" / "+(mouth.shape||"?");$("status").textContent=JSON.stringify(j,null,2)}
+async function refresh(){try{const r=await fetch("/state");render(await r.json())}catch(e){$("dot").className="dot bad";$("summary").textContent=e.message;$("status").textContent=e.stack||e.message}}
+function payloadFromButton(b){const p={};if(b.dataset.select)p[b.dataset.key||"name"]=$(b.dataset.select).value;if(b.dataset.duration)p.duration=number(b.dataset.duration);return p}
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;try{
+if(b.dataset.post){await post(b.dataset.post,payloadFromButton(b));return}
+if(b.id==="mouthApply")await post("/mouth",{style:$("mouthStyle").value,shape:$("mouthShape").value,energy:number("energy"),duration:number("mouthDur")});
+else if(b.id==="mouthTalk")await post("/mouth",{style:$("mouthStyle").value,shape:$("mouthShape").value,talking:true,energy:number("energy"),duration:number("mouthDur")});
+else if(b.id==="mouthStop")await post("/mouth",{talking:false,duration:number("mouthDur")});
+else if(b.id==="mouthAuto")await post("/mouth",{auto:true});
+else if(b.id==="gazeApply")await post("/gaze",{x:number("gx"),y:number("gy"),duration:number("gdur"),move_ms:number("gmove")});
+else if(b.id==="gazeCenter")await post("/gaze",{x:0,y:0,duration:number("gdur"),move_ms:number("gmove")});
+else if(b.id==="gazeAuto")await post("/gaze","auto");
+else if(b.id==="idleOn")await post("/control",{idle:true});
+else if(b.id==="idleOff")await post("/control",{idle:false});
+else if(b.id==="blink")await post("/control",{blink:true,duration_ms:420});
+else if(b.id==="doubleBlink")await post("/control",{blink:true,double:true,duration_ms:260});
+else if(b.id==="winkL")await post("/control",{wink:true,eye:"left",duration_ms:650});
+else if(b.id==="winkR")await post("/control",{wink:true,eye:"right",duration_ms:650});
+else if(b.id==="sleep")await post("/control",{sleep:true,duration:0});
+else if(b.id==="release")await post("/control",{release:true});
+else if(b.id==="refresh")await refresh();
+}catch(err){$("dot").className="dot bad";$("summary").textContent=err.message;$("status").textContent=err.stack||err.message}});
+async function init(){await Promise.all([values("/styles","styles","style"),values("/moods","moods","mood"),values("/beats","beats","beat"),values("/mouth_styles","mouth_styles","mouthStyle"),values("/mouth_shapes","mouth_shapes","mouthShape")]);await refresh();setInterval(refresh,2500)}
+init();
+</script>
+</body>
+</html>
+)FACEUI";
 
 const char *moodName(Mood mood)
 {
@@ -352,6 +534,140 @@ bool parseEyeStyleName(const char *text, EyeRenderStyle &style)
   else if (equalsIgnoreCase(text, "sleepy") || equalsIgnoreCase(text, "steel")) style = EyeRenderStyle::Sleepy;
   else return false;
   return true;
+}
+
+const char *mouthStyleName(MouthStyle style)
+{
+  switch (style) {
+    case MouthStyle::Robot: return "robot";
+    case MouthStyle::Human:
+    default: return "human";
+  }
+}
+
+bool parseMouthStyleName(const char *text, MouthStyle &style)
+{
+  if (equalsIgnoreCase(text, "human") || equalsIgnoreCase(text, "humanistic") || equalsIgnoreCase(text, "790")) {
+    style = MouthStyle::Human;
+  } else if (equalsIgnoreCase(text, "robot") || equalsIgnoreCase(text, "simple")) {
+    style = MouthStyle::Robot;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+const char *mouthShapeName(MouthShape shape)
+{
+  switch (shape) {
+    case MouthShape::Smile: return "smile";
+    case MouthShape::SmirkLeft: return "smirk_left";
+    case MouthShape::SmirkRight: return "smirk_right";
+    case MouthShape::Open: return "open";
+    case MouthShape::Wide: return "wide";
+    case MouthShape::Frown: return "frown";
+    case MouthShape::Grimace: return "grimace";
+    case MouthShape::Sneer: return "sneer";
+    case MouthShape::Sleep: return "sleep";
+    case MouthShape::Neutral:
+    default: return "neutral";
+  }
+}
+
+bool parseMouthShapeName(const char *text, MouthShape &shape)
+{
+  if (equalsIgnoreCase(text, "neutral") || equalsIgnoreCase(text, "flat") || equalsIgnoreCase(text, "line")) {
+    shape = MouthShape::Neutral;
+  } else if (equalsIgnoreCase(text, "smile") || equalsIgnoreCase(text, "happy")) {
+    shape = MouthShape::Smile;
+  } else if (equalsIgnoreCase(text, "smirk_left") || equalsIgnoreCase(text, "left_smirk")) {
+    shape = MouthShape::SmirkLeft;
+  } else if (equalsIgnoreCase(text, "smirk_right") || equalsIgnoreCase(text, "smirk") ||
+             equalsIgnoreCase(text, "right_smirk")) {
+    shape = MouthShape::SmirkRight;
+  } else if (equalsIgnoreCase(text, "open") || equalsIgnoreCase(text, "talk") || equalsIgnoreCase(text, "speaking")) {
+    shape = MouthShape::Open;
+  } else if (equalsIgnoreCase(text, "wide") || equalsIgnoreCase(text, "surprised") || equalsIgnoreCase(text, "shout")) {
+    shape = MouthShape::Wide;
+  } else if (equalsIgnoreCase(text, "frown") || equalsIgnoreCase(text, "sad")) {
+    shape = MouthShape::Frown;
+  } else if (equalsIgnoreCase(text, "grimace") || equalsIgnoreCase(text, "teeth") || equalsIgnoreCase(text, "tense")) {
+    shape = MouthShape::Grimace;
+  } else if (equalsIgnoreCase(text, "sneer") || equalsIgnoreCase(text, "sinister")) {
+    shape = MouthShape::Sneer;
+  } else if (equalsIgnoreCase(text, "sleep") || equalsIgnoreCase(text, "blank")) {
+    shape = MouthShape::Sleep;
+  } else {
+    return false;
+  }
+  return true;
+}
+
+MouthPose mouthPoseFor(MouthShape shape)
+{
+  switch (shape) {
+    case MouthShape::Smile: return {0.22f, 0.78f, 0.55f, 0.0f, 0.0f, 0.16f};
+    case MouthShape::SmirkLeft: return {0.22f, 0.70f, 0.70f, -0.92f, 0.0f, 0.48f};
+    case MouthShape::SmirkRight: return {0.22f, 0.70f, 0.70f, 0.92f, 0.0f, 0.48f};
+    case MouthShape::Open: return {0.58f, 0.64f, 0.05f, 0.0f, 0.0f, 0.18f};
+    case MouthShape::Wide: return {0.84f, 0.76f, 0.04f, 0.0f, 0.0f, 0.22f};
+    case MouthShape::Frown: return {0.18f, 0.64f, -0.54f, 0.0f, 0.0f, 0.30f};
+    case MouthShape::Grimace: return {0.32f, 0.80f, -0.08f, 0.0f, 0.78f, 0.88f};
+    case MouthShape::Sneer: return {0.24f, 0.70f, -0.20f, -0.22f, 0.22f, 0.62f};
+    case MouthShape::Sleep: return {0.05f, 0.44f, -0.08f, 0.0f, 0.0f, 0.08f};
+    case MouthShape::Neutral:
+    default: return {0.12f, 0.60f, 0.0f, 0.0f, 0.0f, 0.12f};
+  }
+}
+
+MouthPose mixMouthPose(const MouthPose &a, const MouthPose &b, float t)
+{
+  return {
+    a.open + (b.open - a.open) * t,
+    a.width + (b.width - a.width) * t,
+    a.curve + (b.curve - a.curve) * t,
+    a.skew + (b.skew - a.skew) * t,
+    a.teeth + (b.teeth - a.teeth) * t,
+    a.tension + (b.tension - a.tension) * t
+  };
+}
+
+MouthShape mouthShapeForMood(Mood mood)
+{
+  switch (mood) {
+    case Mood::Happy:
+    case Mood::Delighted:
+    case Mood::Affection:
+    case Mood::Proud:
+    case Mood::Bashful:
+      return MouthShape::Smile;
+    case Mood::Suspicious:
+    case Mood::Mischief:
+      return MouthShape::SmirkRight;
+    case Mood::Angry:
+      return MouthShape::Sneer;
+    case Mood::Afraid:
+    case Mood::Surprised:
+    case Mood::Wonder:
+      return MouthShape::Open;
+    case Mood::Confused:
+    case Mood::Goofy:
+      return MouthShape::SmirkLeft;
+    case Mood::Sleepy:
+      return MouthShape::Frown;
+    case Mood::Sleep:
+      return MouthShape::Sleep;
+    case Mood::Focused:
+    case Mood::Robotic:
+      return MouthShape::Grimace;
+    case Mood::Glitchy:
+      return MouthShape::Wide;
+    case Mood::Bored:
+    case Mood::Curious:
+    case Mood::Calm:
+    default:
+      return MouthShape::Neutral;
+  }
 }
 
 LidPose poseFor(Mood mood, bool leftEye)
@@ -1123,14 +1439,17 @@ void renderEyeFrame(bool leftEye, uint32_t now)
     gaze.y -= 8.0f;
   }
 
-  fillEllipse(g, EYE_CX, EYE_CY, 114, 80, rgb(240, 238, 228));
-  fillEllipse(g, EYE_CX, EYE_CY + 3, 105, 68, WHITE);
+  if (eyeRenderStyle == EyeRenderStyle::Robot) {
+    fillEllipse(g, EYE_CX, EYE_CY, 114, 80, WHITE);
+  } else {
+    fillEllipse(g, EYE_CX, EYE_CY, 114, 80, rgb(240, 238, 228));
+    fillEllipse(g, EYE_CX, EYE_CY + 3, 105, 68, WHITE);
+  }
   drawIris(g, EYE_CX + int16_t(gaze.x), EYE_CY + int16_t(gaze.y), pupilRadius, leftEye);
   if (mood == Mood::Delighted || mood == Mood::Affection) {
     drawSparkle(g, leftEye ? 186 : 52, 68, 4, rgb(246, 248, 221));
   }
   drawLids(g, blendedPose(leftEye, now), blinkClosedForEye(now, leftEye));
-  g.drawCircle(EYE_CX, EYE_CY, 114, rgb(56, 62, 72));
 #endif
 }
 
@@ -1194,6 +1513,229 @@ void drawEyesFrame(const String &target = "both")
 #endif
 }
 
+void updateMouth(uint32_t now)
+{
+  if (mouthState.overrideShape && mouthState.overrideUntil != 0 && deadlineReached(now, mouthState.overrideUntil)) {
+    mouthState.overrideShape = false;
+    mouthState.talking = false;
+  }
+  if (mouthState.talkUpdated == 0) mouthState.talkUpdated = now;
+  const uint32_t elapsed = now - mouthState.talkUpdated;
+  mouthState.talkUpdated = now;
+  const float target = mouthState.talking ? 1.0f : 0.0f;
+  const uint32_t rateMs = target > mouthState.talkLevel ? MOUTH_TALK_ATTACK_MS : MOUTH_TALK_RELEASE_MS;
+  const float step = rateMs == 0 ? 1.0f : clampf(float(elapsed) / float(rateMs), 0.0f, 1.0f);
+  mouthState.talkLevel += (target - mouthState.talkLevel) * step;
+}
+
+MouthShape activeMouthShape(uint32_t now)
+{
+  if (mouthState.overrideShape) return mouthState.shape;
+  return mouthShapeForMood(currentMood(now));
+}
+
+MouthPose easedMouthPose(MouthShape shape, uint32_t now)
+{
+  const MouthPose target = mouthPoseFor(shape);
+  if (!mouthState.poseInitialized) {
+    mouthState.renderedShape = shape;
+    mouthState.poseFrom = target;
+    mouthState.poseTo = target;
+    mouthState.poseNow = target;
+    mouthState.poseStarted = now;
+    mouthState.poseInitialized = true;
+    return target;
+  }
+  if (shape != mouthState.renderedShape) {
+    mouthState.renderedShape = shape;
+    mouthState.poseFrom = mouthState.poseNow;
+    mouthState.poseTo = target;
+    mouthState.poseStarted = now;
+  }
+  const float t = smoothstep(float(now - mouthState.poseStarted) / float(MOUTH_TRANSITION_MS));
+  mouthState.poseNow = mixMouthPose(mouthState.poseFrom, mouthState.poseTo, t);
+  return mouthState.poseNow;
+}
+
+void drawMouthTeeth(Arduino_GFX &g, int16_t x, int16_t y, int16_t w, int16_t h, float amount)
+{
+  if (amount <= 0.01f || h < 12 || w < 36) return;
+  const int16_t teethH = int16_t(clampf(float(h) * (0.24f + amount * 0.18f), 5.0f, 22.0f));
+  const uint16_t enamel = rgb(238, 228, 198);
+  const uint16_t line = rgb(126, 104, 98);
+  g.fillRoundRect(x, y, w, teethH, 5, enamel);
+  g.drawFastHLine(x + 4, y + teethH - 1, w - 8, line);
+  for (int16_t tx = x + 28; tx < x + w - 14; tx += 36) {
+    g.drawFastVLine(tx, y + 2, teethH - 4, line);
+  }
+}
+
+void drawMouthTongue(Arduino_GFX &g, int16_t cx, int16_t y, int16_t rx, int16_t ry)
+{
+  if (rx < 14 || ry < 4) return;
+  const uint16_t tongue = rgb(162, 54, 72);
+  const uint16_t tongueHi = rgb(218, 94, 106);
+  fillEllipse(g, cx, y, rx, ry, tongue);
+  fillEllipse(g, cx - rx / 5, y - ry / 4, max(int16_t(4), int16_t(rx / 3)), max(int16_t(2), int16_t(ry / 4)), tongueHi);
+}
+
+void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
+{
+  if (!displayOk) return;
+  Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
+  const int16_t screenW = g.width();
+  const int16_t screenH = g.height();
+  const int16_t cx0 = screenW / 2;
+  const int16_t cy0 = screenH / 2;
+
+  if (mouthState.talkLevel > 0.01f) {
+    const float pulse = clampf(0.58f + 0.32f * sinf(float(now) * 0.037f) +
+                                0.18f * sinf(float(now) * 0.071f + 1.7f), 0.0f, 1.0f);
+    pose.open = max(pose.open, 0.18f + mouthState.energy * 0.70f * pulse * mouthState.talkLevel);
+    pose.width = max(pose.width, 0.56f + mouthState.energy * 0.20f * mouthState.talkLevel);
+  }
+
+  g.fillScreen(BLACK);
+
+  if (shape == MouthShape::Sleep && mouthState.talkLevel <= 0.01f &&
+      uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS) {
+    const int16_t sleepW = screenW - 84;
+    const int16_t sleepX = (screenW - sleepW) / 2;
+    const int16_t sleepY = cy0 - 8;
+    g.fillRoundRect(sleepX, sleepY, sleepW, 16, 8, rgb(118, 28, 44));
+    g.drawFastHLine(sleepX + 24, sleepY + 3, sleepW - 58, rgb(218, 92, 102));
+    g.drawFastHLine(sleepX + 30, sleepY + 13, sleepW - 70, rgb(58, 8, 22));
+    if (mouthFrameOk) mouthFrame->flush();
+    return;
+  }
+
+  const int16_t mouthW = int16_t(clampf(124.0f + pose.width * 210.0f, 120.0f, float(screenW - 26)));
+  const int16_t openH = int16_t(clampf(7.0f + pose.open * 88.0f, 5.0f, float(screenH - 92)));
+  const int16_t lipH = int16_t(clampf(26.0f + pose.open * 28.0f + pose.tension * 7.0f, 24.0f, 58.0f));
+  const int16_t driftX = mouthState.talkLevel > 0.01f
+    ? int16_t(5.0f * sinf(float(now) * 0.0031f) + 2.0f * sinf(float(now) * 0.0071f + 1.4f))
+    : 0;
+  const int16_t driftY = mouthState.talkLevel > 0.01f
+    ? int16_t(2.0f * sinf(float(now) * 0.0027f + 0.6f))
+    : 0;
+  const bool isSmirk = shape == MouthShape::SmirkLeft || shape == MouthShape::SmirkRight;
+  const int16_t cx = cx0 + int16_t(pose.skew * (isSmirk ? 38.0f : 20.0f)) + driftX;
+  const int16_t cy = cy0 + int16_t(pose.tension * 4.0f) + driftY;
+  const int16_t curve = int16_t(pose.curve * 18.0f);
+  const int16_t asym = (mouthState.talkLevel > 0.01f
+                          ? int16_t(5.0f * mouthState.talkLevel *
+                                    sinf(float(now) * 0.0041f + pose.width * 3.1f))
+                          : 0) +
+                       int16_t(pose.skew * (isSmirk ? 22.0f : 12.0f));
+  const int16_t cavityW = int16_t(float(mouthW) * (0.86f - pose.tension * 0.05f));
+  const int16_t cavityH = max(int16_t(5), openH);
+  const int16_t topCy = cy - cavityH / 2 - lipH / 3 - curve / 3;
+  const int16_t bottomCy = cy + cavityH / 2 + lipH / 3 - curve / 5;
+  int16_t leftCornerY = cy - curve + int16_t(pose.tension * 2.0f) + asym / 3;
+  int16_t rightCornerY = cy - curve + int16_t(pose.tension * 2.0f) - asym / 4;
+  if (isSmirk) {
+    const int16_t lift = int16_t(fabsf(pose.skew) * 15.0f);
+    const int16_t drop = int16_t(fabsf(pose.skew) * 5.0f);
+    if (pose.skew > 0.0f) {
+      rightCornerY -= lift;
+      leftCornerY += drop;
+    } else {
+      leftCornerY -= lift;
+      rightCornerY += drop;
+    }
+  }
+
+  const uint16_t shadow = rgb(28, 0, 10);
+  const uint16_t lip = rgb(156, 38, 58);
+  const uint16_t lipHi = rgb(236, 104, 112);
+  const uint16_t lipLo = rgb(82, 10, 30);
+  const uint16_t cavity = rgb(9, 0, 5);
+
+  fillEllipse(g, cx + asym / 4, cy, mouthW / 2 + 20, cavityH / 2 + lipH + 16, shadow);
+  fillEllipse(g, cx + asym / 5, bottomCy + 2, mouthW / 2 + 16, max(int16_t(18), int16_t(lipH / 2 + 10)), lipLo);
+  fillEllipse(g, cx + asym / 3, bottomCy, mouthW / 2 + 8, max(int16_t(16), int16_t(lipH / 2 + 5)), lip);
+  fillEllipse(g, cx - mouthW / 5 + asym / 2, topCy + asym / 8, mouthW / 3 + 14, max(int16_t(13), int16_t(lipH / 2 + 1)), lipLo);
+  fillEllipse(g, cx + mouthW / 5 + asym / 3, topCy - asym / 10, mouthW / 3 + 5, max(int16_t(12), int16_t(lipH / 2 - 1)), lipLo);
+  fillEllipse(g, cx - mouthW / 5 + asym / 2, topCy - 3 + asym / 8, mouthW / 3 + 6, max(int16_t(11), int16_t(lipH / 2 - 2)), lip);
+  fillEllipse(g, cx + mouthW / 5 + asym / 3, topCy - 4 - asym / 10, max(int16_t(8), int16_t(mouthW / 3 - 1)), max(int16_t(10), int16_t(lipH / 2 - 4)), lip);
+  fillEllipse(g, cx + asym / 3, topCy + lipH / 7, mouthW / 5 + 3, max(int16_t(8), int16_t(lipH / 3)), mixColor(lipLo, lip, 0.36f));
+  g.fillTriangle(cx - 22 + asym / 4, topCy - lipH / 2 + 6, cx + 15 + asym / 4, topCy - lipH / 2 + 4,
+                 cx - 3 + asym / 3, topCy - lipH / 7, lipLo);
+  fillEllipse(g, cx - mouthW / 5 + asym / 2, topCy - lipH / 5, mouthW / 5, max(int16_t(4), int16_t(lipH / 8)), lipHi);
+  fillEllipse(g, cx + mouthW / 6 + asym / 3, topCy - lipH / 6, mouthW / 6, max(int16_t(3), int16_t(lipH / 9)), mixColor(lip, lipHi, 0.50f));
+  fillEllipse(g, cx + mouthW / 10 + asym / 4, bottomCy - lipH / 5, mouthW / 3 + 6, max(int16_t(5), int16_t(lipH / 7)), mixColor(lip, lipHi, 0.50f));
+
+  fillEllipse(g, cx + asym / 3, cy + asym / 12, cavityW / 2, max(int16_t(3), int16_t(cavityH / 2)), cavity);
+  if (cavityH > 16) {
+    drawMouthTongue(g, cx + asym / 4, cy + cavityH / 3 + asym / 12, cavityW / 4, max(int16_t(5), int16_t(cavityH / 5)));
+  } else {
+    g.drawFastHLine(cx + asym / 3 - cavityW / 2 + 10, cy + asym / 12, cavityW - 20, rgb(28, 2, 12));
+  }
+
+  const float teethAmount = max(pose.teeth, pose.open > 0.34f ? clampf((pose.open - 0.30f) * 1.2f, 0.0f, 0.42f) : 0.0f);
+  drawMouthTeeth(g, cx + asym / 3 - cavityW / 2 + 18, cy + asym / 12 - cavityH / 2 + 2, cavityW - 36, cavityH, teethAmount);
+
+  const int16_t leftX = cx - mouthW / 2;
+  const int16_t rightX = cx + mouthW / 2;
+  g.fillCircle(leftX + asym / 3, leftCornerY + int16_t(pose.skew * 10.0f), max(int16_t(9), int16_t(lipH / 3)), mixColor(lipLo, lip, 0.42f));
+  g.fillCircle(rightX + asym / 4, rightCornerY - int16_t(pose.skew * 10.0f), max(int16_t(11), int16_t(lipH / 3)), mixColor(lipLo, lip, 0.48f));
+  if (isSmirk || shape == MouthShape::Sneer) {
+    const bool liftRight = pose.skew > 0.0f;
+    const int16_t creaseX = liftRight ? rightX - 36 + asym / 3 : leftX + 36 + asym / 2;
+    const int16_t creaseY = liftRight ? rightCornerY - 8 : leftCornerY - 8;
+    const int16_t creaseDir = liftRight ? -1 : 1;
+    const int16_t creaseLen = isSmirk ? 34 : 24;
+    g.drawLine(creaseX, creaseY, creaseX + creaseDir * creaseLen, creaseY - 15, lipHi);
+    g.drawLine(creaseX - creaseDir * 2, creaseY + 7, creaseX + creaseDir * (creaseLen - 4), creaseY, lipLo);
+  }
+  if (mouthFrameOk) mouthFrame->flush();
+}
+
+void renderRobotMouth(MouthShape, MouthPose pose, uint32_t now)
+{
+  if (!displayOk) return;
+  Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
+  const int16_t screenW = g.width();
+  const int16_t screenH = g.height();
+  const int16_t panelX = 12;
+  const int16_t panelY = 34;
+  const int16_t panelW = screenW - panelX * 2;
+  const int16_t panelH = screenH - panelY * 2;
+  const float talkBeat = clampf(0.5f + 0.5f * sinf(float(now) * 0.05f), 0.0f, 1.0f);
+  const float beat = mouthState.talkLevel > 0.01f ? pose.open + (talkBeat - pose.open) * mouthState.talkLevel : pose.open;
+
+  g.fillScreen(BLACK);
+  g.fillRoundRect(panelX, panelY, panelW, panelH, 24, rgb(0, 8, 16));
+  g.drawRoundRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2, 23, rgb(30, 118, 132));
+  g.drawRoundRect(panelX + 8, panelY + 8, panelW - 16, panelH - 16, 18, rgb(12, 58, 78));
+
+  constexpr uint8_t barCount = 13;
+  const int16_t gap = max(int16_t(4), int16_t(screenW / 60));
+  const int16_t barW = max(int16_t(8), int16_t((panelW - 54 - gap * (barCount - 1)) / barCount));
+  const int16_t barsW = barCount * barW + (barCount - 1) * gap;
+  const int16_t barsX = screenW / 2 - barsW / 2;
+  const int16_t barsCy = screenH / 2;
+  for (uint8_t i = 0; i < barCount; ++i) {
+    const int16_t x = barsX + int16_t(i) * (barW + gap);
+    const float wave = 0.35f + 0.65f * fabsf(sinf(float(now) * 0.009f + float(i) * 0.8f));
+    const int16_t barH = int16_t(12.0f + float(panelH - 42) * max(beat, pose.open) * wave);
+    g.fillRoundRect(x, barsCy - barH / 2, barW, barH, barW / 2, rgb(44, 220, 232));
+    g.drawFastVLine(x + barW / 3, barsCy - barH / 2 + 5, max(int16_t(1), int16_t(barH - 10)), rgb(132, 248, 255));
+  }
+  if (mouthFrameOk) mouthFrame->flush();
+}
+
+void renderMouth(uint32_t now)
+{
+  const MouthShape shape = activeMouthShape(now);
+  const MouthPose pose = easedMouthPose(shape, now);
+  if (mouthState.style == MouthStyle::Robot) {
+    renderRobotMouth(shape, pose, now);
+  } else {
+    renderHumanMouth(shape, pose, now);
+  }
+}
+
 void initEyes()
 {
 #if FACE_EXTERNAL_EYES_ENABLED
@@ -1234,8 +1776,14 @@ void initDisplay()
   if (displayOk) {
     display->fillScreen(BLACK);
     display->setTextWrap(false);
+    mouthFrameOk = mouthFrame->begin(GFX_SKIP_OUTPUT_BEGIN);
+    if (mouthFrameOk) {
+      mouthFrame->fillScreen(BLACK);
+      mouthFrame->setTextWrap(false);
+      mouthFrame->flush();
+    }
   }
-  Serial.printf("display=%s\n", displayOk ? "ok" : "fail");
+  Serial.printf("display=%s mouth_frame=%s\n", displayOk ? "ok" : "fail", mouthFrameOk ? "ok" : "direct");
 }
 
 void initI2c()
@@ -1443,6 +1991,17 @@ void addState(JsonDocument &doc, uint32_t now)
   doc["backlight"] = backlight;
   doc["message"] = lastMessage;
 
+  JsonObject mouth = doc["mouth"].to<JsonObject>();
+  mouth["present"] = displayOk;
+  mouth["buffered"] = mouthFrameOk;
+  mouth["display_role"] = "mouth";
+  mouth["style"] = mouthStyleName(mouthState.style);
+  mouth["shape"] = mouthShapeName(activeMouthShape(now));
+  mouth["manual"] = mouthState.overrideShape;
+  mouth["talking"] = mouthState.talking;
+  mouth["energy"] = mouthState.energy;
+  mouth["talk_level"] = mouthState.talkLevel;
+
   JsonObject wifi = doc["wifi"].to<JsonObject>();
   wifi["mode"] = wifiStation ? "station" : "ap";
   wifi["connected"] = wifiStation;
@@ -1491,16 +2050,7 @@ void writeStatusJson()
 void handleRoot()
 {
   requests++;
-  String html = F("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
-                  "<title>Robot 790 Face</title><style>body{font:16px system-ui;background:#080b10;color:#f4f7fb;"
-                  "max-width:720px;margin:32px auto;padding:0 20px}code{color:#7dd3fc}button,input{font:inherit;"
-                  "padding:10px;margin:4px;background:#111827;color:#f4f7fb;border:1px solid #334155;border-radius:6px}</style>"
-                  "</head><body><h1>Robot 790 Face Brain</h1><p><code>esp32-face.local</code></p>"
-                  "<pre id='s'>loading</pre><button onclick=\"fetch('/api/display?message=hello%20robot').then(update)\">Display Test</button>"
-                  "<input id='b' type='range' min='0' max='255' value='255' oninput=\"fetch('/api/backlight?value='+this.value)\">"
-                  "<script>async function update(){s.textContent=JSON.stringify(await (await fetch('/api/status')).json(),null,2)}setInterval(update,1000);update()</script>"
-                  "</body></html>");
-  server.send(200, "text/html", html);
+  server.send_P(200, "text/html", FACE_UI_HTML);
 }
 
 void handleDisplay()
@@ -1619,6 +2169,69 @@ bool handleHttpStyleName(const char *name)
   return true;
 }
 
+bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uint32_t now)
+{
+  if (value.is<const char *>()) {
+    const char *text = value.as<const char *>();
+    if (releaseToken(text)) {
+      mouthState.overrideShape = false;
+      mouthState.talking = false;
+      return true;
+    }
+    MouthShape shape;
+    if (!parseMouthShapeName(text, shape)) {
+      sendError("unknown mouth shape");
+      return false;
+    }
+    mouthState.shape = shape;
+    mouthState.overrideShape = true;
+    const uint32_t holdMs = jsonMs(durationValue, API_DEFAULT_MOUTH_MS);
+    mouthState.overrideUntil = holdMs == 0 ? 0 : now + holdMs;
+    return true;
+  }
+  if (!value.is<JsonObjectConst>()) return true;
+
+  JsonObjectConst mouth = value.as<JsonObjectConst>();
+  if (jsonBool(mouth["release"], false) || jsonBool(mouth["auto"], false)) {
+    mouthState.overrideShape = false;
+    mouthState.talking = false;
+  }
+  if (mouth["style"].is<const char *>()) {
+    MouthStyle style;
+    if (!parseMouthStyleName(mouth["style"].as<const char *>(), style)) {
+      sendError("unknown mouth style");
+      return false;
+    }
+    mouthState.style = style;
+  }
+  if (mouth["shape"].is<const char *>()) {
+    MouthShape shape;
+    if (!parseMouthShapeName(mouth["shape"].as<const char *>(), shape)) {
+      sendError("unknown mouth shape");
+      return false;
+    }
+    mouthState.shape = shape;
+    mouthState.overrideShape = true;
+  }
+  if (!mouth["energy"].isNull()) {
+    mouthState.energy = clampf(mouth["energy"].as<float>(), 0.0f, 1.0f);
+  }
+  if (!mouth["talking"].isNull()) {
+    mouthState.talking = jsonBool(mouth["talking"], false);
+    if (mouthState.talking && !mouthState.overrideShape) {
+      mouthState.shape = MouthShape::Open;
+      mouthState.overrideShape = true;
+    }
+  }
+  if (mouthState.overrideShape || mouthState.talking) {
+    const uint32_t holdMs = jsonMilliseconds(
+        mouth["duration_ms"],
+        jsonMs(mouth["duration"], jsonMs(durationValue, API_DEFAULT_MOUTH_MS)));
+    mouthState.overrideUntil = holdMs == 0 ? 0 : now + holdMs;
+  }
+  return true;
+}
+
 void handleHttpGaze(JsonVariantConst gazeValue, JsonVariantConst durationValue, uint32_t now)
 {
   if (gazeValue.is<const char *>()) {
@@ -1693,6 +2306,9 @@ void handleHttpControl()
   if (doc["style"].is<const char *>()) {
     if (!handleHttpStyleName(doc["style"].as<const char *>())) return;
   }
+  if (!doc["mouth"].isNull()) {
+    if (!handleHttpMouth(doc["mouth"], doc["duration"], now)) return;
+  }
   if (!doc["gaze"].isNull()) handleHttpGaze(doc["gaze"], doc["duration"], now);
   if (jsonBool(doc["blink"], false)) handleHttpBlink(doc, now);
   if (jsonBool(doc["wink"], false)) handleHttpWink(doc, now);
@@ -1727,6 +2343,15 @@ void handleHttpStyleEndpoint()
   JsonDocument doc;
   if (!parseBody(doc)) return;
   if (!handleHttpStyleName(doc["name"] | "")) return;
+  handleHttpState();
+}
+
+void handleHttpMouthEndpoint()
+{
+  requests++;
+  JsonDocument doc;
+  if (!parseBody(doc)) return;
+  if (!handleHttpMouth(doc.as<JsonVariantConst>(), doc["duration"], millis())) return;
   handleHttpState();
 }
 
@@ -1808,6 +2433,15 @@ void initHttp()
     static const char *const values[] = {"friendly", "classic", "cartoony", "robot", "sinister", "sleepy"};
     listValues("styles", values, sizeof(values) / sizeof(values[0]));
   });
+  server.on("/mouth_styles", HTTP_GET, [] {
+    static const char *const values[] = {"human", "robot"};
+    listValues("mouth_styles", values, sizeof(values) / sizeof(values[0]));
+  });
+  server.on("/mouth_shapes", HTTP_GET, [] {
+    static const char *const values[] = {
+        "neutral", "smile", "smirk_left", "smirk_right", "open", "wide", "frown", "grimace", "sneer", "sleep"};
+    listValues("mouth_shapes", values, sizeof(values) / sizeof(values[0]));
+  });
   server.on("/beats", HTTP_GET, [] {
     static const char *const values[] = {
         "slow_smile", "affection", "inspect", "thoughtful", "daydream", "mischief", "confused",
@@ -1821,6 +2455,7 @@ void initHttp()
   server.on("/expression", HTTP_POST, [] { handleHttpMoodEndpoint(true); });
   server.on("/beat", HTTP_POST, handleHttpBeatEndpoint);
   server.on("/style", HTTP_POST, handleHttpStyleEndpoint);
+  server.on("/mouth", HTTP_POST, handleHttpMouthEndpoint);
   server.on("/gaze", HTTP_POST, handleHttpGazeEndpoint);
   server.on("/blink", HTTP_POST, handleHttpBlinkEndpoint);
   server.on("/wink", HTTP_POST, handleHttpWinkEndpoint);
@@ -1842,6 +2477,7 @@ void updateBehavior(uint32_t now)
   const float dt = lastUpdate == 0 ? 16.0f : float(now - lastUpdate);
   lastUpdate = now;
   updateMood(now);
+  updateMouth(now);
   if (currentMood(now) != Mood::Sleep) {
     updateIdleDirector(now);
     updateGaze(now);
@@ -1880,6 +2516,7 @@ void setup()
   blinkState.next = now + uint32_t(randf(900.0f, 2200.0f));
   scheduleNextIdleBeat(now, true);
   drawBootCard("ready");
+  renderMouth(now);
 }
 
 void loop()
@@ -1892,6 +2529,10 @@ void loop()
   if (eyesOk && now - lastEyeFrame > EYE_FRAME_MS) {
     lastEyeFrame = now;
     drawEyesFrame();
+  }
+  if (displayOk && now - lastMouthFrame > (mouthState.talking || mouthState.talkLevel > 0.01f ? MOUTH_FRAME_MS : 160)) {
+    lastMouthFrame = now;
+    renderMouth(now);
   }
   if (millis() - lastDraw > 5000) {
     lastDraw = now;

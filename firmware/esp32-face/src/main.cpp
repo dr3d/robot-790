@@ -142,7 +142,7 @@ const char FACE_UI_HTML[] PROGMEM = R"FACEUI(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reachy Mini Face Control</title>
+<title>Robot 790 Face Control</title>
 <style>
 :root{color-scheme:dark;--bg:#08090d;--panel:#141720;--panel2:#10131a;--line:#2a3140;--text:#eef2f6;--muted:#9aa6b2;--accent:#55c7ff;--ok:#68d391;--warn:#f6ad55;--bad:#fc8181}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1100px;margin:0 auto;padding:16px}
@@ -157,7 +157,7 @@ select,input{width:100%;min-width:0;border:1px solid var(--line);background:var(
 <body>
 <main>
 <header>
-<div><h1>Reachy Mini Face Control</h1><p>Direct ESP32 test panel for eyes, mouth, gaze, idle beats, and display settings.</p></div>
+<div><h1>Robot 790 Face Control</h1><p>Direct ESP32 test panel for eyes, mouth, gaze, idle beats, and display settings.</p></div>
 <div class="pill"><span id="dot" class="dot"></span><span id="summary">connecting</span></div>
 </header>
 <section class="grid">
@@ -252,7 +252,7 @@ function fill(id,values){$(id).innerHTML=values.map(v=>'<option value="'+v+'">'+
 async function values(path,key,id){try{const r=await fetch(path);const j=await r.json();fill(id,j[key]||fallback[id])}catch(e){fill(id,fallback[id])}}
 async function post(path,payload={}){const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const j=await r.json().catch(()=>({ok:false,error:"bad json"}));if(!r.ok||j.ok===false)throw new Error(j.error||r.statusText);render(j);return j}
 function number(id){return Number($(id).value)}
-function render(j){if(!j||!j.ok)return;const mouth=j.mouth||{};const wifi=j.wifi||{};$("dot").className="dot ok";$("summary").textContent=j.mood+" / "+j.style+" / "+mouth.style+" "+mouth.shape;$("status").textContent=JSON.stringify(j,null,2);$("wifiStatus").textContent=(wifi.mode||"?")+" "+(wifi.ip||"")+" "+(wifi.saved_credentials?"saved":"")}
+function render(j){if(!j||!j.ok)return;const mouth=j.mouth||{};const wifi=j.wifi||{};$("dot").className="dot ok";$("summary").textContent=j.mood+" / "+j.style+" / "+mouth.shape;$("status").textContent=JSON.stringify(j,null,2);$("wifiStatus").textContent=(wifi.mode||"?")+" "+(wifi.ip||"")+" "+(wifi.saved_credentials?"saved":"")}
 async function refresh(){try{const r=await fetch("/state");render(await r.json())}catch(e){$("dot").className="dot bad";$("summary").textContent=e.message;$("status").textContent=e.stack||e.message}}
 async function uploadOta(){const file=$("otaFile").files[0];if(!file)throw new Error("choose a firmware .bin first");$("summary").textContent="uploading firmware...";const data=new FormData();data.append("firmware",file,file.name);const r=await fetch("/ota",{method:"POST",body:data});const j=await r.json().catch(()=>({ok:false,error:"bad json"}));if(!r.ok||j.ok===false)throw new Error(j.error||r.statusText);render(j);return j}
 function payloadFromButton(b){const p={};if(b.dataset.select)p[b.dataset.key||"name"]=$(b.dataset.select).value;if(b.dataset.duration)p.duration=number(b.dataset.duration);return p}
@@ -910,6 +910,10 @@ bool auxNeedsFullPaint = true;
 bool auxMouthRendered = false;
 MouthShape auxLastMouthShape = MouthShape::Neutral;
 MouthStyle auxLastMouthStyle = MouthStyle::Human;
+constexpr int16_t AUX_MOUTH_CANVAS_Y = 24;
+constexpr int16_t AUX_MOUTH_CANVAS_W = 320;
+constexpr int16_t AUX_MOUTH_CANVAS_H = 192;
+GFXcanvas16 auxMouthFrame(AUX_MOUTH_CANVAS_W, AUX_MOUTH_CANVAS_H);
 #endif
 #endif
 #if REACHY_HAS_MOUTH && REACHY_HAS_AUX_DISPLAY && (REACHY_AUX_ROLE == REACHY_AUX_ROLE_MOUTH_ONLY) && REACHY_MOUTH_STATUS_WHEN_AUX_MOUTH
@@ -2351,6 +2355,7 @@ void renderAuxMouthMirror(uint32_t now) {
 #if REACHY_AUX_USES_MOUTH_FRAME
   const int16_t screenW = auxTft.width();
   const int16_t screenH = auxTft.height();
+  const int16_t yOffset = AUX_MOUTH_CANVAS_Y;
   MouthShape shape = activeMouthShape(now);
   const bool poseSettled = mouthState.poseInitialized &&
                            uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS;
@@ -2364,15 +2369,16 @@ void renderAuxMouthMirror(uint32_t now) {
 
   MouthPose pose = easedMouthPose(shape, now);
 
+  auxMouthFrame.fillScreen(BLACK);
+
   deselectDisplayBus();
   if (mouthState.style == MouthStyle::Robot) {
     const float talkBeat = clampf(0.5f + 0.5f * sinf(float(now) * 0.05f), 0.0f, 1.0f);
     const float beat = mouthState.talkLevel > 0.01f ? pose.open + (talkBeat - pose.open) * mouthState.talkLevel : pose.open;
     const int16_t cx = screenW / 2;
-    auxTft.fillRect(0, 44, screenW, 152, BLACK);
-    auxTft.fillRoundRect(8, 54, screenW - 16, 132, 34, rgb(0, 8, 16));
-    auxTft.drawRoundRect(9, 55, screenW - 18, 130, 33, rgb(30, 118, 132));
-    auxTft.drawRoundRect(15, 61, screenW - 30, 118, 28, rgb(12, 58, 78));
+    auxMouthFrame.fillRoundRect(8, 54 - yOffset, screenW - 16, 132, 34, rgb(0, 8, 16));
+    auxMouthFrame.drawRoundRect(9, 55 - yOffset, screenW - 18, 130, 33, rgb(30, 118, 132));
+    auxMouthFrame.drawRoundRect(15, 61 - yOffset, screenW - 30, 118, 28, rgb(12, 58, 78));
     constexpr uint8_t barCount = 13;
     constexpr int16_t barW = 12;
     constexpr int16_t barGap = 7;
@@ -2383,8 +2389,8 @@ void renderAuxMouthMirror(uint32_t now) {
       const int16_t x = barsX + int16_t(i) * barStep;
       const float wave = 0.35f + 0.65f * fabsf(sinf(float(now) * 0.009f + float(i) * 0.8f));
       const int16_t barH = int16_t(12.0f + 80.0f * max(beat, pose.open) * wave);
-      auxTft.fillRoundRect(x, 120 - barH / 2, barW, barH, 6, rgb(44, 220, 232));
-      auxTft.drawFastVLine(x + 4, 120 - barH / 2 + 5, maxi16(1, barH - 10), rgb(132, 248, 255));
+      auxMouthFrame.fillRoundRect(x, 120 - barH / 2 - yOffset, barW, barH, 6, rgb(44, 220, 232));
+      auxMouthFrame.drawFastVLine(x + 4, 120 - barH / 2 + 5 - yOffset, maxi16(1, barH - 10), rgb(132, 248, 255));
     }
   } else {
     if (mouthState.talkLevel > 0.01f) {
@@ -2398,10 +2404,9 @@ void renderAuxMouthMirror(uint32_t now) {
         uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS) {
       const int16_t sleepX = 30;
       const int16_t sleepY = screenH / 2 - 7;
-      auxTft.fillRect(0, sleepY - 10, screenW, 36, BLACK);
-      auxTft.fillRoundRect(sleepX, sleepY, screenW - 60, 15, 7, rgb(118, 28, 44));
-      auxTft.drawFastHLine(sleepX + 24, sleepY + 3, screenW - 112, rgb(218, 92, 102));
-      auxTft.drawFastHLine(sleepX + 32, sleepY + 12, screenW - 128, rgb(58, 8, 22));
+      auxMouthFrame.fillRoundRect(sleepX, sleepY - yOffset, screenW - 60, 15, 7, rgb(118, 28, 44));
+      auxMouthFrame.drawFastHLine(sleepX + 24, sleepY + 3 - yOffset, screenW - 112, rgb(218, 92, 102));
+      auxMouthFrame.drawFastHLine(sleepX + 32, sleepY + 12 - yOffset, screenW - 128, rgb(58, 8, 22));
     } else {
       const int16_t w = mini16(screenW - 22, int16_t(150.0f + pose.width * 178.0f));
       const int16_t openH = int16_t(7.0f + pose.open * 92.0f);
@@ -2445,23 +2450,22 @@ void renderAuxMouthMirror(uint32_t now) {
       const uint16_t lipLo = rgb(82, 10, 30);
       const uint16_t cavity = rgb(9, 0, 5);
 
-      auxTft.fillRect(0, maxi16(0, topCy - lipH - 28), screenW,
-                      mini16(screenH, bottomCy + lipH + 34) - maxi16(0, topCy - lipH - 28), BLACK);
-      fillEllipse(auxTft, cx + asym / 4, cy, w / 2 + 24, cavityH / 2 + lipH + 18, shadow);
-      fillEllipse(auxTft, cx + asym / 5, bottomCy + 2, w / 2 + 18, maxi16(18, lipH / 2 + 10), lipLo);
-      fillEllipse(auxTft, cx + asym / 3, bottomCy, w / 2 + 8, maxi16(16, lipH / 2 + 5), lip);
-      fillEllipse(auxTft, cx - w / 5 + asym / 2, topCy + asym / 8, w / 3 + 14, maxi16(13, lipH / 2 + 1), lipLo);
-      fillEllipse(auxTft, cx + w / 5 + asym / 3, topCy - asym / 10, w / 3 + 5, maxi16(12, lipH / 2 - 1), lipLo);
-      fillEllipse(auxTft, cx - w / 5 + asym / 2, topCy - 3 + asym / 8, w / 3 + 6, maxi16(11, lipH / 2 - 2), lip);
-      fillEllipse(auxTft, cx + w / 5 + asym / 3, topCy - 4 - asym / 10, w / 3 - 1, maxi16(10, lipH / 2 - 4), lip);
-      fillEllipse(auxTft, cx + asym / 3, topCy + lipH / 7, w / 5 + 3, maxi16(8, lipH / 3), mixColor(lipLo, lip, 0.36f));
-      auxTft.fillTriangle(cx - 22 + asym / 4, topCy - lipH / 2 + 6, cx + 15 + asym / 4, topCy - lipH / 2 + 4,
-                          cx - 3 + asym / 3, topCy - lipH / 7, lipLo);
-      fillEllipse(auxTft, cx - w / 5 + asym / 2, topCy - lipH / 5, w / 5, maxi16(4, lipH / 8), lipHi);
-      fillEllipse(auxTft, cx + w / 6 + asym / 3, topCy - lipH / 6, w / 6, maxi16(3, lipH / 9), mixColor(lip, lipHi, 0.50f));
-      fillEllipse(auxTft, cx + w / 10 + asym / 4, bottomCy - lipH / 5, w / 3 + 6, maxi16(5, lipH / 7), mixColor(lip, lipHi, 0.50f));
+      fillEllipse(auxMouthFrame, cx + asym / 4, cy - yOffset, w / 2 + 24, cavityH / 2 + lipH + 18, shadow);
+      fillEllipse(auxMouthFrame, cx + asym / 5, bottomCy + 2 - yOffset, w / 2 + 18, maxi16(18, lipH / 2 + 10), lipLo);
+      fillEllipse(auxMouthFrame, cx + asym / 3, bottomCy - yOffset, w / 2 + 8, maxi16(16, lipH / 2 + 5), lip);
+      fillEllipse(auxMouthFrame, cx - w / 5 + asym / 2, topCy + asym / 8 - yOffset, w / 3 + 14, maxi16(13, lipH / 2 + 1), lipLo);
+      fillEllipse(auxMouthFrame, cx + w / 5 + asym / 3, topCy - asym / 10 - yOffset, w / 3 + 5, maxi16(12, lipH / 2 - 1), lipLo);
+      fillEllipse(auxMouthFrame, cx - w / 5 + asym / 2, topCy - 3 + asym / 8 - yOffset, w / 3 + 6, maxi16(11, lipH / 2 - 2), lip);
+      fillEllipse(auxMouthFrame, cx + w / 5 + asym / 3, topCy - 4 - asym / 10 - yOffset, w / 3 - 1, maxi16(10, lipH / 2 - 4), lip);
+      fillEllipse(auxMouthFrame, cx + asym / 3, topCy + lipH / 7 - yOffset, w / 5 + 3, maxi16(8, lipH / 3), mixColor(lipLo, lip, 0.36f));
+      auxMouthFrame.fillTriangle(cx - 22 + asym / 4, topCy - lipH / 2 + 6 - yOffset,
+                                 cx + 15 + asym / 4, topCy - lipH / 2 + 4 - yOffset,
+                                 cx - 3 + asym / 3, topCy - lipH / 7 - yOffset, lipLo);
+      fillEllipse(auxMouthFrame, cx - w / 5 + asym / 2, topCy - lipH / 5 - yOffset, w / 5, maxi16(4, lipH / 8), lipHi);
+      fillEllipse(auxMouthFrame, cx + w / 6 + asym / 3, topCy - lipH / 6 - yOffset, w / 6, maxi16(3, lipH / 9), mixColor(lip, lipHi, 0.50f));
+      fillEllipse(auxMouthFrame, cx + w / 10 + asym / 4, bottomCy - lipH / 5 - yOffset, w / 3 + 6, maxi16(5, lipH / 7), mixColor(lip, lipHi, 0.50f));
 
-      fillEllipse(auxTft, cx + asym / 3, cy + asym / 12, cavityW / 2, maxi16(3, cavityH / 2), cavity);
+      fillEllipse(auxMouthFrame, cx + asym / 3, cy + asym / 12 - yOffset, cavityW / 2, maxi16(3, cavityH / 2), cavity);
       if (cavityH > 16) {
         const uint16_t tongue = rgb(162, 54, 72);
         const uint16_t tongueHi = rgb(218, 94, 106);
@@ -2469,43 +2473,44 @@ void renderAuxMouthMirror(uint32_t now) {
         const int16_t tongueRy = maxi16(5, cavityH / 5);
         const int16_t tongueCx = cx + asym / 4;
         const int16_t tongueY = cy + cavityH / 3 + asym / 12;
-        fillEllipse(auxTft, tongueCx, tongueY, tongueRx, tongueRy, tongue);
-        fillEllipse(auxTft, tongueCx - tongueRx / 5, tongueY - tongueRy / 4,
+        fillEllipse(auxMouthFrame, tongueCx, tongueY - yOffset, tongueRx, tongueRy, tongue);
+        fillEllipse(auxMouthFrame, tongueCx - tongueRx / 5, tongueY - tongueRy / 4 - yOffset,
                     maxi16(4, tongueRx / 3), maxi16(2, tongueRy / 4), tongueHi);
       } else {
-        auxTft.drawFastHLine(cx + asym / 3 - cavityW / 2 + 10, cy + asym / 12, cavityW - 20, rgb(28, 2, 12));
+        auxMouthFrame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 10, cy + asym / 12 - yOffset, cavityW - 20, rgb(28, 2, 12));
       }
 
       const float teethAmount = max(pose.teeth, pose.open > 0.34f ? clampf((pose.open - 0.30f) * 1.2f, 0.0f, 0.42f) : 0.0f);
       if (teethAmount > 0.01f && cavityH >= 12 && cavityW >= 36) {
         const int16_t teethX = cx + asym / 3 - cavityW / 2 + 18;
-        const int16_t teethY = cy + asym / 12 - cavityH / 2 + 2;
+        const int16_t teethY = cy + asym / 12 - cavityH / 2 + 2 - yOffset;
         const int16_t teethW = cavityW - 36;
         const int16_t teethH = int16_t(clampf(float(cavityH) * (0.24f + teethAmount * 0.18f), 5.0f, 22.0f));
-        auxTft.fillRoundRect(teethX, teethY, teethW, teethH, 5, rgb(238, 228, 198));
-        auxTft.drawFastHLine(teethX + 4, teethY + teethH - 1, teethW - 8, rgb(126, 104, 98));
+        auxMouthFrame.fillRoundRect(teethX, teethY, teethW, teethH, 5, rgb(238, 228, 198));
+        auxMouthFrame.drawFastHLine(teethX + 4, teethY + teethH - 1, teethW - 8, rgb(126, 104, 98));
         for (int16_t tx = teethX + 28; tx < teethX + teethW - 14; tx += 36) {
-          auxTft.drawFastVLine(tx, teethY + 2, teethH - 4, rgb(126, 104, 98));
+          auxMouthFrame.drawFastVLine(tx, teethY + 2, teethH - 4, rgb(126, 104, 98));
         }
       }
 
       const int16_t leftX = cx - w / 2;
       const int16_t rightX = cx + w / 2;
-      auxTft.fillCircle(leftX + asym / 3, leftCornerY + int16_t(pose.skew * 10.0f), maxi16(9, lipH / 3), mixColor(lipLo, lip, 0.42f));
-      auxTft.fillCircle(rightX + asym / 4, rightCornerY - int16_t(pose.skew * 10.0f), maxi16(11, lipH / 3), mixColor(lipLo, lip, 0.48f));
+      auxMouthFrame.fillCircle(leftX + asym / 3, leftCornerY + int16_t(pose.skew * 10.0f) - yOffset, maxi16(9, lipH / 3), mixColor(lipLo, lip, 0.42f));
+      auxMouthFrame.fillCircle(rightX + asym / 4, rightCornerY - int16_t(pose.skew * 10.0f) - yOffset, maxi16(11, lipH / 3), mixColor(lipLo, lip, 0.48f));
       if (isSmirk || shape == MouthShape::Sneer) {
         const bool liftRight = pose.skew > 0.0f;
         const int16_t creaseX = liftRight ? rightX - 36 + asym / 3 : leftX + 36 + asym / 2;
-        const int16_t creaseY = liftRight ? rightCornerY - 8 : leftCornerY - 8;
+        const int16_t creaseY = (liftRight ? rightCornerY - 8 : leftCornerY - 8) - yOffset;
         const int16_t creaseDir = liftRight ? -1 : 1;
         const int16_t creaseLen = isSmirk ? 34 : 24;
-        auxTft.drawLine(creaseX, creaseY, creaseX + creaseDir * creaseLen, creaseY - 15, lipHi);
-        auxTft.drawLine(creaseX - creaseDir * 2, creaseY + 7, creaseX + creaseDir * (creaseLen - 4), creaseY, lipLo);
+        auxMouthFrame.drawLine(creaseX, creaseY, creaseX + creaseDir * creaseLen, creaseY - 15, lipHi);
+        auxMouthFrame.drawLine(creaseX - creaseDir * 2, creaseY + 7, creaseX + creaseDir * (creaseLen - 4), creaseY, lipLo);
       }
-      auxTft.drawFastHLine(cx + asym / 3 - cavityW / 2 + 12, topCy - lipH / 3 + asym / 10, maxi16(20, cavityW / 3), lipHi);
-      auxTft.drawFastHLine(cx + asym / 4 - cavityW / 4, bottomCy + lipH / 3 - asym / 12, maxi16(20, cavityW / 2), lipLo);
+      auxMouthFrame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 12, topCy - lipH / 3 + asym / 10 - yOffset, maxi16(20, cavityW / 3), lipHi);
+      auxMouthFrame.drawFastHLine(cx + asym / 4 - cavityW / 4, bottomCy + lipH / 3 - asym / 12 - yOffset, maxi16(20, cavityW / 2), lipLo);
     }
   }
+  auxTft.drawRGBBitmap(0, AUX_MOUTH_CANVAS_Y, auxMouthFrame.getBuffer(), AUX_MOUTH_CANVAS_W, AUX_MOUTH_CANVAS_H);
   auxNeedsFullPaint = false;
   auxMouthRendered = true;
   auxLastMouthShape = shape;

@@ -15,7 +15,7 @@
 #define FACE_LCD_BL 1
 #define FACE_LCD_WIDTH 240
 #define FACE_LCD_HEIGHT 320
-#define FACE_LCD_ROTATION 1
+#define FACE_LCD_ROTATION 3
 
 // Shared onboard I2C bus for touch and IMU.
 #define FACE_I2C_SDA 48

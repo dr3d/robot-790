@@ -54,7 +54,7 @@ const char INDEX_HTML[] PROGMEM = R"HTML(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Reachy Mini Camera</title>
+  <title>Robot 790 Camera</title>
   <style>
     html,body{margin:0;background:#0b1118;color:#dce7ef;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
     main{min-height:100vh;display:grid;place-items:center;padding:18px;box-sizing:border-box}
@@ -71,7 +71,7 @@ const char INDEX_HTML[] PROGMEM = R"HTML(
   <main>
     <div class="wrap">
       <header>
-        <h1>Reachy Mini Camera</h1>
+        <h1>Robot 790 Camera</h1>
         <a href="/jpg">single JPEG</a>
       </header>
       <div class="frame"><img id="live" src="" alt="Live camera stream"></div>
@@ -128,7 +128,7 @@ void jpgHandler() {
     return;
   }
 
-  web.sendHeader("Content-Disposition", "inline; filename=reachy-mini-camera.jpg");
+  web.sendHeader("Content-Disposition", "inline; filename=robot-790-camera.jpg");
   web.sendHeader("Cache-Control", "no-store");
   web.setContentLength(fb->len);
   web.send(200, "image/jpeg", "");
@@ -395,7 +395,7 @@ void setup() {
   digitalWrite(PIN_BAT_HOLD, HIGH);
 
   Serial.println();
-  Serial.println("Reachy Mini camera starting");
+  Serial.println("Robot 790 camera starting");
   Serial.printf("PSRAM: %s\n", psramFound() ? "yes" : "no");
 
   if (!initCamera()) {

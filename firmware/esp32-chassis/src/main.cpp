@@ -59,7 +59,7 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reachy Mini Chassis Control</title>
+<title>Robot 790 Chassis Control</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -103,7 +103,7 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <body>
 <main>
   <header>
-    <h1>Reachy Mini Chassis Control</h1>
+    <h1>Robot 790 Chassis Control</h1>
     <div class="status" id="status">connecting</div>
   </header>
   <section class="cameraControls">
@@ -113,7 +113,7 @@ static const char INDEX_HTML[] PROGMEM = R"rawliteral(
   </section>
   <section class="pad" id="pad" aria-label="drive pad">
     <div class="cameraFrame" id="cameraFrame">
-      <img id="cameraView" alt="Reachy Mini camera stream">
+      <img id="cameraView" alt="Robot 790 camera stream">
     </div>
     <div class="cross"></div>
     <div class="knob" id="knob"></div>

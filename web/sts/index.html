@@ -81,6 +81,15 @@
       gap: 10px;
       align-items: center;
     }
+    .url-controls {
+      grid-template-columns: minmax(260px, 460px) auto auto minmax(0, 1fr);
+    }
+    .url-controls .toggle-row {
+      justify-self: start;
+    }
+    .voice-controls {
+      grid-template-columns: minmax(120px, 160px) minmax(260px, 420px) minmax(140px, 180px) auto auto;
+    }
     label {
       display: grid;
       gap: 6px;
@@ -108,6 +117,9 @@
     textarea {
       min-height: 84px;
       resize: vertical;
+    }
+    input.compact-text {
+      min-height: 40px;
     }
     textarea[readonly] {
       resize: none;
@@ -197,7 +209,7 @@
         height: auto;
         min-height: 100vh;
       }
-      header, .controls, .grid {
+      header, .controls, .url-controls, .voice-controls, .grid {
         grid-template-columns: 1fr;
         align-items: stretch;
       }
@@ -219,7 +231,7 @@
       <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
     </header>
 
-    <section class="controls">
+    <section class="controls url-controls">
       <label>
         Realtime server
         <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
@@ -229,29 +241,41 @@
     </section>
 
     <section class="controls">
+      <div class="meters">
+        <span>Mic</span>
+        <div class="bar"><span id="level"></span></div>
+      </div>
+      <button id="startMic" disabled>Start Mic</button>
+      <button id="stopMic" disabled>Stop Mic</button>
+    </section>
+
+    <section class="controls url-controls">
       <label>
         Face controller
         <input id="faceUrl" value="http://esp32-eyes.local/" spellcheck="false">
-        <span class="toggle-row"><input id="llmTools" type="checkbox"> LLM face tools</span>
       </label>
       <button id="faceIdle" disabled>Idle Face</button>
       <button id="faceBeat" disabled>Beat</button>
+      <span class="toggle-row"><input id="llmTools" type="checkbox" checked> LLM face tools</span>
     </section>
 
-    <section class="controls">
+    <section class="controls url-controls">
       <label>
-        Memory
-        <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
-        <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
+        Chassis controller
+        <input id="chassisUrl" value="http://esp32-chassis.local/" spellcheck="false">
       </label>
-      <button id="memoryRefresh">Refresh</button>
-      <button id="memoryForgetAll">Forget All</button>
+      <button id="chassisStop" class="danger">Stop</button>
+      <span class="toggle-row"><input id="llmChassisTools" type="checkbox" checked> LLM chassis tools</span>
     </section>
 
-    <section class="controls">
+    <section class="controls voice-controls">
+      <label>
+        Voice
+        <select id="ttsVoice" aria-label="Qwen3-TTS voice"></select>
+      </label>
       <label>
         Voice style
-        <textarea id="ttsInstruct" spellcheck="false"></textarea>
+        <input id="ttsInstruct" class="compact-text" spellcheck="false">
       </label>
       <select id="ttsPreset" aria-label="Voice style preset">
         <option value="neutral">Neutral</option>
@@ -264,24 +288,18 @@
         <option value="custom">Custom</option>
       </select>
       <button id="ttsApply">Apply</button>
-    </section>
-
-    <section class="controls">
-      <label>
-        Text test
-        <input id="textPrompt" value="Say hello as Robot 790 in one sentence.">
-      </label>
-      <button id="sendText" disabled>Send Text</button>
       <button id="clearLog">Clear</button>
     </section>
 
     <section class="controls">
-      <div class="meters">
-        <span>Mic</span>
-        <div class="bar"><span id="level"></span></div>
-      </div>
-      <button id="startMic" disabled>Start Mic</button>
-      <button id="stopMic" disabled>Stop Mic</button>
+      <label>
+        Memory
+        <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
+        <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
+        <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
+      </label>
+      <button id="memoryRefresh">Refresh</button>
+      <button id="memoryForgetAll">Forget All</button>
     </section>
 
     <section class="grid log-grid">
@@ -299,23 +317,26 @@
   <script>
     const serverUrl = document.querySelector("#serverUrl");
     const faceUrl = document.querySelector("#faceUrl");
+    const chassisUrlInput = document.querySelector("#chassisUrl");
     const connectButton = document.querySelector("#connect");
     const disconnectButton = document.querySelector("#disconnect");
     const faceIdleButton = document.querySelector("#faceIdle");
     const faceBeatButton = document.querySelector("#faceBeat");
+    const chassisStopButton = document.querySelector("#chassisStop");
     const llmTools = document.querySelector("#llmTools");
+    const llmChassisTools = document.querySelector("#llmChassisTools");
     const llmMemoryTools = document.querySelector("#llmMemoryTools");
+    const llmWebSearchTools = document.querySelector("#llmWebSearchTools");
     const memoryPreview = document.querySelector("#memoryPreview");
     const memoryRefreshButton = document.querySelector("#memoryRefresh");
     const memoryForgetAllButton = document.querySelector("#memoryForgetAll");
+    const ttsVoice = document.querySelector("#ttsVoice");
     const ttsInstruct = document.querySelector("#ttsInstruct");
     const ttsPreset = document.querySelector("#ttsPreset");
     const ttsApplyButton = document.querySelector("#ttsApply");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
-    const sendTextButton = document.querySelector("#sendText");
     const clearLogButton = document.querySelector("#clearLog");
-    const textPrompt = document.querySelector("#textPrompt");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
     const level = document.querySelector("#level");
@@ -329,7 +350,6 @@
     let micSource;
     let micProcessor;
     let playbackTime = 0;
-    let seq = 0;
     const audioFlushMs = 120;
     const minPlaybackBytes = 9600;
     let audioChunks = [];
@@ -338,14 +358,24 @@
     let conversationLines = [];
     let inputDraft = "";
     let lastUserText = "";
+    let recentUserTexts = [];
+    let memorySaveArmedUntil = 0;
     let pendingToolCalls = 0;
     let toolFollowupNeeded = false;
     let responseDoneAfterTool = false;
+    let toolFollowupExactText = "";
+    let toolFollowupInstructions = "";
     let faceMode = "idle";
     let faceIdleTimer;
     let thinkingGazeSide = 1;
+    let gazeHoldUntil = 0;
+    let gazeHoldIndefinite = false;
+    let faceVisualHoldUntil = 0;
+    let faceVisualHoldIndefinite = false;
 
     const memoryStorageKey = "robot790.memory.v1";
+    const toolPrefsStorageKey = "robot790.toolPrefs.v2";
+    const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
@@ -359,12 +389,16 @@
       sleepy: "Speak as Eric with soft volume, slower pacing, relaxed breath, and drowsy warmth.",
       excited: "Speak as Eric with quick bright energy, lively emphasis, and clear delighted pacing."
     };
+    const qwen3TtsVoices = ["Aiden", "Ryan", "Dylan", "Eric", "Ono_Anna", "Serena", "Sohee", "Uncle_Fu", "Vivian"];
+    const chassisMaxSpeed = 1.0;
+    const maxChassisDurationS = 5;
+    let chassisBusyUntil = 0;
 
     const faceTools = [
       {
         type: "function",
         name: "set_robot_mode",
-        description: "Set Robot 790's ESP32 face state only when the user asks for a face or body state change.",
+        description: "Set Robot 790's ESP32 face state only when the user asks for a face or body state change. Use sleeping when the user says go to sleep, close your eyes, or sleep.",
         parameters: {
           type: "object",
           properties: {
@@ -387,16 +421,140 @@
       {
         type: "function",
         name: "play_face_beat",
-        description: "Play a named ESP32 face beat only when the user asks for an expressive face action.",
+        description: "Play a named ESP32 face beat when the user asks for a funny face, silly face, expressive action, scan, double take, or animated beat.",
         parameters: {
           type: "object",
           properties: {
             name: {
               type: "string",
-              description: "Beat name understood by the ESP32 face firmware."
+              enum: [
+                "slow_smile", "affection", "inspect", "thoughtful", "daydream",
+                "mischief", "confused", "focus_lock", "double_take", "goofy",
+                "drowsy", "robot_scan", "wary", "startle"
+              ],
+              description: "Beat name supported by the ESP32 face firmware."
             }
           },
           required: ["name"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "set_face_mood",
+        description: "Set a specific Robot 790 ESP32 face mood when the user asks for an emotion, mood, or expression by name.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              enum: [
+                "calm", "curious", "surprised", "suspicious", "afraid", "angry",
+                "sleepy", "sleep", "goofy", "robotic", "wonder", "glitchy",
+                "happy", "delighted", "bashful", "bored", "focused", "confused",
+                "proud", "mischief", "affection"
+              ],
+              description: "Mood name supported by the ESP32 face firmware."
+            },
+            duration: {
+              type: "number",
+              minimum: 0,
+              maximum: 30,
+              description: "Seconds to hold the mood. Use 0 for the firmware default."
+            }
+          },
+          required: ["name"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "set_eye_gaze",
+        description: "Aim Robot 790's eyes when the user asks the robot to look left, right, up, down, center, or at a direction.",
+        parameters: {
+          type: "object",
+          properties: {
+            x: {
+              type: "number",
+              minimum: -1,
+              maximum: 1,
+              description: "Normalized left/right gaze target from -1.0 to 1.0."
+            },
+            y: {
+              type: "number",
+              minimum: -1,
+              maximum: 1,
+              description: "Normalized up/down gaze target from -1.0 to 1.0."
+            },
+            duration: {
+              type: "number",
+              minimum: 0,
+              maximum: 30,
+              description: "Seconds to hold the gaze. Use 0 to hold until released."
+            },
+            move_ms: {
+              type: "integer",
+              minimum: 0,
+              maximum: 2000,
+              description: "Transition time in milliseconds."
+            }
+          },
+          required: ["x", "y"],
+          additionalProperties: false
+        }
+      }
+    ];
+
+    const chassisTools = [
+      {
+        type: "function",
+        name: "set_chassis",
+        description: (
+          "Control Robot 790's optional ESP32 tracked chassis with one immediate command: status, stop, e-stop, " +
+          "clear e-stop, tank drive, or twist drive. Never queue, chain, or choreograph multi-step drive sequences. " +
+          "For a turn-in-place, use twist with velocity 0 and a positive or negative turn; do not invent turn_right or turn_left actions. " +
+          "If the user asks for full or maximum speed, use 1.0, matching the chassis web UI max-speed value; the firmware applies the voltage duty cap."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            action: {
+              type: "string",
+              enum: ["status", "stop", "estop", "clear", "tank", "twist"],
+              description: "Chassis action. Use estop for urgent safety and stop when movement should end."
+            },
+            left: {
+              type: "number",
+              minimum: -1.0,
+              maximum: 1.0,
+              description: "Left track speed for tank action, -1.0 reverse to 1.0 forward."
+            },
+            right: {
+              type: "number",
+              minimum: -1.0,
+              maximum: 1.0,
+              description: "Right track speed for tank action, -1.0 reverse to 1.0 forward."
+            },
+            velocity: {
+              type: "number",
+              minimum: -1.0,
+              maximum: 1.0,
+              description: "Forward/reverse velocity for twist action, -1.0 reverse to 1.0 forward."
+            },
+            turn: {
+              type: "number",
+              minimum: -1.0,
+              maximum: 1.0,
+              description: "Turn rate for twist action, -1.0 left to 1.0 right."
+            },
+            duration_s: {
+              type: "number",
+              minimum: 0,
+              maximum: 5,
+              description: "Optional movement duration for one firmware-timed segment, capped at 5 seconds."
+            }
+          },
+          required: ["action"],
           additionalProperties: false
         }
       }
@@ -445,6 +603,36 @@
       }
     ];
 
+    const searchTools = [
+      {
+        type: "function",
+        name: "search_web",
+        description: (
+          "Search the web for current information and return compact title, snippet, and URL results. " +
+          "Call this directly when the user asks Robot 790 to search, look something up, check the web, " +
+          "find current information, or learn what is happening now."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Search query."
+            },
+            max_results: {
+              type: "integer",
+              minimum: 1,
+              maximum: 10,
+              default: 5,
+              description: "Maximum number of search results to return."
+            }
+          },
+          required: ["query"],
+          additionalProperties: false
+        }
+      }
+    ];
+
     const baseSessionInstructions = [
       "You are Robot 790, spoken name Eric.",
       "You are a local animatronic robot head with ESP32 eyes and mouth displays.",
@@ -452,9 +640,26 @@
       "Reply in one short spoken sentence by default, under 12 words when possible.",
       "Never say you lack a body; refer to your robot face/body as your hardware.",
       "Do not use tools for ordinary greetings or conversation.",
-      "Use face tools only when the user asks for a face or body action.",
-      "Use memory tools only when the user explicitly asks you to remember or forget a named fact in the same user turn.",
+      "When the user asks for a face, expression, mood, gaze, chassis, or body action, call an appropriate robot tool before answering.",
+      "For go to sleep, close your eyes, sleepy eyes, or sleep mode, call set_robot_mode with mode sleeping before answering; do not merely describe the action.",
+      "For wake up or open your eyes, call set_robot_mode with mode idle before answering.",
+      "Never say you set, moved, closed, opened, or changed your eyes unless an eye or face tool was actually called successfully.",
+      "Use set_face_mood for named moods such as glitchy, goofy, happy, curious, confused, focused, suspicious, or mischief.",
+      "Use play_face_beat for animated beats such as funny face, silly face, scan, double take, startle, mischief, thoughtful, or slow smile.",
+      "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
+      "Use set_chassis only for explicit drive-base, wheel, track, move, turn, stop, or e-stop requests.",
+      "For chassis movement, prefer slow values around 0.2 to 0.35 and one short timed segment; never queue a route, dance, or multi-step movement.",
+      "If the user asks for full speed or maximum speed in a short explicit movement, use set_chassis speed 1.0 for that segment, matching the chassis web UI MAX SPEED setting.",
+      "Do not refuse a clear short movement merely because the user said maximum speed; the chassis firmware applies the voltage duty cap.",
+      "Use positive chassis turn values for right turns and negative values for left turns.",
+      "For a turn-in-place, call set_chassis with action twist, velocity 0, and a positive or negative turn; never invent turn_right or turn_left actions.",
+      "If the user asks for multiple movement steps, perform only the first safe segment, then ask for the next movement as a new command.",
+      "Never output XML, function-call tags, parameter tags, or hidden tool syntax in spoken text.",
+      "Use search_web whenever the user asks you to search, look something up, check the web, find current information, or answer something likely to have changed recently.",
+      "When using search_web, summarize the result briefly and naturally; mention the source site when useful.",
+      "Use memory tools only when the user explicitly asks you to remember or forget a named fact, or when you just asked the user to provide a fact so you could save it and the user provides that fact in the next turn.",
       "When remembering, choose a short snake_case name and one factual sentence.",
+      "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
       "If you use a tool, still answer briefly afterward."
     ];
 
@@ -505,15 +710,15 @@
     }
 
     function rememberMemoryFact({ name, fact } = {}) {
-      if (!userExplicitlyAskedForMemory(lastUserText)) {
-        throw new Error("Memory writes require an explicit remember-this request in the current user turn");
+      if (!memoryWriteAllowed(lastUserText)) {
+        throw new Error("Memory writes require an explicit remember-this request or a just-armed save flow");
       }
       const normalizedName = normalizeMemoryName(name);
       const normalizedFact = normalizeMemoryFact(fact);
       if (!normalizedName) throw new Error("Missing required argument: name");
       if (!normalizedFact) throw new Error("Missing required argument: fact");
-      if (!memoryFactAppearsInUserTurn(normalizedFact, lastUserText)) {
-        throw new Error("Memory fact must be grounded in the current user turn; nothing was saved");
+      if (!memoryFactAppearsInUserEvidence(normalizedFact)) {
+        throw new Error("Memory fact must be grounded in recent user turns; nothing was saved");
       }
       if (isPlaceholderMemoryFact(normalizedFact)) {
         throw new Error("Memory fact is a placeholder or inferred unknown; nothing was saved");
@@ -522,6 +727,7 @@
       const stored = { name: normalizedName, fact: normalizedFact, updatedAt: Date.now() };
       const remaining = loadMemoryFacts().filter((item) => item.name !== normalizedName);
       saveMemoryFacts([stored, ...remaining]);
+      memorySaveArmedUntil = 0;
       return { status: "ok", tool: "remember_fact", name: stored.name, fact: stored.fact };
     }
 
@@ -539,6 +745,26 @@
       return { status: "ok", tool: "forget_fact", name: removed.name, removed: removed.fact };
     }
 
+    function memoryWriteAllowed(text) {
+      return userExplicitlyAskedForMemory(text) || memorySaveArmed();
+    }
+
+    function memorySaveArmed() {
+      return memorySaveArmedUntil > Date.now();
+    }
+
+    function noteAssistantText(text) {
+      if (assistantArmedMemorySave(text)) {
+        memorySaveArmedUntil = Date.now() + 45000;
+      }
+    }
+
+    function assistantArmedMemorySave(text) {
+      const value = String(text || "");
+      return /\b(remind me|tell me|provide it|give me)\b[\s\S]{0,80}\b(save|remember|store)\b/i.test(value)
+        || /\b(would you like me to|want me to)\b[\s\S]{0,80}\b(remember|save|store)\b/i.test(value);
+    }
+
     function userExplicitlyAskedForMemory(text) {
       return /\b(remember|memorize|save|store|note)\b\s+(that\s+|this\s+|my\s+|our\s+|the\s+|[a-z0-9])/i.test(text || "");
     }
@@ -549,6 +775,11 @@
 
     function isPlaceholderMemoryFact(text) {
       return /\b(not yet known|unknown|not known|unspecified|not provided|do not know|don't know|unclear)\b/i.test(text || "");
+    }
+
+    function memoryFactAppearsInUserEvidence(fact) {
+      return memoryFactAppearsInUserTurn(fact, lastUserText)
+        || memoryFactAppearsInUserTurn(fact, recentUserTexts.join(" "));
     }
 
     function memoryFactAppearsInUserTurn(fact, text) {
@@ -591,6 +822,31 @@
       return String(ttsInstruct.value || "").trim();
     }
 
+    function currentTtsVoice() {
+      const voice = String(ttsVoice.value || "").trim();
+      return qwen3TtsVoices.includes(voice) ? voice : "Eric";
+    }
+
+    function populateTtsVoices() {
+      ttsVoice.replaceChildren(
+        ...qwen3TtsVoices.map((voice) => {
+          const option = document.createElement("option");
+          option.value = voice;
+          option.textContent = voice;
+          return option;
+        })
+      );
+    }
+
+    function loadTtsVoice() {
+      const saved = localStorage.getItem(ttsVoiceStorageKey);
+      ttsVoice.value = qwen3TtsVoices.includes(saved) ? saved : "Eric";
+    }
+
+    function saveTtsVoice() {
+      localStorage.setItem(ttsVoiceStorageKey, currentTtsVoice());
+    }
+
     function loadTtsStyle() {
       const saved = localStorage.getItem(ttsStyleStorageKey);
       if (saved !== null) {
@@ -610,10 +866,14 @@
 
     function ttsRuntimeConfig() {
       const instruct = currentTtsInstruct();
+      const voice = currentTtsVoice();
       return {
+        qwen3_tts_speaker: voice,
         qwen3_tts_instruct: instruct,
         audio: {
           output: {
+            voice,
+            qwen3_tts_speaker: voice,
             qwen3_tts_instruct: instruct
           }
         }
@@ -621,9 +881,10 @@
     }
 
     function updateSessionTtsStyle({ announce = true } = {}) {
+      saveTtsVoice();
       saveTtsStyle();
       if (!ws || ws.readyState !== WebSocket.OPEN) {
-        if (announce) log(events, "voice style saved; reconnect or apply after connecting");
+        if (announce) log(events, "voice settings saved; reconnect or apply after connecting");
         return;
       }
       send({
@@ -633,7 +894,11 @@
           ...ttsRuntimeConfig()
         }
       });
-      if (announce) log(events, currentTtsInstruct() ? "voice style applied" : "voice style neutral");
+      if (announce) {
+        log(events, currentTtsInstruct()
+          ? `voice ${currentTtsVoice()} style applied`
+          : `voice ${currentTtsVoice()} neutral`);
+      }
     }
 
     function renderMemory() {
@@ -641,6 +906,28 @@
       memoryPreview.value = facts.length
         ? facts.map((item) => `${item.name}: ${item.fact}`).join("\n")
         : "No saved facts";
+    }
+
+    function loadToolPrefs() {
+      let prefs = {};
+      try {
+        prefs = JSON.parse(localStorage.getItem(toolPrefsStorageKey) || "{}");
+      } catch {
+        prefs = {};
+      }
+      llmTools.checked = prefs.faceTools !== false;
+      llmChassisTools.checked = prefs.chassisTools !== false;
+      llmMemoryTools.checked = prefs.memoryTools !== false;
+      llmWebSearchTools.checked = prefs.webSearchTools !== false;
+    }
+
+    function saveToolPrefs() {
+      localStorage.setItem(toolPrefsStorageKey, JSON.stringify({
+        faceTools: llmTools.checked,
+        chassisTools: llmChassisTools.checked,
+        memoryTools: llmMemoryTools.checked,
+        webSearchTools: llmWebSearchTools.checked
+      }));
     }
 
     function setState(text, kind = "bad") {
@@ -669,6 +956,7 @@
 
     function noteUserText(text) {
       lastUserText = String(text || "").trim();
+      if (lastUserText) recentUserTexts = [...recentUserTexts, lastUserText].slice(-8);
     }
 
     function updateInputDraft(text) {
@@ -741,6 +1029,10 @@
       return faceUrl.value.trim().replace(/\/?$/, "/");
     }
 
+    function normalizeChassisBaseUrl() {
+      return chassisUrlInput.value.trim().replace(/\/?$/, "/");
+    }
+
     async function postFace(path, payload) {
       const response = await fetch(new URL(path, normalizeFaceBaseUrl()), {
         method: "POST",
@@ -760,27 +1052,62 @@
       return data;
     }
 
+    function chassisUrl(path, params = {}) {
+      const url = new URL(path, normalizeChassisBaseUrl());
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+      });
+      return url;
+    }
+
+    async function requestChassis(path, { method = "POST", params = {} } = {}) {
+      const response = await fetch(chassisUrl(path, params), { method, cache: "no-store" });
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { raw: text };
+      }
+      if (!response.ok || data.ok === false) {
+        throw new Error(`${response.status} ${response.statusText}: ${data.error || text}`);
+      }
+      return data;
+    }
+
+    function sleepMs(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
     async function setFaceMode({ mode, energy = 0.55 } = {}) {
-      if (mode === "idle") return postFace("release", {});
+      if (mode === "idle") {
+        clearGazeHold();
+        clearFaceVisualHold();
+        return postFace("release", {});
+      }
       if (mode === "listening") {
-        return postFace("control", {
+        const payload = {
           expression: "focused",
-          duration: 1.4,
-          gaze: { x: 0.0, y: 0.0, duration: 1.4, move_ms: 120 }
-        });
+          duration: 1.4
+        };
+        if (!gazeHoldActive()) payload.gaze = { x: 0.0, y: 0.0, duration: 1.4, move_ms: 120 };
+        return postFace("control", payload);
       }
       if (mode === "thinking") {
         thinkingGazeSide *= -1;
-        return postFace("control", {
+        const payload = {
           expression: "focused",
-          duration: 2.5,
-          gaze: {
+          duration: 2.5
+        };
+        if (!gazeHoldActive()) {
+          payload.gaze = {
             x: 0.34 * thinkingGazeSide,
             y: -0.22,
             duration: 2.5,
             move_ms: 280
-          }
-        });
+          };
+        }
+        return postFace("control", payload);
       }
       if (mode === "speaking") {
         return postFace("control", {
@@ -793,27 +1120,198 @@
           }
         });
       }
-      if (mode === "sleeping") return postFace("sleep", { duration: 0 });
+      if (mode === "sleeping") {
+        noteFaceVisualHold(0);
+        return postFace("sleep", { duration: 0 });
+      }
       throw new Error(`Unsupported face mode: ${mode}`);
+    }
+
+    function maybeHandleDirectFaceCommand(text) {
+      const value = String(text || "");
+      if (/\b(go to sleep|close your eyes|sleepy eyes|sleep mode)\b/i.test(value)) {
+        noteFaceVisualHold(0);
+        setFaceMode({ mode: "sleeping" }).then(
+          (result) => log(events, `face direct sleep: ${JSON.stringify(result)}`),
+          (error) => log(events, `face direct sleep error: ${error.message}`)
+        );
+        return true;
+      }
+      if (/\b(wake up|open your eyes)\b/i.test(value)) {
+        clearFaceVisualHold();
+        clearGazeHold();
+        setFaceMode({ mode: "idle" }).then(
+          (result) => log(events, `face direct idle: ${JSON.stringify(result)}`),
+          (error) => log(events, `face direct idle error: ${error.message}`)
+        );
+        return true;
+      }
+      return false;
     }
 
     async function playFaceBeat({ name } = {}) {
       if (!name) throw new Error("Missing beat name");
-      return postFace("beat", { name });
+      const result = await postFace("beat", { name });
+      noteFaceVisualHold(5.5);
+      return result;
+    }
+
+    async function setFaceMood({ name, duration = 0 } = {}) {
+      if (!name) throw new Error("Missing mood name");
+      const seconds = Math.max(0, Math.min(30, Number(duration) || 0));
+      const payload = { name };
+      if (seconds > 0) payload.duration = seconds;
+      const result = await postFace("mood", payload);
+      noteFaceVisualHold(seconds || 5);
+      return result;
+    }
+
+    async function setEyeGaze({ x = 0, y = 0, duration = 2.0, move_ms = 180 } = {}) {
+      const payload = {
+        x: Math.max(-1, Math.min(1, Number(x) || 0)),
+        y: Math.max(-1, Math.min(1, Number(y) || 0)),
+        duration: Math.max(0, Math.min(30, Number(duration) || 0)),
+        move_ms: Math.max(0, Math.min(2000, Number(move_ms) || 0))
+      };
+      const result = await postFace("gaze", payload);
+      noteGazeHold(payload.duration, payload.move_ms);
+      return result;
+    }
+
+    async function setChassis({ action, left, right, velocity, turn, duration_s = 0 } = {}) {
+      const normalizedAction = String(action || "").trim().toLowerCase();
+      if (!normalizedAction) throw new Error("Missing chassis action");
+
+      if (normalizedAction === "status") return requestChassis("api/status", { method: "GET" });
+      if (normalizedAction === "stop") return requestChassis("api/stop");
+      if (normalizedAction === "estop") return requestChassis("api/estop");
+      if (normalizedAction === "clear") return requestChassis("api/clear");
+
+      const now = Date.now();
+      if (chassisBusyUntil > now) {
+        throw new Error("Chassis drive command already in progress; refusing to queue another movement.");
+      }
+
+      const duration = Math.max(0, Math.min(maxChassisDurationS, Number(duration_s) || 0));
+      const durationMs = Math.round(duration * 1000);
+      chassisBusyUntil = durationMs > 0 ? now + durationMs + 300 : now + 500;
+      try {
+        if (normalizedAction === "tank") {
+          const params = {
+            left: Math.max(-chassisMaxSpeed, Math.min(chassisMaxSpeed, Number(left) || 0)).toFixed(3),
+            right: Math.max(-chassisMaxSpeed, Math.min(chassisMaxSpeed, Number(right) || 0)).toFixed(3)
+          };
+          if (durationMs > 0) params.duration_ms = durationMs;
+          const drive = await requestChassis("api/tank", { params });
+          if (durationMs > 0) {
+            await sleepMs(durationMs);
+            return { status: "ok", action: "tank", queued: false, drive, stop: await requestChassis("api/stop") };
+          }
+          return { status: "ok", action: "tank", queued: false, drive };
+        }
+        if (normalizedAction === "twist") {
+          const params = {
+            v: Math.max(-chassisMaxSpeed, Math.min(chassisMaxSpeed, Number(velocity) || 0)).toFixed(3),
+            w: Math.max(-chassisMaxSpeed, Math.min(chassisMaxSpeed, Number(turn) || 0)).toFixed(3)
+          };
+          if (durationMs > 0) params.duration_ms = durationMs;
+          const drive = await requestChassis("api/twist", { params });
+          if (durationMs > 0) {
+            await sleepMs(durationMs);
+            return { status: "ok", action: "twist", queued: false, drive, stop: await requestChassis("api/stop") };
+          }
+          return { status: "ok", action: "twist", queued: false, drive };
+        }
+      } finally {
+        if (durationMs <= 0) chassisBusyUntil = 0;
+      }
+
+      throw new Error(`Unsupported chassis action: ${normalizedAction}`);
+    }
+
+    async function searchWeb({ query, max_results = 5 } = {}) {
+      const text = String(query || "").trim();
+      if (!text) throw new Error("Missing search query");
+      log(events, `web search: ${text}`);
+      const url = new URL("/api/search", location.href);
+      url.searchParams.set("q", text);
+      url.searchParams.set("max_results", String(max_results || 5));
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      log(events, `web search results: ${result.results?.length || 0}`);
+      return result;
+    }
+
+    function noteGazeHold(duration, moveMs) {
+      const holdMs = Math.max(0, Math.min(30, Number(duration) || 0)) * 1000;
+      const transitionMs = Math.max(0, Math.min(2000, Number(moveMs) || 0));
+      gazeHoldIndefinite = holdMs === 0;
+      gazeHoldUntil = gazeHoldIndefinite ? 0 : Date.now() + holdMs + transitionMs + 300;
+    }
+
+    function clearGazeHold() {
+      gazeHoldUntil = 0;
+      gazeHoldIndefinite = false;
+    }
+
+    function noteFaceVisualHold(duration) {
+      const holdMs = Math.max(0, Math.min(30, Number(duration) || 0)) * 1000;
+      faceVisualHoldIndefinite = holdMs === 0;
+      faceVisualHoldUntil = faceVisualHoldIndefinite ? 0 : Date.now() + holdMs + 300;
+    }
+
+    function clearFaceVisualHold() {
+      faceVisualHoldUntil = 0;
+      faceVisualHoldIndefinite = false;
+    }
+
+    function gazeHoldActive() {
+      return gazeHoldIndefinite || gazeHoldUntil > Date.now();
+    }
+
+    function faceVisualHoldActive() {
+      return faceVisualHoldIndefinite || faceVisualHoldUntil > Date.now();
+    }
+
+    function gazeHoldRemainingMs() {
+      if (gazeHoldIndefinite) return Infinity;
+      return Math.max(0, gazeHoldUntil - Date.now());
+    }
+
+    function faceVisualHoldRemainingMs() {
+      if (faceVisualHoldIndefinite) return Infinity;
+      return Math.max(0, faceVisualHoldUntil - Date.now());
     }
 
     async function executeTool(name, rawArguments) {
-      const args = rawArguments ? JSON.parse(rawArguments) : {};
+      const args = parseToolArguments(rawArguments);
       if (name === "set_robot_mode") return setFaceMode(args);
       if (name === "play_face_beat") return playFaceBeat(args);
+      if (name === "set_face_mood") return setFaceMood(args);
+      if (name === "set_eye_gaze") return setEyeGaze(args);
+      if (name === "set_chassis") return setChassis(args);
       if (name === "remember_fact") return rememberMemoryFact(args);
       if (name === "forget_fact") return forgetMemoryFact(args);
+      if (name === "search_web") return searchWeb(args);
       throw new Error(`Unknown tool: ${name}`);
+    }
+
+    function parseToolArguments(rawArguments) {
+      if (!rawArguments) return {};
+      if (typeof rawArguments === "object") return rawArguments;
+      return JSON.parse(rawArguments);
     }
 
     function cueFaceMode(mode, energy = 0.55, { force = false } = {}) {
       if (faceIdleTimer) clearTimeout(faceIdleTimer);
       faceIdleTimer = null;
+      if (!force && mode !== "idle" && faceVisualHoldActive()) {
+        log(events, `face ${mode} skipped; visual hold active`);
+        return;
+      }
       if (!force && faceMode === mode) return;
       faceMode = mode;
       setFaceMode({ mode, energy }).then(
@@ -824,9 +1322,53 @@
 
     function scheduleFaceIdle(delayMs = 900) {
       if (faceIdleTimer) clearTimeout(faceIdleTimer);
+      const gazeRemainingMs = gazeHoldRemainingMs();
+      const visualRemainingMs = faceVisualHoldRemainingMs();
+      if (gazeRemainingMs === Infinity || visualRemainingMs === Infinity) {
+        log(events, "face idle delayed; hold is indefinite");
+        return;
+      }
+      const actualDelayMs = Math.max(delayMs, gazeRemainingMs, visualRemainingMs);
       faceIdleTimer = setTimeout(() => {
         cueFaceMode("idle");
-      }, delayMs);
+      }, actualDelayMs);
+      if (actualDelayMs !== delayMs) log(events, `face idle delayed until hold ends: ${Math.round(actualDelayMs)}ms`);
+    }
+
+    function userAskedForMultipleMovements() {
+      return /\b(and then|then|after that|followed by|next)\b/i.test(lastUserText || "");
+    }
+
+    function chassisFollowupText(result) {
+      const action = String(result?.action || "").toLowerCase();
+      if (result?.status === "error") return "I could not move.";
+      if (action === "status") return "Status checked.";
+      if (action === "stop") return "Stopped.";
+      if (action === "estop") return "Emergency stop is set.";
+      if (action === "clear") return "Emergency stop is clear.";
+      if (userAskedForMultipleMovements()) return "First move done. Give me the next command.";
+      return "Done.";
+    }
+
+    function memoryFollowupText(toolName, result) {
+      if (result?.status === "error") return "I could not save that.";
+      if (toolName === "remember_fact") return "I'll remember that.";
+      if (toolName === "forget_fact") return "I forgot that.";
+      return "Done.";
+    }
+
+    function exactSpeechInstruction(text) {
+      const safeText = String(text || "Done.").replace(/["\\]/g, "");
+      return `Say exactly this and nothing else: "${safeText}"`;
+    }
+
+    function searchFollowupInstructions(result) {
+      const count = Array.isArray(result?.results) ? result.results.length : 0;
+      if (!count) return exactSpeechInstruction("I searched, but found nothing useful.");
+      return (
+        "Use the search_web tool output in the conversation to answer the user's question in one short spoken sentence. " +
+        "Mention the source site when useful. Do not say you cannot browse or search. Do not mention tools, JSON, or URLs unless the user asked for links."
+      );
     }
 
     async function handleFunctionCall(event) {
@@ -834,17 +1376,27 @@
       toolFollowupNeeded = true;
       try {
         const result = await executeTool(event.name, event.arguments);
+        if (event.name === "set_chassis") toolFollowupExactText = chassisFollowupText(result);
+        if (event.name === "remember_fact" || event.name === "forget_fact") {
+          toolFollowupExactText = memoryFollowupText(event.name, result);
+        }
+        if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
         send({
           type: "conversation.item.create",
           item: {
             type: "function_call_output",
             call_id: event.call_id,
-            output: JSON.stringify({ status: "ok", result })
+            output: JSON.stringify(event.name === "search_web" ? result : { status: "ok", result })
           }
         });
         if (event.name === "remember_fact" || event.name === "forget_fact") updateSessionTools();
       } catch (error) {
+        if (event.name === "set_chassis") toolFollowupExactText = "I could not move.";
+        if (event.name === "remember_fact" || event.name === "forget_fact") {
+          toolFollowupExactText = "I could not save that.";
+        }
+        if (event.name === "search_web") toolFollowupExactText = "I could not search.";
         log(events, `tool ${event.name} error: ${error.message}`);
         send({
           type: "conversation.item.create",
@@ -863,22 +1415,30 @@
       if (!toolFollowupNeeded || pendingToolCalls > 0 || !responseDoneAfterTool) return;
       toolFollowupNeeded = false;
       responseDoneAfterTool = false;
+      const instructions = toolFollowupExactText
+        ? exactSpeechInstruction(toolFollowupExactText)
+        : toolFollowupInstructions || "Now reply as Robot 790, spoken name Eric. One short spoken sentence. Do not mention tools or output XML/function-call tags. Do not claim any additional robot action happened. If the user requested multiple chassis movements, say the first move is done and ask for the next movement as a new command.";
+      toolFollowupExactText = "";
+      toolFollowupInstructions = "";
       send({
         type: "response.create",
         response: {
           modalities: ["audio", "text"],
           tool_choice: "none",
-          instructions: "Now reply as Robot 790, spoken name Eric. One short spoken sentence. Do not mention tools.",
+          instructions,
           ...ttsRuntimeConfig()
         }
       });
     }
 
     function updateSessionTools() {
+      saveToolPrefs();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       const enabledTools = [
         ...(llmTools?.checked ? faceTools : []),
-        ...(llmMemoryTools?.checked ? memoryTools : [])
+        ...(llmChassisTools?.checked ? chassisTools : []),
+        ...(llmMemoryTools?.checked ? memoryTools : []),
+        ...(llmWebSearchTools?.checked ? searchTools : [])
       ];
       send({
         type: "session.update",
@@ -984,8 +1544,9 @@
         clearInputDraft();
         noteUserText(event.transcript || "");
         addConversation(`You: ${event.transcript || ""}`);
-        cueFaceMode("thinking", 0.45);
+        if (!maybeHandleDirectFaceCommand(event.transcript || "")) cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.output_audio_transcript.done") {
+        noteAssistantText(event.transcript || "");
         addConversation(`Robot 790: ${event.transcript || ""}`);
       } else if (event.type === "response.output_text.delta") {
         addConversation(`Robot 790: ${event.delta || ""}`);
@@ -1007,7 +1568,6 @@
         connectButton.disabled = true;
         disconnectButton.disabled = false;
         startMicButton.disabled = false;
-        sendTextButton.disabled = false;
         faceIdleButton.disabled = false;
         faceBeatButton.disabled = false;
         log(events, "connected");
@@ -1027,7 +1587,6 @@
         disconnectButton.disabled = true;
         startMicButton.disabled = true;
         stopMicButton.disabled = true;
-        sendTextButton.disabled = true;
         faceIdleButton.disabled = true;
         faceBeatButton.disabled = true;
         log(events, "disconnected");
@@ -1081,32 +1640,6 @@
       log(events, "mic stopped");
     }
 
-    function sendText() {
-      const text = textPrompt.value.trim();
-      if (!text) return;
-      const id = `msg_${Date.now()}_${seq++}`;
-      clearInputDraft();
-      noteUserText(text);
-      addConversation(`You: ${text}`);
-      cueFaceMode("thinking", 0.45);
-      send({
-        type: "conversation.item.create",
-        item: {
-          id,
-          type: "message",
-          role: "user",
-          content: [{ type: "input_text", text }]
-        }
-      });
-      send({
-        type: "response.create",
-        response: {
-          modalities: ["audio", "text"],
-          ...ttsRuntimeConfig()
-        }
-      });
-    }
-
     connectButton.addEventListener("click", connect);
     disconnectButton.addEventListener("click", () => ws?.close());
     faceIdleButton.addEventListener("click", () => setFaceMode({ mode: "idle" }).then(
@@ -1117,11 +1650,17 @@
       (result) => log(events, `face beat: ${JSON.stringify(result)}`),
       (error) => log(events, `face beat error: ${error.message}`)
     ));
+    chassisStopButton.addEventListener("click", () => setChassis({ action: "stop" }).then(
+      (result) => log(events, `chassis stop: ${JSON.stringify(result)}`),
+      (error) => log(events, `chassis stop error: ${error.message}`)
+    ));
     startMicButton.addEventListener("click", () => startMic().catch((error) => log(events, `mic error: ${error.message}`)));
     stopMicButton.addEventListener("click", () => stopMic().catch((error) => log(events, `mic stop error: ${error.message}`)));
-    sendTextButton.addEventListener("click", sendText);
     llmTools.addEventListener("change", updateSessionTools);
+    llmChassisTools.addEventListener("change", updateSessionTools);
     llmMemoryTools.addEventListener("change", updateSessionTools);
+    llmWebSearchTools.addEventListener("change", updateSessionTools);
+    ttsVoice.addEventListener("change", () => updateSessionTtsStyle());
     ttsPreset.addEventListener("change", () => {
       if (ttsPreset.value === "custom") return;
       ttsInstruct.value = ttsStylePresets[ttsPreset.value] || "";
@@ -1153,10 +1692,10 @@
       clearInputDraft();
       events.textContent = "";
     });
-    textPrompt.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") sendText();
-    });
+    populateTtsVoices();
+    loadTtsVoice();
     loadTtsStyle();
+    loadToolPrefs();
     renderMemory();
   </script>
 </body>

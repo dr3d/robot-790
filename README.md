@@ -159,8 +159,14 @@ The tool module is `robot_790d.realtime_tools`. It currently exposes:
 - `set_robot_mode`: maps voice turn states to `idle`, `listening`, `thinking`,
   `speaking`, or `sleeping`.
 - `play_face_beat`: lets an agent trigger a named firmware beat.
+- `set_face_mood`: sets a named ESP32 face mood for a short visual hold.
+- `set_eye_gaze`: aims the eyes at a normalized left/right and up/down gaze
+  target when the user explicitly asks Robot 790 to look somewhere.
+- `set_chassis`: sends one status, stop, e-stop, clear, tank, or twist command
+  to the ESP32 chassis controller.
 - `remember_fact`: saves or updates one persistent named fact.
 - `forget_fact`: removes one persistent named fact by name.
+- `search_web`: searches the web and returns compact title/snippet/URL results.
 
 The browser STS page sends a compact Robot 790/Eric identity instruction with
 `session.update` when it connects. Its deterministic lifecycle drives the face
@@ -174,16 +180,33 @@ and stores the current style in browser `localStorage` under
 troll-ish, sleepy, and excited. CustomVoice models still anchor to the selected
 speaker, so this should be treated as performance direction rather than a hard
 guarantee of a totally different voice.
-The optional `LLM face tools` checkbox exposes `set_robot_mode` and
-`play_face_beat` to the model for experiments. Tool calls are executed in the
-page by posting to the configured ESP32 face URL, which defaults to
-`http://esp32-eyes.local/`.
+The optional `LLM face tools` checkbox exposes `set_robot_mode`,
+`set_face_mood`, `play_face_beat`, and `set_eye_gaze` to the model. It is
+enabled by default so voice requests like "look all the way left" can actuate
+the eyes. Face tool calls are executed in the page by posting to the configured
+ESP32 face URL, which defaults to `http://esp32-eyes.local/`.
 
-The `LLM memory tools` checkbox is disabled by default on the STS page. When
-enabled, it exposes `remember_fact` and `forget_fact` so explicit current-turn
-instructions such as "remember my name as Dave" or "forget user_name" can update
-persistent named facts. The page refuses inferred placeholder facts such as
-"not yet known" and rejects facts that are not grounded in the current user turn.
+The optional `LLM chassis tools` checkbox exposes `set_chassis`. Chassis tool
+calls target `http://esp32-chassis.local/` and are limited to one explicit
+command at a time: status, stop, e-stop, clear, tank, or twist. Voice movement
+should stay slow, short, and firmware-timed; "full speed" and "max speed" map
+to the same normalized `1.0` value as the chassis web UI, and the firmware
+applies the voltage duty cap. The tool contract forbids queued routes or
+multi-step routines.
+
+The optional `LLM web search` checkbox exposes `search_web`. This was adapted
+from the Reachy Mini conversation app's search-tool contract, but runs locally
+through the Robot 790 STS page at `/api/search`. The implementation uses the
+`ddgs` package and returns title, snippet, and URL results. It is useful for
+current facts, newsy questions, and quick lookups; it is still an internet
+tool, so it depends on network availability and upstream search behavior.
+
+The `LLM memory tools` checkbox is enabled by default on the STS page. It
+exposes `remember_fact` and `forget_fact` so explicit instructions such as
+"remember my name as Dave" or "forget user_name" can update persistent named
+facts. If Robot 790 asks the user to provide a fact so it can save it, the next
+user turn can also be saved. The page refuses inferred placeholder facts such as
+"not yet known" and rejects facts that are not grounded in the current save turn.
 The current browser STS path stores those facts in browser `localStorage` under
 `robot790.memory.v1` and injects them into session instructions on connect,
 refresh, and memory updates. The Python daemon path stores the same named-fact

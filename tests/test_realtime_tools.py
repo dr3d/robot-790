@@ -24,6 +24,47 @@ class FakeFace:
         self.calls.append(("beat", name))
         return {"status": "ok"}
 
+    def emotion(self, name: str, duration_s: float | None = None) -> dict[str, object]:
+        self.calls.append(("emotion", {"name": name, "duration": duration_s}))
+        return {"status": "ok"}
+
+    def gaze(self, x: float, y: float, duration_s: float = 1.2, move_ms: int = 160) -> dict[str, object]:
+        self.calls.append(("gaze", {"x": x, "y": y, "duration": duration_s, "move_ms": move_ms}))
+        return {"status": "ok"}
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class FakeChassis:
+    def __init__(self) -> None:
+        self.closed = False
+        self.calls: list[tuple[str, object]] = []
+
+    def status(self) -> dict[str, object]:
+        self.calls.append(("status", None))
+        return {"status": "ok"}
+
+    def tank(self, left: float, right: float, duration_s: float | None = None) -> dict[str, object]:
+        self.calls.append(("tank", {"left": left, "right": right, "duration": duration_s}))
+        return {"status": "ok"}
+
+    def twist(self, velocity: float, turn: float, duration_s: float | None = None) -> dict[str, object]:
+        self.calls.append(("twist", {"velocity": velocity, "turn": turn, "duration": duration_s}))
+        return {"status": "ok"}
+
+    def stop(self) -> dict[str, object]:
+        self.calls.append(("stop", None))
+        return {"status": "ok"}
+
+    def estop(self) -> dict[str, object]:
+        self.calls.append(("estop", None))
+        return {"status": "ok"}
+
+    def clear(self) -> dict[str, object]:
+        self.calls.append(("clear", None))
+        return {"status": "ok"}
+
     def close(self) -> None:
         self.closed = True
 
@@ -31,7 +72,16 @@ class FakeFace:
 def test_realtime_tool_catalog_exposes_robot_actions() -> None:
     names = {str(tool["name"]) for tool in realtime_tools.TOOLS}
 
-    assert names == {"set_robot_mode", "play_face_beat", "remember_fact", "forget_fact"}
+    assert names == {
+        "set_robot_mode",
+        "play_face_beat",
+        "set_face_mood",
+        "set_eye_gaze",
+        "set_chassis",
+        "remember_fact",
+        "forget_fact",
+        "search_web",
+    }
 
 
 def test_set_robot_mode_tool_drives_behavior(monkeypatch) -> None:
@@ -74,6 +124,106 @@ def test_play_face_beat_tool_drives_behavior(monkeypatch) -> None:
     assert face.calls == [("beat", "mischief")]
 
 
+def test_set_face_mood_tool_drives_face(monkeypatch) -> None:
+    face = FakeFace()
+
+    def build_daemon() -> tuple[BehaviorDaemon, FakeFace]:
+        return BehaviorDaemon(face), face
+
+    monkeypatch.setattr(realtime_tools, "_build_daemon", build_daemon)
+
+    result = realtime_tools._set_face_mood({"name": "glitchy", "duration": 4})
+
+    assert result["status"] == "ok"
+    assert result["tool"] == "set_face_mood"
+    assert result["mood"] == "glitchy"
+    assert face.closed is True
+    assert face.calls == [("emotion", {"name": "glitchy", "duration": 4.0})]
+
+
+def test_set_eye_gaze_tool_drives_face(monkeypatch) -> None:
+    face = FakeFace()
+
+    def build_daemon() -> tuple[BehaviorDaemon, FakeFace]:
+        return BehaviorDaemon(face), face
+
+    monkeypatch.setattr(realtime_tools, "_build_daemon", build_daemon)
+
+    result = realtime_tools._set_eye_gaze({"x": 2, "y": -0.5, "duration": 4, "move_ms": 250})
+
+    assert result["status"] == "ok"
+    assert result["tool"] == "set_eye_gaze"
+    assert result["x"] == 1.0
+    assert result["y"] == -0.5
+    assert face.closed is True
+    assert face.calls == [("gaze", {"x": 1.0, "y": -0.5, "duration": 4.0, "move_ms": 250})]
+
+
+def test_set_chassis_maps_status_stop_and_estop(monkeypatch) -> None:
+    chassis = FakeChassis()
+    monkeypatch.setattr(realtime_tools, "_build_chassis", lambda: chassis)
+
+    status = realtime_tools._set_chassis({"action": "status"})
+    stop = realtime_tools._set_chassis({"action": "stop"})
+    estop = realtime_tools._set_chassis({"action": "estop"})
+    clear = realtime_tools._set_chassis({"action": "clear"})
+
+    assert status["status"] == "ok"
+    assert stop["status"] == "ok"
+    assert estop["status"] == "ok"
+    assert clear["status"] == "ok"
+    assert chassis.calls == [
+        ("status", None),
+        ("stop", None),
+        ("estop", None),
+        ("clear", None),
+    ]
+
+
+def test_set_chassis_tank_clamps_values(monkeypatch) -> None:
+    chassis = FakeChassis()
+    monkeypatch.setattr(realtime_tools, "_build_chassis", lambda: chassis)
+
+    result = realtime_tools._set_chassis({"action": "tank", "left": 1, "right": "-1"})
+
+    assert result["status"] == "ok"
+    assert result["queued"] is False
+    assert chassis.closed is True
+    assert chassis.calls == [("tank", {"left": 1.0, "right": -1.0, "duration": None})]
+
+
+def test_set_chassis_timed_twist_stops_after_duration(monkeypatch) -> None:
+    chassis = FakeChassis()
+    monkeypatch.setattr(realtime_tools, "_build_chassis", lambda: chassis)
+
+    result = realtime_tools._set_chassis({"action": "twist", "velocity": 0.2, "turn": -0.1, "duration_s": 0.01})
+
+    assert result["status"] == "ok"
+    assert result["commands_sent"] == 1
+    assert chassis.closed is True
+    assert chassis.calls == [
+        ("twist", {"velocity": 0.2, "turn": -0.1, "duration": 0.01}),
+        ("stop", None),
+    ]
+
+
+def test_set_chassis_refuses_overlapping_drive(monkeypatch) -> None:
+    chassis = FakeChassis()
+    monkeypatch.setattr(realtime_tools, "_build_chassis", lambda: chassis)
+
+    acquired = realtime_tools._CHASSIS_DRIVE_LOCK.acquire(blocking=False)
+    assert acquired is True
+    try:
+        result = realtime_tools._set_chassis({"action": "twist", "velocity": 0.2, "turn": 0.0, "duration_s": 0.1})
+    finally:
+        realtime_tools._CHASSIS_DRIVE_LOCK.release()
+
+    assert result["status"] == "error"
+    assert result["queued"] is False
+    assert "refusing to queue" in str(result["error"])
+    assert chassis.calls == []
+
+
 def test_memory_tools_persist_named_facts(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("ROBOT_790_INSTANCE_PATH", str(tmp_path))
 
@@ -95,3 +245,20 @@ def test_memory_tools_persist_named_facts(tmp_path, monkeypatch) -> None:
         "removed": "The user's name is Dave.",
     }
     assert list_facts(tmp_path) == []
+
+
+def test_search_web_tool_uses_shared_helper(monkeypatch) -> None:
+    def fake_search(query: str, max_results: object = 5) -> dict[str, object]:
+        return {"status": "ok", "tool": "search_web", "query": query, "max_results": max_results, "results": []}
+
+    monkeypatch.setattr(realtime_tools, "search_web", fake_search)
+
+    result = realtime_tools._search_web({"query": "current robot news", "max_results": 3})
+
+    assert result == {
+        "status": "ok",
+        "tool": "search_web",
+        "query": "current robot news",
+        "max_results": 3,
+        "results": [],
+    }

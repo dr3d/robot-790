@@ -4,7 +4,6 @@ from urllib.parse import urljoin
 
 import httpx
 
-
 logger = logging.getLogger(__name__)
 
 DEFAULT_FACE_URL = "http://esp32-eyes.local/"
@@ -42,6 +41,22 @@ class Esp32FaceClient:
     def beat(self, name: str) -> dict[str, object]:
         return self._request("POST", "beat", {"name": name})
 
+    def gaze(
+        self,
+        x: float,
+        y: float,
+        duration_s: float = 1.2,
+        move_ms: int = 160,
+    ) -> dict[str, object]:
+        return self._request(
+            "POST",
+            "gaze",
+            {"x": x, "y": y, "duration": duration_s, "move_ms": move_ms},
+        )
+
+    def gaze_auto(self) -> dict[str, object]:
+        return self._request("POST", "gaze", {"gaze": "auto"})
+
     def sleep(self, duration_s: float = 0.0) -> dict[str, object]:
         return self._request("POST", "sleep", {"duration": duration_s})
 
@@ -70,4 +85,3 @@ class Esp32FaceClient:
                 return {"error": str(data.get("error", "ESP32 face returned ok=false")), "url": url, "response": data}
             return {"status": "ok", "url": url, "response": data}
         return {"error": "ESP32 face returned a non-object response", "url": url, "response": data}
-
