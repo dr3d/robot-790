@@ -17,15 +17,21 @@ This V2 target claims:
 http://esp32-face.local/
 ```
 
-## First Milestone
+## Current Milestone
 
-This firmware is intentionally a discovery build. It does not yet port the
-multi-display eyes and mouth renderer. It verifies the onboard hardware and
-provides a stable HTTP/OTA shell for the next pass.
+This firmware started as a discovery build and now drives the two external
+round TFTs as Robot 790 eyes. The eye behavior contract has been ported from
+the V1 face controller in an eye-only form: moods, styles, autonomous gaze,
+manual gaze holds, blinks/winks, idle beats, and the HTTP routes used by the
+STS face tools.
+
+The built-in 240x320 display remains a hardware/status surface for now. Mouth
+rendering is not yet ported to this target.
 
 Current probes:
 
 - ST7789T3 display through Arduino_GFX
+- two GC9A01 round eye displays through Arduino_GFX
 - CST816D touch controller presence over I2C
 - QMI8658 IMU over I2C
 - microSD over SPI, disabled by default during first bring-up
@@ -79,7 +85,36 @@ URL: http://192.168.4.1/
 | `GET` | `/status` | JSON status |
 | `GET` | `/api/status` | JSON status |
 | `GET` | `/api/display?message=...` | redraw display self-test card |
+| `GET` | `/api/eyes?pattern=eye\|test&target=left\|right\|both` | redraw external eyes or diagnostics |
 | `GET` | `/api/backlight?value=0..255` | set display backlight PWM |
+| `GET` | `/state` | V1-style face state JSON |
+| `GET` | `/moods` | supported mood names |
+| `GET` | `/emotions` | supported emotion names |
+| `GET` | `/styles` | supported eye style names |
+| `GET` | `/beats` | supported idle beat names |
+| `POST` | `/control` | combined V1-style face control JSON |
+| `POST` | `/mood` | set eye mood |
+| `POST` | `/emotion` | set eye mood alias |
+| `POST` | `/expression` | set mood and matching gaze |
+| `POST` | `/gaze` | manual gaze target or release |
+| `POST` | `/beat` | play an idle beat |
+| `POST` | `/style` | set eye render style |
+| `POST` | `/blink` | trigger blink |
+| `POST` | `/wink` | trigger wink |
+| `POST` | `/sleep` | close/sleep eyes |
+| `POST` | `/release` | release overrides back to autonomous behavior |
+
+Example manual gaze using normalized `x`/`y` values:
+
+```powershell
+Invoke-RestMethod -Uri http://esp32-face.local/gaze `
+  -Method Post -ContentType 'application/json' `
+  -Body '{"x":-1,"y":0.5,"duration":2,"move_ms":200}'
+```
+
+If `z` is omitted, `x` and `y` are normalized to `-1..1`, matching the V1
+face-control tools. If `z` is provided, `x`, `y`, and `z` are treated as raw
+millimeter-style gaze target coordinates.
 
 ## Hardware Notes
 
