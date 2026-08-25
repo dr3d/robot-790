@@ -269,7 +269,7 @@ GazeState gazeState;
 BlinkState blinkState;
 ApiState apiState;
 IdleDirector idleDirector;
-EyeRenderStyle eyeRenderStyle = EyeRenderStyle::Friendly;
+EyeRenderStyle eyeRenderStyle = EyeRenderStyle::Robot;
 float pupilRadius = 15.5f;
 uint32_t lastUpdate = 0;
 uint32_t lastEyeFrame = 0;
