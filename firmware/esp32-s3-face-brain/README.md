@@ -227,6 +227,11 @@ This keeps the built-in 240x320 screen available as the mouth/status surface.
 It intentionally gives up the built-in camera connector for this V2 layout.
 Keep `IO19`/`IO20` for native USB and keep `IO47`/`IO48` as the shared I2C bus.
 
+The external eyes run on the ESP32-S3 `HSPI` controller at 40 MHz. The first
+bring-up used software SPI for pin-safety while verifying wiring, but the
+animated eye renderer needs hardware SPI so left/right gaze updates do not look
+visibly staggered.
+
 Sources:
 
 - Waveshare product documentation: <https://docs.waveshare.com/ESP32-S3-Touch-LCD-2>

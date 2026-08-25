@@ -23,10 +23,10 @@ Arduino_GFX *display = new Arduino_ST7789(
     displayBus, FACE_LCD_RST, FACE_LCD_ROTATION, true, FACE_LCD_WIDTH, FACE_LCD_HEIGHT);
 
 #if FACE_EXTERNAL_EYES_ENABLED
-Arduino_DataBus *leftEyeBus = new Arduino_SWSPI(
-    FACE_EYE_DC, FACE_EYE_LEFT_CS, FACE_EYE_SCLK, FACE_EYE_MOSI, FACE_EYE_MISO);
-Arduino_DataBus *rightEyeBus = new Arduino_SWSPI(
-    FACE_EYE_DC, FACE_EYE_RIGHT_CS, FACE_EYE_SCLK, FACE_EYE_MOSI, FACE_EYE_MISO);
+Arduino_DataBus *leftEyeBus = new Arduino_ESP32SPI(
+    FACE_EYE_DC, FACE_EYE_LEFT_CS, FACE_EYE_SCLK, FACE_EYE_MOSI, FACE_EYE_MISO, HSPI);
+Arduino_DataBus *rightEyeBus = new Arduino_ESP32SPI(
+    FACE_EYE_DC, FACE_EYE_RIGHT_CS, FACE_EYE_SCLK, FACE_EYE_MOSI, FACE_EYE_MISO, HSPI);
 Arduino_GFX *leftEye = new Arduino_GC9A01(
     leftEyeBus, GFX_NOT_DEFINED, FACE_EYE_ROTATION, true);
 Arduino_GFX *rightEye = new Arduino_GC9A01(
@@ -73,7 +73,7 @@ constexpr uint32_t API_DEFAULT_MOOD_MS = 3500;
 constexpr uint32_t API_DEFAULT_EXPR_MS = 8000;
 constexpr uint32_t API_DEFAULT_GAZE_HOLD_MS = 1200;
 constexpr uint32_t API_DEFAULT_GAZE_MOVE_MS = 160;
-constexpr uint32_t EYE_FRAME_MS = 90;
+constexpr uint32_t EYE_FRAME_MS = 50;
 
 uint16_t rgb(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -1207,11 +1207,11 @@ void initEyes()
   digitalWrite(FACE_EYE_RST, HIGH);
   delay(120);
 
-  const bool leftOk = leftEye->begin();
+  const bool leftOk = leftEye->begin(40000000);
   digitalWrite(FACE_EYE_LEFT_CS, HIGH);
   digitalWrite(FACE_EYE_RIGHT_CS, HIGH);
   delay(20);
-  const bool rightOk = rightEye->begin();
+  const bool rightOk = rightEye->begin(40000000);
   digitalWrite(FACE_EYE_LEFT_CS, HIGH);
   digitalWrite(FACE_EYE_RIGHT_CS, HIGH);
   const bool canvasOk = eyeFrame->begin();
@@ -1905,6 +1905,5 @@ void loop()
                   sdOk,
                   cameraOk,
                   static_cast<unsigned long>(requests));
-    drawBootCard("ready");
   }
 }
