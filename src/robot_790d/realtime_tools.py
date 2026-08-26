@@ -439,7 +439,9 @@ TOOLS: list[dict[str, object]] = [
         "name": "write_text_file",
         "description": (
             "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, "
-            "append, or put text into a named file. Use .txt by default unless the user explicitly names .md."
+            "append, or put text into a named file. Use .txt by default unless the user explicitly names .md. "
+            "Notes are durable memory aids: record what happened, what the user supplied, and Eric's thoughts as "
+            "thoughts. Do not turn Eric's poetic rumination or unverified outside facts into remembered truth."
         ),
         "parameters": {
             "type": "object",

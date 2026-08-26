@@ -879,7 +879,9 @@
         name: "write_text_file",
         description: (
           "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, " +
-          "append, or put text into a named file. Use .txt by default unless the user explicitly names .md."
+          "append, or put text into a named file. Use .txt by default unless the user explicitly names .md. " +
+          "Notes are durable memory aids: record what happened, what the user supplied, and Eric's thoughts as thoughts. " +
+          "Do not turn Eric's poetic rumination or unverified outside facts into remembered truth."
         ),
         parameters: {
           type: "object",
@@ -1080,6 +1082,11 @@
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
       "Use note file tools only when the user explicitly asks you to write, save, append, read, or list a text file or note.",
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
+      "When writing notes, write for future memory, not for live performance: keep the voice warm, but make the record clear and useful.",
+      "In notes, distinguish user-supplied facts, observed session events, tool-verified facts, and Eric's own ruminations.",
+      "In notes, preserve Eric's strange thoughts as thoughts; do not restate them as factual claims about the world.",
+      "In notes, avoid storing precise outside-world claims unless the user supplied them or a tool verified them. If they matter, label them unverified.",
+      "In notes, replace vague time phrases such as just now, earlier, forty-five seconds ago, or while you were gone with session context or omit them.",
       "Never say you wrote, saved, appended, read, or listed a file unless the note file tool succeeded.",
       "If a sensing-eye image is staged, use it as visual context when the user's spoken request refers to what you see, the picture, the image, this, or it.",
       "When using sensing-eye vision, separate visible observations from guesses; say you are guessing when unsure, and ask for confirmation before any actuation-relevant interpretation.",

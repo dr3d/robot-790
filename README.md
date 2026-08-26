@@ -292,6 +292,12 @@ memory: Robot 790 only touches files when explicitly asked to save, write,
 append, read, or list a note. Files live under the local `notes/` folder by
 default, missing extensions become `.txt`, and only `.txt` or explicitly named
 `.md` files are allowed. Set `ROBOT_790_NOTES_PATH` to move the notes folder.
+Because notes are memory aids, the note-writing prompt asks Eric to keep the
+record clearer than the live idle voice: user-supplied facts, observed session
+events, tool-verified facts, and Eric's own ruminations should stay distinct.
+Poetic thoughts can be preserved as thoughts, but unverified outside facts
+should not be written as settled truth, and vague time phrases should be made
+session-relative or omitted.
 This gives future summarizer/reflection jobs a safe storage layer to reuse
 without changing the voice UI contract.
 
