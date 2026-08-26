@@ -15,6 +15,7 @@
       --accent: #60d394;
       --warn: #ffcf5a;
       --bad: #ff6b6b;
+      --log-pane-height: clamp(18rem, 42vh, 34rem);
     }
     * { box-sizing: border-box; }
     html {
@@ -263,8 +264,9 @@
       gap: 16px;
     }
     .log-grid {
-      flex: 1;
-      min-height: 18rem;
+      flex: 0 0 auto;
+      min-height: var(--log-pane-height);
+      max-height: var(--log-pane-height);
       padding-bottom: 0;
     }
     .log-grid > div {
@@ -273,7 +275,9 @@
       grid-template-rows: auto minmax(0, 1fr);
     }
     .log {
-      min-height: 18rem;
+      height: var(--log-pane-height);
+      min-height: var(--log-pane-height);
+      max-height: var(--log-pane-height);
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -312,6 +316,9 @@
       letter-spacing: 0;
     }
     @media (max-width: 720px) {
+      :root {
+        --log-pane-height: clamp(16rem, 38vh, 24rem);
+      }
       body {
         height: auto;
         min-height: 100vh;
@@ -341,9 +348,6 @@
       }
       .log-grid {
         flex: none;
-      }
-      .log {
-        height: 280px;
       }
     }
   </style>
