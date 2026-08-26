@@ -188,7 +188,10 @@ and speaking drives the mouth/talking state.
 The `Idle drift` slider is off at `0`. Higher values let the page create an
 occasional one-sentence autonomous ponder after a quiet period, using recent
 conversation and saved facts as light context while disabling tools for that
-turn. The `Ponder` button triggers the same path manually for testing.
+turn. Level `11` is a deliberately overactive mode: it schedules ponders every
+10-45 seconds when the system is otherwise idle and lets Robot 790 sound a bit
+more expressive. The `Ponder` button triggers the same path manually for
+testing.
 The `Voice style` control sends a `qwen3_tts_instruct` runtime hint to Qwen3-TTS
 and stores the current style in browser `localStorage` under
 `robot790.ttsStyle.v1`. Presets include neutral, dry Eric, happy, ominous,

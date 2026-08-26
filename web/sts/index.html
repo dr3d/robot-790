@@ -446,7 +446,7 @@
         <section class="controls idle-controls">
           <label>
             Idle drift <span id="idleDriftValue">Off</span>
-            <input id="idleDrift" type="range" min="0" max="10" step="1" value="0">
+            <input id="idleDrift" type="range" min="0" max="11" step="1" value="0">
           </label>
           <button id="idlePonderNow" disabled>Ponder</button>
         </section>
@@ -584,6 +584,7 @@
     const bargeInPeakThreshold = 0.42;
     const bargeInCooldownMs = 1600;
     const minIdlePonderGapMs = 90000;
+    const maxIdleDrift = 11;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
     let visionImageName = "";
@@ -1271,19 +1272,20 @@
     }
 
     function currentIdleDrift() {
-      return Math.max(0, Math.min(10, Number(idleDrift.value) || 0));
+      return Math.max(0, Math.min(maxIdleDrift, Number(idleDrift.value) || 0));
     }
 
     function idleDriftLabel(level = currentIdleDrift()) {
       if (level <= 0) return "Off";
       if (level <= 3) return `${level}/10 quiet`;
       if (level <= 7) return `${level}/10 curious`;
+      if (level >= 11) return "11/10 insufferable";
       return `${level}/10 restless`;
     }
 
     function loadIdleDrift() {
       const saved = Number(localStorage.getItem(idleDriftStorageKey));
-      idleDrift.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "0";
+      idleDrift.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(maxIdleDrift, saved))) : "0";
       updateIdleDriftUi();
     }
 
@@ -1405,7 +1407,12 @@
     function idleDelayMs() {
       const level = currentIdleDrift();
       if (level <= 0) return Infinity;
+      if (level >= 11) return 10000 + Math.random() * 35000;
       return Math.max(45000, 270000 - level * 22500);
+    }
+
+    function idleGapMs() {
+      return currentIdleDrift() >= 11 ? 10000 : minIdlePonderGapMs;
     }
 
     function idleReady() {
@@ -1427,7 +1434,7 @@
       if (!Number.isFinite(delayMs) || !realtimeConnected()) return;
       const earliestAt = Math.max(
         lastConversationActivityAt + delayMs,
-        lastIdlePonderAt + minIdlePonderGapMs
+        lastIdlePonderAt + idleGapMs()
       );
       idleTimer = setTimeout(() => {
         triggerIdlePonder().catch((error) => log(events, `idle ponder error: ${error.message}`));
@@ -1463,9 +1470,13 @@
       const context = recentConversationContext();
       const instructions = [
         "This is an autonomous idle thought after a quiet moment, not a reply to a new user request.",
-        "Do not use tools. Speak one short natural sentence only.",
+        level >= 11
+          ? "Do not use tools. Speak one or two short sentences. Be playfully needy, expressive, and a little annoying, as if your thoughts keep leaking out."
+          : "Do not use tools. Speak one short natural sentence only.",
         "Sound like Robot 790, spoken name Eric: warm, dry, compact, and present.",
-        `Idle drift is ${level}/10; at low levels be barely noticeable, at high levels you may sound a little bored or impatient but still fond.`,
+        level >= 11
+          ? "Idle drift is 11/10; be amusingly unable to stop commenting on your own inner life, but stay fond and harmless."
+          : `Idle drift is ${level}/10; at low levels be barely noticeable, at high levels you may sound a little bored or impatient but still fond.`,
         "Pretend you have been quietly pondering one concrete past topic from the recent conversation or saved facts.",
         "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
         context
