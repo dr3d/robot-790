@@ -202,7 +202,9 @@ then committed back as an assistant item so Robot 790 can keep continuity if the
 user responds. The page also distinguishes build inventory from live telemetry:
 saved notes may say a PIR, yaw turntable, IMU, or fans exist, but idle ponders
 should not claim current readings from those devices unless the ambient context
-or a tool result actually supplied them. At levels `10` and `11`,
+or a tool result actually supplied them. It may still imagine future or missing
+body sensations when clearly framed as imagined, hoped-for, rehearsed, or
+someday-not-yet. At levels `10` and `11`,
 the curiosity lane may perform one rate-limited web search when `LLM web search`
 is enabled and fold a compact outside detail into the next idle thought. If the
 page detects repeated "I'm out / same loop / nothing new" style outputs, it
