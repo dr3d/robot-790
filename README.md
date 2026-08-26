@@ -190,8 +190,15 @@ occasional one-sentence autonomous ponder after a quiet period, using recent
 conversation and saved facts as light context while disabling tools for that
 turn. Level `11` is a deliberately overactive mode: it schedules ponders every
 10-45 seconds when the system is otherwise idle and lets Robot 790 sound a bit
-more expressive. The `Ponder` button triggers the same path manually for
-testing.
+more expressive. Idle ponders rotate through deterministic lanes such as object
+noticing, callback, status, question, craft, curiosity, and aside so they do not
+always use the same fact/contrast/uncertainty shape. At levels `10` and `11`,
+the curiosity lane may perform one rate-limited web search when `LLM web search`
+is enabled and fold a compact outside detail into the next idle thought. If the
+page detects repeated "I'm out / same loop / nothing new" style outputs, it
+puts idle pondering into a short cooldown instead of letting the loop narrate
+its own exhaustion forever. The `Ponder` button triggers the same path manually
+for testing.
 The `Voice style` control sends a `qwen3_tts_instruct` runtime hint to Qwen3-TTS
 and stores the current style in browser `localStorage` under
 `robot790.ttsStyle.v1`. Presets include neutral, dry Eric, happy, ominous,

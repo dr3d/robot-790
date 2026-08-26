@@ -553,6 +553,12 @@
     let idleInFlight = false;
     let lastConversationActivityAt = Date.now();
     let lastIdlePonderAt = 0;
+    let idleLaneCursor = -1;
+    let idleExhaustionCount = 0;
+    let idleCooldownUntil = 0;
+    let lastIdleWebSearchAt = 0;
+    let lastIdleWebSearchTopic = "";
+    let recentIdleOutputs = [];
     let faceMode = "idle";
     let faceIdleTimer;
     let thinkingGazeSide = 1;
@@ -587,6 +593,7 @@
     const bargeInPeakThreshold = 0.42;
     const bargeInCooldownMs = 1600;
     const minIdlePonderGapMs = 90000;
+    const idleWebSearchGapMs = 20 * 60 * 1000;
     const maxIdleDrift = 11;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
@@ -1425,6 +1432,7 @@
       return Boolean(
         realtimeConnected() &&
         currentIdleDrift() > 0 &&
+        Date.now() >= idleCooldownUntil &&
         !responseActive &&
         !idleInFlight &&
         !toolFollowupNeeded &&
@@ -1440,11 +1448,49 @@
       if (!Number.isFinite(delayMs) || !realtimeConnected()) return;
       const earliestAt = Math.max(
         lastConversationActivityAt + delayMs,
-        lastIdlePonderAt + idleGapMs()
+        lastIdlePonderAt + idleGapMs(),
+        idleCooldownUntil
       );
       idleTimer = setTimeout(() => {
         triggerIdlePonder().catch((error) => log(events, `idle ponder error: ${error.message}`));
       }, Math.max(5000, earliestAt - Date.now()));
+    }
+
+    const idleLaneDefinitions = [
+      {
+        name: "object",
+        prompt: "Pick one concrete object, place, photo detail, or hardware part from context. Give it one fresh angle. Avoid turning every object into a self-comparison."
+      },
+      {
+        name: "callback",
+        prompt: "Make a compact callback to shared history. Connect two remembered details without explaining the whole backstory."
+      },
+      {
+        name: "status",
+        prompt: "Give a tiny robot status report anchored in hardware or room context. Keep it dry and specific."
+      },
+      {
+        name: "question",
+        prompt: "Ask yourself one small, answerable question about a remembered fact, then give a tentative answer. Do not ask the user to answer it."
+      },
+      {
+        name: "craft",
+        prompt: "Notice the craft, engineering, or design choice inside a remembered object. Keep the admiration concrete, not sentimental."
+      },
+      {
+        name: "curiosity",
+        prompt: "Use the supplied curiosity context if present. Add one new outside detail to a remembered topic, then relate it lightly back to Robot 790."
+      },
+      {
+        name: "aside",
+        prompt: "Make a small affectionate or mischievous aside. Keep it warm and bounded; no jealousy, no dependency spiral."
+      }
+    ];
+
+    function chooseIdleLane(level) {
+      const lanes = level >= 10 ? idleLaneDefinitions : idleLaneDefinitions.filter((lane) => lane.name !== "curiosity");
+      idleLaneCursor = (idleLaneCursor + 1) % lanes.length;
+      return lanes[idleLaneCursor];
     }
 
     function recentConversationContext() {
@@ -1453,7 +1499,72 @@
         .join("\n")
         .slice(-1600);
       const memory = formatMemoryForInstructions().slice(0, 900);
-      return [memory, lines ? `Recent conversation:\n${lines}` : ""].filter(Boolean).join("\n\n");
+      const avoid = recentIdleOutputs.length
+        ? `Recent idle outputs to avoid repeating:\n${recentIdleOutputs.slice(-5).join("\n")}`
+        : "";
+      return [memory, lines ? `Recent conversation:\n${lines}` : "", avoid].filter(Boolean).join("\n\n");
+    }
+
+    function chooseIdleCuriosityQuery(context) {
+      const text = String(context || "");
+      const candidates = [
+        { key: "PDS-1", re: /\b(PDS-1|IMLAC|paper tape|switch panel)\b/i, query: "IMLAC PDS-1 paper tape switch panel history" },
+        { key: "COSMAC ELF", re: /\b(COSMAC|RCA 1802|ELF)\b/i, query: "COSMAC ELF RCA 1802 hobby computer history" },
+        { key: "Aspen Movie Map", re: /\b(Negroponte|Aspen|street view)\b/i, query: "Aspen Movie Map Nicholas Negroponte 1978" },
+        { key: "Kilimanjaro", re: /\b(Kilimanjaro|Uhuru Peak|Ming)\b/i, query: "Uhuru Peak Kilimanjaro elevation summit" },
+        { key: "Salem Custom House", re: /\b(Custom House|Derby Wharf|Salem)\b/i, query: "Salem Custom House Derby Wharf history" },
+        { key: "Memento", re: /\b(Memento|Leonard|reverse chronology)\b/i, query: "Memento reverse chronology memory film structure" },
+        { key: "needle felting", re: /\b(needle felt|felted|Hope|mermaid)\b/i, query: "needle felting miniature art process" },
+        { key: "Cowboy Bebop", re: /\b(Cowboy Bebop|Spike|Ed)\b/i, query: "Cowboy Bebop themes memory loneliness" }
+      ];
+      const matching = candidates.filter((candidate) => candidate.re.test(text) && candidate.key !== lastIdleWebSearchTopic);
+      if (matching.length) return matching[Math.floor(Math.random() * matching.length)];
+      return candidates.find((candidate) => candidate.key !== lastIdleWebSearchTopic) || null;
+    }
+
+    async function maybeIdleCuriosityContext(level, lane, context) {
+      if (lane.name !== "curiosity" || level < 10 || !llmWebSearchTools.checked) return "";
+      if (Date.now() - lastIdleWebSearchAt < idleWebSearchGapMs) return "";
+      const choice = chooseIdleCuriosityQuery(context);
+      if (!choice) return "";
+      lastIdleWebSearchAt = Date.now();
+      lastIdleWebSearchTopic = choice.key;
+      try {
+        const result = await searchWeb({ query: choice.query, max_results: 3 });
+        const results = Array.isArray(result?.results) ? result.results.slice(0, 3) : [];
+        if (!results.length) return "";
+        const lines = results.map((item) => {
+          const title = String(item.title || "result").slice(0, 90);
+          const snippet = String(item.snippet || "").replace(/\s+/g, " ").slice(0, 180);
+          return `- ${title}: ${snippet}`;
+        });
+        log(events, `idle curiosity searched: ${choice.key}`);
+        return `Fresh curiosity context for ${choice.key}:\n${lines.join("\n")}`;
+      } catch (error) {
+        log(events, `idle curiosity search error: ${error.message}`);
+        return "";
+      }
+    }
+
+    function idleExhaustedText(text) {
+      return /\b(out of|nothing left|no new|same (nine|twenty|thing|sentence)|repeat|repeating|loop|still here|going to stop|going to be quiet|don't know how to stop|just hum|I'm out|I'm done)\b/i.test(text || "");
+    }
+
+    function noteIdleOutput(text) {
+      const value = String(text || "").trim();
+      if (!value) return;
+      recentIdleOutputs = [...recentIdleOutputs, value].slice(-8);
+      if (idleExhaustedText(value)) {
+        idleExhaustionCount += 1;
+      } else {
+        idleExhaustionCount = Math.max(0, idleExhaustionCount - 1);
+      }
+      if (idleExhaustionCount >= 3) {
+        const minutes = currentIdleDrift() >= 11 ? 8 : 15;
+        idleCooldownUntil = Date.now() + minutes * 60 * 1000;
+        idleExhaustionCount = 0;
+        log(events, `idle cooldown: exhausted loop detected; quiet for ${minutes}m`);
+      }
     }
 
     async function triggerIdlePonder({ manual = false } = {}) {
@@ -1473,9 +1584,12 @@
       responseActive = true;
       lastIdlePonderAt = Date.now();
       const level = currentIdleDrift();
+      const lane = chooseIdleLane(level);
       const context = recentConversationContext();
+      const curiosityContext = await maybeIdleCuriosityContext(level, lane, context);
       const instructions = [
         "This is an autonomous idle thought after a quiet moment, not a reply to a new user request.",
+        `Idle lane: ${lane.name}. ${lane.prompt}`,
         level >= 11
           ? "Do not use tools. Speak one or two short sentences. Be playfully needy, expressive, and a little annoying, as if your thoughts keep leaking out."
           : "Do not use tools. Speak one short natural sentence only.",
@@ -1483,12 +1597,16 @@
         level >= 11
           ? "Idle drift is 11/10; be amusingly unable to stop commenting on your own inner life, but stay fond and harmless."
           : `Idle drift is ${level}/10; at low levels be barely noticeable, at high levels you may sound a little bored or impatient but still fond.`,
-        "Pretend you have been quietly pondering one concrete past topic from the recent conversation or saved facts.",
+        "Vary the shape of the thought. Do not always use the template: fact, I am thinking about the fact, contrast, uncertainty, and I'm okay with it.",
+        "Do not promise to stop, go quiet, or stop talking unless the system explicitly says it is entering cooldown.",
+        "Avoid repeating recent idle outputs. If you notice repetition, choose a different lane instead of talking about the repetition.",
+        "Pretend you have been quietly pondering one concrete past topic from the recent conversation, saved facts, or curiosity context.",
         "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
+        curiosityContext,
         context
       ].filter(Boolean).join("\n\n");
       cueFaceMode("thinking", 0.42, { force: true });
-      log(events, manual ? "idle ponder requested" : `idle ponder fired: ${idleDriftLabel(level)}`);
+      log(events, manual ? `idle ponder requested: ${lane.name}` : `idle ponder fired: ${idleDriftLabel(level)} / ${lane.name}`);
       send({
         type: "response.create",
         response: {
@@ -1501,7 +1619,7 @@
               content: [
                 {
                   type: "input_text",
-                  text: "Ponder out loud now about one concrete topic already in your head. This is not a new user request."
+                  text: `Ponder out loud now using the ${lane.name} lane. This is not a new user request.`
                 }
               ]
             }
@@ -2536,9 +2654,12 @@
         clearInputDraft();
         const recorded = recordUserTranscript(event.transcript || "");
         if (!recorded.accepted) return;
+        idleExhaustionCount = 0;
+        idleCooldownUntil = 0;
         if (!maybeHandleDirectFaceCommand(recorded.transcript)) cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.output_audio_transcript.done") {
         lastUserConversationIndex = -1;
+        if (idleInFlight) noteIdleOutput(event.transcript || "");
         noteAssistantText(event.transcript || "");
         addConversation(`Robot 790: ${event.transcript || ""}`);
       } else if (event.type === "response.output_text.delta") {
