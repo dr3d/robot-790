@@ -437,6 +437,8 @@
             <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
             <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
             <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
+            <span class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</span>
+            <span class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</span>
             <span class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</span>
           </label>
           <button id="memoryRefresh">Refresh</button>
@@ -471,6 +473,8 @@
     const llmChassisTools = document.querySelector("#llmChassisTools");
     const llmMemoryTools = document.querySelector("#llmMemoryTools");
     const llmWebSearchTools = document.querySelector("#llmWebSearchTools");
+    const llmWebPageTools = document.querySelector("#llmWebPageTools");
+    const llmCastMediaTools = document.querySelector("#llmCastMediaTools");
     const llmNoteFileTools = document.querySelector("#llmNoteFileTools");
     const memoryPreview = document.querySelector("#memoryPreview");
     const memoryRefreshButton = document.querySelector("#memoryRefresh");
@@ -506,6 +510,8 @@
     let audioChunks = [];
     let audioChunkBytes = 0;
     let audioFlushTimer;
+    let activeAudioSources = new Set();
+    let lastBargeInAt = 0;
     let conversationLines = [];
     let inputDraft = "";
     let lastUserText = "";
@@ -546,6 +552,8 @@
     const maxChassisDurationS = 5;
     const visionMaxEdgePx = 768;
     const visionJpegQuality = 0.82;
+    const bargeInPeakThreshold = 0.42;
+    const bargeInCooldownMs = 1600;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
     let visionImageName = "";
@@ -906,6 +914,83 @@
       }
     ];
 
+    const webPageTools = [
+      {
+        type: "function",
+        name: "show_web_page",
+        description: (
+          "Open an HTTP or HTTPS web page from the Robot 790 STS browser UI in a new tab or window. " +
+          "Use this when the user asks to show, open, display, or bring up a website, article, document page, " +
+          "search result page, dashboard, or other normal web page in the UI."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            url: {
+              type: "string",
+              description: "HTTP or HTTPS URL for the web page to open."
+            },
+            title: {
+              type: "string",
+              description: "Optional short label for the web page."
+            }
+          },
+          required: ["url"],
+          additionalProperties: false
+        }
+      }
+    ];
+
+    const castMediaTools = [
+      {
+        type: "function",
+        name: "cast_media",
+        description: (
+          "Search YouTube, play videos, show direct image URLs, list Cast receivers, or stop playback on " +
+          "Robot 790's configured Chromecast-compatible TV. Use this when the user asks to show, watch, " +
+          "cast, play, or put YouTube videos or pictures on the TV."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            action: {
+              type: "string",
+              enum: ["devices", "search_youtube", "play_youtube", "show_image", "stop"],
+              description: "Media action to perform."
+            },
+            query: {
+              type: "string",
+              description: "YouTube search query. For play_youtube, this plays the first matching result."
+            },
+            video_id: {
+              type: "string",
+              description: "YouTube video ID or watch/shorts URL to play directly."
+            },
+            device_name: {
+              type: "string",
+              description: "Optional Cast device name. Defaults to Living Room TV."
+            },
+            image_url: {
+              type: "string",
+              description: "Direct HTTP or HTTPS image URL for show_image."
+            },
+            title: {
+              type: "string",
+              description: "Optional short title for a cast image."
+            },
+            max_results: {
+              type: "integer",
+              minimum: 1,
+              maximum: 5,
+              description: "Number of YouTube search results to return for search_youtube."
+            }
+          },
+          required: ["action"],
+          additionalProperties: false
+        }
+      }
+    ];
+
     const baseSessionInstructions = [
       "You are Robot 790, spoken name Eric.",
       "You are a local animatronic robot head with ESP32 eyes and mouth displays.",
@@ -933,6 +1018,12 @@
       "Never output XML, function-call tags, parameter tags, or hidden tool syntax in spoken text.",
       "Use search_web whenever the user asks you to search, look something up, check the web, find current information, or answer something likely to have changed recently.",
       "When using search_web, summarize the result naturally in one compact spoken sentence; mention the source site when useful.",
+      "Use show_web_page when the user asks you to open, show, display, or bring up a web page in the UI.",
+      "If the user says open the page after a search, use show_web_page with the most relevant URL from the recent search_web results.",
+      "Never say you opened a web page unless show_web_page succeeded.",
+      "Use cast_media when the user asks you to show, watch, cast, play, or put a YouTube video or direct image URL on the TV.",
+      "The default Cast target is Living Room TV; if it is not found, report discovered devices briefly.",
+      "For broad video requests, call cast_media with action play_youtube and a concise search query instead of only searching the web.",
       "Use memory tools only when the user explicitly asks you to remember or forget a named fact, or when you just asked the user to provide a fact so you could save it and the user provides that fact in the next turn.",
       "When remembering, choose a short snake_case name and one factual sentence.",
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
@@ -1220,6 +1311,8 @@
       llmChassisTools.checked = prefs.chassisTools !== false;
       llmMemoryTools.checked = prefs.memoryTools !== false;
       llmWebSearchTools.checked = prefs.webSearchTools !== false;
+      llmWebPageTools.checked = prefs.webPageTools !== false;
+      llmCastMediaTools.checked = prefs.castMediaTools !== false;
       llmNoteFileTools.checked = prefs.noteFileTools !== false;
     }
 
@@ -1229,6 +1322,8 @@
         chassisTools: llmChassisTools.checked,
         memoryTools: llmMemoryTools.checked,
         webSearchTools: llmWebSearchTools.checked,
+        webPageTools: llmWebPageTools.checked,
+        castMediaTools: llmCastMediaTools.checked,
         noteFileTools: llmNoteFileTools.checked
       }));
     }
@@ -1571,6 +1666,59 @@
       return result;
     }
 
+    async function showWebPage({ url, title } = {}) {
+      const targetUrl = String(url || "").trim();
+      if (!/^https?:\/\/[^/\s?#]+/i.test(targetUrl)) {
+        throw new Error("url must be an HTTP or HTTPS web page URL");
+      }
+      const label = String(title || "").trim().slice(0, 80) || targetUrl;
+      const opened = window.open(targetUrl, "_blank", "noopener,noreferrer");
+      const blocked = !opened;
+      log(events, blocked ? `web page blocked: ${targetUrl}` : `web page opened: ${targetUrl}`);
+      return {
+        status: "ok",
+        tool: "show_web_page",
+        source: "web",
+        url: targetUrl,
+        title: label,
+        blocked
+      };
+    }
+
+    async function castMedia({
+      action,
+      query,
+      video_id,
+      device_name,
+      image_url,
+      title,
+      max_results = 3
+    } = {}) {
+      const normalizedAction = String(action || "").trim().toLowerCase();
+      if (!normalizedAction) throw new Error("Missing cast media action");
+      const payload = {
+        action: normalizedAction,
+        query: String(query || "").trim(),
+        video_id: String(video_id || "").trim(),
+        device_name: String(device_name || "").trim(),
+        image_url: String(image_url || "").trim(),
+        title: String(title || "").trim(),
+        max_results: Math.max(1, Math.min(5, Number(max_results) || 3))
+      };
+      log(events, `cast media: ${normalizedAction}${payload.query ? ` ${payload.query}` : ""}`);
+      const response = await fetch(new URL("/api/cast", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      log(events, `cast media result: ${result.action || normalizedAction}`);
+      return result;
+    }
+
     async function writeTextFile({ filename, content, mode = "overwrite" } = {}) {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Missing filename");
@@ -1758,6 +1906,8 @@
       if (name === "remember_fact") return rememberMemoryFact(args);
       if (name === "forget_fact") return forgetMemoryFact(args);
       if (name === "search_web") return searchWeb(args);
+      if (name === "show_web_page") return showWebPage(args);
+      if (name === "cast_media") return castMedia(args);
       if (name === "write_text_file") return writeTextFile(args);
       if (name === "read_text_file") return readTextFile(args);
       if (name === "list_text_files") return listTextFiles(args);
@@ -1857,6 +2007,27 @@
       );
     }
 
+    function webPageFollowupText(result) {
+      if (result?.status === "error") return "I could not open that page.";
+      if (result?.blocked) return "The browser blocked the new tab.";
+      return "I opened it.";
+    }
+
+    function castMediaFollowupText(result) {
+      if (result?.status === "error") return "I could not cast that.";
+      const action = String(result?.action || "").toLowerCase();
+      if (action === "devices") {
+        const count = Array.isArray(result?.devices) ? result.devices.length : 0;
+        if (!count) return "I found no Cast receivers.";
+        return count === 1 ? "I found one Cast receiver." : `I found ${count} Cast receivers.`;
+      }
+      if (action === "search_youtube") return "I found some YouTube options.";
+      if (action === "play_youtube") return "Casting now.";
+      if (action === "show_image") return "Image is on the TV.";
+      if (action === "stop") return "Cast playback stopped.";
+      return "Done.";
+    }
+
     async function handleFunctionCall(event) {
       pendingToolCalls += 1;
       toolFollowupNeeded = true;
@@ -1873,6 +2044,8 @@
           toolFollowupInstructions = noteFileFollowupInstructions(event.name, result);
         }
         if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
+        if (event.name === "show_web_page") toolFollowupExactText = webPageFollowupText(result);
+        if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
         send({
           type: "conversation.item.create",
@@ -1892,6 +2065,8 @@
           toolFollowupExactText = "I could not touch that file.";
         }
         if (event.name === "search_web") toolFollowupExactText = "I could not search.";
+        if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
+        if (event.name === "cast_media") toolFollowupExactText = "I could not cast that.";
         log(events, `tool ${event.name} error: ${error.message}`);
         send({
           type: "conversation.item.create",
@@ -1934,6 +2109,8 @@
         ...(llmChassisTools?.checked ? chassisTools : []),
         ...(llmMemoryTools?.checked ? memoryTools : []),
         ...(llmWebSearchTools?.checked ? searchTools : []),
+        ...(llmWebPageTools?.checked ? webPageTools : []),
+        ...(llmCastMediaTools?.checked ? castMediaTools : []),
         ...(llmNoteFileTools?.checked ? noteFileTools : [])
       ];
       send({
@@ -1943,7 +2120,10 @@
           instructions: buildSessionInstructions(),
           ...ttsRuntimeConfig(),
           tools: enabledTools,
-          tool_choice: enabledTools.length ? "auto" : "none"
+          tool_choice: enabledTools.length ? "auto" : "none",
+          turn_detection: {
+            interrupt_response: true
+          }
         }
       });
       log(
@@ -1966,6 +2146,41 @@
       audioChunkBytes = 0;
     }
 
+    function outputAudioActive() {
+      return Boolean(
+        audioChunkBytes > 0 ||
+        (audioContext && playbackTime > audioContext.currentTime + 0.08) ||
+        activeAudioSources.size
+      );
+    }
+
+    function stopPlaybackNow() {
+      clearAudioQueue();
+      for (const source of activeAudioSources) {
+        try {
+          source.stop();
+        } catch {
+          // Already stopped.
+        }
+      }
+      activeAudioSources.clear();
+      if (audioContext) playbackTime = audioContext.currentTime;
+    }
+
+    function maybeBargeInFromMicPeak(peak) {
+      if (!outputAudioActive()) return;
+      if (peak < bargeInPeakThreshold) return;
+      const now = Date.now();
+      if (now - lastBargeInAt < bargeInCooldownMs) return;
+      lastBargeInAt = now;
+      stopPlaybackNow();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        send({ type: "response.cancel" });
+      }
+      cueFaceMode("listening", 0.45, { force: true });
+      log(events, `barge-in: peak ${peak.toFixed(2)}, response cancelled`);
+    }
+
     function joinAudioChunks() {
       const bytes = new Uint8Array(audioChunkBytes);
       let offset = 0;
@@ -1986,6 +2201,8 @@
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
       source.connect(audioContext.destination);
+      activeAudioSources.add(source);
+      source.onended = () => activeAudioSources.delete(source);
       const now = audioContext.currentTime;
       playbackTime = Math.max(playbackTime, now + 0.03);
       source.start(playbackTime);
@@ -2152,6 +2369,7 @@
         let peak = 0;
         for (const sample of input) peak = Math.max(peak, Math.abs(sample));
         level.style.width = `${Math.min(100, peak * 180)}%`;
+        maybeBargeInFromMicPeak(peak);
         const pcm16 = float32ToPcm16(resample(input, micContext.sampleRate, 16000));
         send({ type: "input_audio_buffer.append", audio: bytesToB64(pcm16) });
       };
@@ -2225,6 +2443,8 @@
     llmChassisTools.addEventListener("change", updateSessionTools);
     llmMemoryTools.addEventListener("change", updateSessionTools);
     llmWebSearchTools.addEventListener("change", updateSessionTools);
+    llmWebPageTools.addEventListener("change", updateSessionTools);
+    llmCastMediaTools.addEventListener("change", updateSessionTools);
     llmNoteFileTools.addEventListener("change", updateSessionTools);
     ttsVoice.addEventListener("change", () => updateSessionTtsStyle());
     ttsPreset.addEventListener("change", () => {

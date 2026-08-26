@@ -5,10 +5,12 @@ import threading
 import time
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 from robot_790d.behavior import BehaviorDaemon
 from robot_790d.devices.esp32_chassis import DEFAULT_CHASSIS_URL, ChassisSettings, Esp32ChassisClient
 from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, FaceSettings
+from robot_790d.media_cast import CastMediaClient
 from robot_790d.memory import forget_fact, remember_fact
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
 from robot_790d.state import Affect, RobotMode
@@ -369,6 +371,71 @@ TOOLS: list[dict[str, object]] = [
     },
     {
         "type": "function",
+        "name": "cast_media",
+        "description": (
+            "Search YouTube, play videos, show direct image URLs, list Cast receivers, or stop playback on "
+            "Robot 790's configured Chromecast-compatible TV. Use this when the user asks to show, watch, "
+            "cast, play, or put YouTube videos or pictures on the TV."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["devices", "search_youtube", "play_youtube", "show_image", "stop"],
+                    "description": "Media action to perform.",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "YouTube search query. For play_youtube, this plays the first matching result.",
+                },
+                "video_id": {
+                    "type": "string",
+                    "description": "YouTube video ID or watch/shorts URL to play directly.",
+                },
+                "device_name": {
+                    "type": "string",
+                    "description": "Optional Cast device name. Defaults to Living Room TV.",
+                },
+                "image_url": {
+                    "type": "string",
+                    "description": "Direct HTTP or HTTPS image URL for show_image.",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Optional short title for a cast image.",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "Number of YouTube search results to return for search_youtube.",
+                },
+            },
+            "required": ["action"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "show_web_page",
+        "description": (
+            "Open or display an HTTP or HTTPS web page from a client UI. Use this when the user asks "
+            "to show, open, display, or bring up a website, article, document page, search result page, "
+            "dashboard, or other normal web page in the UI."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "HTTP or HTTPS URL for the web page to display."},
+                "title": {"type": "string", "description": "Optional short label for the web page."},
+            },
+            "required": ["url"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
         "name": "write_text_file",
         "description": (
             "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, "
@@ -448,6 +515,10 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_forget_fact, parsed)
     elif name == "search_web":
         result = await asyncio.to_thread(_search_web, parsed)
+    elif name == "cast_media":
+        result = await asyncio.to_thread(_cast_media, parsed)
+    elif name == "show_web_page":
+        result = await asyncio.to_thread(_show_web_page, parsed)
     elif name == "write_text_file":
         result = await asyncio.to_thread(_write_text_file, parsed)
     elif name == "read_text_file":
@@ -702,6 +773,54 @@ def _search_web(arguments: dict[str, object]) -> dict[str, object]:
     query = str(arguments.get("query", "")).strip()
     max_results = arguments.get("max_results", 5)
     return search_web(query, max_results=max_results)
+
+
+def _cast_media(arguments: dict[str, object]) -> dict[str, object]:
+    action = str(arguments.get("action", "")).strip().lower()
+    if not action:
+        return {"status": "error", "error": "Missing required argument: action"}
+
+    client = CastMediaClient()
+    try:
+        if action == "devices":
+            return client.list_devices()
+        if action == "search_youtube":
+            query = str(arguments.get("query") or "").strip()
+            max_results = int(_clamp(_float_argument(arguments.get("max_results"), default=3.0), 1.0, 5.0))
+            return client.search_youtube(query, max_results)
+        if action == "play_youtube":
+            return client.play_youtube(
+                query=str(arguments.get("query") or "").strip() or None,
+                video_id=str(arguments.get("video_id") or "").strip() or None,
+                device_name=str(arguments.get("device_name") or "").strip() or None,
+            )
+        if action == "show_image":
+            return client.show_image(
+                image_url=str(arguments.get("image_url") or "").strip(),
+                title=str(arguments.get("title") or "").strip() or None,
+                device_name=str(arguments.get("device_name") or "").strip() or None,
+            )
+        if action == "stop":
+            return client.stop(str(arguments.get("device_name") or "").strip() or None)
+    except ModuleNotFoundError as exc:
+        return {"status": "error", "error": f"Missing Cast media dependency: {exc.name}"}
+    except ValueError as exc:
+        return {"status": "error", "error": str(exc)}
+
+    return {"status": "error", "error": f"Unsupported cast_media action: {action}"}
+
+
+def _show_web_page(arguments: dict[str, object]) -> dict[str, object]:
+    url = str(arguments.get("url") or "").strip()
+    title = str(arguments.get("title") or "").strip()
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return {"status": "error", "error": "url must be an HTTP or HTTPS web page URL"}
+
+    result: dict[str, object] = {"status": "ok", "tool": "show_web_page", "url": url, "source": "web"}
+    if title:
+        result["title"] = title[:80]
+    return result
 
 
 def _write_text_file(arguments: dict[str, object]) -> dict[str, object]:

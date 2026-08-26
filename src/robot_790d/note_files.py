@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,6 +53,34 @@ def relative_note_name(path: Path, instance_path: str | Path | None = None) -> s
     return path.resolve().relative_to(notes_root_for_instance(instance_path).resolve()).as_posix()
 
 
+def note_lookup_key(path: Path) -> tuple[str, ...]:
+    parts = list(path.parts)
+    if not parts:
+        return ()
+    final = Path(parts[-1])
+    parts[-1] = f"{_slug_text(final.stem)}{final.suffix.lower()}"
+    return tuple(_slug_text(part) for part in parts[:-1]) + (parts[-1],)
+
+
+def _slug_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", value.casefold()).strip("_")
+
+
+def find_existing_note_path(filename: str, instance_path: str | Path | None = None) -> Path:
+    requested = resolve_note_path(filename, instance_path)
+    if requested.exists():
+        return requested
+
+    root = notes_root_for_instance(instance_path).resolve()
+    requested_key = note_lookup_key(requested.relative_to(root))
+    for candidate in root.rglob("*"):
+        if not candidate.is_file() or candidate.suffix.lower() not in ALLOWED_EXTENSIONS:
+            continue
+        if note_lookup_key(candidate.resolve().relative_to(root)) == requested_key:
+            return candidate.resolve()
+    return requested
+
+
 def write_note_file(
     instance_path: str | Path | None,
     filename: str,
@@ -88,7 +117,7 @@ def write_note_file(
 
 
 def read_note_file(instance_path: str | Path | None, filename: str) -> NoteFile:
-    path = resolve_note_path(filename, instance_path)
+    path = find_existing_note_path(filename, instance_path)
     content = path.read_text(encoding="utf-8")
     if len(content) > MAX_NOTE_CHARS:
         raise ValueError(f"Note is too long to read. Limit is {MAX_NOTE_CHARS} characters.")

@@ -11,6 +11,8 @@ requires-python = ">=3.11"
 dependencies = [
   "ddgs>=9.9.1",
   "httpx>=0.28.1",
+  "pychromecast>=14.0.10",
+  "yt-dlp>=2026.7.4",
 ]
 
 [project.optional-dependencies]

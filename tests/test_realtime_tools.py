@@ -83,6 +83,8 @@ def test_realtime_tool_catalog_exposes_robot_actions() -> None:
         "remember_fact",
         "forget_fact",
         "search_web",
+        "show_web_page",
+        "cast_media",
         "write_text_file",
         "read_text_file",
         "list_text_files",
@@ -267,6 +269,43 @@ def test_search_web_tool_uses_shared_helper(monkeypatch) -> None:
         "max_results": 3,
         "results": [],
     }
+
+
+def test_cast_media_tool_dispatches_to_client(monkeypatch) -> None:
+    class FakeCastMediaClient:
+        def play_youtube(self, **kwargs: object) -> dict[str, object]:
+            return {"status": "ok", "tool": "cast_media", "action": "play_youtube", **kwargs}
+
+    monkeypatch.setattr(realtime_tools, "CastMediaClient", FakeCastMediaClient)
+
+    result = realtime_tools._cast_media({"action": "play_youtube", "query": "pterodactyl facts"})
+
+    assert result == {
+        "status": "ok",
+        "tool": "cast_media",
+        "action": "play_youtube",
+        "query": "pterodactyl facts",
+        "video_id": None,
+        "device_name": None,
+    }
+
+
+def test_show_web_page_accepts_http_url() -> None:
+    result = realtime_tools._show_web_page({"url": "https://example.com/robot", "title": "Robot"})
+
+    assert result == {
+        "status": "ok",
+        "tool": "show_web_page",
+        "url": "https://example.com/robot",
+        "source": "web",
+        "title": "Robot",
+    }
+
+
+def test_show_web_page_rejects_non_http_url() -> None:
+    result = realtime_tools._show_web_page({"url": "file:///secret.html"})
+
+    assert result == {"status": "error", "error": "url must be an HTTP or HTTPS web page URL"}
 
 
 def test_text_file_tools_use_instance_notes_folder(tmp_path, monkeypatch) -> None:

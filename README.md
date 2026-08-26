@@ -171,6 +171,10 @@ The tool module is `robot_790d.realtime_tools`. It currently exposes:
 - `remember_fact`: saves or updates one persistent named fact.
 - `forget_fact`: removes one persistent named fact by name.
 - `search_web`: searches the web and returns compact title/snippet/URL results.
+- `show_web_page`: opens or displays an HTTP(S) web page in the client UI.
+- `cast_media`: lists Cast receivers, searches YouTube, plays a YouTube result
+  or video ID/URL, shows direct image URLs, and stops playback on the configured
+  Cast receiver.
 - `write_text_file`: writes or appends a plain text note under `notes/`.
 - `read_text_file`: reads a `.txt` or explicitly named `.md` note.
 - `list_text_files`: lists available Robot 790 note files.
@@ -208,6 +212,30 @@ through the Robot 790 STS page at `/api/search`. The implementation uses the
 `ddgs` package and returns title, snippet, and URL results. It is useful for
 current facts, newsy questions, and quick lookups; it is still an internet
 tool, so it depends on network availability and upstream search behavior.
+
+The optional `LLM web pages` checkbox exposes `show_web_page`, ported from the
+Reachy Mini conversation app. In the standalone STS page this opens an HTTP(S)
+URL in a new browser tab/window from the Robot 790 UI. If the browser blocks
+automatic tabs, the events log records the target URL. This pairs naturally
+with `search_web`: Robot 790 can search first, then open a selected result when
+asked to bring up the page.
+
+The optional `LLM cast media` checkbox exposes `cast_media`, ported from the
+Reachy Mini conversation app. Browser STS calls run through the local page
+server at `/api/cast`; daemon calls use `robot_790d.media_cast` directly. The
+tool can list receivers, search YouTube, play the first YouTube result for a
+query, play a YouTube video ID or URL, show a direct `jpg`/`jpeg`/`png`/`webp`/
+`gif` image URL, and stop playback. Configure the default target with:
+
+```powershell
+$env:ROBOT_790_CAST_DEVICE_NAME = "Living Room TV"
+$env:ROBOT_790_CAST_TIMEOUT_S = "10"
+$env:ROBOT_790_CAST_KNOWN_HOSTS = "192.168.0.45"
+```
+
+`ROBOT_790_CAST_KNOWN_HOSTS` is optional, but useful when mDNS discovery misses
+the receiver. Generic web pages and image-search result pages will not cast
+through this path; the TV needs a direct media URL it can fetch.
 
 The `LLM memory tools` checkbox is enabled by default on the STS page. It
 exposes `remember_fact` and `forget_fact` so explicit instructions such as

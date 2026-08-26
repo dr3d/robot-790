@@ -16,6 +16,15 @@ def test_note_files_default_to_txt_and_append(tmp_path: Path) -> None:
     assert list_note_files(tmp_path) == ["session_summary.txt"]
 
 
+def test_note_files_read_human_title_as_snake_case_filename(tmp_path: Path) -> None:
+    write_note_file(tmp_path, "conversation_summary", "Readable by title.")
+
+    read = read_note_file(tmp_path, "Conversation Summary")
+
+    assert read.filename == "conversation_summary.txt"
+    assert read.content == "Readable by title."
+
+
 def test_note_files_allow_named_markdown(tmp_path: Path) -> None:
     written = write_note_file(tmp_path, "logs/today.md", "# Today\n")
 

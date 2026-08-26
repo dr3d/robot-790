@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
 from robot_790d.web_search import search_web
 
@@ -31,6 +32,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path == "/api/notes/write":
             self._handle_note_write()
+            return
+        if parsed.path == "/api/cast":
+            self._handle_cast()
             return
         if parsed.path == "/api/realtime/restart":
             self._handle_realtime_restart()
@@ -91,6 +95,16 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 "characters": len(note.content),
             },
         )
+
+    def _handle_cast(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = _dispatch_cast(payload)
+        except (ModuleNotFoundError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        status_code = 200 if result.get("status") == "ok" else 400
+        self._send_json(status_code, result)
 
     def _handle_realtime_restart(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
@@ -164,6 +178,39 @@ def _first_param(params: dict[str, list[str]], name: str) -> str | None:
     if not values:
         return None
     return values[0]
+
+
+def _dispatch_cast(payload: dict[str, Any]) -> dict[str, object]:
+    action = str(payload.get("action") or "").strip().lower()
+    if not action:
+        return {"status": "error", "error": "Missing required argument: action"}
+
+    client = CastMediaClient()
+    try:
+        if action == "devices":
+            return client.list_devices()
+        if action == "search_youtube":
+            return client.search_youtube(str(payload.get("query") or "").strip(), int(payload.get("max_results") or 3))
+        if action == "play_youtube":
+            return client.play_youtube(
+                query=str(payload.get("query") or "").strip() or None,
+                video_id=str(payload.get("video_id") or "").strip() or None,
+                device_name=str(payload.get("device_name") or "").strip() or None,
+            )
+        if action == "show_image":
+            return client.show_image(
+                image_url=str(payload.get("image_url") or "").strip(),
+                title=str(payload.get("title") or "").strip() or None,
+                device_name=str(payload.get("device_name") or "").strip() or None,
+            )
+        if action == "stop":
+            return client.stop(str(payload.get("device_name") or "").strip() or None)
+    except ModuleNotFoundError as exc:
+        return {"status": "error", "error": f"Missing Cast media dependency: {exc.name}"}
+    except ValueError as exc:
+        return {"status": "error", "error": str(exc)}
+
+    return {"status": "error", "error": f"Unsupported cast_media action: {action}"}
 
 
 def main() -> None:
