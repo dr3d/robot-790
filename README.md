@@ -199,7 +199,10 @@ answer arrives. Addressed questions are cooldown-limited so they remain
 occasional punctuation, not the default mode. Idle ponders are generated as
 out-of-band internal events rather than fake user turns; the spoken idle line is
 then committed back as an assistant item so Robot 790 can keep continuity if the
-user responds. At levels `10` and `11`,
+user responds. The page also distinguishes build inventory from live telemetry:
+saved notes may say a PIR, yaw turntable, IMU, or fans exist, but idle ponders
+should not claim current readings from those devices unless the ambient context
+or a tool result actually supplied them. At levels `10` and `11`,
 the curiosity lane may perform one rate-limited web search when `LLM web search`
 is enabled and fold a compact outside detail into the next idle thought. If the
 page detects repeated "I'm out / same loop / nothing new" style outputs, it
