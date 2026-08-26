@@ -185,6 +185,10 @@ by default: user speech cues listening, transcription/LLM work cues thinking,
 audio output cues speaking, and response completion releases the face to idle.
 Listening uses a focused centered gaze, thinking alternates a small side glance,
 and speaking drives the mouth/talking state.
+The `Idle drift` slider is off at `0`. Higher values let the page create an
+occasional one-sentence autonomous ponder after a quiet period, using recent
+conversation and saved facts as light context while disabling tools for that
+turn. The `Ponder` button triggers the same path manually for testing.
 The `Voice style` control sends a `qwen3_tts_instruct` runtime hint to Qwen3-TTS
 and stores the current style in browser `localStorage` under
 `robot790.ttsStyle.v1`. Presets include neutral, dry Eric, happy, ominous,

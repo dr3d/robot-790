@@ -22,15 +22,16 @@
     }
     body {
       margin: 0;
-      height: 100vh;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
       background: var(--bg);
       color: var(--text);
       font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     main {
       width: min(980px, calc(100vw - 32px));
-      height: 100vh;
+      min-height: 100vh;
       margin: 0 auto;
       padding: 28px 0 36px;
       display: flex;
@@ -137,6 +138,9 @@
     .voice-controls {
       grid-template-columns: minmax(120px, 160px) minmax(260px, 420px) minmax(140px, 180px) auto auto;
     }
+    .idle-controls {
+      grid-template-columns: minmax(260px, 1fr) auto;
+    }
     .mic-vision-controls {
       grid-template-columns: 152px auto minmax(180px, 1fr) auto auto;
     }
@@ -214,6 +218,10 @@
       padding: 0;
       accent-color: var(--accent);
     }
+    input[type="range"] {
+      padding: 0;
+      accent-color: var(--accent);
+    }
     textarea {
       min-height: 84px;
       resize: vertical;
@@ -256,7 +264,7 @@
     }
     .log-grid {
       flex: 1;
-      min-height: 0;
+      min-height: 18rem;
       padding-bottom: 0;
     }
     .log-grid > div {
@@ -265,7 +273,7 @@
       grid-template-rows: auto minmax(0, 1fr);
     }
     .log {
-      min-height: 0;
+      min-height: 18rem;
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -431,6 +439,14 @@
           <button id="clearLog">Clear</button>
         </section>
 
+        <section class="controls idle-controls">
+          <label>
+            Idle drift <span id="idleDriftValue">Off</span>
+            <input id="idleDrift" type="range" min="0" max="10" step="1" value="0">
+          </label>
+          <button id="idlePonderNow" disabled>Ponder</button>
+        </section>
+
         <section class="controls">
           <label>
             Memory
@@ -483,6 +499,9 @@
     const ttsInstruct = document.querySelector("#ttsInstruct");
     const ttsPreset = document.querySelector("#ttsPreset");
     const ttsApplyButton = document.querySelector("#ttsApply");
+    const idleDrift = document.querySelector("#idleDrift");
+    const idleDriftValue = document.querySelector("#idleDriftValue");
+    const idlePonderNowButton = document.querySelector("#idlePonderNow");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
     const visionDrop = document.querySelector("#visionDrop");
@@ -522,6 +541,11 @@
     let responseDoneAfterTool = false;
     let toolFollowupExactText = "";
     let toolFollowupInstructions = "";
+    let responseActive = false;
+    let idleTimer;
+    let idleInFlight = false;
+    let lastConversationActivityAt = Date.now();
+    let lastIdlePonderAt = 0;
     let faceMode = "idle";
     let faceIdleTimer;
     let thinkingGazeSide = 1;
@@ -534,6 +558,7 @@
     const toolPrefsStorageKey = "robot790.toolPrefs.v2";
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
+    const idleDriftStorageKey = "robot790.idleDrift.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
@@ -554,6 +579,7 @@
     const visionJpegQuality = 0.82;
     const bargeInPeakThreshold = 0.42;
     const bargeInCooldownMs = 1600;
+    const minIdlePonderGapMs = 90000;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
     let visionImageName = "";
@@ -1240,6 +1266,34 @@
       localStorage.setItem(ttsStyleStorageKey, currentTtsInstruct());
     }
 
+    function currentIdleDrift() {
+      return Math.max(0, Math.min(10, Number(idleDrift.value) || 0));
+    }
+
+    function idleDriftLabel(level = currentIdleDrift()) {
+      if (level <= 0) return "Off";
+      if (level <= 3) return `${level}/10 quiet`;
+      if (level <= 7) return `${level}/10 curious`;
+      return `${level}/10 restless`;
+    }
+
+    function loadIdleDrift() {
+      const saved = Number(localStorage.getItem(idleDriftStorageKey));
+      idleDrift.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "0";
+      updateIdleDriftUi();
+    }
+
+    function saveIdleDrift() {
+      localStorage.setItem(idleDriftStorageKey, String(currentIdleDrift()));
+    }
+
+    function updateIdleDriftUi() {
+      const level = currentIdleDrift();
+      idleDriftValue.textContent = idleDriftLabel(level);
+      saveIdleDrift();
+      scheduleIdlePonder();
+    }
+
     function loadSettingsPanelState() {
       settingsPanel.open = localStorage.getItem(settingsPanelStorageKey) === "true";
     }
@@ -1339,6 +1393,92 @@
       target.scrollTop = target.scrollHeight;
     }
 
+    function noteConversationActivity() {
+      lastConversationActivityAt = Date.now();
+      scheduleIdlePonder();
+    }
+
+    function idleDelayMs() {
+      const level = currentIdleDrift();
+      if (level <= 0) return Infinity;
+      return Math.max(45000, 270000 - level * 22500);
+    }
+
+    function idleReady() {
+      return Boolean(
+        realtimeConnected() &&
+        currentIdleDrift() > 0 &&
+        !responseActive &&
+        !idleInFlight &&
+        !toolFollowupNeeded &&
+        pendingToolCalls === 0 &&
+        !outputAudioActive()
+      );
+    }
+
+    function scheduleIdlePonder() {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = null;
+      const delayMs = idleDelayMs();
+      if (!Number.isFinite(delayMs) || !realtimeConnected()) return;
+      const earliestAt = Math.max(
+        lastConversationActivityAt + delayMs,
+        lastIdlePonderAt + minIdlePonderGapMs
+      );
+      idleTimer = setTimeout(() => {
+        triggerIdlePonder().catch((error) => log(events, `idle ponder error: ${error.message}`));
+      }, Math.max(5000, earliestAt - Date.now()));
+    }
+
+    function recentConversationContext() {
+      const lines = conversationLines
+        .slice(-10)
+        .join("\n")
+        .slice(-1600);
+      const memory = formatMemoryForInstructions().slice(0, 900);
+      return [memory, lines ? `Recent conversation:\n${lines}` : ""].filter(Boolean).join("\n\n");
+    }
+
+    async function triggerIdlePonder({ manual = false } = {}) {
+      if (manual && (!realtimeConnected() || responseActive || outputAudioActive() || pendingToolCalls > 0)) {
+        log(events, "idle ponder skipped: busy");
+        return;
+      }
+      if (!manual && !idleReady()) {
+        scheduleIdlePonder();
+        return;
+      }
+      if (!realtimeConnected()) {
+        log(events, "idle ponder skipped: disconnected");
+        return;
+      }
+      idleInFlight = true;
+      responseActive = true;
+      lastIdlePonderAt = Date.now();
+      const level = currentIdleDrift();
+      const context = recentConversationContext();
+      const instructions = [
+        "This is an autonomous idle thought after a quiet moment, not a reply to a new user request.",
+        "Do not use tools. Speak one short natural sentence only.",
+        "Sound like Robot 790, spoken name Eric: warm, dry, compact, and present.",
+        `Idle drift is ${level}/10; at low levels be barely noticeable, at high levels you may sound a little bored or impatient but still fond.`,
+        "Pretend you have been quietly pondering one concrete past topic from the recent conversation or saved facts.",
+        "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
+        context
+      ].filter(Boolean).join("\n\n");
+      cueFaceMode("thinking", 0.42, { force: true });
+      log(events, manual ? "idle ponder requested" : `idle ponder fired: ${idleDriftLabel(level)}`);
+      send({
+        type: "response.create",
+        response: {
+          modalities: ["audio", "text"],
+          tool_choice: "none",
+          instructions,
+          ...ttsRuntimeConfig()
+        }
+      });
+    }
+
     function renderConversation() {
       const lines = [...conversationLines];
       if (inputDraft) lines.push(inputDraft);
@@ -1350,6 +1490,7 @@
       const stamp = new Date().toLocaleTimeString();
       conversationLines.push(`[${stamp}] ${text}`);
       renderConversation();
+      noteConversationActivity();
     }
 
     function noteUserText(text) {
@@ -2243,13 +2384,20 @@
           responseDoneAfterTool = true;
           maybeCreateToolFollowup();
         }
+        if (event.type === "response.done") {
+          responseActive = false;
+          idleInFlight = false;
+          noteConversationActivity();
+        }
         if (!toolFollowupNeeded) scheduleFaceIdle();
       }
       if (event.type === "input_audio_buffer.speech_started") {
+        noteConversationActivity();
         cueFaceMode("listening", 0.35);
       } else if (event.type === "input_audio_buffer.speech_stopped") {
         cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.created") {
+        responseActive = true;
         cueFaceMode("thinking", 0.45);
       } else if (event.type === "conversation.item.input_audio_transcription.delta") {
         updateInputDraft(event.delta || "");
@@ -2266,6 +2414,9 @@
       } else if (event.type === "response.function_call_arguments.done") {
         handleFunctionCall(event).catch((error) => log(events, `tool bridge error: ${error.message}`));
       } else if (event.type === "error") {
+        responseActive = false;
+        idleInFlight = false;
+        scheduleIdlePonder();
         log(events, `ERROR ${event.error?.type || ""}: ${event.error?.message || JSON.stringify(event)}`);
       }
       log(events, event.type || JSON.stringify(event));
@@ -2283,9 +2434,11 @@
         startMicButton.disabled = false;
         faceIdleButton.disabled = false;
         faceBeatButton.disabled = false;
+        idlePonderNowButton.disabled = false;
         updateVisionButtons();
         stageVisionImage();
         log(events, "connected");
+        noteConversationActivity();
         updateSessionTools();
       });
       ws.addEventListener("message", (message) => {
@@ -2296,6 +2449,10 @@
         }
       });
       ws.addEventListener("close", () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = null;
+        responseActive = false;
+        idleInFlight = false;
         clearAudioQueue();
         setState("Disconnected");
         connectButton.disabled = false;
@@ -2304,6 +2461,7 @@
         stopMicButton.disabled = true;
         faceIdleButton.disabled = true;
         faceBeatButton.disabled = true;
+        idlePonderNowButton.disabled = true;
         updateVisionButtons();
         log(events, "disconnected");
       });
@@ -2462,6 +2620,10 @@
         .find(([, value]) => value === currentTtsInstruct())?.[0] || "custom";
       saveTtsStyle();
     });
+    idleDrift.addEventListener("input", updateIdleDriftUi);
+    idlePonderNowButton.addEventListener("click", () => {
+      triggerIdlePonder({ manual: true }).catch((error) => log(events, `idle ponder error: ${error.message}`));
+    });
     memoryRefreshButton.addEventListener("click", () => {
       renderMemory();
       updateSessionTools();
@@ -2483,6 +2645,7 @@
     loadSettingsPanelState();
     loadTtsVoice();
     loadTtsStyle();
+    loadIdleDrift();
     loadToolPrefs();
     renderMemory();
     updateVisionButtons();
