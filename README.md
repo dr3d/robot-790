@@ -243,6 +243,16 @@ $env:ROBOT_790_CAST_KNOWN_HOSTS = "192.168.0.45"
 `ROBOT_790_CAST_KNOWN_HOSTS` is optional, but useful when mDNS discovery misses
 the receiver. Generic web pages and image-search result pages will not cast
 through this path; the TV needs a direct media URL it can fetch.
+When the browser STS page starts YouTube playback through `cast_media`, it
+auto-pauses an active mic to avoid transcribing TV audio as user speech. If
+Robot 790 later stops that Cast playback through the same tool, the page
+restores the mic only if it was the thing that paused it.
+
+The browser STS page also coalesces near-duplicate final STT transcripts in its
+visible conversation and local grounding buffer, so speculative endpointing
+fragments do not become repeated user lines. Sensing-eye prompts are framed as
+visual impressions: Robot 790 should separate what is visible from guesses and
+ask before relying on uncertain vision for action.
 
 The `LLM memory tools` checkbox is enabled by default on the STS page. It
 exposes `remember_fact` and `forget_fact` so explicit instructions such as

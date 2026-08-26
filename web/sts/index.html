@@ -539,6 +539,9 @@
     let inputDraft = "";
     let lastUserText = "";
     let recentUserTexts = [];
+    let lastAcceptedUserTranscript = "";
+    let lastAcceptedUserTranscriptAt = 0;
+    let lastUserConversationIndex = -1;
     let memorySaveArmedUntil = 0;
     let pendingToolCalls = 0;
     let toolFollowupNeeded = false;
@@ -589,6 +592,8 @@
     let visionImageUrl = "";
     let visionImageName = "";
     let visionImageStaged = false;
+    let castPlaybackActive = false;
+    let micPausedForCast = false;
 
     const faceTools = [
       {
@@ -1062,6 +1067,7 @@
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
       "Never say you wrote, saved, appended, read, or listed a file unless the note file tool succeeded.",
       "If a sensing-eye image is staged, use it as visual context when the user's spoken request refers to what you see, the picture, the image, this, or it.",
+      "When using sensing-eye vision, separate visible observations from guesses; say you are guessing when unsure, and ask for confirmation before any actuation-relevant interpretation.",
       "If you use a tool, still answer compactly afterward."
     ];
 
@@ -1513,16 +1519,88 @@
       conversation.scrollTop = conversation.scrollHeight;
     }
 
-    function addConversation(text) {
+    function conversationLine(text) {
       const stamp = new Date().toLocaleTimeString();
-      conversationLines.push(`[${stamp}] ${text}`);
+      return `[${stamp}] ${text}`;
+    }
+
+    function addConversation(text) {
+      conversationLines.push(conversationLine(text));
       renderConversation();
       noteConversationActivity();
+      return conversationLines.length - 1;
+    }
+
+    function replaceConversation(index, text) {
+      if (index < 0 || index >= conversationLines.length) return addConversation(text);
+      conversationLines[index] = conversationLine(text);
+      renderConversation();
+      noteConversationActivity();
+      return index;
     }
 
     function noteUserText(text) {
       lastUserText = String(text || "").trim();
       if (lastUserText) recentUserTexts = [...recentUserTexts, lastUserText].slice(-8);
+    }
+
+    function normalizeTranscriptForDedupe(text) {
+      return String(text || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    function transcriptSimilarity(a, b) {
+      const aWords = new Set(normalizeTranscriptForDedupe(a).split(" ").filter(Boolean));
+      const bWords = new Set(normalizeTranscriptForDedupe(b).split(" ").filter(Boolean));
+      if (!aWords.size || !bWords.size) return 0;
+      let shared = 0;
+      for (const word of aWords) if (bWords.has(word)) shared += 1;
+      return shared / Math.max(aWords.size, bWords.size);
+    }
+
+    function classifyTranscriptUpdate(text) {
+      const current = String(text || "").trim();
+      const previous = lastAcceptedUserTranscript;
+      const now = Date.now();
+      if (!current) return "empty";
+      if (!previous || now - lastAcceptedUserTranscriptAt > 20000) return "new";
+
+      const currentKey = normalizeTranscriptForDedupe(current);
+      const previousKey = normalizeTranscriptForDedupe(previous);
+      if (!currentKey || !previousKey || Math.min(currentKey.length, previousKey.length) < 12) return "new";
+      if (currentKey === previousKey) return "duplicate";
+      if (currentKey.includes(previousKey) && currentKey.length > previousKey.length) return "supersedes";
+      if (previousKey.includes(currentKey)) return "duplicate";
+
+      const similarity = transcriptSimilarity(current, previous);
+      if (similarity >= 0.82) return currentKey.length > previousKey.length ? "supersedes" : "duplicate";
+      return "new";
+    }
+
+    function recordUserTranscript(text) {
+      const transcript = String(text || "").trim();
+      const update = classifyTranscriptUpdate(transcript);
+      if (update === "empty") return { accepted: false, transcript };
+      if (update === "duplicate") {
+        lastAcceptedUserTranscriptAt = Date.now();
+        log(events, `stt duplicate suppressed: ${transcript}`);
+        return { accepted: false, transcript };
+      }
+
+      noteUserText(transcript);
+      lastAcceptedUserTranscript = transcript;
+      lastAcceptedUserTranscriptAt = Date.now();
+      if (update === "supersedes" && lastUserConversationIndex >= 0) {
+        lastUserConversationIndex = replaceConversation(lastUserConversationIndex, `You: ${transcript}`);
+        log(events, `stt transcript coalesced: ${transcript}`);
+        return { accepted: true, coalesced: true, transcript };
+      }
+      lastUserConversationIndex = addConversation(`You: ${transcript}`);
+      return { accepted: true, coalesced: false, transcript };
     }
 
     function updateInputDraft(text) {
@@ -1884,7 +1962,32 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       log(events, `cast media result: ${result.action || normalizedAction}`);
+      await updateMicForCastResult(result, normalizedAction);
       return result;
+    }
+
+    async function updateMicForCastResult(result, requestedAction) {
+      if (result?.status === "error") return;
+      const action = String(result?.action || requestedAction || "").toLowerCase();
+      if (action === "play_youtube") {
+        castPlaybackActive = true;
+        if (micStream) {
+          micPausedForCast = true;
+          await stopMic({ reason: "cast playback" });
+          log(events, "mic auto-paused while Cast playback is active");
+        }
+        return;
+      }
+      if (action === "stop") {
+        castPlaybackActive = false;
+        if (micPausedForCast) {
+          micPausedForCast = false;
+          if (realtimeConnected() && !micStream) {
+            await startMic({ reason: "cast playback stopped" });
+            log(events, "mic auto-restored after Cast playback stopped");
+          }
+        }
+      }
     }
 
     async function writeTextFile({ filename, content, mode = "overwrite" } = {}) {
@@ -2008,7 +2111,8 @@
               type: "input_text",
               text: (
                 "The user has placed an image in Robot 790's sensing eye. " +
-                "Do not answer yet. Keep this image as visual context until the user clears or replaces it."
+                "Do not answer yet. Keep this image as visual context until the user clears or replaces it. " +
+                "When later describing the image, separate what is plainly visible from guesses, and be explicit when uncertain."
               )
             },
             { type: "input_image", image_url: visionImageUrl, detail: "auto" }
@@ -2430,13 +2534,15 @@
         updateInputDraft(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.completed") {
         clearInputDraft();
-        noteUserText(event.transcript || "");
-        addConversation(`You: ${event.transcript || ""}`);
-        if (!maybeHandleDirectFaceCommand(event.transcript || "")) cueFaceMode("thinking", 0.45);
+        const recorded = recordUserTranscript(event.transcript || "");
+        if (!recorded.accepted) return;
+        if (!maybeHandleDirectFaceCommand(recorded.transcript)) cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.output_audio_transcript.done") {
+        lastUserConversationIndex = -1;
         noteAssistantText(event.transcript || "");
         addConversation(`Robot 790: ${event.transcript || ""}`);
       } else if (event.type === "response.output_text.delta") {
+        lastUserConversationIndex = -1;
         addConversation(`Robot 790: ${event.delta || ""}`);
       } else if (event.type === "response.function_call_arguments.done") {
         handleFunctionCall(event).catch((error) => log(events, `tool bridge error: ${error.message}`));
@@ -2536,8 +2642,9 @@
       }
     }
 
-    async function startMic() {
+    async function startMic({ reason = "" } = {}) {
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (micStream) return;
       micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -2562,10 +2669,10 @@
       micProcessor.connect(micContext.destination);
       startMicButton.disabled = true;
       stopMicButton.disabled = false;
-      log(events, "mic started");
+      log(events, reason ? `mic started: ${reason}` : "mic started");
     }
 
-    async function stopMic() {
+    async function stopMic({ reason = "" } = {}) {
       if (micProcessor) micProcessor.disconnect();
       if (micSource) micSource.disconnect();
       if (micStream) micStream.getTracks().forEach((track) => track.stop());
@@ -2577,7 +2684,7 @@
       level.style.width = "0";
       startMicButton.disabled = !(ws && ws.readyState === WebSocket.OPEN);
       stopMicButton.disabled = true;
-      log(events, "mic stopped");
+      log(events, reason ? `mic stopped: ${reason}` : "mic stopped");
     }
 
     connectButton.addEventListener("click", connect);
@@ -2597,8 +2704,14 @@
       (result) => log(events, `chassis stop: ${JSON.stringify(result)}`),
       (error) => log(events, `chassis stop error: ${error.message}`)
     ));
-    startMicButton.addEventListener("click", () => startMic().catch((error) => log(events, `mic error: ${error.message}`)));
-    stopMicButton.addEventListener("click", () => stopMic().catch((error) => log(events, `mic stop error: ${error.message}`)));
+    startMicButton.addEventListener("click", () => {
+      if (castPlaybackActive) micPausedForCast = false;
+      startMic().catch((error) => log(events, `mic error: ${error.message}`));
+    });
+    stopMicButton.addEventListener("click", () => {
+      micPausedForCast = false;
+      stopMic().catch((error) => log(events, `mic stop error: ${error.message}`));
+    });
     visionDrop.addEventListener("click", () => visionFile.click());
     visionDrop.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
