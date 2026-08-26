@@ -1473,6 +1473,18 @@
         response: {
           modalities: ["audio", "text"],
           tool_choice: "none",
+          input: [
+            {
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: "Ponder out loud now about one concrete topic already in your head. This is not a new user request."
+                }
+              ]
+            }
+          ],
           instructions,
           ...ttsRuntimeConfig()
         }
