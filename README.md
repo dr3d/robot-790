@@ -195,7 +195,11 @@ noticing, callback, status, self-question, addressed question, craft, curiosity,
 and aside so they do not always use the same fact/contrast/uncertainty shape.
 The addressed-question lane appears at level `9` and above: Robot 790 may ask
 Scott one small question into the room and then keep pondering later if no
-answer arrives. At levels `10` and `11`,
+answer arrives. Addressed questions are cooldown-limited so they remain
+occasional punctuation, not the default mode. Idle ponders are generated as
+out-of-band internal events rather than fake user turns; the spoken idle line is
+then committed back as an assistant item so Robot 790 can keep continuity if the
+user responds. At levels `10` and `11`,
 the curiosity lane may perform one rate-limited web search when `LLM web search`
 is enabled and fold a compact outside detail into the next idle thought. If the
 page detects repeated "I'm out / same loop / nothing new" style outputs, it

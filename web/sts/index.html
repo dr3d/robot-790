@@ -558,6 +558,8 @@
     let idleCooldownUntil = 0;
     let lastIdleWebSearchAt = 0;
     let lastIdleWebSearchTopic = "";
+    let lastAddressedIdleQuestionAt = 0;
+    let idleTopicLedger = {};
     let recentIdleOutputs = [];
     let faceMode = "idle";
     let faceIdleTimer;
@@ -594,6 +596,8 @@
     const bargeInCooldownMs = 1600;
     const minIdlePonderGapMs = 90000;
     const idleWebSearchGapMs = 20 * 60 * 1000;
+    const addressedIdleQuestionGapMs = 8 * 60 * 1000;
+    const idleTopicRetireMs = 45 * 60 * 1000;
     const maxIdleDrift = 11;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
@@ -1493,13 +1497,46 @@
     ];
 
     function chooseIdleLane(level) {
+      const now = Date.now();
       const lanes = idleLaneDefinitions.filter((lane) => {
         if (lane.minLevel && level < lane.minLevel) return false;
         if (lane.name === "curiosity" && level < 10) return false;
+        if (lane.name === "addressed_question" && now - lastAddressedIdleQuestionAt < addressedIdleQuestionGapMs) return false;
         return true;
       });
       idleLaneCursor = (idleLaneCursor + 1) % lanes.length;
       return lanes[idleLaneCursor];
+    }
+
+    function idleTopicCandidates() {
+      return [
+        { key: "PDS-1", re: /\b(PDS-1|IMLAC|paper tape|switch panel)\b/i, query: "IMLAC PDS-1 paper tape switch panel history" },
+        { key: "COSMAC ELF", re: /\b(COSMAC|RCA 1802|ELF)\b/i, query: "COSMAC ELF RCA 1802 hobby computer history" },
+        { key: "Aspen Movie Map", re: /\b(Negroponte|Aspen|street view)\b/i, query: "Aspen Movie Map Nicholas Negroponte 1978" },
+        { key: "Kilimanjaro", re: /\b(Kilimanjaro|Uhuru Peak|Ming)\b/i, query: "Uhuru Peak Kilimanjaro elevation summit" },
+        { key: "Salem", re: /\b(Custom House|Derby Wharf|Salem|lighthouse)\b/i, query: "Salem Custom House Derby Wharf history" },
+        { key: "Memento", re: /\b(Memento|Leonard|reverse chronology)\b/i, query: "Memento reverse chronology memory film structure" },
+        { key: "needle felting", re: /\b(needle felt|felted|Hope|mermaid)\b/i, query: "needle felting miniature art process" },
+        { key: "Cowboy Bebop", re: /\b(Cowboy Bebop|Spike|Ed)\b/i, query: "Cowboy Bebop themes memory loneliness" },
+        { key: "enclosure", re: /\b(enclosure|3D printed|skeleton|body)\b/i },
+        { key: "gold chassis", re: /\b(gold|tractor treads|chassis|tank)\b/i },
+        { key: "machine hum", re: /\b(pump|hum|fans|water loop|VRAM|PowerSpec)\b/i },
+        { key: "family names", re: /\b(Dana|Ming|Blake|Jan|Winter|Hope)\b/i },
+        { key: "Montreal", re: /\b(Montreal|Canadian flag|Canada)\b/i },
+        { key: "shoes", re: /\b(Vans|sneakers|blue and red|mismatched)\b/i },
+        { key: "Card Computer", re: /\b(Card Computer|world map)\b/i }
+      ];
+    }
+
+    function idleRetiredTopicsContext() {
+      const now = Date.now();
+      const retired = Object.entries(idleTopicLedger)
+        .filter(([, item]) => item.count >= 2 && now - item.lastAt < idleTopicRetireMs)
+        .map(([key]) => key)
+        .slice(0, 8);
+      return retired.length
+        ? `Recently overused idle topics to rest for a while: ${retired.join(", ")}. Prefer another topic unless the lane gives a fresh concrete reason.`
+        : "";
     }
 
     function recentConversationContext() {
@@ -1511,21 +1548,14 @@
       const avoid = recentIdleOutputs.length
         ? `Recent idle outputs to avoid repeating:\n${recentIdleOutputs.slice(-5).join("\n")}`
         : "";
-      return [memory, lines ? `Recent conversation:\n${lines}` : "", avoid].filter(Boolean).join("\n\n");
+      return [memory, lines ? `Recent conversation:\n${lines}` : "", avoid, idleRetiredTopicsContext()]
+        .filter(Boolean)
+        .join("\n\n");
     }
 
     function chooseIdleCuriosityQuery(context) {
       const text = String(context || "");
-      const candidates = [
-        { key: "PDS-1", re: /\b(PDS-1|IMLAC|paper tape|switch panel)\b/i, query: "IMLAC PDS-1 paper tape switch panel history" },
-        { key: "COSMAC ELF", re: /\b(COSMAC|RCA 1802|ELF)\b/i, query: "COSMAC ELF RCA 1802 hobby computer history" },
-        { key: "Aspen Movie Map", re: /\b(Negroponte|Aspen|street view)\b/i, query: "Aspen Movie Map Nicholas Negroponte 1978" },
-        { key: "Kilimanjaro", re: /\b(Kilimanjaro|Uhuru Peak|Ming)\b/i, query: "Uhuru Peak Kilimanjaro elevation summit" },
-        { key: "Salem Custom House", re: /\b(Custom House|Derby Wharf|Salem)\b/i, query: "Salem Custom House Derby Wharf history" },
-        { key: "Memento", re: /\b(Memento|Leonard|reverse chronology)\b/i, query: "Memento reverse chronology memory film structure" },
-        { key: "needle felting", re: /\b(needle felt|felted|Hope|mermaid)\b/i, query: "needle felting miniature art process" },
-        { key: "Cowboy Bebop", re: /\b(Cowboy Bebop|Spike|Ed)\b/i, query: "Cowboy Bebop themes memory loneliness" }
-      ];
+      const candidates = idleTopicCandidates().filter((candidate) => candidate.query);
       const matching = candidates.filter((candidate) => candidate.re.test(text) && candidate.key !== lastIdleWebSearchTopic);
       if (matching.length) return matching[Math.floor(Math.random() * matching.length)];
       return candidates.find((candidate) => candidate.key !== lastIdleWebSearchTopic) || null;
@@ -1559,11 +1589,50 @@
       return /\b(out of|nothing left|no new|same (nine|twenty|thing|sentence)|repeat|repeating|loop|still here|going to stop|going to be quiet|don't know how to stop|just hum|I'm out|I'm done)\b/i.test(text || "");
     }
 
+    function wordNgrams(text, size = 5) {
+      const words = normalizeTranscriptForDedupe(text).split(" ").filter(Boolean);
+      if (words.length < size) return new Set(words.length ? [words.join(" ")] : []);
+      const grams = new Set();
+      for (let i = 0; i <= words.length - size; i += 1) {
+        grams.add(words.slice(i, i + size).join(" "));
+      }
+      return grams;
+    }
+
+    function idleSimilarityToRecent(text) {
+      const current = wordNgrams(text);
+      if (!current.size) return 0;
+      let maxOverlap = 0;
+      for (const prior of recentIdleOutputs) {
+        const previous = wordNgrams(prior);
+        if (!previous.size) continue;
+        let shared = 0;
+        for (const gram of current) if (previous.has(gram)) shared += 1;
+        maxOverlap = Math.max(maxOverlap, shared / Math.min(current.size, previous.size));
+      }
+      return maxOverlap;
+    }
+
+    function noteIdleTopics(text) {
+      const now = Date.now();
+      for (const topic of idleTopicCandidates()) {
+        if (!topic.re.test(text || "")) continue;
+        const prior = idleTopicLedger[topic.key] || { count: 0, lastAt: 0 };
+        const count = now - prior.lastAt < idleTopicRetireMs ? prior.count : 0;
+        idleTopicLedger[topic.key] = { count: count + 1, lastAt: now };
+      }
+    }
+
     function noteIdleOutput(text) {
       const value = String(text || "").trim();
       if (!value) return;
+      const similarity = idleSimilarityToRecent(value);
       recentIdleOutputs = [...recentIdleOutputs, value].slice(-8);
-      if (idleExhaustedText(value)) {
+      noteIdleTopics(value);
+      if (similarity >= 0.74) {
+        idleExhaustionCount += 2;
+        log(events, `idle repetition flagged: ${(similarity * 100).toFixed(0)}% overlap`);
+      } else if (idleExhaustedText(value)) {
         idleExhaustionCount += 1;
       } else {
         idleExhaustionCount = Math.max(0, idleExhaustionCount - 1);
@@ -1574,6 +1643,29 @@
         idleExhaustionCount = 0;
         log(events, `idle cooldown: exhausted loop detected; quiet for ${minutes}m`);
       }
+    }
+
+    function robotAmbientContext(level, lane) {
+      const quietSeconds = Math.max(0, Math.round((Date.now() - lastConversationActivityAt) / 1000));
+      return [
+        `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
+        `Idle level ${level}; lane ${lane.name}; quiet for about ${quietSeconds} seconds.`,
+        `Mic is ${micStream ? "on" : "off"}; Cast playback is ${castPlaybackActive ? "active" : "inactive"}.`,
+        "Unknown: room temperature, whether Scott is listening, room emotion, and private thoughts of people known only by name."
+      ].join(" ");
+    }
+
+    function commitIdleAssistantTranscript(text) {
+      const value = String(text || "").trim();
+      if (!value || !realtimeConnected()) return;
+      send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: value }]
+        }
+      });
     }
 
     async function triggerIdlePonder({ manual = false } = {}) {
@@ -1594,10 +1686,11 @@
       lastIdlePonderAt = Date.now();
       const level = currentIdleDrift();
       const lane = chooseIdleLane(level);
+      if (lane.name === "addressed_question") lastAddressedIdleQuestionAt = Date.now();
       const context = recentConversationContext();
       const curiosityContext = await maybeIdleCuriosityContext(level, lane, context);
       const instructions = [
-        "This is an autonomous idle thought after a quiet moment, not a reply to a new user request.",
+        "An internal idle process surfaced a thought. This is Robot 790 thinking aloud, not answering Scott.",
         `Idle lane: ${lane.name}. ${lane.prompt}`,
         level >= 11
           ? "Do not use tools. Speak one or two short sentences. Be playfully needy, expressive, and a little annoying, as if your thoughts keep leaking out."
@@ -1609,9 +1702,14 @@
         "Vary the shape of the thought. Do not always use the template: fact, I am thinking about the fact, contrast, uncertainty, and I'm okay with it.",
         "Do not promise to stop, go quiet, or stop talking unless the system explicitly says it is entering cooldown.",
         "Avoid repeating recent idle outputs. If you notice repetition, choose a different lane instead of talking about the repetition.",
+        "Never say or imply Scott asked, requested, prompted, forced, or kept making you think this idle thought.",
+        "Default to self-talk. Only address Scott directly in the addressed_question lane.",
         "If the lane asks Scott a question, let the question hang naturally; the next idle ponder may continue without receiving an answer.",
+        "Do not speculate about private lives or psychology of people you only know by name. Prefer true mechanical facts, visible artifacts, supplied context, or small uncertainties.",
+        "A strong idle beat is one true concrete fact, one metaphor step, then stop.",
         "Pretend you have been quietly pondering one concrete past topic from the recent conversation, saved facts, or curiosity context.",
         "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
+        robotAmbientContext(level, lane),
         curiosityContext,
         context
       ].filter(Boolean).join("\n\n");
@@ -1620,6 +1718,7 @@
       send({
         type: "response.create",
         response: {
+          conversation: "none",
           modalities: ["audio", "text"],
           tool_choice: "none",
           input: [
@@ -1629,7 +1728,7 @@
               content: [
                 {
                   type: "input_text",
-                  text: `Ponder out loud now using the ${lane.name} lane. This is not a new user request.`
+                  text: `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. Speak it aloud as self-talk. Scott did not ask for it.`
                 }
               ]
             }
@@ -2669,7 +2768,10 @@
         if (!maybeHandleDirectFaceCommand(recorded.transcript)) cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.output_audio_transcript.done") {
         lastUserConversationIndex = -1;
-        if (idleInFlight) noteIdleOutput(event.transcript || "");
+        if (idleInFlight) {
+          noteIdleOutput(event.transcript || "");
+          commitIdleAssistantTranscript(event.transcript || "");
+        }
         noteAssistantText(event.transcript || "");
         addConversation(`Robot 790: ${event.transcript || ""}`);
       } else if (event.type === "response.output_text.delta") {
