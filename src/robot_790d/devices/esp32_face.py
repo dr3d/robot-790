@@ -41,6 +41,33 @@ class Esp32FaceClient:
     def beat(self, name: str) -> dict[str, object]:
         return self._request("POST", "beat", {"name": name})
 
+    def style(self, name: str) -> dict[str, object]:
+        return self._request("POST", "style", {"name": name})
+
+    def mouth(
+        self,
+        style: str | None = None,
+        shape: str | None = None,
+        talking: bool | None = None,
+        energy: float | None = None,
+        duration_s: float | None = None,
+        auto: bool = False,
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {}
+        if auto:
+            payload["auto"] = True
+        if style:
+            payload["style"] = style
+        if shape:
+            payload["shape"] = shape
+        if talking is not None:
+            payload["talking"] = talking
+        if energy is not None:
+            payload["energy"] = energy
+        if duration_s is not None:
+            payload["duration"] = duration_s
+        return self._request("POST", "mouth", payload)
+
     def gaze(
         self,
         x: float,

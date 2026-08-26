@@ -5,10 +5,10 @@ param(
     [int] $StreamBatchSentences = 1,
     [string] $LlmBaseUrl = "http://127.0.0.1:1234/v1",
     [string] $LlmApiKey = "none",
-    [string] $LlmModel = "qwen3.5-4b",
+    [string] $LlmModel = "qwen/qwen3.8-27b",
     [ValidateSet("low", "medium", "xhigh")]
     [string] $ReasoningEffort = "low",
-    [int] $AudioMaxTokens = 48,
+    [int] $AudioMaxTokens = 64,
     [string] $TtsModel = "C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice",
     [string] $Speaker = "Eric",
     [string] $TtsInstruct = "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",

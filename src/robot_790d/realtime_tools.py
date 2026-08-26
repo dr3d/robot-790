@@ -10,6 +10,7 @@ from robot_790d.behavior import BehaviorDaemon
 from robot_790d.devices.esp32_chassis import DEFAULT_CHASSIS_URL, ChassisSettings, Esp32ChassisClient
 from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, FaceSettings
 from robot_790d.memory import forget_fact, remember_fact
+from robot_790d.note_files import list_note_files, read_note_file, write_note_file
 from robot_790d.state import Affect, RobotMode
 from robot_790d.web_search import search_web
 
@@ -138,6 +139,26 @@ TOOLS: list[dict[str, object]] = [
     },
     {
         "type": "function",
+        "name": "set_eye_style",
+        "description": (
+            "Set Robot 790's eye rendering style when the user explicitly asks for eye style, "
+            "robot eyes, friendly eyes, classic eyes, cartoony eyes, sinister/red eyes, or sleepy eyes."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "enum": ["friendly", "classic", "cartoony", "robot", "sinister", "sleepy"],
+                    "description": "Eye style supported by the ESP32 face firmware.",
+                }
+            },
+            "required": ["name"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
         "name": "set_eye_gaze",
         "description": (
             "Aim Robot 790's eyes at a simple normalized gaze target when the user asks the robot to look "
@@ -172,6 +193,61 @@ TOOLS: list[dict[str, object]] = [
                 },
             },
             "required": ["x", "y"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "set_mouth",
+        "description": (
+            "Set Robot 790's mouth style or shape when the user asks for a human mouth, robot mouth, "
+            "smile, smirk, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "style": {
+                    "type": "string",
+                    "enum": ["human", "robot"],
+                    "description": "Optional mouth renderer style.",
+                },
+                "shape": {
+                    "type": "string",
+                    "enum": [
+                        "neutral",
+                        "smile",
+                        "smirk_left",
+                        "smirk_right",
+                        "open",
+                        "wide",
+                        "frown",
+                        "grimace",
+                        "sneer",
+                        "sleep",
+                    ],
+                    "description": "Optional mouth shape.",
+                },
+                "talking": {
+                    "type": "boolean",
+                    "description": "Whether the mouth should animate as talking.",
+                },
+                "energy": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Optional mouth animation energy.",
+                },
+                "duration": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 30,
+                    "description": "Seconds to hold the manual mouth. Use 0 to hold until released.",
+                },
+                "auto": {
+                    "type": "boolean",
+                    "description": "True releases the mouth back to autonomous firmware control.",
+                },
+            },
             "additionalProperties": False,
         },
     },
@@ -291,6 +367,60 @@ TOOLS: list[dict[str, object]] = [
             "additionalProperties": False,
         },
     },
+    {
+        "type": "function",
+        "name": "write_text_file",
+        "description": (
+            "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, "
+            "append, or put text into a named file. Use .txt by default unless the user explicitly names .md."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": (
+                        "Relative filename inside Robot 790's notes folder. "
+                        "If no extension is given, .txt is used."
+                    ),
+                },
+                "content": {"type": "string", "description": "Plain text content to write."},
+                "mode": {
+                    "type": "string",
+                    "enum": ["overwrite", "append"],
+                    "default": "overwrite",
+                    "description": "overwrite replaces the file; append adds to the end.",
+                },
+            },
+            "required": ["filename", "content"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "read_text_file",
+        "description": "Read a .txt or .md note file from Robot 790's notes folder when the user explicitly asks.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": (
+                        "Relative filename inside Robot 790's notes folder. "
+                        "If no extension is given, .txt is used."
+                    ),
+                }
+            },
+            "required": ["filename"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "list_text_files",
+        "description": "List Robot 790 note files when the user explicitly asks what notes or text files exist.",
+        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+    },
 ]
 
 
@@ -304,8 +434,12 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_play_face_beat, parsed)
     elif name == "set_face_mood":
         result = await asyncio.to_thread(_set_face_mood, parsed)
+    elif name == "set_eye_style":
+        result = await asyncio.to_thread(_set_eye_style, parsed)
     elif name == "set_eye_gaze":
         result = await asyncio.to_thread(_set_eye_gaze, parsed)
+    elif name == "set_mouth":
+        result = await asyncio.to_thread(_set_mouth, parsed)
     elif name == "set_chassis":
         result = await asyncio.to_thread(_set_chassis, parsed)
     elif name == "remember_fact":
@@ -314,6 +448,12 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_forget_fact, parsed)
     elif name == "search_web":
         result = await asyncio.to_thread(_search_web, parsed)
+    elif name == "write_text_file":
+        result = await asyncio.to_thread(_write_text_file, parsed)
+    elif name == "read_text_file":
+        result = await asyncio.to_thread(_read_text_file, parsed)
+    elif name == "list_text_files":
+        result = await asyncio.to_thread(_list_text_files)
     else:
         result = {"status": "error", "error": f"Unknown Robot 790 tool: {name}"}
 
@@ -371,6 +511,20 @@ def _set_face_mood(arguments: dict[str, object]) -> dict[str, object]:
     return {"status": "ok", "tool": "set_face_mood", "mood": mood_name, "face": result}
 
 
+def _set_eye_style(arguments: dict[str, object]) -> dict[str, object]:
+    style_name = str(arguments.get("name", "")).strip()
+    if not style_name:
+        return {"status": "error", "error": "Missing required argument: name"}
+
+    _daemon, face = _build_daemon()
+    try:
+        result = face.style(style_name)
+    finally:
+        face.close()
+
+    return {"status": "ok", "tool": "set_eye_style", "style": style_name, "face": result}
+
+
 def _set_eye_gaze(arguments: dict[str, object]) -> dict[str, object]:
     x = _clamp(_float_argument(arguments.get("x"), default=0.0), -1.0, 1.0)
     y = _clamp(_float_argument(arguments.get("y"), default=0.0), -1.0, 1.0)
@@ -384,6 +538,50 @@ def _set_eye_gaze(arguments: dict[str, object]) -> dict[str, object]:
         face.close()
 
     return {"status": "ok", "tool": "set_eye_gaze", "x": x, "y": y, "duration": duration, "face": result}
+
+
+def _set_mouth(arguments: dict[str, object]) -> dict[str, object]:
+    auto = bool(arguments.get("auto", False))
+    style = str(arguments.get("style", "")).strip() or None
+    shape = str(arguments.get("shape", "")).strip() or None
+    talking = arguments.get("talking")
+    talking_bool = bool(talking) if talking is not None else None
+    energy = (
+        _clamp(_float_argument(arguments.get("energy"), default=0.65), 0.0, 1.0)
+        if arguments.get("energy") is not None
+        else None
+    )
+    duration = (
+        _clamp(_float_argument(arguments.get("duration"), default=0.0), 0.0, 30.0)
+        if arguments.get("duration") is not None
+        else None
+    )
+
+    if not auto and style is None and shape is None and talking_bool is None and energy is None:
+        return {"status": "error", "error": "Missing mouth style, shape, talking, energy, or auto=true"}
+
+    _daemon, face = _build_daemon()
+    try:
+        result = face.mouth(
+            style=style,
+            shape=shape,
+            talking=talking_bool,
+            energy=energy,
+            duration_s=duration,
+            auto=auto,
+        )
+    finally:
+        face.close()
+
+    return {
+        "status": "ok",
+        "tool": "set_mouth",
+        "style": style,
+        "shape": shape,
+        "talking": talking_bool,
+        "auto": auto,
+        "face": result,
+    }
 
 
 def _set_chassis(arguments: dict[str, object]) -> dict[str, object]:
@@ -504,6 +702,50 @@ def _search_web(arguments: dict[str, object]) -> dict[str, object]:
     query = str(arguments.get("query", "")).strip()
     max_results = arguments.get("max_results", 5)
     return search_web(query, max_results=max_results)
+
+
+def _write_text_file(arguments: dict[str, object]) -> dict[str, object]:
+    filename = str(arguments.get("filename") or arguments.get("name") or "").strip()
+    content = str(arguments.get("content") or "")
+    mode = str(arguments.get("mode") or "overwrite")
+    if not filename:
+        return {"status": "error", "error": "Missing required argument: filename"}
+
+    try:
+        note = write_note_file(os.getenv("ROBOT_790_INSTANCE_PATH"), filename, content, mode=mode)
+    except (OSError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
+
+    return {
+        "status": "ok",
+        "tool": "write_text_file",
+        "filename": note.filename,
+        "path": str(note.path),
+        "characters": len(note.content),
+    }
+
+
+def _read_text_file(arguments: dict[str, object]) -> dict[str, object]:
+    filename = str(arguments.get("filename") or arguments.get("name") or "").strip()
+    if not filename:
+        return {"status": "error", "error": "Missing required argument: filename"}
+
+    try:
+        note = read_note_file(os.getenv("ROBOT_790_INSTANCE_PATH"), filename)
+    except FileNotFoundError:
+        return {"status": "error", "error": "Note file not found"}
+    except (OSError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
+
+    return {"status": "ok", "tool": "read_text_file", "filename": note.filename, "content": note.content}
+
+
+def _list_text_files() -> dict[str, object]:
+    try:
+        filenames = list_note_files(os.getenv("ROBOT_790_INSTANCE_PATH"))
+    except OSError as exc:
+        return {"status": "error", "error": str(exc)}
+    return {"status": "ok", "tool": "list_text_files", "files": filenames}
 
 
 def _build_daemon() -> tuple[BehaviorDaemon, Esp32FaceClient]:

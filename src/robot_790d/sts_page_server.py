@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from robot_790d.note_files import list_note_files, read_note_file, write_note_file
 from robot_790d.web_search import search_web
 
 
@@ -17,7 +19,23 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/search":
             self._handle_search(parsed.query)
             return
+        if parsed.path == "/api/notes/read":
+            self._handle_note_read(parsed.query)
+            return
+        if parsed.path == "/api/notes/list":
+            self._handle_note_list()
+            return
         super().do_GET()
+
+    def do_POST(self) -> None:
+        parsed = urlsplit(self.path)
+        if parsed.path == "/api/notes/write":
+            self._handle_note_write()
+            return
+        if parsed.path == "/api/realtime/restart":
+            self._handle_realtime_restart()
+            return
+        self._send_json(404, {"status": "error", "error": "Unknown API endpoint."})
 
     def _handle_search(self, query_string: str) -> None:
         params = parse_qs(query_string)
@@ -26,6 +44,110 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         payload = search_web(query, max_results=max_results)
         status_code = 200 if payload.get("status") == "ok" else 400
         self._send_json(status_code, payload)
+
+    def _handle_note_read(self, query_string: str) -> None:
+        params = parse_qs(query_string)
+        filename = _first_param(params, "filename") or _first_param(params, "name") or ""
+        try:
+            note = read_note_file(None, filename)
+        except FileNotFoundError:
+            self._send_json(404, {"status": "error", "error": "Note file not found."})
+            return
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(
+            200,
+            {"status": "ok", "tool": "read_text_file", "filename": note.filename, "content": note.content},
+        )
+
+    def _handle_note_list(self) -> None:
+        try:
+            filenames = list_note_files()
+        except OSError as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, {"status": "ok", "tool": "list_text_files", "files": filenames})
+
+    def _handle_note_write(self) -> None:
+        try:
+            payload = self._read_json_body()
+            note = write_note_file(
+                None,
+                str(payload.get("filename") or payload.get("name") or ""),
+                str(payload.get("content") or ""),
+                str(payload.get("mode") or "overwrite"),
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(
+            200,
+            {
+                "status": "ok",
+                "tool": "write_text_file",
+                "filename": note.filename,
+                "path": str(note.path),
+                "characters": len(note.content),
+            },
+        )
+
+    def _handle_realtime_restart(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        script_path = repo_root / "scripts" / "restart_realtime_gold.ps1"
+        if not script_path.exists():
+            self._send_json(500, {"status": "error", "error": f"Missing restart script at {script_path}."})
+            return
+
+        logs_dir = repo_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        out_log = logs_dir / "sts-realtime-restart.out.log"
+        err_log = logs_dir / "sts-realtime-restart.err.log"
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        try:
+            with out_log.open("ab") as stdout, err_log.open("ab") as stderr:
+                process = subprocess.Popen(
+                    [
+                        "powershell.exe",
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(script_path),
+                    ],
+                    cwd=repo_root,
+                    stdout=stdout,
+                    stderr=stderr,
+                    creationflags=creationflags,
+                )
+        except OSError as exc:
+            self._send_json(500, {"status": "error", "error": str(exc)})
+            return
+
+        self._send_json(
+            202,
+            {
+                "status": "ok",
+                "tool": "restart_realtime_server",
+                "preset": "gold",
+                "pid": process.pid,
+                "message": "Realtime backend restart started.",
+            },
+        )
+
+    def _read_json_body(self) -> dict[str, Any]:
+        length_header = self.headers.get("Content-Length") or "0"
+        try:
+            length = int(length_header)
+        except ValueError as exc:
+            raise ValueError("Invalid Content-Length.") from exc
+        if length <= 0:
+            return {}
+        raw = self.rfile.read(length)
+        parsed = json.loads(raw.decode("utf-8"))
+        if not isinstance(parsed, dict):
+            raise ValueError("JSON body must be an object.")
+        return parsed
 
     def _send_json(self, status_code: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

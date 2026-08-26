@@ -10,6 +10,8 @@ build/
 qwen3_tts.env
 *.log
 samples/
+notes/
+backups/
 .pio/
 firmware/**/.pio/
 firmware/**/include/*_private.h

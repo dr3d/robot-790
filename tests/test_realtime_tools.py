@@ -76,11 +76,16 @@ def test_realtime_tool_catalog_exposes_robot_actions() -> None:
         "set_robot_mode",
         "play_face_beat",
         "set_face_mood",
+        "set_eye_style",
         "set_eye_gaze",
+        "set_mouth",
         "set_chassis",
         "remember_fact",
         "forget_fact",
         "search_web",
+        "write_text_file",
+        "read_text_file",
+        "list_text_files",
     }
 
 
@@ -262,3 +267,21 @@ def test_search_web_tool_uses_shared_helper(monkeypatch) -> None:
         "max_results": 3,
         "results": [],
     }
+
+
+def test_text_file_tools_use_instance_notes_folder(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("ROBOT_790_INSTANCE_PATH", str(tmp_path))
+
+    written = realtime_tools._write_text_file({"filename": "session_summary", "content": "Robot 790 is awake."})
+    read = realtime_tools._read_text_file({"filename": "session_summary"})
+    listed = realtime_tools._list_text_files()
+
+    assert written["status"] == "ok"
+    assert written["filename"] == "session_summary.txt"
+    assert read == {
+        "status": "ok",
+        "tool": "read_text_file",
+        "filename": "session_summary.txt",
+        "content": "Robot 790 is awake.",
+    }
+    assert listed == {"status": "ok", "tool": "list_text_files", "files": ["session_summary.txt"]}

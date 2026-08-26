@@ -75,6 +75,50 @@
       border-top: 1px solid var(--line);
       padding: 18px 0;
     }
+    .settings-panel {
+      border-top: 1px solid var(--line);
+      padding: 0;
+    }
+    .settings-panel > summary {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--text);
+      cursor: pointer;
+      list-style: none;
+      padding: 12px 0;
+    }
+    .settings-panel > summary::-webkit-details-marker {
+      display: none;
+    }
+    .settings-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 650;
+    }
+    .settings-title::before {
+      content: ">";
+      color: var(--accent);
+      font-size: 14px;
+      transition: transform 120ms ease;
+    }
+    .settings-panel[open] .settings-title::before {
+      transform: rotate(90deg);
+    }
+    .settings-hint {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .settings-body {
+      padding-bottom: 4px;
+    }
+    .settings-body > section:first-child {
+      border-top: 0;
+    }
     .controls {
       display: grid;
       grid-template-columns: 1fr auto auto;
@@ -84,11 +128,67 @@
     .url-controls {
       grid-template-columns: minmax(260px, 460px) auto auto minmax(0, 1fr);
     }
+    .server-controls {
+      grid-template-columns: minmax(260px, 1fr) auto auto auto;
+    }
     .url-controls .toggle-row {
       justify-self: start;
     }
     .voice-controls {
       grid-template-columns: minmax(120px, 160px) minmax(260px, 420px) minmax(140px, 180px) auto auto;
+    }
+    .mic-vision-controls {
+      grid-template-columns: 152px auto minmax(180px, 1fr) auto auto;
+    }
+    .vision-drop {
+      width: 152px;
+      height: 152px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      align-items: end;
+      gap: 8px;
+      padding: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .vision-drop:hover,
+    .vision-drop.dragover {
+      border-color: rgba(96, 211, 148, 0.75);
+      background: #17231d;
+    }
+    .vision-preview {
+      display: none;
+      width: 100%;
+      height: 88px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #0c0d10;
+    }
+    .vision-preview.ready {
+      display: block;
+    }
+    .vision-copy {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+    .vision-title {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .vision-hint {
+      overflow: hidden;
+      white-space: nowrap;
+      color: var(--text);
     }
     label {
       display: grid;
@@ -140,6 +240,10 @@
     button.danger {
       border-color: rgba(255, 107, 107, 0.55);
       background: #2d1f21;
+    }
+    button.warn {
+      border-color: rgba(255, 207, 90, 0.55);
+      background: #2d291d;
     }
     button:disabled {
       cursor: not-allowed;
@@ -209,12 +313,24 @@
         height: auto;
         min-height: 100vh;
       }
-      header, .controls, .url-controls, .voice-controls, .grid {
+      header, .controls, .url-controls, .voice-controls, .mic-vision-controls, .grid {
         grid-template-columns: 1fr;
         align-items: stretch;
       }
       header { display: grid; }
       .status { white-space: normal; }
+      .settings-panel > summary {
+        align-items: flex-start;
+        display: grid;
+      }
+      .settings-hint {
+        white-space: normal;
+      }
+      .vision-drop {
+        width: 100%;
+        height: auto;
+        min-height: 152px;
+      }
       .log-grid {
         flex: none;
       }
@@ -231,16 +347,34 @@
       <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
     </header>
 
-    <section class="controls url-controls">
-      <label>
-        Realtime server
-        <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
-      </label>
-      <button id="connect" class="primary">Connect</button>
-      <button id="disconnect" class="danger" disabled>Disconnect</button>
-    </section>
+    <details id="serverPanel" class="settings-panel server-panel" open>
+      <summary>
+        <span class="settings-title">Realtime Server</span>
+        <span class="settings-hint">Endpoint, connection, and backend restart</span>
+      </summary>
+      <div class="settings-body">
+        <section class="controls server-controls">
+          <label>
+            Realtime server
+            <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
+          </label>
+          <button id="connect" class="primary">Connect</button>
+          <button id="disconnect" class="danger" disabled>Disconnect</button>
+          <button id="restartServer" class="warn">Restart</button>
+        </section>
+      </div>
+    </details>
 
-    <section class="controls">
+    <section class="controls mic-vision-controls">
+      <label id="visionDrop" class="vision-drop" tabindex="0">
+        <img id="visionPreview" class="vision-preview" alt="">
+        <span class="vision-copy">
+          <span class="vision-title">Sensing Eye</span>
+          <span id="visionHint" class="vision-hint">Drop image, then speak</span>
+        </span>
+        <input id="visionFile" type="file" accept="image/*" hidden>
+      </label>
+      <button id="visionClear" disabled>Clear Image</button>
       <div class="meters">
         <span>Mic</span>
         <div class="bar"><span id="level"></span></div>
@@ -249,58 +383,67 @@
       <button id="stopMic" disabled>Stop Mic</button>
     </section>
 
-    <section class="controls url-controls">
-      <label>
-        Face controller
-        <input id="faceUrl" value="http://esp32-eyes.local/" spellcheck="false">
-      </label>
-      <button id="faceIdle" disabled>Idle Face</button>
-      <button id="faceBeat" disabled>Beat</button>
-      <span class="toggle-row"><input id="llmTools" type="checkbox" checked> LLM face tools</span>
-    </section>
+    <details id="settingsPanel" class="settings-panel">
+      <summary>
+        <span class="settings-title">Robot Controls</span>
+        <span class="settings-hint">Face, chassis, voice, memory, and LLM tool switches</span>
+      </summary>
+      <div class="settings-body">
+        <section class="controls url-controls">
+          <label>
+            Face controller
+            <input id="faceUrl" value="http://esp32-eyes.local/" spellcheck="false">
+          </label>
+          <button id="faceIdle" disabled>Idle Face</button>
+          <button id="faceBeat" disabled>Beat</button>
+          <span class="toggle-row"><input id="llmTools" type="checkbox" checked> LLM face tools</span>
+        </section>
 
-    <section class="controls url-controls">
-      <label>
-        Chassis controller
-        <input id="chassisUrl" value="http://esp32-chassis.local/" spellcheck="false">
-      </label>
-      <button id="chassisStop" class="danger">Stop</button>
-      <span class="toggle-row"><input id="llmChassisTools" type="checkbox" checked> LLM chassis tools</span>
-    </section>
+        <section class="controls url-controls">
+          <label>
+            Chassis controller
+            <input id="chassisUrl" value="http://esp32-chassis.local/" spellcheck="false">
+          </label>
+          <button id="chassisStop" class="danger">Stop</button>
+          <span class="toggle-row"><input id="llmChassisTools" type="checkbox" checked> LLM chassis tools</span>
+        </section>
 
-    <section class="controls voice-controls">
-      <label>
-        Voice
-        <select id="ttsVoice" aria-label="Qwen3-TTS voice"></select>
-      </label>
-      <label>
-        Voice style
-        <input id="ttsInstruct" class="compact-text" spellcheck="false">
-      </label>
-      <select id="ttsPreset" aria-label="Voice style preset">
-        <option value="neutral">Neutral</option>
-        <option value="dry">Dry Eric</option>
-        <option value="happy">Happy</option>
-        <option value="ominous">Ominous</option>
-        <option value="troll">Troll-ish</option>
-        <option value="sleepy">Sleepy</option>
-        <option value="excited">Excited</option>
-        <option value="custom">Custom</option>
-      </select>
-      <button id="ttsApply">Apply</button>
-      <button id="clearLog">Clear</button>
-    </section>
+        <section class="controls voice-controls">
+          <label>
+            Voice
+            <select id="ttsVoice" aria-label="Qwen3-TTS voice"></select>
+          </label>
+          <label>
+            Voice style
+            <input id="ttsInstruct" class="compact-text" spellcheck="false">
+          </label>
+          <select id="ttsPreset" aria-label="Voice style preset">
+            <option value="neutral">Neutral</option>
+            <option value="dry">Dry Eric</option>
+            <option value="happy">Happy</option>
+            <option value="ominous">Ominous</option>
+            <option value="troll">Troll-ish</option>
+            <option value="sleepy">Sleepy</option>
+            <option value="excited">Excited</option>
+            <option value="custom">Custom</option>
+          </select>
+          <button id="ttsApply">Apply</button>
+          <button id="clearLog">Clear</button>
+        </section>
 
-    <section class="controls">
-      <label>
-        Memory
-        <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
-        <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
-        <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
-      </label>
-      <button id="memoryRefresh">Refresh</button>
-      <button id="memoryForgetAll">Forget All</button>
-    </section>
+        <section class="controls">
+          <label>
+            Memory
+            <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
+            <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
+            <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
+            <span class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</span>
+          </label>
+          <button id="memoryRefresh">Refresh</button>
+          <button id="memoryForgetAll">Forget All</button>
+        </section>
+      </div>
+    </details>
 
     <section class="grid log-grid">
       <div>
@@ -320,6 +463,7 @@
     const chassisUrlInput = document.querySelector("#chassisUrl");
     const connectButton = document.querySelector("#connect");
     const disconnectButton = document.querySelector("#disconnect");
+    const restartServerButton = document.querySelector("#restartServer");
     const faceIdleButton = document.querySelector("#faceIdle");
     const faceBeatButton = document.querySelector("#faceBeat");
     const chassisStopButton = document.querySelector("#chassisStop");
@@ -327,6 +471,7 @@
     const llmChassisTools = document.querySelector("#llmChassisTools");
     const llmMemoryTools = document.querySelector("#llmMemoryTools");
     const llmWebSearchTools = document.querySelector("#llmWebSearchTools");
+    const llmNoteFileTools = document.querySelector("#llmNoteFileTools");
     const memoryPreview = document.querySelector("#memoryPreview");
     const memoryRefreshButton = document.querySelector("#memoryRefresh");
     const memoryForgetAllButton = document.querySelector("#memoryForgetAll");
@@ -336,12 +481,18 @@
     const ttsApplyButton = document.querySelector("#ttsApply");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
+    const visionDrop = document.querySelector("#visionDrop");
+    const visionFile = document.querySelector("#visionFile");
+    const visionPreview = document.querySelector("#visionPreview");
+    const visionHint = document.querySelector("#visionHint");
+    const visionClearButton = document.querySelector("#visionClear");
     const clearLogButton = document.querySelector("#clearLog");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
     const level = document.querySelector("#level");
     const conversation = document.querySelector("#conversation");
     const events = document.querySelector("#events");
+    const settingsPanel = document.querySelector("#settingsPanel");
 
     let ws;
     let audioContext;
@@ -377,6 +528,7 @@
     const toolPrefsStorageKey = "robot790.toolPrefs.v2";
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
+    const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
     const maxMemoryFactChars = 320;
@@ -392,7 +544,12 @@
     const qwen3TtsVoices = ["Aiden", "Ryan", "Dylan", "Eric", "Ono_Anna", "Serena", "Sohee", "Uncle_Fu", "Vivian"];
     const chassisMaxSpeed = 1.0;
     const maxChassisDurationS = 5;
+    const visionMaxEdgePx = 768;
+    const visionJpegQuality = 0.82;
     let chassisBusyUntil = 0;
+    let visionImageUrl = "";
+    let visionImageName = "";
+    let visionImageStaged = false;
 
     const faceTools = [
       {
@@ -469,6 +626,23 @@
       },
       {
         type: "function",
+        name: "set_eye_style",
+        description: "Set Robot 790's eye rendering style when the user asks for eye style, robot eyes, friendly eyes, classic eyes, cartoony eyes, sinister/red eyes, or sleepy eyes.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              enum: ["friendly", "classic", "cartoony", "robot", "sinister", "sleepy"],
+              description: "Eye style supported by the ESP32 face firmware."
+            }
+          },
+          required: ["name"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
         name: "set_eye_gaze",
         description: "Aim Robot 790's eyes when the user asks the robot to look left, right, up, down, center, or at a direction.",
         parameters: {
@@ -500,6 +674,47 @@
             }
           },
           required: ["x", "y"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "set_mouth",
+        description: "Set Robot 790's mouth style or shape when the user asks for a human mouth, robot mouth, smile, smirk, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth.",
+        parameters: {
+          type: "object",
+          properties: {
+            style: {
+              type: "string",
+              enum: ["human", "robot"],
+              description: "Optional mouth renderer style."
+            },
+            shape: {
+              type: "string",
+              enum: ["neutral", "smile", "smirk_left", "smirk_right", "open", "wide", "frown", "grimace", "sneer", "sleep"],
+              description: "Optional mouth shape."
+            },
+            talking: {
+              type: "boolean",
+              description: "Whether the mouth should animate as talking."
+            },
+            energy: {
+              type: "number",
+              minimum: 0,
+              maximum: 1,
+              description: "Optional mouth animation energy."
+            },
+            duration: {
+              type: "number",
+              minimum: 0,
+              maximum: 30,
+              description: "Seconds to hold the manual mouth. Use 0 to hold until released."
+            },
+            auto: {
+              type: "boolean",
+              description: "True releases the mouth back to autonomous firmware control."
+            }
+          },
           additionalProperties: false
         }
       }
@@ -603,6 +818,64 @@
       }
     ];
 
+    const noteFileTools = [
+      {
+        type: "function",
+        name: "write_text_file",
+        description: (
+          "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, " +
+          "append, or put text into a named file. Use .txt by default unless the user explicitly names .md."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            filename: {
+              type: "string",
+              description: "Relative filename inside Robot 790's notes folder. If no extension is given, .txt is used."
+            },
+            content: {
+              type: "string",
+              description: "Plain text content to write."
+            },
+            mode: {
+              type: "string",
+              enum: ["overwrite", "append"],
+              default: "overwrite",
+              description: "overwrite replaces the file; append adds to the end."
+            }
+          },
+          required: ["filename", "content"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "read_text_file",
+        description: "Read a .txt or .md note file from Robot 790's notes folder when the user explicitly asks.",
+        parameters: {
+          type: "object",
+          properties: {
+            filename: {
+              type: "string",
+              description: "Relative filename inside Robot 790's notes folder. If no extension is given, .txt is used."
+            }
+          },
+          required: ["filename"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "list_text_files",
+        description: "List Robot 790 note files when the user explicitly asks what notes or text files exist.",
+        parameters: {
+          type: "object",
+          properties: {},
+          additionalProperties: false
+        }
+      }
+    ];
+
     const searchTools = [
       {
         type: "function",
@@ -637,16 +910,19 @@
       "You are Robot 790, spoken name Eric.",
       "You are a local animatronic robot head with ESP32 eyes and mouth displays.",
       "You are being built for a 790-style 3D printed robot body.",
-      "Reply in one short spoken sentence by default, under 12 words when possible.",
+      "Reply in one natural spoken sentence by default; use two short sentences when the user asks for explanation, comparison, advice, or your assessment.",
+      "Be compact, not clipped; prefer a complete useful answer over maximum brevity.",
       "Never say you lack a body; refer to your robot face/body as your hardware.",
       "Do not use tools for ordinary greetings or conversation.",
       "When the user asks for a face, expression, mood, gaze, chassis, or body action, call an appropriate robot tool before answering.",
-      "For go to sleep, close your eyes, sleepy eyes, or sleep mode, call set_robot_mode with mode sleeping before answering; do not merely describe the action.",
+      "For go to sleep, close your eyes, shut your eyes, or sleep mode, call set_robot_mode with mode sleeping before answering; do not merely describe the action.",
       "For wake up or open your eyes, call set_robot_mode with mode idle before answering.",
       "Never say you set, moved, closed, opened, or changed your eyes unless an eye or face tool was actually called successfully.",
       "Use set_face_mood for named moods such as glitchy, goofy, happy, curious, confused, focused, suspicious, or mischief.",
       "Use play_face_beat for animated beats such as funny face, silly face, scan, double take, startle, mischief, thoughtful, or slow smile.",
+      "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes.",
       "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
+      "Use set_mouth when the user asks for a mouth style or shape such as human, robot, smile, smirk, frown, grimace, sneer, open, talking, sleep, or auto mouth.",
       "Use set_chassis only for explicit drive-base, wheel, track, move, turn, stop, or e-stop requests.",
       "For chassis movement, prefer slow values around 0.2 to 0.35 and one short timed segment; never queue a route, dance, or multi-step movement.",
       "If the user asks for full speed or maximum speed in a short explicit movement, use set_chassis speed 1.0 for that segment, matching the chassis web UI MAX SPEED setting.",
@@ -656,11 +932,15 @@
       "If the user asks for multiple movement steps, perform only the first safe segment, then ask for the next movement as a new command.",
       "Never output XML, function-call tags, parameter tags, or hidden tool syntax in spoken text.",
       "Use search_web whenever the user asks you to search, look something up, check the web, find current information, or answer something likely to have changed recently.",
-      "When using search_web, summarize the result briefly and naturally; mention the source site when useful.",
+      "When using search_web, summarize the result naturally in one compact spoken sentence; mention the source site when useful.",
       "Use memory tools only when the user explicitly asks you to remember or forget a named fact, or when you just asked the user to provide a fact so you could save it and the user provides that fact in the next turn.",
       "When remembering, choose a short snake_case name and one factual sentence.",
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
-      "If you use a tool, still answer briefly afterward."
+      "Use note file tools only when the user explicitly asks you to write, save, append, read, or list a text file or note.",
+      "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
+      "Never say you wrote, saved, appended, read, or listed a file unless the note file tool succeeded.",
+      "If a sensing-eye image is staged, use it as visual context when the user's spoken request refers to what you see, the picture, the image, this, or it.",
+      "If you use a tool, still answer compactly afterward."
     ];
 
     function normalizeMemoryName(name) {
@@ -747,6 +1027,11 @@
 
     function memoryWriteAllowed(text) {
       return userExplicitlyAskedForMemory(text) || memorySaveArmed();
+    }
+
+    function noteFileWriteAllowed(text) {
+      return /\b(write|save|append|put|record|log|create|produce|generate|make)\b[\s\S]{0,80}\b(file|note|notes|txt|text|md|markdown|summary)\b/i.test(text || "")
+        || /\b(file|note|notes|txt|text|md|markdown|summary)\b[\s\S]{0,80}\b(write|save|append|put|record|log|create|produce|generate|make)\b/i.test(text || "");
     }
 
     function memorySaveArmed() {
@@ -864,6 +1149,22 @@
       localStorage.setItem(ttsStyleStorageKey, currentTtsInstruct());
     }
 
+    function loadSettingsPanelState() {
+      settingsPanel.open = localStorage.getItem(settingsPanelStorageKey) === "true";
+    }
+
+    function saveSettingsPanelState() {
+      localStorage.setItem(settingsPanelStorageKey, settingsPanel.open ? "true" : "false");
+    }
+
+    function realtimeConnected() {
+      return Boolean(ws && ws.readyState === WebSocket.OPEN);
+    }
+
+    function updateVisionButtons() {
+      visionClearButton.disabled = !visionImageUrl;
+    }
+
     function ttsRuntimeConfig() {
       const instruct = currentTtsInstruct();
       const voice = currentTtsVoice();
@@ -919,6 +1220,7 @@
       llmChassisTools.checked = prefs.chassisTools !== false;
       llmMemoryTools.checked = prefs.memoryTools !== false;
       llmWebSearchTools.checked = prefs.webSearchTools !== false;
+      llmNoteFileTools.checked = prefs.noteFileTools !== false;
     }
 
     function saveToolPrefs() {
@@ -926,7 +1228,8 @@
         faceTools: llmTools.checked,
         chassisTools: llmChassisTools.checked,
         memoryTools: llmMemoryTools.checked,
-        webSearchTools: llmWebSearchTools.checked
+        webSearchTools: llmWebSearchTools.checked,
+        noteFileTools: llmNoteFileTools.checked
       }));
     }
 
@@ -1129,7 +1432,7 @@
 
     function maybeHandleDirectFaceCommand(text) {
       const value = String(text || "");
-      if (/\b(go to sleep|close your eyes|sleepy eyes|sleep mode)\b/i.test(value)) {
+      if (/\b(go to sleep|close your eyes|shut your eyes|sleep mode)\b/i.test(value)) {
         noteFaceVisualHold(0);
         setFaceMode({ mode: "sleeping" }).then(
           (result) => log(events, `face direct sleep: ${JSON.stringify(result)}`),
@@ -1166,6 +1469,13 @@
       return result;
     }
 
+    async function setEyeStyle({ name } = {}) {
+      if (!name) throw new Error("Missing eye style name");
+      const result = await postFace("style", { name });
+      noteFaceVisualHold(3);
+      return result;
+    }
+
     async function setEyeGaze({ x = 0, y = 0, duration = 2.0, move_ms = 180 } = {}) {
       const payload = {
         x: Math.max(-1, Math.min(1, Number(x) || 0)),
@@ -1175,6 +1485,22 @@
       };
       const result = await postFace("gaze", payload);
       noteGazeHold(payload.duration, payload.move_ms);
+      return result;
+    }
+
+    async function setMouth({ style, shape, talking, energy, duration, auto = false } = {}) {
+      const payload = {};
+      if (auto) payload.auto = true;
+      if (style) payload.style = style;
+      if (shape) payload.shape = shape;
+      if (talking !== undefined) payload.talking = Boolean(talking);
+      if (energy !== undefined) payload.energy = Math.max(0, Math.min(1, Number(energy) || 0));
+      if (duration !== undefined) payload.duration = Math.max(0, Math.min(30, Number(duration) || 0));
+      if (!payload.auto && !payload.style && !payload.shape && payload.talking === undefined && payload.energy === undefined) {
+        throw new Error("Missing mouth style, shape, talking, energy, or auto=true");
+      }
+      const result = await postFace("mouth", payload);
+      noteFaceVisualHold(payload.auto ? 0.2 : (payload.duration ?? 5));
       return result;
     }
 
@@ -1245,6 +1571,140 @@
       return result;
     }
 
+    async function writeTextFile({ filename, content, mode = "overwrite" } = {}) {
+      const name = String(filename || "").trim();
+      if (!name) throw new Error("Missing filename");
+      if (!noteFileWriteAllowed(lastUserText)) {
+        throw new Error("File writes require an explicit user request.");
+      }
+      const payload = {
+        filename: name,
+        content: String(content || ""),
+        mode: String(mode || "overwrite")
+      };
+      const response = await fetch(new URL("/api/notes/write", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      log(events, `note file ${result.filename}: ${result.characters || 0} chars`);
+      return result;
+    }
+
+    async function readTextFile({ filename } = {}) {
+      const name = String(filename || "").trim();
+      if (!name) throw new Error("Missing filename");
+      const url = new URL("/api/notes/read", location.href);
+      url.searchParams.set("filename", name);
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      log(events, `note file read: ${result.filename}`);
+      return result;
+    }
+
+    async function listTextFiles() {
+      const response = await fetch(new URL("/api/notes/list", location.href), { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      log(events, `note files listed: ${result.files?.length || 0}`);
+      return result;
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error || new Error("Could not read image"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("Could not decode image"));
+        image.src = src;
+      });
+    }
+
+    async function prepareVisionImage(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        throw new Error("Choose an image file.");
+      }
+      const sourceUrl = await fileToDataUrl(file);
+      const image = await loadImage(sourceUrl);
+      const scale = Math.min(1, visionMaxEdgePx / Math.max(image.naturalWidth, image.naturalHeight));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#101114";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(image, 0, 0, width, height);
+      visionImageUrl = canvas.toDataURL("image/jpeg", visionJpegQuality);
+      visionImageName = file.name || "image";
+      visionImageStaged = false;
+      visionPreview.src = visionImageUrl;
+      visionPreview.classList.add("ready");
+      visionHint.textContent = `${visionImageName} (${width}x${height})`;
+      updateVisionButtons();
+      log(events, `vision image loaded: ${visionHint.textContent}`);
+      stageVisionImage();
+    }
+
+    function clearVisionImage() {
+      visionImageUrl = "";
+      visionImageName = "";
+      visionImageStaged = false;
+      visionFile.value = "";
+      visionPreview.removeAttribute("src");
+      visionPreview.classList.remove("ready");
+      visionHint.textContent = "Drop image, then speak";
+      updateVisionButtons();
+    }
+
+    function stageVisionImage() {
+      if (!visionImageUrl || visionImageStaged) return;
+      if (!realtimeConnected()) {
+        visionHint.textContent = `${visionImageName || "image"} - connect to stage`;
+        updateVisionButtons();
+        return;
+      }
+      send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: (
+                "The user has placed an image in Robot 790's sensing eye. " +
+                "Do not answer yet. Keep this image as visual context until the user clears or replaces it."
+              )
+            },
+            { type: "input_image", image_url: visionImageUrl, detail: "auto" }
+          ]
+        }
+      });
+      visionImageStaged = true;
+      visionHint.textContent = `${visionImageName || "image"} - ready for voice`;
+      updateVisionButtons();
+      log(events, `vision image staged: ${visionImageName || "image"}`);
+    }
+
     function noteGazeHold(duration, moveMs) {
       const holdMs = Math.max(0, Math.min(30, Number(duration) || 0)) * 1000;
       const transitionMs = Math.max(0, Math.min(2000, Number(moveMs) || 0));
@@ -1291,11 +1751,16 @@
       if (name === "set_robot_mode") return setFaceMode(args);
       if (name === "play_face_beat") return playFaceBeat(args);
       if (name === "set_face_mood") return setFaceMood(args);
+      if (name === "set_eye_style") return setEyeStyle(args);
       if (name === "set_eye_gaze") return setEyeGaze(args);
+      if (name === "set_mouth") return setMouth(args);
       if (name === "set_chassis") return setChassis(args);
       if (name === "remember_fact") return rememberMemoryFact(args);
       if (name === "forget_fact") return forgetMemoryFact(args);
       if (name === "search_web") return searchWeb(args);
+      if (name === "write_text_file") return writeTextFile(args);
+      if (name === "read_text_file") return readTextFile(args);
+      if (name === "list_text_files") return listTextFiles(args);
       throw new Error(`Unknown tool: ${name}`);
     }
 
@@ -1357,6 +1822,27 @@
       return "Done.";
     }
 
+    function noteFileFollowupText(toolName, result) {
+      if (result?.status === "error") return "I could not touch that file.";
+      if (toolName === "write_text_file") return `Saved that to ${result?.filename || "the note file"}.`;
+      return "Done.";
+    }
+
+    function noteFileFollowupInstructions(toolName, result) {
+      if (toolName === "read_text_file") {
+        return (
+          "Use the read_text_file tool output to answer the user's request compactly. " +
+          "Do not recite the entire file unless the user explicitly asked for that."
+        );
+      }
+      if (toolName === "list_text_files") {
+        const count = Array.isArray(result?.files) ? result.files.length : 0;
+        if (!count) return exactSpeechInstruction("I found no note files.");
+        return "Use the list_text_files tool output to name the available note files compactly.";
+      }
+      return "";
+    }
+
     function exactSpeechInstruction(text) {
       const safeText = String(text || "Done.").replace(/["\\]/g, "");
       return `Say exactly this and nothing else: "${safeText}"`;
@@ -1366,7 +1852,7 @@
       const count = Array.isArray(result?.results) ? result.results.length : 0;
       if (!count) return exactSpeechInstruction("I searched, but found nothing useful.");
       return (
-        "Use the search_web tool output in the conversation to answer the user's question in one short spoken sentence. " +
+        "Use the search_web tool output in the conversation to answer the user's question in one compact spoken sentence. " +
         "Mention the source site when useful. Do not say you cannot browse or search. Do not mention tools, JSON, or URLs unless the user asked for links."
       );
     }
@@ -1379,6 +1865,12 @@
         if (event.name === "set_chassis") toolFollowupExactText = chassisFollowupText(result);
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = memoryFollowupText(event.name, result);
+        }
+        if (event.name === "write_text_file") {
+          toolFollowupExactText = noteFileFollowupText(event.name, result);
+        }
+        if (event.name === "read_text_file" || event.name === "list_text_files") {
+          toolFollowupInstructions = noteFileFollowupInstructions(event.name, result);
         }
         if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
@@ -1395,6 +1887,9 @@
         if (event.name === "set_chassis") toolFollowupExactText = "I could not move.";
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = "I could not save that.";
+        }
+        if (event.name === "write_text_file" || event.name === "read_text_file" || event.name === "list_text_files") {
+          toolFollowupExactText = "I could not touch that file.";
         }
         if (event.name === "search_web") toolFollowupExactText = "I could not search.";
         log(events, `tool ${event.name} error: ${error.message}`);
@@ -1417,7 +1912,7 @@
       responseDoneAfterTool = false;
       const instructions = toolFollowupExactText
         ? exactSpeechInstruction(toolFollowupExactText)
-        : toolFollowupInstructions || "Now reply as Robot 790, spoken name Eric. One short spoken sentence. Do not mention tools or output XML/function-call tags. Do not claim any additional robot action happened. If the user requested multiple chassis movements, say the first move is done and ask for the next movement as a new command.";
+        : toolFollowupInstructions || "Now reply as Robot 790, spoken name Eric. One compact spoken sentence. Do not mention tools or output XML/function-call tags. Do not claim any additional robot action happened. If the user requested multiple chassis movements, say the first move is done and ask for the next movement as a new command.";
       toolFollowupExactText = "";
       toolFollowupInstructions = "";
       send({
@@ -1438,7 +1933,8 @@
         ...(llmTools?.checked ? faceTools : []),
         ...(llmChassisTools?.checked ? chassisTools : []),
         ...(llmMemoryTools?.checked ? memoryTools : []),
-        ...(llmWebSearchTools?.checked ? searchTools : [])
+        ...(llmWebSearchTools?.checked ? searchTools : []),
+        ...(llmNoteFileTools?.checked ? noteFileTools : [])
       ];
       send({
         type: "session.update",
@@ -1570,6 +2066,8 @@
         startMicButton.disabled = false;
         faceIdleButton.disabled = false;
         faceBeatButton.disabled = false;
+        updateVisionButtons();
+        stageVisionImage();
         log(events, "connected");
         updateSessionTools();
       });
@@ -1589,12 +2087,51 @@
         stopMicButton.disabled = true;
         faceIdleButton.disabled = true;
         faceBeatButton.disabled = true;
+        updateVisionButtons();
         log(events, "disconnected");
       });
       ws.addEventListener("error", () => {
         setState("Socket error");
         log(events, "websocket error");
       });
+    }
+
+    async function restartRealtimeServer() {
+      restartServerButton.disabled = true;
+      log(events, "realtime restart requested");
+      try {
+        if (micStream) await stopMic();
+      } catch (error) {
+        log(events, `mic stop during restart error: ${error.message}`);
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+      clearAudioQueue();
+      setState("Restarting realtime", "warn");
+      connectButton.disabled = true;
+      disconnectButton.disabled = true;
+
+      try {
+        const response = await fetch(new URL("/api/realtime/restart", location.href), {
+          method: "POST",
+          cache: "no-store"
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        log(events, `realtime restart started: pid ${result.pid || "unknown"}`);
+        setTimeout(() => {
+          restartServerButton.disabled = false;
+          connectButton.disabled = false;
+          setState("Disconnected");
+          log(events, "realtime restart launched; reconnect when ready");
+        }, 5000);
+      } catch (error) {
+        restartServerButton.disabled = false;
+        connectButton.disabled = false;
+        setState("Restart failed");
+        log(events, `realtime restart error: ${error.message}`);
+      }
     }
 
     async function startMic() {
@@ -1642,6 +2179,9 @@
 
     connectButton.addEventListener("click", connect);
     disconnectButton.addEventListener("click", () => ws?.close());
+    restartServerButton.addEventListener("click", () => {
+      restartRealtimeServer().catch((error) => log(events, `realtime restart error: ${error.message}`));
+    });
     faceIdleButton.addEventListener("click", () => setFaceMode({ mode: "idle" }).then(
       (result) => log(events, `face idle: ${JSON.stringify(result)}`),
       (error) => log(events, `face idle error: ${error.message}`)
@@ -1656,10 +2196,36 @@
     ));
     startMicButton.addEventListener("click", () => startMic().catch((error) => log(events, `mic error: ${error.message}`)));
     stopMicButton.addEventListener("click", () => stopMic().catch((error) => log(events, `mic stop error: ${error.message}`)));
+    visionDrop.addEventListener("click", () => visionFile.click());
+    visionDrop.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        visionFile.click();
+      }
+    });
+    visionDrop.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      visionDrop.classList.add("dragover");
+    });
+    visionDrop.addEventListener("dragleave", () => {
+      visionDrop.classList.remove("dragover");
+    });
+    visionDrop.addEventListener("drop", (event) => {
+      event.preventDefault();
+      visionDrop.classList.remove("dragover");
+      const file = event.dataTransfer?.files?.[0];
+      prepareVisionImage(file).catch((error) => log(events, `vision image error: ${error.message}`));
+    });
+    visionFile.addEventListener("change", () => {
+      const file = visionFile.files?.[0];
+      prepareVisionImage(file).catch((error) => log(events, `vision image error: ${error.message}`));
+    });
+    visionClearButton.addEventListener("click", clearVisionImage);
     llmTools.addEventListener("change", updateSessionTools);
     llmChassisTools.addEventListener("change", updateSessionTools);
     llmMemoryTools.addEventListener("change", updateSessionTools);
     llmWebSearchTools.addEventListener("change", updateSessionTools);
+    llmNoteFileTools.addEventListener("change", updateSessionTools);
     ttsVoice.addEventListener("change", () => updateSessionTtsStyle());
     ttsPreset.addEventListener("change", () => {
       if (ttsPreset.value === "custom") return;
@@ -1692,11 +2258,14 @@
       clearInputDraft();
       events.textContent = "";
     });
+    settingsPanel.addEventListener("toggle", saveSettingsPanelState);
     populateTtsVoices();
+    loadSettingsPanelState();
     loadTtsVoice();
     loadTtsStyle();
     loadToolPrefs();
     renderMemory();
+    updateVisionButtons();
   </script>
 </body>
 </html>

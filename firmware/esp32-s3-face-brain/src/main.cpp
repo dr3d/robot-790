@@ -282,8 +282,16 @@ struct ApiState {
 
 struct MouthPose {
   MouthPose() = default;
-  MouthPose(float openValue, float widthValue, float curveValue, float skewValue, float teethValue, float tensionValue)
-    : open(openValue), width(widthValue), curve(curveValue), skew(skewValue), teeth(teethValue), tension(tensionValue) {}
+  MouthPose(float openValue, float widthValue, float curveValue, float skewValue,
+            float teethValue, float tensionValue, float slantValue = 0.0f, float upperLiftValue = 0.0f)
+    : open(openValue),
+      width(widthValue),
+      curve(curveValue),
+      skew(skewValue),
+      teeth(teethValue),
+      tension(tensionValue),
+      slant(slantValue),
+      upperLift(upperLiftValue) {}
 
   float open = 0.0f;
   float width = 0.0f;
@@ -291,6 +299,8 @@ struct MouthPose {
   float skew = 0.0f;
   float teeth = 0.0f;
   float tension = 0.0f;
+  float slant = 0.0f;
+  float upperLift = 0.0f;
 };
 
 struct MouthState {
@@ -606,17 +616,17 @@ bool parseMouthShapeName(const char *text, MouthShape &shape)
 MouthPose mouthPoseFor(MouthShape shape)
 {
   switch (shape) {
-    case MouthShape::Smile: return {0.22f, 0.78f, 0.55f, 0.0f, 0.0f, 0.16f};
-    case MouthShape::SmirkLeft: return {0.22f, 0.70f, 0.70f, -0.92f, 0.0f, 0.48f};
-    case MouthShape::SmirkRight: return {0.22f, 0.70f, 0.70f, 0.92f, 0.0f, 0.48f};
-    case MouthShape::Open: return {0.58f, 0.64f, 0.05f, 0.0f, 0.0f, 0.18f};
-    case MouthShape::Wide: return {0.84f, 0.76f, 0.04f, 0.0f, 0.0f, 0.22f};
-    case MouthShape::Frown: return {0.18f, 0.64f, -0.54f, 0.0f, 0.0f, 0.30f};
-    case MouthShape::Grimace: return {0.32f, 0.80f, -0.08f, 0.0f, 0.78f, 0.88f};
-    case MouthShape::Sneer: return {0.24f, 0.70f, -0.20f, -0.22f, 0.22f, 0.62f};
-    case MouthShape::Sleep: return {0.05f, 0.44f, -0.08f, 0.0f, 0.0f, 0.08f};
+    case MouthShape::Smile: return {0.16f, 0.82f, 0.86f, 0.05f, 0.0f, 0.10f, 0.07f, 0.0f};
+    case MouthShape::SmirkLeft: return {0.14f, 0.66f, 0.82f, -0.98f, 0.05f, 0.52f, -0.70f, -0.28f};
+    case MouthShape::SmirkRight: return {0.14f, 0.66f, 0.82f, 0.98f, 0.05f, 0.52f, 0.70f, 0.28f};
+    case MouthShape::Open: return {0.62f, 0.48f, -0.04f, -0.04f, 0.0f, 0.14f, -0.05f, 0.0f};
+    case MouthShape::Wide: return {0.92f, 0.58f, 0.08f, 0.04f, 0.16f, 0.24f, 0.06f, 0.0f};
+    case MouthShape::Frown: return {0.10f, 0.56f, -0.88f, -0.04f, 0.0f, 0.36f, -0.08f, 0.0f};
+    case MouthShape::Grimace: return {0.24f, 0.84f, -0.18f, 0.03f, 1.0f, 0.98f, 0.03f, 0.0f};
+    case MouthShape::Sneer: return {0.18f, 0.62f, -0.30f, 0.66f, 0.72f, 0.78f, 0.72f, 0.92f};
+    case MouthShape::Sleep: return {0.03f, 0.42f, -0.12f, 0.0f, 0.0f, 0.08f, 0.0f, 0.0f};
     case MouthShape::Neutral:
-    default: return {0.12f, 0.60f, 0.0f, 0.0f, 0.0f, 0.12f};
+    default: return {0.07f, 0.54f, 0.02f, -0.03f, 0.0f, 0.16f, 0.02f, 0.0f};
   }
 }
 
@@ -628,7 +638,9 @@ MouthPose mixMouthPose(const MouthPose &a, const MouthPose &b, float t)
     a.curve + (b.curve - a.curve) * t,
     a.skew + (b.skew - a.skew) * t,
     a.teeth + (b.teeth - a.teeth) * t,
-    a.tension + (b.tension - a.tension) * t
+    a.tension + (b.tension - a.tension) * t,
+    a.slant + (b.slant - a.slant) * t,
+    a.upperLift + (b.upperLift - a.upperLift) * t
   };
 }
 
@@ -1627,12 +1639,22 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
                                     sinf(float(now) * 0.0041f + pose.width * 3.1f))
                           : 0) +
                        int16_t(pose.skew * (isSmirk ? 22.0f : 12.0f));
+  const int16_t slant = int16_t(pose.slant * 24.0f) + int16_t(pose.skew * 6.0f);
+  const int16_t upperLift = int16_t(pose.upperLift * 26.0f);
+  const int16_t leftUpperLift = upperLift < 0 ? int16_t(-upperLift) : 0;
+  const int16_t rightUpperLift = upperLift > 0 ? upperLift : 0;
   const int16_t cavityW = int16_t(float(mouthW) * (0.86f - pose.tension * 0.05f));
   const int16_t cavityH = max(int16_t(5), openH);
   const int16_t topCy = cy - cavityH / 2 - lipH / 3 - curve / 3;
   const int16_t bottomCy = cy + cavityH / 2 + lipH / 3 - curve / 5;
-  int16_t leftCornerY = cy - curve + int16_t(pose.tension * 2.0f) + asym / 3;
-  int16_t rightCornerY = cy - curve + int16_t(pose.tension * 2.0f) - asym / 4;
+  const int16_t leftTopCy = topCy + slant / 2 - leftUpperLift + asym / 10;
+  const int16_t rightTopCy = topCy - slant / 2 - rightUpperLift - asym / 12;
+  const int16_t centerTopCy = topCy - (leftUpperLift + rightUpperLift) / 6 + asym / 18;
+  const int16_t leftBottomCy = bottomCy - slant / 4 + leftUpperLift / 7;
+  const int16_t rightBottomCy = bottomCy + slant / 4 + rightUpperLift / 7;
+  const int16_t lowerCenterCy = bottomCy + asym / 18;
+  int16_t leftCornerY = cy - curve + int16_t(pose.tension * 2.0f) + asym / 3 + slant / 2 - leftUpperLift / 2;
+  int16_t rightCornerY = cy - curve + int16_t(pose.tension * 2.0f) - asym / 4 - slant / 2 - rightUpperLift / 2;
   if (isSmirk) {
     const int16_t lift = int16_t(fabsf(pose.skew) * 15.0f);
     const int16_t drop = int16_t(fabsf(pose.skew) * 5.0f);
@@ -1650,20 +1672,22 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
   const uint16_t lipHi = rgb(236, 104, 112);
   const uint16_t lipLo = rgb(82, 10, 30);
   const uint16_t cavity = rgb(9, 0, 5);
+  const uint16_t enamel = rgb(238, 228, 198);
 
   fillEllipse(g, cx + asym / 4, cy, mouthW / 2 + 20, cavityH / 2 + lipH + 16, shadow);
-  fillEllipse(g, cx + asym / 5, bottomCy + 2, mouthW / 2 + 16, max(int16_t(18), int16_t(lipH / 2 + 10)), lipLo);
-  fillEllipse(g, cx + asym / 3, bottomCy, mouthW / 2 + 8, max(int16_t(16), int16_t(lipH / 2 + 5)), lip);
-  fillEllipse(g, cx - mouthW / 5 + asym / 2, topCy + asym / 8, mouthW / 3 + 14, max(int16_t(13), int16_t(lipH / 2 + 1)), lipLo);
-  fillEllipse(g, cx + mouthW / 5 + asym / 3, topCy - asym / 10, mouthW / 3 + 5, max(int16_t(12), int16_t(lipH / 2 - 1)), lipLo);
-  fillEllipse(g, cx - mouthW / 5 + asym / 2, topCy - 3 + asym / 8, mouthW / 3 + 6, max(int16_t(11), int16_t(lipH / 2 - 2)), lip);
-  fillEllipse(g, cx + mouthW / 5 + asym / 3, topCy - 4 - asym / 10, max(int16_t(8), int16_t(mouthW / 3 - 1)), max(int16_t(10), int16_t(lipH / 2 - 4)), lip);
-  fillEllipse(g, cx + asym / 3, topCy + lipH / 7, mouthW / 5 + 3, max(int16_t(8), int16_t(lipH / 3)), mixColor(lipLo, lip, 0.36f));
-  g.fillTriangle(cx - 22 + asym / 4, topCy - lipH / 2 + 6, cx + 15 + asym / 4, topCy - lipH / 2 + 4,
-                 cx - 3 + asym / 3, topCy - lipH / 7, lipLo);
-  fillEllipse(g, cx - mouthW / 5 + asym / 2, topCy - lipH / 5, mouthW / 5, max(int16_t(4), int16_t(lipH / 8)), lipHi);
-  fillEllipse(g, cx + mouthW / 6 + asym / 3, topCy - lipH / 6, mouthW / 6, max(int16_t(3), int16_t(lipH / 9)), mixColor(lip, lipHi, 0.50f));
-  fillEllipse(g, cx + mouthW / 10 + asym / 4, bottomCy - lipH / 5, mouthW / 3 + 6, max(int16_t(5), int16_t(lipH / 7)), mixColor(lip, lipHi, 0.50f));
+  fillEllipse(g, cx + asym / 5, lowerCenterCy + 2, mouthW / 2 + 16, max(int16_t(18), int16_t(lipH / 2 + 10)), lipLo);
+  fillEllipse(g, cx - mouthW / 5 + asym / 4, leftBottomCy, mouthW / 3 + 12, max(int16_t(15), int16_t(lipH / 2 + 4)), lip);
+  fillEllipse(g, cx + mouthW / 5 + asym / 3, rightBottomCy, mouthW / 3 + 8, max(int16_t(15), int16_t(lipH / 2 + 4)), lip);
+  fillEllipse(g, cx - mouthW / 5 + asym / 2, leftTopCy, mouthW / 3 + 14, max(int16_t(13), int16_t(lipH / 2 + 1)), lipLo);
+  fillEllipse(g, cx + mouthW / 5 + asym / 3, rightTopCy, mouthW / 3 + 5, max(int16_t(12), int16_t(lipH / 2 - 1)), lipLo);
+  fillEllipse(g, cx - mouthW / 5 + asym / 2, leftTopCy - 3, mouthW / 3 + 6, max(int16_t(11), int16_t(lipH / 2 - 2)), lip);
+  fillEllipse(g, cx + mouthW / 5 + asym / 3, rightTopCy - 4, max(int16_t(8), int16_t(mouthW / 3 - 1)), max(int16_t(10), int16_t(lipH / 2 - 4)), lip);
+  fillEllipse(g, cx + asym / 3, centerTopCy + lipH / 7, mouthW / 5 + 3, max(int16_t(8), int16_t(lipH / 3)), mixColor(lipLo, lip, 0.36f));
+  g.fillTriangle(cx - 24 + asym / 4, centerTopCy - lipH / 2 + 6, cx + 18 + asym / 4, centerTopCy - lipH / 2 + 4,
+                 cx - 3 + asym / 3, centerTopCy - lipH / 7, lipLo);
+  fillEllipse(g, cx - mouthW / 5 + asym / 2, leftTopCy - lipH / 5, mouthW / 5, max(int16_t(4), int16_t(lipH / 8)), lipHi);
+  fillEllipse(g, cx + mouthW / 6 + asym / 3, rightTopCy - lipH / 6, mouthW / 6, max(int16_t(3), int16_t(lipH / 9)), mixColor(lip, lipHi, 0.50f));
+  fillEllipse(g, cx + mouthW / 10 + asym / 4, lowerCenterCy - lipH / 5, mouthW / 3 + 6, max(int16_t(5), int16_t(lipH / 7)), mixColor(lip, lipHi, 0.50f));
 
   fillEllipse(g, cx + asym / 3, cy + asym / 12, cavityW / 2, max(int16_t(3), int16_t(cavityH / 2)), cavity);
   if (cavityH > 16) {
@@ -1674,6 +1698,20 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
 
   const float teethAmount = max(pose.teeth, pose.open > 0.34f ? clampf((pose.open - 0.30f) * 1.2f, 0.0f, 0.42f) : 0.0f);
   drawMouthTeeth(g, cx + asym / 3 - cavityW / 2 + 18, cy + asym / 12 - cavityH / 2 + 2, cavityW - 36, cavityH, teethAmount);
+  if (shape == MouthShape::Grimace && cavityW > 92) {
+    const int16_t gumY = cy + asym / 12 + max(int16_t(4), int16_t(cavityH / 7));
+    g.drawFastHLine(cx + asym / 3 - cavityW / 2 + 24, gumY, cavityW - 48, rgb(204, 190, 170));
+    for (int16_t tx = cx + asym / 3 - cavityW / 2 + 40; tx < cx + asym / 3 + cavityW / 2 - 36; tx += 30) {
+      g.drawFastVLine(tx, gumY - 7, 14, rgb(126, 104, 98));
+    }
+  }
+  if (fabsf(pose.upperLift) > 0.35f && cavityW > 84) {
+    const bool rightLift = pose.upperLift > 0.0f;
+    const int16_t fangX = rightLift ? cx + cavityW / 6 + asym / 3 : cx - cavityW / 6 + asym / 3;
+    const int16_t fangY = cy + asym / 12 - cavityH / 2 + 3 - (rightLift ? rightUpperLift : leftUpperLift) / 3;
+    g.fillTriangle(fangX - 12, fangY, fangX + 12, fangY, fangX + (rightLift ? 5 : -5),
+                   fangY + max(int16_t(10), int16_t(cavityH / 3)), enamel);
+  }
 
   const int16_t leftX = cx - mouthW / 2;
   const int16_t rightX = cx + mouthW / 2;
@@ -1684,14 +1722,24 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
     const int16_t creaseX = liftRight ? rightX - 36 + asym / 3 : leftX + 36 + asym / 2;
     const int16_t creaseY = liftRight ? rightCornerY - 8 : leftCornerY - 8;
     const int16_t creaseDir = liftRight ? -1 : 1;
-    const int16_t creaseLen = isSmirk ? 34 : 24;
+    const int16_t creaseLen = isSmirk ? 42 : 34;
     g.drawLine(creaseX, creaseY, creaseX + creaseDir * creaseLen, creaseY - 15, lipHi);
     g.drawLine(creaseX - creaseDir * 2, creaseY + 7, creaseX + creaseDir * (creaseLen - 4), creaseY, lipLo);
+  }
+  if (shape == MouthShape::Smile) {
+    g.drawLine(leftX + 20, leftCornerY - 6, leftX + 48, leftCornerY - 18, lipHi);
+    g.drawLine(rightX - 20, rightCornerY - 6, rightX - 48, rightCornerY - 18, lipHi);
+  } else if (shape == MouthShape::Frown) {
+    g.drawLine(leftX + 26, leftCornerY + 4, leftX + 58, leftCornerY + 22, lipLo);
+    g.drawLine(rightX - 26, rightCornerY + 4, rightX - 58, rightCornerY + 22, lipLo);
+  } else if (shape == MouthShape::Grimace) {
+    g.drawLine(leftX + 18, leftCornerY - 3, leftX + 34, leftCornerY + 18, lipLo);
+    g.drawLine(rightX - 18, rightCornerY - 3, rightX - 34, rightCornerY + 18, lipLo);
   }
   if (mouthFrameOk) mouthFrame->flush();
 }
 
-void renderRobotMouth(MouthShape, MouthPose pose, uint32_t now)
+void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now)
 {
   if (!displayOk) return;
   Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
@@ -1701,8 +1749,7 @@ void renderRobotMouth(MouthShape, MouthPose pose, uint32_t now)
   const int16_t panelY = 34;
   const int16_t panelW = screenW - panelX * 2;
   const int16_t panelH = screenH - panelY * 2;
-  const float talkBeat = clampf(0.5f + 0.5f * sinf(float(now) * 0.05f), 0.0f, 1.0f);
-  const float beat = mouthState.talkLevel > 0.01f ? pose.open + (talkBeat - pose.open) * mouthState.talkLevel : pose.open;
+  const float talkMix = clampf(mouthState.talkLevel * 0.85f, 0.0f, 1.0f);
 
   g.fillScreen(BLACK);
   g.fillRoundRect(panelX, panelY, panelW, panelH, 24, rgb(0, 8, 16));
@@ -1717,10 +1764,58 @@ void renderRobotMouth(MouthShape, MouthPose pose, uint32_t now)
   const int16_t barsCy = screenH / 2;
   for (uint8_t i = 0; i < barCount; ++i) {
     const int16_t x = barsX + int16_t(i) * (barW + gap);
+    const float center = float(barCount - 1) * 0.5f;
+    const float pos = center <= 0.0f ? 0.0f : (float(i) - center) / center;
+    const float side = 0.5f + 0.5f * pos;
+    float shapeLevel = clampf(0.12f + pose.open * 0.62f, 0.06f, 0.98f);
+    switch (shape) {
+      case MouthShape::Smile:
+        shapeLevel = 0.20f + 0.34f * fabsf(pos);
+        break;
+      case MouthShape::SmirkLeft:
+        shapeLevel = 0.18f + 0.46f * (1.0f - side);
+        break;
+      case MouthShape::SmirkRight:
+        shapeLevel = 0.18f + 0.46f * side;
+        break;
+      case MouthShape::Open:
+        shapeLevel = 0.18f + 0.64f * (1.0f - fabsf(pos));
+        break;
+      case MouthShape::Wide:
+        shapeLevel = 0.52f + 0.26f * (1.0f - fabsf(pos) * 0.35f);
+        break;
+      case MouthShape::Frown:
+        shapeLevel = 0.34f - 0.18f * fabsf(pos);
+        break;
+      case MouthShape::Grimace:
+        shapeLevel = 0.34f + 0.04f * ((i % 2) ? 1.0f : -1.0f);
+        break;
+      case MouthShape::Sneer:
+        shapeLevel = 0.16f + 0.50f * side + 0.10f * ((i % 2) ? 1.0f : 0.0f);
+        break;
+      case MouthShape::Sleep:
+        shapeLevel = 0.07f;
+        break;
+      case MouthShape::Neutral:
+      default:
+        shapeLevel = 0.16f + 0.08f * (1.0f - fabsf(pos));
+        break;
+    }
     const float wave = 0.35f + 0.65f * fabsf(sinf(float(now) * 0.009f + float(i) * 0.8f));
-    const int16_t barH = int16_t(12.0f + float(panelH - 42) * max(beat, pose.open) * wave);
-    g.fillRoundRect(x, barsCy - barH / 2, barW, barH, barW / 2, rgb(44, 220, 232));
-    g.drawFastVLine(x + barW / 3, barsCy - barH / 2 + 5, max(int16_t(1), int16_t(barH - 10)), rgb(132, 248, 255));
+    const float level = clampf(shapeLevel * (1.0f - talkMix) + max(shapeLevel, wave) * talkMix, 0.03f, 1.0f);
+    const int16_t barH = int16_t(10.0f + float(panelH - 42) * level);
+    const int16_t ySkew = int16_t((pose.slant * 9.0f + pose.skew * 5.0f) * pos);
+    const uint16_t bar = shape == MouthShape::Sneer ? rgb(236, 102, 80)
+                         : shape == MouthShape::Grimace ? rgb(236, 220, 150)
+                         : shape == MouthShape::Frown ? rgb(82, 180, 236)
+                         : rgb(44, 220, 232);
+    const uint16_t hi = mixColor(bar, rgb(210, 255, 255), 0.56f);
+    g.fillRoundRect(x, barsCy - barH / 2 + ySkew, barW, barH, barW / 2, bar);
+    g.drawFastVLine(x + barW / 3, barsCy - barH / 2 + 5 + ySkew, max(int16_t(1), int16_t(barH - 10)), hi);
+  }
+  if (shape == MouthShape::Sleep) {
+    g.drawFastHLine(panelX + 44, barsCy, panelW - 88, rgb(44, 220, 232));
+    g.drawFastHLine(panelX + 66, barsCy + 6, panelW - 132, rgb(12, 58, 78));
   }
   if (mouthFrameOk) mouthFrame->flush();
 }

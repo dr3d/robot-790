@@ -1,0 +1,45 @@
+{
+  "name": "robot-790-gold",
+  "label": "Robot 790 Gold Personality",
+  "captured_date": "2026-08-25",
+  "purpose": "Fast companion-house-pet tuning with strong character and low latency.",
+  "realtime": {
+    "launcher": "scripts/start_realtime_eric_qwen3.ps1",
+    "model": "qwen/qwen3.8-27b",
+    "reasoning_effort": "low",
+    "num_pipelines": 1,
+    "stream_batch_sentences": 1,
+    "audio_max_tokens": 64
+  },
+  "tts": {
+    "engine": "qwen3",
+    "model_path": "C:/Users/dr3d/ComfyUI_windows_portable/ComfyUI/models/TTS/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+    "speaker": "Eric",
+    "instruct": "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
+    "language": "English",
+    "backend": "torch",
+    "device": "cuda",
+    "dtype": "bfloat16",
+    "attention": "eager"
+  },
+  "client": {
+    "page_launcher": "scripts/start_sts_page.ps1",
+    "page_url": "http://127.0.0.1:8790/",
+    "realtime_url": "ws://127.0.0.1:8765/v1/realtime",
+    "preferred_client": "Robot 790 standalone STS page"
+  },
+  "style_notes": [
+    "One natural spoken sentence by default.",
+    "Two short sentences for explanation, comparison, advice, or assessment.",
+    "Compact, not clipped.",
+    "Helpful first, then one small glint of character.",
+    "Do not let broad answers become monologues."
+  ],
+  "observed_behavior": {
+    "typical_stt_seconds": "0.03-0.07",
+    "typical_llm_seconds": "0.75-1.7",
+    "typical_tts_ttfa_seconds": "0.18-0.37",
+    "typical_last_speech_to_first_audio_seconds": "1.1-2.7",
+    "notes": "This felt fast, present, characterful, and conversationally alive on the RTX 5090 setup."
+  }
+}

@@ -160,13 +160,20 @@ The tool module is `robot_790d.realtime_tools`. It currently exposes:
   `speaking`, or `sleeping`.
 - `play_face_beat`: lets an agent trigger a named firmware beat.
 - `set_face_mood`: sets a named ESP32 face mood for a short visual hold.
+- `set_eye_style`: changes the ESP32 eye renderer style, such as `robot`,
+  `friendly`, `classic`, `cartoony`, `sinister`, or `sleepy`.
 - `set_eye_gaze`: aims the eyes at a normalized left/right and up/down gaze
   target when the user explicitly asks Robot 790 to look somewhere.
+- `set_mouth`: changes the ESP32 mouth style, shape, talking state, energy, or
+  releases the mouth back to autonomous control.
 - `set_chassis`: sends one status, stop, e-stop, clear, tank, or twist command
   to the ESP32 chassis controller.
 - `remember_fact`: saves or updates one persistent named fact.
 - `forget_fact`: removes one persistent named fact by name.
 - `search_web`: searches the web and returns compact title/snippet/URL results.
+- `write_text_file`: writes or appends a plain text note under `notes/`.
+- `read_text_file`: reads a `.txt` or explicitly named `.md` note.
+- `list_text_files`: lists available Robot 790 note files.
 
 The browser STS page sends a compact Robot 790/Eric identity instruction with
 `session.update` when it connects. Its deterministic lifecycle drives the face
@@ -181,10 +188,11 @@ troll-ish, sleepy, and excited. CustomVoice models still anchor to the selected
 speaker, so this should be treated as performance direction rather than a hard
 guarantee of a totally different voice.
 The optional `LLM face tools` checkbox exposes `set_robot_mode`,
-`set_face_mood`, `play_face_beat`, and `set_eye_gaze` to the model. It is
-enabled by default so voice requests like "look all the way left" can actuate
-the eyes. Face tool calls are executed in the page by posting to the configured
-ESP32 face URL, which defaults to `http://esp32-eyes.local/`.
+`set_face_mood`, `play_face_beat`, `set_eye_style`, `set_eye_gaze`, and
+`set_mouth` to the model. It is enabled by default so voice requests like
+"look all the way left", "use robot eyes", or "make the mouth smile" can
+actuate the face. Face tool calls are executed in the page by posting to the
+configured ESP32 face URL, which defaults to `http://esp32-eyes.local/`.
 
 The optional `LLM chassis tools` checkbox exposes `set_chassis`. Chassis tool
 calls target `http://esp32-chassis.local/` and are limited to one explicit
@@ -213,6 +221,15 @@ refresh, and memory updates. The Python daemon path stores the same named-fact
 shape in `memory.v1.json`; set `ROBOT_790_MEMORY_PATH` for an exact file path,
 or `ROBOT_790_INSTANCE_PATH` for an instance directory.
 
+The optional `LLM note files` checkbox exposes `write_text_file`,
+`read_text_file`, and `list_text_files`. This is intentionally simpler than
+memory: Robot 790 only touches files when explicitly asked to save, write,
+append, read, or list a note. Files live under the local `notes/` folder by
+default, missing extensions become `.txt`, and only `.txt` or explicitly named
+`.md` files are allowed. Set `ROBOT_790_NOTES_PATH` to move the notes folder.
+This gives future summarizer/reflection jobs a safe storage layer to reuse
+without changing the voice UI contract.
+
 For a fully local LLM, run an OpenAI-compatible server such as llama.cpp or
 vLLM, then pass backend arguments through `-ExtraArgs`:
 
@@ -234,14 +251,30 @@ the realtime server:
 .\scripts\start_realtime_eric_qwen3.ps1
 ```
 
-That launcher uses one realtime pipeline by default, the
+The current gold personality preset is the 27B/Eric tuning that felt fast,
+present, and characterful during live testing:
+
+```powershell
+.\scripts\start_realtime_gold.ps1
+```
+
+It pins `qwen/qwen3.8-27b`, reasoning `low`, one realtime pipeline, one-sentence
+TTS batching, `64` audio tokens, the `Eric` speaker, and the dry Eric voice
+style. The matching snapshot lives at:
+
+```text
+presets\robot-790-gold.json
+```
+
+That launcher uses one realtime session pipeline by default, the
 local
 `C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice`
 model, the CUDA `torch` backend, the `Eric` speaker, and the local
-`qwen3.5-4b` LLM through LM Studio's Chat Completions endpoint. Reasoning is
-disabled with `reasoning_effort=none`, and spoken LLM output is capped at 48
-tokens by default to keep turns realtime-friendly. Increase `-NumPipelines`
-only after checking VRAM and latency.
+`qwen/qwen3.8-27b` LLM through LM Studio's Chat Completions endpoint. Reasoning
+uses `reasoning_effort=low`, and spoken LLM output is capped at 64
+tokens by default to keep turns responsive without forcing clipped answers.
+Use `-NumPipelines 2` only when you want two simultaneous clients; increase
+above that only after checking VRAM and latency.
 The launcher sets a dry Eric TTS instruction by default. Override it at launch
 with:
 
@@ -254,6 +287,20 @@ session. This works through the project-owned realtime entrypoint
 `robot_790d.realtime_entry`, which applies a small runtime patch to the upstream
 `speech-to-speech` Qwen3-TTS handler without editing the installed dependency.
 
+If Ctrl-C does not stop a stuck standalone STS page or realtime backend, stop
+both Robot 790 STS processes with:
+
+```powershell
+.\scripts\stop_sts.ps1
+```
+
+To stop only one side:
+
+```powershell
+.\scripts\stop_sts.ps1 -RealtimeOnly
+.\scripts\stop_sts.ps1 -PageOnly
+```
+
 The launcher reads its system prompt from:
 
 ```text
@@ -261,7 +308,7 @@ prompts\robot-790-reachy-no-tools.md
 ```
 
 That prompt is adapted from the Reachy Mini conversation app's default profile
-body. It keeps the spoken Robot 790 identity, brevity rules, and sparse
+body. It keeps the spoken Robot 790 identity, compact response rules, and sparse
 face/memory tool guidance, while leaving Reachy SDK movement instructions out
 of this repo's first pass.
 
@@ -269,6 +316,12 @@ To try another local model without editing the script:
 
 ```powershell
 .\scripts\start_realtime_eric_qwen3.ps1 -LlmModel "qwen/qwen3.5-9b"
+```
+
+To temporarily drop back to the small default LM Studio model:
+
+```powershell
+.\scripts\start_realtime_eric_qwen3.ps1 -LlmModel "qwen3.5-4b"
 ```
 
 To try the larger local CustomVoice model:
