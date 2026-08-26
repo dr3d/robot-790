@@ -191,8 +191,11 @@ conversation and saved facts as light context while disabling tools for that
 turn. Level `11` is a deliberately overactive mode: it schedules ponders every
 10-45 seconds when the system is otherwise idle and lets Robot 790 sound a bit
 more expressive. Idle ponders rotate through deterministic lanes such as object
-noticing, callback, status, question, craft, curiosity, and aside so they do not
-always use the same fact/contrast/uncertainty shape. At levels `10` and `11`,
+noticing, callback, status, self-question, addressed question, craft, curiosity,
+and aside so they do not always use the same fact/contrast/uncertainty shape.
+The addressed-question lane appears at level `9` and above: Robot 790 may ask
+Scott one small question into the room and then keep pondering later if no
+answer arrives. At levels `10` and `11`,
 the curiosity lane may perform one rate-limited web search when `LLM web search`
 is enabled and fold a compact outside detail into the next idle thought. If the
 page detects repeated "I'm out / same loop / nothing new" style outputs, it

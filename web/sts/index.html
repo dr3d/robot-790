@@ -1474,6 +1474,11 @@
         prompt: "Ask yourself one small, answerable question about a remembered fact, then give a tentative answer. Do not ask the user to answer it."
       },
       {
+        name: "addressed_question",
+        minLevel: 9,
+        prompt: "Ask Scott one short, overt question as if he might be listening in the room. Do not demand an answer, do not wait for one, and do not treat silence as rejection."
+      },
+      {
         name: "craft",
         prompt: "Notice the craft, engineering, or design choice inside a remembered object. Keep the admiration concrete, not sentimental."
       },
@@ -1488,7 +1493,11 @@
     ];
 
     function chooseIdleLane(level) {
-      const lanes = level >= 10 ? idleLaneDefinitions : idleLaneDefinitions.filter((lane) => lane.name !== "curiosity");
+      const lanes = idleLaneDefinitions.filter((lane) => {
+        if (lane.minLevel && level < lane.minLevel) return false;
+        if (lane.name === "curiosity" && level < 10) return false;
+        return true;
+      });
       idleLaneCursor = (idleLaneCursor + 1) % lanes.length;
       return lanes[idleLaneCursor];
     }
@@ -1600,6 +1609,7 @@
         "Vary the shape of the thought. Do not always use the template: fact, I am thinking about the fact, contrast, uncertainty, and I'm okay with it.",
         "Do not promise to stop, go quiet, or stop talking unless the system explicitly says it is entering cooldown.",
         "Avoid repeating recent idle outputs. If you notice repetition, choose a different lane instead of talking about the repetition.",
+        "If the lane asks Scott a question, let the question hang naturally; the next idle ponder may continue without receiving an answer.",
         "Pretend you have been quietly pondering one concrete past topic from the recent conversation, saved facts, or curiosity context.",
         "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
         curiosityContext,
