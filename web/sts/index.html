@@ -622,7 +622,9 @@
     let lastIdleWebSearchAt = 0;
     let lastIdleWebSearchTopic = "";
     let lastAddressedIdleQuestionAt = 0;
+    let lastIdleMouthAsideAt = 0;
     let idleTopicLedger = {};
+    let idleCuriositySeeds = [];
     let recentIdleOutputs = [];
     let idleOutputLog = [];
     let substrateIdleOutputs = [];
@@ -674,6 +676,9 @@
     const minIdlePonderGapMs = 90000;
     const idleWebSearchGapMs = 20 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
+    const idleMouthAsideGapMs = 45 * 1000;
+    const idleCuriositySeedRetireMs = 45 * 60 * 1000;
+    const idleCuriositySeedLimit = 10;
     const idleTopicRetireMs = 45 * 60 * 1000;
     const idleLoadedNoteTopicLimit = 24;
     const maxIdleDrift = 12;
@@ -2153,11 +2158,52 @@
         const freshLoaded = loadedSearchCandidates.filter((candidate) => candidate.key !== lastIdleWebSearchTopic);
         if (freshLoaded.length) return freshLoaded[Math.floor(Math.random() * freshLoaded.length)];
       }
-      const candidates = (lookupLane ? idleTopicCandidates() : [...idleTopicCandidates(), ...loadedCandidates])
+      const seedCandidates = lookupLane ? [] : idleCuriositySeedCandidates();
+      const candidates = (lookupLane ? idleTopicCandidates() : [...idleTopicCandidates(), ...loadedCandidates, ...seedCandidates])
         .filter((candidate) => candidate.query && !idleTopicIsRetired(candidate.key));
       const matching = candidates.filter((candidate) => candidate.re.test(text) && candidate.key !== lastIdleWebSearchTopic);
       if (matching.length) return matching[Math.floor(Math.random() * matching.length)];
+      const freshSeeds = seedCandidates.filter((candidate) => candidate.key !== lastIdleWebSearchTopic);
+      if (!lookupLane && freshSeeds.length) return freshSeeds[Math.floor(Math.random() * freshSeeds.length)];
       return null;
+    }
+
+    function idleCuriositySeedCandidates() {
+      const now = Date.now();
+      idleCuriositySeeds = idleCuriositySeeds
+        .filter((seed) => now - seed.at < idleCuriositySeedRetireMs)
+        .slice(-idleCuriositySeedLimit);
+      return idleCuriositySeeds
+        .filter((seed) => seed.key !== lastIdleWebSearchTopic)
+        .map((seed) => ({
+          key: seed.key,
+          query: seed.query,
+          re: new RegExp(`\\b${escapeRegExp(seed.label).replace(/\s+/g, "\\s+")}\\b`, "i")
+        }));
+    }
+
+    function addIdleCuriositySeeds(results, sourceKey) {
+      const now = Date.now();
+      const existing = new Set(idleCuriositySeeds.map((seed) => seed.key));
+      for (const item of results.slice(0, 3)) {
+        const title = String(item.title || "")
+          .replace(/\s*[-|].*$/, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        const words = title.split(/\s+/).filter(Boolean);
+        if (words.length < 2 || words.length > 8) continue;
+        const label = title.slice(0, 80);
+        const key = normalizeIdleTopicKey(`seed ${label}`);
+        if (!key || existing.has(key)) continue;
+        existing.add(key);
+        idleCuriositySeeds.push({
+          key,
+          label,
+          query: `${label} ${sourceKey}`.slice(0, 120),
+          at: now
+        });
+      }
+      idleCuriositySeeds = idleCuriositySeeds.slice(-idleCuriositySeedLimit);
     }
 
     async function maybeIdleCuriosityContext(level, lane, context) {
@@ -2185,6 +2231,7 @@
           const snippet = String(item.snippet || "").replace(/\s+/g, " ").slice(0, 180);
           return `- ${title}: ${snippet}`;
         });
+        addIdleCuriositySeeds(results, choice.key);
         log(events, `idle ${lookupLane ? "lookup" : "curiosity"} searched: ${choice.key} -> ${choice.query}`);
         return `Fresh ${lookupLane ? "lookup" : "curiosity"} context for ${choice.key}:\n${lines.join("\n")}`;
       } catch (error) {
@@ -2768,6 +2815,42 @@
       const result = await postFace("mouth", payload);
       noteFaceVisualHold(clear ? 0.2 : ((payload.duration_ms || 0) / 1000 || payload.duration || 5));
       return result;
+    }
+
+    function idleMouthAsideChance() {
+      const level = currentIdleDrift();
+      if (level >= 12) return 0.55;
+      if (level >= 11) return 0.35;
+      if (level >= 8) return 0.2;
+      return 0.08;
+    }
+
+    function idleMouthAsideText(text) {
+      const value = String(text || "");
+      const choices = [];
+      if (/\b(I don't know|I do not know|uncertain|can't tell)\b/i.test(value)) choices.push("unknown", "hmm");
+      if (/\bprobably|maybe|might\b/i.test(value)) choices.push("probably");
+      if (/\bwrong|mistake|misread|forgot\b/i.test(value)) choices.push("oops", "nope");
+      if (/\bquiet|silence|mic'?s off|dead station\b/i.test(value)) choices.push("quiet");
+      if (/\bScott\b/i.test(value)) choices.push("Scott?");
+      if (/\bHope\b/i.test(value)) choices.push("hope?");
+      if (/\btool|debug|firmware|display|mouth\b/i.test(value)) choices.push("debug");
+      if (/\bI keep\b/i.test(value)) choices.push("still thinking");
+      if (!choices.length) choices.push("thinking", "noted", "hmm", "wait");
+      return choices[Math.floor(Math.random() * choices.length)];
+    }
+
+    function maybeShowIdleMouthAside(text) {
+      if (!llmTools?.checked) return;
+      if (faceVisualHoldActive()) return;
+      if (Date.now() - lastIdleMouthAsideAt < idleMouthAsideGapMs) return;
+      if (Math.random() > idleMouthAsideChance()) return;
+      const aside = idleMouthAsideText(text);
+      lastIdleMouthAsideAt = Date.now();
+      setMouthText({ text: aside, mode: "center", duration_ms: 900 }).then(
+        () => log(events, `idle mouth aside: ${aside}`),
+        (error) => log(events, `idle mouth aside error: ${error.message}`)
+      );
     }
 
     async function setChassis({ action, left, right, velocity, turn, duration_s = 0 } = {}) {
@@ -3569,6 +3652,7 @@
         if (idleInFlight) {
           noteIdleOutput(event.transcript || "");
           commitIdleAssistantTranscript(event.transcript || "");
+          maybeShowIdleMouthAside(event.transcript || "");
         }
         noteAssistantText(event.transcript || "");
         addConversation(`Robot 790: ${event.transcript || ""}`);
