@@ -870,6 +870,12 @@
               maximum: 30,
               description: "Seconds to hold the text. Use 0 to hold until released."
             },
+            duration_ms: {
+              type: "number",
+              minimum: 50,
+              maximum: 30000,
+              description: "Optional precise hold duration in milliseconds, useful for very fast flashes such as 100 ms."
+            },
             clear: {
               type: "boolean",
               description: "True clears mouth text and returns to normal expressive mouth."
@@ -2715,7 +2721,7 @@
       return result;
     }
 
-    async function setMouthText({ text = "", mode = "center", duration = 5, clear = false } = {}) {
+    async function setMouthText({ text = "", mode = "center", duration = 5, duration_ms, clear = false } = {}) {
       const payload = {};
       if (clear) {
         payload.auto = true;
@@ -2724,10 +2730,15 @@
         if (!value) throw new Error("Missing mouth text");
         payload.text = value.slice(0, 96);
         payload.mode = String(mode || "center").toLowerCase() === "marquee" ? "marquee" : "center";
-        payload.duration = Math.max(0, Math.min(30, Number(duration) || 0));
+        const preciseMs = Number(duration_ms);
+        if (Number.isFinite(preciseMs) && preciseMs > 0) {
+          payload.duration_ms = Math.max(50, Math.min(30000, preciseMs));
+        } else {
+          payload.duration = Math.max(0, Math.min(30, Number(duration) || 0));
+        }
       }
       const result = await postFace("mouth", payload);
-      noteFaceVisualHold(clear ? 0.2 : (payload.duration || 5));
+      noteFaceVisualHold(clear ? 0.2 : ((payload.duration_ms || 0) / 1000 || payload.duration || 5));
       return result;
     }
 

@@ -45,7 +45,8 @@ constexpr uint32_t MOUTH_TRANSITION_MS = 220;
 constexpr uint32_t MOUTH_TALK_ATTACK_MS = 90;
 constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
 constexpr uint8_t MOUTH_TEXT_MAX = 96;
-constexpr uint32_t MOUTH_TEXT_FRAME_MS = 80;
+constexpr uint32_t MOUTH_TEXT_FRAME_MS = 50;
+constexpr uint8_t MOUTH_TEXT_MARQUEE_MS_PER_PX = 12;
 constexpr float API_NORMALIZED_GAZE_X_MM = 190.0f;
 constexpr float API_NORMALIZED_GAZE_Y_MM = 110.0f;
 constexpr float API_NORMALIZED_GAZE_Z_MM = 360.0f;
@@ -2357,6 +2358,29 @@ uint8_t mouthTextSizeFor(int16_t w, size_t len, bool marquee) {
   return size;
 }
 
+void drawClippedMouthText(
+  Adafruit_GFX &g,
+  const char *text,
+  int16_t x,
+  int16_t y,
+  uint8_t size,
+  uint16_t color,
+  int16_t clipX,
+  int16_t clipW
+) {
+  const int16_t charW = 6 * size;
+  const int16_t clipRight = clipX + clipW;
+  g.setTextWrap(false);
+  g.setTextSize(size);
+  g.setTextColor(color);
+  for (size_t i = 0; text[i] != '\0'; ++i) {
+    const int16_t charX = x + int16_t(i) * charW;
+    if (charX < clipX || charX + charW > clipRight) continue;
+    g.setCursor(charX, y);
+    g.write(uint8_t(text[i]));
+  }
+}
+
 void drawMouthTextPanel(Adafruit_GFX &g, int16_t w, int16_t h, uint32_t now) {
   const char *text = mouthState.text;
   const size_t len = strlen(text);
@@ -2375,25 +2399,23 @@ void drawMouthTextPanel(Adafruit_GFX &g, int16_t w, int16_t h, uint32_t now) {
   const int16_t panelY = maxi16(10, h / 2 - 44);
   const int16_t panelW = w - 16;
   const int16_t panelH = mini16(92, h - panelY - 10);
+  const int16_t clipX = panelX + 14;
+  const int16_t clipW = panelW - 28;
 
   g.fillScreen(bg);
   g.fillRoundRect(panelX, panelY, panelW, panelH, 16, panel);
   g.drawRoundRect(panelX, panelY, panelW, panelH, 16, line);
   g.drawFastHLine(panelX + 18, panelY + panelH - 12, panelW - 36, dim);
-  g.setTextWrap(false);
-  g.setTextSize(size);
-  g.setTextColor(glow);
 
   const int16_t y = panelY + (panelH - textH) / 2;
   int16_t x = panelX + (panelW - textW) / 2;
   if (marquee) {
     const uint32_t elapsed = now - mouthState.textStarted;
     const int16_t travel = textW + panelW + 42;
-    const int16_t offset = int16_t((elapsed / 35) % uint32_t(maxi16(1, travel)));
+    const int16_t offset = int16_t((elapsed / MOUTH_TEXT_MARQUEE_MS_PER_PX) % uint32_t(maxi16(1, travel)));
     x = panelX + panelW + 18 - offset;
   }
-  g.setCursor(x, y);
-  g.print(text);
+  drawClippedMouthText(g, text, x, y, size, glow, clipX, clipW);
 }
 
 void renderMouth(uint32_t now) {
