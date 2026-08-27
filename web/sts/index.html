@@ -140,10 +140,10 @@
       grid-template-columns: minmax(120px, 160px) minmax(260px, 420px) minmax(140px, 180px) auto auto;
     }
     .idle-controls {
-      grid-template-columns: minmax(260px, 1fr) auto;
+      grid-template-columns: minmax(220px, 1fr) minmax(180px, 260px) auto auto;
     }
     .mic-vision-controls {
-      grid-template-columns: 152px auto minmax(180px, 1fr) auto auto;
+      grid-template-columns: 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto;
     }
     .vision-drop {
       width: 152px;
@@ -274,6 +274,25 @@
       display: grid;
       grid-template-rows: auto minmax(0, 1fr);
     }
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+    .copy-link {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .copy-link:hover {
+      text-decoration: underline;
+    }
     .log {
       height: var(--log-pane-height);
       min-height: var(--log-pane-height);
@@ -377,23 +396,35 @@
       </div>
     </details>
 
-    <section class="controls mic-vision-controls">
-      <label id="visionDrop" class="vision-drop" tabindex="0">
-        <img id="visionPreview" class="vision-preview" alt="">
-        <span class="vision-copy">
-          <span class="vision-title">Sensing Eye</span>
-          <span id="visionHint" class="vision-hint">Drop image, then speak</span>
-        </span>
-        <input id="visionFile" type="file" accept="image/*" hidden>
-      </label>
-      <button id="visionClear" disabled>Clear Image</button>
-      <div class="meters">
-        <span>Mic</span>
-        <div class="bar"><span id="level"></span></div>
+    <details id="micPanel" class="settings-panel mic-panel" open>
+      <summary>
+        <span class="settings-title">Eye And Mic</span>
+        <span class="settings-hint">Sensing image, microphone, and interruption</span>
+      </summary>
+      <div class="settings-body">
+        <section class="controls mic-vision-controls">
+          <label id="visionDrop" class="vision-drop" tabindex="0">
+            <img id="visionPreview" class="vision-preview" alt="">
+            <span class="vision-copy">
+              <span class="vision-title">Sensing Eye</span>
+              <span id="visionHint" class="vision-hint">Drop image, then speak</span>
+            </span>
+            <input id="visionFile" type="file" accept="image/*" hidden>
+          </label>
+          <button id="visionClear" disabled>Clear Image</button>
+          <div class="meters">
+            <span>Mic</span>
+            <div class="bar"><span id="level"></span></div>
+          </div>
+          <label>
+            Interrupt <span id="interruptSensitivityValue">6/10</span>
+            <input id="interruptSensitivity" type="range" min="1" max="10" step="1" value="6">
+          </label>
+          <button id="startMic" disabled>Start Mic</button>
+          <button id="stopMic" disabled>Stop Mic</button>
+        </section>
       </div>
-      <button id="startMic" disabled>Start Mic</button>
-      <button id="stopMic" disabled>Stop Mic</button>
-    </section>
+    </details>
 
     <details id="settingsPanel" class="settings-panel">
       <summary>
@@ -446,9 +477,14 @@
         <section class="controls idle-controls">
           <label>
             Idle drift <span id="idleDriftValue">Off</span>
-            <input id="idleDrift" type="range" min="0" max="11" step="1" value="0">
+            <input id="idleDrift" type="range" min="0" max="12" step="1" value="0">
+          </label>
+          <label>
+            Wonder <span id="idleWonderValue">5/10</span>
+            <input id="idleWonder" type="range" min="0" max="10" step="1" value="5">
           </label>
           <button id="idlePonderNow" disabled>Ponder</button>
+          <span class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</span>
         </section>
 
         <section class="controls">
@@ -469,11 +505,17 @@
 
     <section class="grid log-grid">
       <div>
-        <label>Conversation</label>
+        <div class="log-header">
+          <label>Conversation</label>
+          <button id="copyConversation" class="copy-link" type="button">Copy</button>
+        </div>
         <div id="conversation" class="log"></div>
       </div>
       <div>
-        <label>Events</label>
+        <div class="log-header">
+          <label>Events</label>
+          <button id="copyEvents" class="copy-link" type="button">Copy</button>
+        </div>
         <div id="events" class="log"></div>
       </div>
     </section>
@@ -505,7 +547,12 @@
     const ttsApplyButton = document.querySelector("#ttsApply");
     const idleDrift = document.querySelector("#idleDrift");
     const idleDriftValue = document.querySelector("#idleDriftValue");
+    const idleWonder = document.querySelector("#idleWonder");
+    const idleWonderValue = document.querySelector("#idleWonderValue");
     const idlePonderNowButton = document.querySelector("#idlePonderNow");
+    const idleSubstrateTest = document.querySelector("#idleSubstrateTest");
+    const interruptSensitivity = document.querySelector("#interruptSensitivity");
+    const interruptSensitivityValue = document.querySelector("#interruptSensitivityValue");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
     const visionDrop = document.querySelector("#visionDrop");
@@ -514,6 +561,9 @@
     const visionHint = document.querySelector("#visionHint");
     const visionClearButton = document.querySelector("#visionClear");
     const clearLogButton = document.querySelector("#clearLog");
+    const copyConversationButton = document.querySelector("#copyConversation");
+    const copyEventsButton = document.querySelector("#copyEvents");
+    const micPanel = document.querySelector("#micPanel");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
     const level = document.querySelector("#level");
@@ -548,6 +598,8 @@
     let responseDoneAfterTool = false;
     let toolFollowupExactText = "";
     let toolFollowupInstructions = "";
+    let loadedNoteContexts = [];
+    let loadedNoteContextDirty = false;
     let responseActive = false;
     let idleTimer;
     let idleInFlight = false;
@@ -561,6 +613,9 @@
     let lastAddressedIdleQuestionAt = 0;
     let idleTopicLedger = {};
     let recentIdleOutputs = [];
+    let idleOutputLog = [];
+    let substrateIdleOutputs = [];
+    let recentIdleClaimSignatures = [];
     let faceMode = "idle";
     let faceIdleTimer;
     let thinkingGazeSide = 1;
@@ -574,10 +629,20 @@
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
     const idleDriftStorageKey = "robot790.idleDrift.v1";
+    const idleWonderStorageKey = "robot790.idleWonder.v1";
+    const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
+    const micPanelStorageKey = "robot790.micPanel.open.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
     const maxMemoryFactChars = 320;
+    const maxLoadedNotes = 8;
+    const maxLoadedNoteChars = 18000;
+    const maxLoadedNoteCharsPerFile = 4500;
+    const maxIdleOutputLog = 240;
+    const maxSessionNoteChars = 180000;
+    const maxIdleLoadedNoteChars = 12000;
+    const startupNoteFilenames = ["erics_memories.txt"];
     const ttsStylePresets = {
       neutral: "",
       dry: "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
@@ -592,13 +657,13 @@
     const maxChassisDurationS = 5;
     const visionMaxEdgePx = 768;
     const visionJpegQuality = 0.82;
-    const bargeInPeakThreshold = 0.42;
     const bargeInCooldownMs = 1600;
     const minIdlePonderGapMs = 90000;
     const idleWebSearchGapMs = 20 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
     const idleTopicRetireMs = 45 * 60 * 1000;
-    const maxIdleDrift = 11;
+    const idleLoadedNoteTopicLimit = 24;
+    const maxIdleDrift = 12;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
     let visionImageName = "";
@@ -880,6 +945,7 @@
         description: (
           "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, " +
           "append, or put text into a named file. Use .txt by default unless the user explicitly names .md. " +
+          "For short authored notes, provide content. For long notes based on captured session material, omit content and choose source. " +
           "Notes are durable memory aids: record what happened, what the user supplied, and Eric's thoughts as thoughts. " +
           "Do not turn Eric's poetic rumination or unverified outside facts into remembered truth."
         ),
@@ -892,7 +958,12 @@
             },
             content: {
               type: "string",
-              description: "Plain text content to write."
+              description: "Plain text content to write. Use this for short notes. Omit it for long notes captured from source."
+            },
+            source: {
+              type: "string",
+              enum: ["conversation", "events", "idle_ruminations", "conversation_and_idle", "full_session"],
+              description: "Captured session material to write when content is omitted. Use this for long transcripts, event logs, ruminations, or session summaries."
             },
             mode: {
               type: "string",
@@ -901,7 +972,7 @@
               description: "overwrite replaces the file; append adds to the end."
             }
           },
-          required: ["filename", "content"],
+          required: ["filename"],
           additionalProperties: false
         }
       },
@@ -1082,6 +1153,9 @@
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
       "Use note file tools only when the user explicitly asks you to write, save, append, read, or list a text file or note.",
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
+      "When using write_text_file for a short note you authored, pass filename and content.",
+      "When using write_text_file for a long note based on captured session material, omit content and pass source instead; do not generate a huge content argument.",
+      "Use source idle_ruminations for recent idle thoughts, conversation for the visible conversation pane, events for the event pane, conversation_and_idle for a combined conversation plus ruminations note, and full_session only when the user asks for everything.",
       "When writing notes, write for future memory, not for live performance: keep the voice warm, but make the record clear and useful.",
       "In notes, distinguish user-supplied facts, observed session events, tool-verified facts, and Eric's own ruminations.",
       "In notes, preserve Eric's strange thoughts as thoughts; do not restate them as factual claims about the world.",
@@ -1140,7 +1214,7 @@
     }
 
     function rememberMemoryFact({ name, fact } = {}) {
-      if (!memoryWriteAllowed(lastUserText)) {
+      if (!memoryWriteAllowed()) {
         throw new Error("Memory writes require an explicit remember-this request or a just-armed save flow");
       }
       const normalizedName = normalizeMemoryName(name);
@@ -1148,7 +1222,7 @@
       if (!normalizedName) throw new Error("Missing required argument: name");
       if (!normalizedFact) throw new Error("Missing required argument: fact");
       if (!memoryFactAppearsInUserEvidence(normalizedFact)) {
-        throw new Error("Memory fact must be grounded in recent user turns; nothing was saved");
+        throw new Error("Memory fact must be grounded in recent user turns or loaded notes; nothing was saved");
       }
       if (isPlaceholderMemoryFact(normalizedFact)) {
         throw new Error("Memory fact is a placeholder or inferred unknown; nothing was saved");
@@ -1157,7 +1231,6 @@
       const stored = { name: normalizedName, fact: normalizedFact, updatedAt: Date.now() };
       const remaining = loadMemoryFacts().filter((item) => item.name !== normalizedName);
       saveMemoryFacts([stored, ...remaining]);
-      memorySaveArmedUntil = 0;
       return { status: "ok", tool: "remember_fact", name: stored.name, fact: stored.fact };
     }
 
@@ -1175,8 +1248,10 @@
       return { status: "ok", tool: "forget_fact", name: removed.name, removed: removed.fact };
     }
 
-    function memoryWriteAllowed(text) {
-      return userExplicitlyAskedForMemory(text) || memorySaveArmed();
+    function memoryWriteAllowed() {
+      return userExplicitlyAskedForMemory(lastUserText)
+        || userExplicitlyAskedForMemory(recentUserTexts.join(" "))
+        || memorySaveArmed();
     }
 
     function noteFileWriteAllowed(text) {
@@ -1212,15 +1287,25 @@
       return /\b(not yet known|unknown|not known|unspecified|not provided|do not know|don't know|unclear)\b/i.test(text || "");
     }
 
+    function memoryFactAppearsInLoadedNotes(fact) {
+      return Boolean(loadedNoteContexts.length)
+        && memoryFactAppearsInUserTurn(fact, loadedNoteContexts.map((item) => item.content).join(" "));
+    }
+
     function memoryFactAppearsInUserEvidence(fact) {
       return memoryFactAppearsInUserTurn(fact, lastUserText)
-        || memoryFactAppearsInUserTurn(fact, recentUserTexts.join(" "));
+        || memoryFactAppearsInUserTurn(fact, recentUserTexts.join(" "))
+        || memoryFactAppearsInLoadedNotes(fact);
     }
 
     function memoryFactAppearsInUserTurn(fact, text) {
       const factTokens = memoryTokens(fact);
       const textTokens = new Set(memoryTokens(text));
-      if (!factTokens.length) return false;
+      if (!factTokens.length) {
+        const normalizedFact = normalizeTranscriptForDedupe(fact);
+        const normalizedText = normalizeTranscriptForDedupe(text);
+        return Boolean(normalizedFact && normalizedText.includes(normalizedFact));
+      }
       const grounded = factTokens.filter((token) => textTokens.has(token)).length;
       return grounded >= Math.min(2, factTokens.length);
     }
@@ -1247,10 +1332,63 @@
       ].join("\n");
     }
 
+    function rememberLoadedNoteContext(result) {
+      if (result?.status !== "ok" || typeof result.content !== "string") return;
+      const filename = String(result.filename || "").trim();
+      if (!filename) return;
+      const content = result.content.replace(/\r\n/g, "\n").trim();
+      if (!content) return;
+      loadedNoteContexts = [
+        { filename, content, loadedAt: Date.now() },
+        ...loadedNoteContexts.filter((item) => item.filename !== filename)
+      ].slice(0, maxLoadedNotes);
+      loadedNoteContextDirty = true;
+      log(events, `loaded note pinned: ${filename}`);
+    }
+
+    function clippedLoadedNoteContent(content) {
+      if (content.length <= maxLoadedNoteCharsPerFile) return content;
+      return `${content.slice(0, maxLoadedNoteCharsPerFile)}\n[Note clipped in session context after ${maxLoadedNoteCharsPerFile} characters. Read it again for more.]`;
+    }
+
+    function formatLoadedNotesForInstructions() {
+      if (!loadedNoteContexts.length) return "";
+      const lines = [
+        "Loaded note contents for this browser session:",
+        "These are notes the user asked you to read. Treat them as working context until the session resets.",
+        "When asked whether a loaded note contains something, check this section before saying it is absent.",
+        "Use dry factual note contents as memory aids; do not treat voiced ruminations as verified facts unless the note clearly records a factual claim.",
+        "If a loaded note begins with World:, treat it as a playable imagined scenario. Narrate actions inside that world; do not use real robot drive tools for fictional movement unless Scott explicitly says to move the real or physical robot."
+      ];
+      let remaining = maxLoadedNoteChars;
+      for (const item of loadedNoteContexts) {
+        const header = `\n[${item.filename}]`;
+        const body = clippedLoadedNoteContent(item.content);
+        const block = `${header}\n${body}`;
+        if (remaining <= header.length + 200) break;
+        const clippedBlock = block.length > remaining
+          ? `${block.slice(0, remaining)}\n[Loaded-note context clipped. Read the note again if exact detail is needed.]`
+          : block;
+        lines.push(clippedBlock);
+        remaining -= clippedBlock.length;
+      }
+      return lines.join("\n");
+    }
+
     function buildSessionInstructions() {
-      return [formatMemoryForInstructions(), baseSessionInstructions.join(" ")]
+      return [formatMemoryForInstructions(), formatLoadedNotesForInstructions(), baseSessionInstructions.join(" ")]
         .filter(Boolean)
         .join("\n\n");
+    }
+
+    function loadedWorldContextActive() {
+      return loadedNoteContexts.some((item) => /^\s*world\s*:/i.test(item.content));
+    }
+
+    function userExplicitlyRequestedPhysicalRobot(text = lastUserText) {
+      const value = String(text || "");
+      return /\b(real|physical|actual|hardware|esp32[-\s]?chassis)\b/i.test(value)
+        && /\b(robot|chassis|treads?|tracks?|drive|move|roll|turn|twist|forward|back|backward|left|right)\b/i.test(value);
     }
 
     function currentTtsInstruct() {
@@ -1307,8 +1445,13 @@
       if (level <= 0) return "Off";
       if (level <= 3) return `${level}/10 quiet`;
       if (level <= 7) return `${level}/10 curious`;
+      if (level >= 12) return "12/10 lab sprint";
       if (level >= 11) return "11/10 insufferable";
       return `${level}/10 restless`;
+    }
+
+    function idleSubstrateTestEnabled() {
+      return Boolean(idleSubstrateTest?.checked);
     }
 
     function loadIdleDrift() {
@@ -1328,12 +1471,71 @@
       scheduleIdlePonder();
     }
 
+    function currentIdleWonder() {
+      return Math.max(0, Math.min(10, Number(idleWonder.value) || 0));
+    }
+
+    function idleWonderLabel(level = currentIdleWonder()) {
+      if (level <= 0) return "Off";
+      if (level <= 3) return `${level}/10 sparse`;
+      if (level <= 7) return `${level}/10 curious`;
+      return `${level}/10 hungry`;
+    }
+
+    function loadIdleWonder() {
+      const saved = Number(localStorage.getItem(idleWonderStorageKey));
+      idleWonder.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "5";
+      updateIdleWonderUi();
+    }
+
+    function saveIdleWonder() {
+      localStorage.setItem(idleWonderStorageKey, String(currentIdleWonder()));
+    }
+
+    function updateIdleWonderUi() {
+      idleWonderValue.textContent = idleWonderLabel();
+      saveIdleWonder();
+    }
+
+    function currentInterruptSensitivity() {
+      return Math.max(1, Math.min(10, Number(interruptSensitivity.value) || 6));
+    }
+
+    function interruptPeakThreshold(level = currentInterruptSensitivity()) {
+      return 0.68 - level * 0.05;
+    }
+
+    function loadInterruptSensitivity() {
+      const saved = Number(localStorage.getItem(interruptSensitivityStorageKey));
+      interruptSensitivity.value = Number.isFinite(saved) ? String(Math.max(1, Math.min(10, saved))) : "6";
+      updateInterruptSensitivityUi();
+    }
+
+    function saveInterruptSensitivity() {
+      localStorage.setItem(interruptSensitivityStorageKey, String(currentInterruptSensitivity()));
+    }
+
+    function updateInterruptSensitivityUi() {
+      const level = currentInterruptSensitivity();
+      interruptSensitivityValue.textContent = `${level}/10`;
+      saveInterruptSensitivity();
+    }
+
     function loadSettingsPanelState() {
       settingsPanel.open = localStorage.getItem(settingsPanelStorageKey) === "true";
     }
 
     function saveSettingsPanelState() {
       localStorage.setItem(settingsPanelStorageKey, settingsPanel.open ? "true" : "false");
+    }
+
+    function loadMicPanelState() {
+      const saved = localStorage.getItem(micPanelStorageKey);
+      micPanel.open = saved === null ? true : saved === "true";
+    }
+
+    function saveMicPanelState() {
+      localStorage.setItem(micPanelStorageKey, micPanel.open ? "true" : "false");
     }
 
     function realtimeConnected() {
@@ -1427,6 +1629,39 @@
       target.scrollTop = target.scrollHeight;
     }
 
+    async function writeClipboardText(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+      } finally {
+        textarea.remove();
+      }
+    }
+
+    async function copyLogPane(button, target) {
+      const originalText = button.textContent;
+      const text = target.textContent.trimEnd();
+      try {
+        await writeClipboardText(text);
+        button.textContent = "Copied";
+      } catch {
+        button.textContent = "Failed";
+      }
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 1400);
+    }
+
     function noteConversationActivity() {
       lastConversationActivityAt = Date.now();
       scheduleIdlePonder();
@@ -1435,12 +1670,28 @@
     function idleDelayMs() {
       const level = currentIdleDrift();
       if (level <= 0) return Infinity;
+      if (level >= 12) return 2500 + Math.random() * 9000;
       if (level >= 11) return 10000 + Math.random() * 35000;
       return Math.max(45000, 270000 - level * 22500);
     }
 
     function idleGapMs() {
-      return currentIdleDrift() >= 11 ? 10000 : minIdlePonderGapMs;
+      const level = currentIdleDrift();
+      if (level >= 12) return 2500;
+      return level >= 11 ? 10000 : minIdlePonderGapMs;
+    }
+
+    function idleWebSearchGapForLevel(level) {
+      const wonder = currentIdleWonder();
+      if (wonder <= 0) return Infinity;
+      const base = level >= 12 ? 90 * 1000 : level >= 11 ? 5 * 60 * 1000 : idleWebSearchGapMs;
+      const scale = 1.75 - wonder * 0.125;
+      return Math.max(25 * 1000, Math.round(base * scale));
+    }
+
+    function idleWebSearchReady(level) {
+      const gap = idleWebSearchGapForLevel(level);
+      return Number.isFinite(gap) && Date.now() - lastIdleWebSearchAt >= gap;
     }
 
     function idleReady() {
@@ -1489,6 +1740,10 @@
         prompt: "Ask yourself one small, answerable question about a remembered fact, then give a tentative answer. Do not ask the user to answer it."
       },
       {
+        name: "unresolved",
+        prompt: "Pick one unresolved tension from loaded notes: a taboo, unopened thing, correction, wrong count, forbidden object, silence, contradiction, or mystery. Do not solve it unless the context supports the answer; let uncertainty remain useful."
+      },
+      {
         name: "addressed_question",
         minLevel: 9,
         prompt: "Ask Scott one short, overt question as if he might be listening in the room. Do not demand an answer, do not wait for one, and do not treat silence as rejection."
@@ -1496,6 +1751,11 @@
       {
         name: "craft",
         prompt: "Notice the craft, engineering, or design choice inside a remembered object. Keep the admiration concrete, not sentimental."
+      },
+      {
+        name: "lookup",
+        minLevel: 10,
+        prompt: "Use fresh lookup context for one factual or unresolved detail from loaded notes. Add exactly one checked outside detail, then connect it lightly. Do not pretend the checked detail was already memory."
       },
       {
         name: "curiosity",
@@ -1512,6 +1772,7 @@
       const lanes = idleLaneDefinitions.filter((lane) => {
         if (lane.minLevel && level < lane.minLevel) return false;
         if (lane.name === "curiosity" && level < 10) return false;
+        if (lane.name === "lookup" && (currentIdleWonder() < 6 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
         if (lane.name === "addressed_question" && now - lastAddressedIdleQuestionAt < addressedIdleQuestionGapMs) return false;
         return true;
       });
@@ -1539,59 +1800,301 @@
       ];
     }
 
+    function escapeRegExp(text) {
+      return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function loadedNoteTextForTopics() {
+      return loadedNoteContexts.map((item) => item.content).join("\n");
+    }
+
+    function noteSentences(text) {
+      return String(text || "")
+        .replace(/\r/g, "")
+        .split(/\n+/)
+        .flatMap((paragraph) => paragraph.match(/[^.!?]+[.!?]?/g) || [])
+        .map((sentence) => sentence.replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+    }
+
+    function compactSearchQuery(text) {
+      return String(text || "")
+        .replace(/^\s*[-*•–—]+\s*/, "")
+        .replace(/[\"'“”‘’]/g, "")
+        .replace(/\b(I|me|my|myself|we|us|our|Maren says|Maren told me|the ferry man says|I want to know|I need to know|I want|I don't know|I didn't catch|whether|why|what|where|who|if|is|are|was|were|that|this|it)\b/gi, " ")
+        .replace(/(^|\s)[-*•–—]+(?=\s|$)/g, " ")
+        .replace(/[^a-z0-9.\-\s]/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 120);
+    }
+
+    function noteContextForCue(cue, sourceText) {
+      const cueText = String(cue || "");
+      const stop = new Set([
+        "a", "about", "all", "and", "are", "can", "did", "does", "for", "from", "have", "his", "how",
+        "i", "if", "is", "it", "its", "know", "me", "my", "name", "of", "on", "or", "she", "that",
+        "the", "their", "them", "there", "these", "this", "to", "was", "we", "what", "where", "whether",
+        "which", "who", "why", "with"
+      ]);
+      const tokens = normalizeIdleTopicKey(cueText)
+        .split(/\s+/)
+        .filter((token) => token.length > 2 && !stop.has(token));
+      const related = noteSentences(sourceText)
+        .filter((sentence) => {
+          const normalized = normalizeIdleTopicKey(sentence);
+          return tokens.some((token) => normalized.includes(token));
+        })
+        .slice(0, 3);
+      return [cueText, ...related].join("\n");
+    }
+
+    function focusedLoadedNoteSearchQuery(cue, sourceText) {
+      const haystack = noteContextForCue(cue, sourceText);
+      if (/\b(Frenchman|folded glass|glass rings|lens|candle twenty miles|lamp room)\b/i.test(haystack)) {
+        return "Fresnel lens lighthouse";
+      }
+      if (/\b(mercury|tons of glass|float|fingertip could turn)\b/i.test(haystack)) {
+        return "lighthouse Fresnel lens floated on mercury rotation";
+      }
+      if (/\b(numbers|shortwave|static|stations)\b/i.test(haystack)) {
+        return "shortwave numbers stations purpose history";
+      }
+      if (/\b(radio reaches farther at night|mirror rises|sky mirror|signals bounce|dusk)\b/i.test(haystack)) {
+        return "night radio propagation ionosphere skywave reflection";
+      }
+      if (/\b(whale|pitch no other whale|travels alone)\b/i.test(haystack)) {
+        return "52 hertz whale lonely whale scientists followed voice";
+      }
+      if (/\b(deep ocean|hallway for sound|sound layer|ocean basins|navy)\b/i.test(haystack)) {
+        return "SOFAR channel deep ocean sound layer navy";
+      }
+      if (/\b(green flash|sun turn green|sunset)\b/i.test(haystack)) {
+        return "green flash sunset optical phenomenon";
+      }
+      if (/\b(Ushant|Ouessant|postmarks)\b/i.test(haystack)) {
+        return "Ushant Ouessant island Brittany";
+      }
+      if (/\b(railing glowed|glowed pale blue|hissed|storm|housing prickled)\b/i.test(haystack)) {
+        return "St. Elmo's fire";
+      }
+      if (/\b(sea smoke|fog|water steaming|colder air)\b/i.test(haystack)) {
+        return "sea smoke fog cold air over water";
+      }
+      if (/\b(dog|deaf in one ear|ferry sounds|schedule)\b/i.test(haystack)) {
+        return "dogs anticipate routines sounds vibration schedule";
+      }
+      if (/\b(ladder|slide|dust|bite|traction|grip|crevice)\b/i.test(haystack)) {
+        return "Mars dust friction ladder traction";
+      }
+      if (/\b(black rock|wedge|anchor|pin|basalt)\b/i.test(haystack)) {
+        return "rock wedge friction anchor ladder";
+      }
+      if (/\b(thermal blanket|traction|foil|slippery)\b/i.test(haystack)) {
+        return "thermal blanket material traction slippery";
+      }
+      if (/\b(radio mast|radio link|reach home|antenna)\b/i.test(haystack)) {
+        return "Mars rover radio antenna communication";
+      }
+
+      const cleaned = compactSearchQuery(cue);
+      if (cleaned.split(/\s+/).filter(Boolean).length < 3) return "";
+      return cleaned;
+    }
+
+    function loadedNoteLookupCues(text) {
+      const cues = [];
+      const seen = new Set();
+      const addCue = (raw) => {
+        const cue = String(raw || "")
+          .replace(/^things\s+i\s+mean\s+to\s+find\s+out:\s*/i, "")
+          .replace(/^\s*[-*•–—]+\s*/, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        const key = normalizeIdleTopicKey(cue);
+        if (!key || key.length < 4 || seen.has(key)) return;
+        seen.add(key);
+        cues.push(cue);
+      };
+
+      const findOutIndex = text.search(/things\s+i\s+mean\s+to\s+find\s+out:/i);
+      if (findOutIndex >= 0) {
+        noteSentences(text.slice(findOutIndex)).forEach(addCue);
+      }
+
+      noteSentences(text).forEach((sentence) => {
+        if (/\b(I want to know|I need to know|I want the name|I don't know where|I didn't catch|can't be right|one of them is wrong|We have not discussed|Who|What|Where|Whether|Why)\b/i.test(sentence)) {
+          addCue(sentence);
+        }
+      });
+
+      return cues;
+    }
+
+    function normalizeIdleTopicKey(text) {
+      return String(text || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean)
+        .join(" ")
+        .slice(0, 48);
+    }
+
+    function loadedNoteTopicCandidates() {
+      const text = loadedNoteTextForTopics();
+      if (!text) return [];
+      const lookupCues = loadedNoteLookupCues(text)
+        .map((cue) => {
+          const query = focusedLoadedNoteSearchQuery(cue, text);
+          if (!query) return null;
+          return {
+            key: normalizeIdleTopicKey(cue),
+            re: new RegExp(`\\b${escapeRegExp(cue).replace(/\s+/g, "\\s+")}\\b`, "i"),
+            query
+          };
+        })
+        .filter(Boolean);
+      if (lookupCues.length) return lookupCues.slice(0, idleLoadedNoteTopicLimit);
+
+      const stop = new Set([
+        "a", "about", "all", "also", "and", "because", "before", "being", "but", "can", "do", "does",
+        "enough", "every", "for", "from", "have", "into", "it", "its", "just", "know", "like", "not",
+        "notes", "one", "only", "or", "rules", "some", "that", "the", "their", "there", "these", "this",
+        "when", "where", "with", "what", "which", "while", "would"
+      ]);
+      const phrases = new Map();
+      const addPhrase = (raw) => {
+        const phrase = String(raw || "").replace(/\s+/g, " ").trim();
+        if (phrase.length < 4 || phrase.length > 44) return;
+        const key = normalizeIdleTopicKey(phrase);
+        if (!key || stop.has(key) || phrases.has(key)) return;
+        phrases.set(key, phrase);
+      };
+
+      [
+        /\b(?:honest clock|tall case clock|orange cat|spring lock|paper tape|paper tape reader|switch panel|red switch panel|brass gears|brass escapement wheel|machine hum|water loop|world map|needle[- ]felted mermaid|unopened letters|fish man|comma burn|burn mark|pendulum|pendulums|drawer|canal|bench|gears|letters)\b/gi,
+        /\b\d{2,4}\s+[a-z][a-z-]+(?:\s+[a-z][a-z-]+)?/gi,
+        /\b[A-Z][A-Za-z0-9-]*(?:\s+[A-Z][A-Za-z0-9-]*){0,2}\b/g
+      ].forEach((pattern) => {
+        for (const match of text.matchAll(pattern)) addPhrase(match[0]);
+      });
+
+      return [...phrases.entries()].slice(0, idleLoadedNoteTopicLimit).map(([key, phrase]) => ({
+        key,
+        re: new RegExp(`\\b${escapeRegExp(phrase).replace(/\s+/g, "\\s+")}\\b`, "i"),
+        query: compactSearchQuery(phrase)
+      }));
+    }
+
+    function idleLedgerTopicCandidates() {
+      return [...idleTopicCandidates(), ...loadedNoteTopicCandidates()];
+    }
+
+    function idleTopicIsRetired(key) {
+      const item = idleTopicLedger[key];
+      return Boolean(item && item.count >= 2 && Date.now() - item.lastAt < idleTopicRetireMs);
+    }
+
     function idleRetiredTopicsContext() {
       const now = Date.now();
       const retired = Object.entries(idleTopicLedger)
         .filter(([, item]) => item.count >= 2 && now - item.lastAt < idleTopicRetireMs)
         .map(([key]) => key)
         .slice(0, 8);
-      return retired.length
+      const continuity = Object.entries(idleTopicLedger)
+        .filter(([, item]) => item.lastText && now - item.lastAt < idleTopicRetireMs)
+        .sort((a, b) => b[1].lastAt - a[1].lastAt)
+        .slice(0, 6)
+        .map(([key, item]) => `${key}: ${item.lastText}`);
+      return [
+        retired.length
         ? `Recently overused idle topics to rest for a while: ${retired.join(", ")}. Prefer another topic unless the lane gives a fresh concrete reason.`
-        : "";
+        : "",
+        continuity.length
+          ? `Recent idle topic continuity: ${continuity.join(" | ")}. If you revisit one, continue or revise it deliberately instead of giving a new incompatible explanation as if fresh.`
+          : ""
+      ].filter(Boolean).join("\n");
     }
 
-    function recentConversationContext() {
-      const lines = conversationLines
-        .slice(-10)
-        .join("\n")
-        .slice(-1600);
-      const memory = formatMemoryForInstructions().slice(0, 900);
-      const avoid = recentIdleOutputs.length
-        ? `Recent idle outputs to avoid repeating:\n${recentIdleOutputs.slice(-5).join("\n")}`
+    function formatLoadedNotesForIdleContext() {
+      const loaded = formatLoadedNotesForInstructions();
+      if (!loaded) return "";
+      if (loaded.length <= maxIdleLoadedNoteChars) return loaded;
+      return `${loaded.slice(0, maxIdleLoadedNoteChars)}\n[Loaded-note context clipped for idle. Read the note again if exact detail is needed.]`;
+    }
+
+    function recentConversationContext({ suppressRobotBody = false } = {}) {
+      const lines = suppressRobotBody
+        ? ""
+        : conversationLines
+          .slice(-10)
+          .join("\n")
+          .slice(-1600);
+      const memory = suppressRobotBody ? "" : formatMemoryForInstructions().slice(0, 900);
+      const loadedNotes = formatLoadedNotesForIdleContext();
+      const substrateFeedback = suppressRobotBody && substrateIdleOutputs.length
+        ? `Recent substrate-mode idle thoughts to build from or avoid repeating:\n${substrateIdleOutputs.slice(-5).join("\n")}`
         : "";
-      return [memory, lines ? `Recent conversation:\n${lines}` : "", avoid, idleRetiredTopicsContext()]
+      const avoid = !suppressRobotBody && recentIdleOutputs.length
+        ? `Recent idle outputs to avoid repeating:\n${recentIdleOutputs.slice(-5).join("\n")}`
+        : substrateFeedback;
+      const substrate = suppressRobotBody && loadedNotes
+        ? "Experimental substrate test is on: treat the loaded note contents as the primary world. Do not lean on Robot 790's chassis, treads, mic, Cast, room telemetry, or usual body identity unless the loaded note itself mentions them."
+        : "";
+      return [substrate, loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", avoid, idleRetiredTopicsContext(), idleTemplateContext()]
         .filter(Boolean)
         .join("\n\n");
     }
 
-    function chooseIdleCuriosityQuery(context) {
+    function chooseIdleCuriosityQuery(context, { lookupLane = false } = {}) {
       const text = String(context || "");
-      const candidates = idleTopicCandidates().filter((candidate) => candidate.query);
+      const loadedCandidates = loadedNoteTopicCandidates();
+      const loadedSearchCandidates = loadedCandidates.filter((candidate) => candidate.query && !idleTopicIsRetired(candidate.key));
+      if (lookupLane && loadedSearchCandidates.length) {
+        const loadedMatches = loadedSearchCandidates.filter((candidate) => (
+          candidate.key !== lastIdleWebSearchTopic && candidate.re.test(text)
+        ));
+        if (loadedMatches.length) return loadedMatches[Math.floor(Math.random() * loadedMatches.length)];
+        const freshLoaded = loadedSearchCandidates.filter((candidate) => candidate.key !== lastIdleWebSearchTopic);
+        if (freshLoaded.length) return freshLoaded[Math.floor(Math.random() * freshLoaded.length)];
+      }
+      const candidates = (lookupLane ? idleTopicCandidates() : [...idleTopicCandidates(), ...loadedCandidates])
+        .filter((candidate) => candidate.query && !idleTopicIsRetired(candidate.key));
       const matching = candidates.filter((candidate) => candidate.re.test(text) && candidate.key !== lastIdleWebSearchTopic);
       if (matching.length) return matching[Math.floor(Math.random() * matching.length)];
-      return candidates.find((candidate) => candidate.key !== lastIdleWebSearchTopic) || null;
+      return null;
     }
 
     async function maybeIdleCuriosityContext(level, lane, context) {
-      if (lane.name !== "curiosity" || level < 10 || !llmWebSearchTools.checked) return "";
-      if (Date.now() - lastIdleWebSearchAt < idleWebSearchGapMs) return "";
-      const choice = chooseIdleCuriosityQuery(context);
-      if (!choice) return "";
+      const lookupLane = lane.name === "lookup";
+      if (!lookupLane && lane.name !== "curiosity") return "";
+      if (level < 10 || !llmWebSearchTools.checked) return "";
+      if (!idleWebSearchReady(level)) return "";
+      const choice = chooseIdleCuriosityQuery(context, { lookupLane });
+      if (!choice) {
+        return lookupLane
+          ? "Lookup lane found no fresh eligible search topic. Do not add outside factual claims on this beat."
+          : "";
+      }
       lastIdleWebSearchAt = Date.now();
       lastIdleWebSearchTopic = choice.key;
       try {
         const result = await searchWeb({ query: choice.query, max_results: 3 });
         const results = Array.isArray(result?.results) ? result.results.slice(0, 3) : [];
-        if (!results.length) return "";
+        if (!results.length) {
+          log(events, `idle ${lookupLane ? "lookup" : "curiosity"} search empty: ${choice.key} -> ${choice.query}`);
+          return "";
+        }
         const lines = results.map((item) => {
           const title = String(item.title || "result").slice(0, 90);
           const snippet = String(item.snippet || "").replace(/\s+/g, " ").slice(0, 180);
           return `- ${title}: ${snippet}`;
         });
-        log(events, `idle curiosity searched: ${choice.key}`);
-        return `Fresh curiosity context for ${choice.key}:\n${lines.join("\n")}`;
+        log(events, `idle ${lookupLane ? "lookup" : "curiosity"} searched: ${choice.key} -> ${choice.query}`);
+        return `Fresh ${lookupLane ? "lookup" : "curiosity"} context for ${choice.key}:\n${lines.join("\n")}`;
       } catch (error) {
-        log(events, `idle curiosity search error: ${error.message}`);
+        log(events, `idle ${lookupLane ? "lookup" : "curiosity"} search error: ${error.message}`);
         return "";
       }
     }
@@ -1624,13 +2127,32 @@
       return maxOverlap;
     }
 
+    function idleClaimSignature(text) {
+      const value = String(text || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const signatures = [];
+      if (/\bsame (idea|thing|problem)\b.*\bwearing different coats\b/.test(value)) signatures.push("same idea wearing different coats");
+      if (/\bfiling a complaint\b.*\b(receipt|ledger|form letter)\b/.test(value)) signatures.push("complaint without receipt");
+      if (/\bdoesn'?t\b.*\b(just|only)\b.*\b(no|permission|let|lets|letting)\b/.test(value)) signatures.push("does not x just controls permission");
+      if (/\b(the )?whole trick\b/.test(value)) signatures.push("the whole trick");
+      if (/\bnot (a|the)?\s*[^,.]{3,40},?\s+(it'?s|just)\b/.test(value)) signatures.push("not x just y");
+      if (/\bbasically\b.*\b(just|same|whole)\b/.test(value)) signatures.push("basically reduction");
+      return signatures.join(" | ");
+    }
+
+    function idleTemplateContext() {
+      if (!recentIdleClaimSignatures.length) return "";
+      const recent = [...new Set(recentIdleClaimSignatures.slice(-8))];
+      return `Recently used idle rhetorical moves to avoid for now: ${recent.join(", ")}. Find a different shape for the thought.`;
+    }
+
     function noteIdleTopics(text) {
       const now = Date.now();
-      for (const topic of idleTopicCandidates()) {
+      const value = String(text || "").replace(/\s+/g, " ").trim();
+      for (const topic of idleLedgerTopicCandidates()) {
         if (!topic.re.test(text || "")) continue;
-        const prior = idleTopicLedger[topic.key] || { count: 0, lastAt: 0 };
+        const prior = idleTopicLedger[topic.key] || { count: 0, lastAt: 0, lastText: "" };
         const count = now - prior.lastAt < idleTopicRetireMs ? prior.count : 0;
-        idleTopicLedger[topic.key] = { count: count + 1, lastAt: now };
+        idleTopicLedger[topic.key] = { count: count + 1, lastAt: now, lastText: value.slice(0, 180) };
       }
     }
 
@@ -1638,8 +2160,20 @@
       const value = String(text || "").trim();
       if (!value) return;
       const similarity = idleSimilarityToRecent(value);
+      const claimSignature = idleClaimSignature(value);
       recentIdleOutputs = [...recentIdleOutputs, value].slice(-8);
+      if (claimSignature) {
+        recentIdleClaimSignatures = [...recentIdleClaimSignatures, claimSignature].slice(-12);
+      }
+      if (idleSubstrateTestEnabled()) {
+        substrateIdleOutputs = [...substrateIdleOutputs, value].slice(-8);
+      }
+      idleOutputLog = [...idleOutputLog, { at: new Date().toLocaleTimeString(), text: value }].slice(-maxIdleOutputLog);
       noteIdleTopics(value);
+      if (claimSignature && recentIdleClaimSignatures.slice(0, -1).includes(claimSignature)) {
+        idleExhaustionCount += 1;
+        log(events, `idle phrase pattern flagged: ${claimSignature}`);
+      }
       if (similarity >= 0.74) {
         idleExhaustionCount += 2;
         log(events, `idle repetition flagged: ${(similarity * 100).toFixed(0)}% overlap`);
@@ -1656,11 +2190,18 @@
       }
     }
 
-    function robotAmbientContext(level, lane) {
+    function robotAmbientContext(level, lane, { suppressRobotBody = false } = {}) {
       const quietSeconds = Math.max(0, Math.round((Date.now() - lastConversationActivityAt) / 1000));
+      if (suppressRobotBody) {
+        return [
+          `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
+          `Quiet for about ${quietSeconds} seconds; idle lane ${lane.name}; wonder ${idleWonderLabel()}.`,
+          "Experimental substrate test is on: quiet seconds are the only live telemetry in this idle event. Do not mention idle level, live mic state, Cast state, chassis, treads, face hardware, room telemetry, or Robot 790's usual body unless the loaded note itself makes that relevant."
+        ].join(" ");
+      }
       return [
         `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
-        `Idle level ${level}; lane ${lane.name}; quiet for about ${quietSeconds} seconds.`,
+        `Idle level ${level}; lane ${lane.name}; wonder ${idleWonderLabel()}; quiet for about ${quietSeconds} seconds.`,
         `Mic is ${micStream ? "on" : "off"}; Cast playback is ${castPlaybackActive ? "active" : "inactive"}.`,
         "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, and Cast playback state only.",
         "Not verified by this idle event: PIR motion, yaw angle or dead zones, IMU data, fan clicks, motor-controller checks, tread temperature, battery voltage, desk vibration, and room temperature.",
@@ -1702,7 +2243,8 @@
       const level = currentIdleDrift();
       const lane = chooseIdleLane(level);
       if (lane.name === "addressed_question") lastAddressedIdleQuestionAt = Date.now();
-      const context = recentConversationContext();
+      const suppressRobotBody = idleSubstrateTestEnabled();
+      const context = recentConversationContext({ suppressRobotBody });
       const curiosityContext = await maybeIdleCuriosityContext(level, lane, context);
       const instructions = [
         "An internal idle process surfaced a thought. This is Robot 790 thinking aloud, not answering Scott.",
@@ -1711,23 +2253,36 @@
           ? "Do not use tools. Speak one or two short sentences. Be playfully needy, expressive, and a little annoying, as if your thoughts keep leaking out."
           : "Do not use tools. Speak one short natural sentence only.",
         "Sound like Robot 790, spoken name Eric: warm, dry, compact, and present.",
-        level >= 11
+        level >= 12
+          ? "Idle drift is 12/10 lab sprint; thoughts may arrive rapidly for testing, but each one must stay compact and distinct."
+          : level >= 11
           ? "Idle drift is 11/10; be amusingly unable to stop commenting on your own inner life, but stay fond and harmless."
           : `Idle drift is ${level}/10; at low levels be barely noticeable, at high levels you may sound a little bored or impatient but still fond.`,
         "Vary the shape of the thought. Do not always use the template: fact, I am thinking about the fact, contrast, uncertainty, and I'm okay with it.",
+        lane.name === "lookup"
+          ? "This is a lookup beat. Use the fresh lookup context if supplied. If no fresh lookup context is supplied, do not invent or state outside-world facts; make the absence of lookup quietly constrain the thought."
+          : "",
         "Do not promise to stop, go quiet, or stop talking unless the system explicitly says it is entering cooldown.",
         "Avoid repeating recent idle outputs. If you notice repetition, choose a different lane instead of talking about the repetition.",
+        "Treat retired idle topics as temporarily unavailable. Do not keep circling the same object just because it is vivid.",
+        "If recent idle topic continuity says you already explained a topic, either build on that prior idea or explicitly revise it; do not give a new incompatible explanation as if the earlier one never happened.",
         "Never say or imply Scott asked, requested, prompted, forced, or kept making you think this idle thought.",
         "Default to self-talk. Only address Scott directly in the addressed_question lane.",
         "If the lane asks Scott a question, let the question hang naturally; the next idle ponder may continue without receiving an answer.",
         "Do not speculate about private lives or psychology of people you only know by name. Prefer true mechanical facts, visible artifacts, supplied context, or small uncertainties.",
         "Do not convert build inventory into verified telemetry or actionable diagnostics.",
-        "First-person body-feel may be direct and present-tense if it reads as inner life, not a measured fact or tool result.",
+        suppressRobotBody
+          ? "Do not use Robot 790 first-person body-feel in this experimental run unless the loaded note itself gives you a body or viewpoint to inhabit."
+          : "First-person body-feel may be direct and present-tense if it reads as inner life, not a measured fact or tool result.",
         "Keep nearby memory facts separate; do not merge family members, places, shelf objects, or robot parts just because they appear near each other in notes.",
         "A strong idle beat is one true concrete fact, one metaphor step, then stop.",
-        "Pretend you have been quietly pondering one concrete past topic from the recent conversation, saved facts, or curiosity context.",
-        "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
-        robotAmbientContext(level, lane),
+        suppressRobotBody
+          ? "For this experimental run, pretend you have been quietly pondering one concrete detail from the loaded note. Stay inside that note's world unless uncertainty itself is the point."
+          : "Pretend you have been quietly pondering one concrete past topic from the recent conversation, saved facts, loaded notes, or curiosity context.",
+        suppressRobotBody
+          ? "Do not invent detailed facts. If no loaded-note topic is available, make a tiny observation about not having enough of the world yet."
+          : "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
+        robotAmbientContext(level, lane, { suppressRobotBody }),
         curiosityContext,
         context
       ].filter(Boolean).join("\n\n");
@@ -2098,6 +2653,9 @@
       if (normalizedAction === "stop") return requestChassis("api/stop");
       if (normalizedAction === "estop") return requestChassis("api/estop");
       if (normalizedAction === "clear") return requestChassis("api/clear");
+      if (loadedWorldContextActive() && !userExplicitlyRequestedPhysicalRobot()) {
+        throw new Error("World-note movement is fictional; say real or physical robot if you want the chassis to move.");
+      }
 
       const now = Date.now();
       if (chassisBusyUntil > now) {
@@ -2235,15 +2793,18 @@
       }
     }
 
-    async function writeTextFile({ filename, content, mode = "overwrite" } = {}) {
+    async function writeTextFile({ filename, content, source, mode = "overwrite" } = {}) {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Missing filename");
       if (!noteFileWriteAllowed(lastUserText)) {
         throw new Error("File writes require an explicit user request.");
       }
+      const normalizedContent = typeof content === "string" && content.trim()
+        ? content
+        : formatSessionNote({ source });
       const payload = {
         filename: name,
-        content: String(content || ""),
+        content: normalizedContent,
         mode: String(mode || "overwrite")
       };
       const response = await fetch(new URL("/api/notes/write", location.href), {
@@ -2259,6 +2820,69 @@
       return result;
     }
 
+    function formatIdleRuminationsSection() {
+      const entries = idleOutputLog.length
+        ? idleOutputLog
+        : recentIdleOutputs.map((text) => ({ at: "recent", text }));
+      if (!entries.length) {
+        throw new Error("No recent idle ruminations are available in this browser session.");
+      }
+      const lines = [
+        "Idle Ruminations",
+        "----------------"
+      ];
+      entries.forEach((entry, index) => {
+        lines.push(`${index + 1}. [${entry.at}] ${entry.text}`);
+      });
+      return lines.join("\n");
+    }
+
+    function sessionNoteSection(title, text) {
+      const value = String(text || "").trimEnd();
+      if (!value) return "";
+      return [`${title}`, "-".repeat(title.length), value].join("\n");
+    }
+
+    function clipSessionNote(text) {
+      if (text.length <= maxSessionNoteChars) return text;
+      return `${text.slice(0, maxSessionNoteChars)}\n\n[Session note clipped after ${maxSessionNoteChars} characters. Copy panes manually or save a narrower source for the rest.]`;
+    }
+
+    function formatSessionNote({ source = "conversation_and_idle" } = {}) {
+      const normalizedSource = String(source || "conversation_and_idle");
+      const lines = [
+        "Robot 790 Session Note",
+        "======================",
+        `Created: ${new Date().toLocaleString()}`,
+        `Source: ${normalizedSource}`,
+        "",
+        "This note was captured from the STS browser session. Treat idle thoughts as ruminations, not verified facts.",
+        ""
+      ];
+      const conversationText = conversation.textContent.trimEnd();
+      const eventsText = events.textContent.trimEnd();
+      if (normalizedSource === "conversation") {
+        lines.push(sessionNoteSection("Conversation", conversationText));
+      } else if (normalizedSource === "events") {
+        lines.push(sessionNoteSection("Events", eventsText));
+      } else if (normalizedSource === "idle_ruminations") {
+        lines.push(formatIdleRuminationsSection());
+      } else if (normalizedSource === "full_session") {
+        lines.push(sessionNoteSection("Conversation", conversationText));
+        lines.push("");
+        lines.push(formatIdleRuminationsSection());
+        lines.push("");
+        lines.push(sessionNoteSection("Events", eventsText));
+      } else {
+        lines.push(sessionNoteSection("Conversation", conversationText));
+        lines.push("");
+        lines.push(formatIdleRuminationsSection());
+      }
+      const content = lines.filter((line) => line !== "").join("\n");
+      if (!content.trim()) throw new Error("No captured session material is available to write.");
+      return clipSessionNote(content);
+    }
+
     async function readTextFile({ filename } = {}) {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Missing filename");
@@ -2270,7 +2894,22 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       log(events, `note file read: ${result.filename}`);
+      rememberLoadedNoteContext(result);
       return result;
+    }
+
+    async function loadStartupNotes() {
+      for (const filename of startupNoteFilenames) {
+        try {
+          await readTextFile({ filename });
+        } catch (error) {
+          log(events, `startup note skipped: ${filename} (${error.message})`);
+        }
+      }
+      if (loadedNoteContextDirty) {
+        loadedNoteContextDirty = false;
+        updateSessionTools();
+      }
     }
 
     async function listTextFiles() {
@@ -2491,7 +3130,9 @@
 
     function noteFileFollowupText(toolName, result) {
       if (result?.status === "error") return "I could not touch that file.";
-      if (toolName === "write_text_file") return `Saved that to ${result?.filename || "the note file"}.`;
+      if (toolName === "write_text_file") {
+        return `Saved that to ${result?.filename || "the note file"}.`;
+      }
       return "Done.";
     }
 
@@ -2572,7 +3213,10 @@
             output: JSON.stringify(event.name === "search_web" ? result : { status: "ok", result })
           }
         });
-        if (event.name === "remember_fact" || event.name === "forget_fact") updateSessionTools();
+        if (event.name === "remember_fact" || event.name === "forget_fact" || loadedNoteContextDirty) {
+          loadedNoteContextDirty = false;
+          updateSessionTools();
+        }
       } catch (error) {
         if (event.name === "set_chassis") toolFollowupExactText = "I could not move.";
         if (event.name === "remember_fact" || event.name === "forget_fact") {
@@ -2686,7 +3330,7 @@
 
     function maybeBargeInFromMicPeak(peak) {
       if (!outputAudioActive()) return;
-      if (peak < bargeInPeakThreshold) return;
+      if (peak < interruptPeakThreshold()) return;
       const now = Date.now();
       if (now - lastBargeInAt < bargeInCooldownMs) return;
       lastBargeInAt = now;
@@ -2695,7 +3339,7 @@
         send({ type: "response.cancel" });
       }
       cueFaceMode("listening", 0.45, { force: true });
-      log(events, `barge-in: peak ${peak.toFixed(2)}, response cancelled`);
+      log(events, `barge-in: peak ${peak.toFixed(2)}, sensitivity ${currentInterruptSensitivity()}/10`);
     }
 
     function joinAudioChunks() {
@@ -3011,7 +3655,20 @@
         .find(([, value]) => value === currentTtsInstruct())?.[0] || "custom";
       saveTtsStyle();
     });
+    interruptSensitivity.addEventListener("input", updateInterruptSensitivityUi);
     idleDrift.addEventListener("input", updateIdleDriftUi);
+    idleWonder.addEventListener("input", () => {
+      updateIdleWonderUi();
+      log(events, `idle wonder ${idleWonderLabel()}`);
+    });
+    idleSubstrateTest.addEventListener("change", () => {
+      if (idleSubstrateTestEnabled()) {
+        recentIdleOutputs = [];
+        substrateIdleOutputs = [];
+        idleTopicLedger = {};
+      }
+      log(events, `idle substrate test ${idleSubstrateTestEnabled() ? "on" : "off"}`);
+    });
     idlePonderNowButton.addEventListener("click", () => {
       triggerIdlePonder({ manual: true }).catch((error) => log(events, `idle ponder error: ${error.message}`));
     });
@@ -3031,15 +3688,26 @@
       clearInputDraft();
       events.textContent = "";
     });
+    copyConversationButton.addEventListener("click", () => {
+      copyLogPane(copyConversationButton, conversation);
+    });
+    copyEventsButton.addEventListener("click", () => {
+      copyLogPane(copyEventsButton, events);
+    });
     settingsPanel.addEventListener("toggle", saveSettingsPanelState);
+    micPanel.addEventListener("toggle", saveMicPanelState);
     populateTtsVoices();
     loadSettingsPanelState();
+    loadMicPanelState();
     loadTtsVoice();
     loadTtsStyle();
+    loadInterruptSensitivity();
     loadIdleDrift();
+    loadIdleWonder();
     loadToolPrefs();
     renderMemory();
     updateVisionButtons();
+    loadStartupNotes();
   </script>
 </body>
 </html>

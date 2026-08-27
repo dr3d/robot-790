@@ -25,6 +25,15 @@ def test_note_files_read_human_title_as_snake_case_filename(tmp_path: Path) -> N
     assert read.content == "Readable by title."
 
 
+def test_note_files_read_possessive_title_as_snake_case_filename(tmp_path: Path) -> None:
+    write_note_file(tmp_path, "erics_memories", "Remember this by title.")
+
+    read = read_note_file(tmp_path, "Eric's Memories")
+
+    assert read.filename == "erics_memories.txt"
+    assert read.content == "Remember this by title."
+
+
 def test_note_files_allow_named_markdown(tmp_path: Path) -> None:
     written = write_note_file(tmp_path, "logs/today.md", "# Today\n")
 

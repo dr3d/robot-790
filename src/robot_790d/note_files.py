@@ -63,7 +63,8 @@ def note_lookup_key(path: Path) -> tuple[str, ...]:
 
 
 def _slug_text(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", value.casefold()).strip("_")
+    without_apostrophes = value.casefold().replace("'", "").replace("’", "")
+    return re.sub(r"[^a-z0-9]+", "_", without_apostrophes).strip("_")
 
 
 def find_existing_note_path(filename: str, instance_path: str | Path | None = None) -> Path:
