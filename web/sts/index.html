@@ -115,6 +115,12 @@
       font-size: 13px;
       white-space: nowrap;
     }
+    .subtle {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
     .settings-body {
       padding-bottom: 4px;
     }
@@ -490,6 +496,7 @@
         <section class="controls">
           <label>
             Memory
+            <span id="memoryStatus" class="subtle"></span>
             <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
             <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
             <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
@@ -539,6 +546,7 @@
     const llmCastMediaTools = document.querySelector("#llmCastMediaTools");
     const llmNoteFileTools = document.querySelector("#llmNoteFileTools");
     const memoryPreview = document.querySelector("#memoryPreview");
+    const memoryStatus = document.querySelector("#memoryStatus");
     const memoryRefreshButton = document.querySelector("#memoryRefresh");
     const memoryForgetAllButton = document.querySelector("#memoryForgetAll");
     const ttsVoice = document.querySelector("#ttsVoice");
@@ -1224,7 +1232,7 @@
       } catch {
         parsed = {};
       }
-      const source = Array.isArray(parsed.facts) ? parsed.facts : [];
+      const source = memoryFactsFromParsedStorage(parsed);
       const seen = new Set();
       const facts = [];
       for (const item of source) {
@@ -1236,6 +1244,24 @@
         facts.push({ name, fact, updatedAt });
       }
       return facts.slice(0, maxMemoryFacts);
+    }
+
+    function memoryFactsFromParsedStorage(parsed) {
+      if (Array.isArray(parsed?.facts)) return parsed.facts;
+      if (Array.isArray(parsed)) return parsed;
+      if (!parsed || typeof parsed !== "object") return [];
+      return Object.entries(parsed)
+        .filter(([name]) => !["version", "updatedAt", "facts"].includes(name))
+        .map(([name, fact]) => {
+          if (fact && typeof fact === "object") {
+            return {
+              name,
+              fact: fact.fact ?? fact.value ?? fact.text ?? "",
+              updatedAt: fact.updatedAt
+            };
+          }
+          return { name, fact: String(fact || "") };
+        });
     }
 
     function saveMemoryFacts(facts) {
@@ -1619,6 +1645,7 @@
 
     function renderMemory() {
       const facts = loadMemoryFacts();
+      memoryStatus.textContent = `${facts.length} fact${facts.length === 1 ? "" : "s"} in ${location.origin} localStorage:${memoryStorageKey}`;
       memoryPreview.value = facts.length
         ? facts.map((item) => `${item.name}: ${item.fact}`).join("\n")
         : "No saved facts";
