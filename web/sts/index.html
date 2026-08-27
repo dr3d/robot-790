@@ -609,6 +609,9 @@
     let loadedNoteContexts = [];
     let loadedNoteContextDirty = false;
     let responseActive = false;
+    let userSpeechActive = false;
+    let userTurnPendingUntil = 0;
+    let lastUserTurnActivityAt = 0;
     let idleTimer;
     let idleInFlight = false;
     let lastConversationActivityAt = Date.now();
@@ -666,6 +669,8 @@
     const visionMaxEdgePx = 768;
     const visionJpegQuality = 0.82;
     const bargeInCooldownMs = 1600;
+    const idlePostUserQuietMs = 12000;
+    const idlePendingUserTurnMs = 25000;
     const minIdlePonderGapMs = 90000;
     const idleWebSearchGapMs = 20 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
@@ -1734,6 +1739,35 @@
       scheduleIdlePonder();
     }
 
+    function noteUserTurnActivity({ pendingMs = idlePendingUserTurnMs } = {}) {
+      const now = Date.now();
+      lastUserTurnActivityAt = now;
+      userTurnPendingUntil = Math.max(userTurnPendingUntil, now + pendingMs);
+      noteConversationActivity();
+    }
+
+    function clearUserTurnPending() {
+      userSpeechActive = false;
+      userTurnPendingUntil = 0;
+    }
+
+    function userTurnPending() {
+      return userSpeechActive || Date.now() < userTurnPendingUntil;
+    }
+
+    function idleBlockedReason({ manual = false } = {}) {
+      if (!realtimeConnected()) return "disconnected";
+      if (!manual && currentIdleDrift() <= 0) return "idle off";
+      if (Date.now() < idleCooldownUntil) return "cooldown";
+      if (responseActive || outputAudioActive()) return "assistant busy";
+      if (idleInFlight) return "idle already in flight";
+      if (toolFollowupNeeded || pendingToolCalls > 0) return "tool followup pending";
+      if (userSpeechActive) return "user speaking";
+      if (userTurnPending()) return "user turn pending";
+      if (!manual && lastUserTurnActivityAt && Date.now() - lastUserTurnActivityAt < idlePostUserQuietMs) return "recent user turn";
+      return "";
+    }
+
     function idleDelayMs() {
       const level = currentIdleDrift();
       if (level <= 0) return Infinity;
@@ -1762,16 +1796,7 @@
     }
 
     function idleReady() {
-      return Boolean(
-        realtimeConnected() &&
-        currentIdleDrift() > 0 &&
-        Date.now() >= idleCooldownUntil &&
-        !responseActive &&
-        !idleInFlight &&
-        !toolFollowupNeeded &&
-        pendingToolCalls === 0 &&
-        !outputAudioActive()
-      );
+      return !idleBlockedReason();
     }
 
     function scheduleIdlePonder() {
@@ -1781,6 +1806,8 @@
       if (!Number.isFinite(delayMs) || !realtimeConnected()) return;
       const earliestAt = Math.max(
         lastConversationActivityAt + delayMs,
+        lastUserTurnActivityAt + idlePostUserQuietMs,
+        userTurnPendingUntil,
         lastIdlePonderAt + idleGapMs(),
         idleCooldownUntil
       );
@@ -2301,11 +2328,12 @@
     }
 
     async function triggerIdlePonder({ manual = false } = {}) {
-      if (manual && (!realtimeConnected() || responseActive || outputAudioActive() || pendingToolCalls > 0)) {
-        log(events, "idle ponder skipped: busy");
+      const blockedReason = idleBlockedReason({ manual });
+      if (manual && blockedReason) {
+        log(events, `idle ponder skipped: ${blockedReason}`);
         return;
       }
-      if (!manual && !idleReady()) {
+      if (!manual && blockedReason) {
         scheduleIdlePonder();
         return;
       }
@@ -3510,22 +3538,32 @@
         if (!toolFollowupNeeded) scheduleFaceIdle();
       }
       if (event.type === "input_audio_buffer.speech_started") {
-        noteConversationActivity();
+        userSpeechActive = true;
+        noteUserTurnActivity();
         cueFaceMode("listening", 0.35);
       } else if (event.type === "input_audio_buffer.speech_stopped") {
+        userSpeechActive = false;
+        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
         cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.created") {
+        clearUserTurnPending();
         responseActive = true;
         cueFaceMode("thinking", 0.45);
       } else if (event.type === "conversation.item.input_audio_transcription.delta") {
+        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
         updateInputDraft(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.completed") {
         clearInputDraft();
         const recorded = recordUserTranscript(event.transcript || "");
         if (!recorded.accepted) return;
+        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
         idleExhaustionCount = 0;
         idleCooldownUntil = 0;
-        if (!maybeHandleDirectFaceCommand(recorded.transcript)) cueFaceMode("thinking", 0.45);
+        if (maybeHandleDirectFaceCommand(recorded.transcript)) {
+          userTurnPendingUntil = Date.now() + 2500;
+        } else {
+          cueFaceMode("thinking", 0.45);
+        }
       } else if (event.type === "response.output_audio_transcript.done") {
         lastUserConversationIndex = -1;
         if (idleInFlight) {
@@ -3542,6 +3580,7 @@
       } else if (event.type === "error") {
         responseActive = false;
         idleInFlight = false;
+        clearUserTurnPending();
         scheduleIdlePonder();
         log(events, `ERROR ${event.error?.type || ""}: ${event.error?.message || JSON.stringify(event)}`);
       }
@@ -3579,6 +3618,7 @@
         idleTimer = null;
         responseActive = false;
         idleInFlight = false;
+        clearUserTurnPending();
         clearAudioQueue();
         setState("Disconnected");
         connectButton.disabled = false;
