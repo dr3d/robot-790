@@ -800,7 +800,7 @@
       {
         type: "function",
         name: "set_mouth",
-        description: "Set Robot 790's mouth style or shape when the user asks for a human mouth, robot mouth, smile, smirk, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth.",
+        description: "Set Robot 790's expressive mouth style or shape when the user asks for a human mouth, robot mouth, smile, smirk, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth. Use set_mouth_text instead when the user wants words, captions, or hidden thought text on the mouth display.",
         parameters: {
           type: "object",
           properties: {
@@ -833,6 +833,38 @@
             auto: {
               type: "boolean",
               description: "True releases the mouth back to autonomous firmware control."
+            }
+          },
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "set_mouth_text",
+        description: "Put words on Robot 790's mouth display as its own caption/text mode. Use this when the user asks to put a word or phrase in the mouth, show words, caption the mouth, transcribe, or display a hidden thought aside.",
+        parameters: {
+          type: "object",
+          properties: {
+            text: {
+              type: "string",
+              maxLength: 96,
+              description: "Short word or phrase to show on the mouth display."
+            },
+            mode: {
+              type: "string",
+              enum: ["center", "marquee"],
+              default: "center",
+              description: "center holds short text centered; marquee scrolls longer text."
+            },
+            duration: {
+              type: "number",
+              minimum: 0,
+              maximum: 30,
+              description: "Seconds to hold the text. Use 0 to hold until released."
+            },
+            clear: {
+              type: "boolean",
+              description: "True clears mouth text and returns to normal expressive mouth."
             }
           },
           additionalProperties: false
@@ -1132,6 +1164,7 @@
       "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes.",
       "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
       "Use set_mouth when the user asks for a mouth style or shape such as human, robot, smile, smirk, frown, grimace, sneer, open, talking, sleep, or auto mouth.",
+      "Use set_mouth_text when the user asks you to put words, a caption, a transcript, or a hidden aside on your mouth display.",
       "Use set_chassis only for explicit drive-base, wheel, track, move, turn, stop, or e-stop requests.",
       "For chassis movement, prefer slow values around 0.2 to 0.35 and one short timed segment; never queue a route, dance, or multi-step movement.",
       "If the user asks for full speed or maximum speed in a short explicit movement, use set_chassis speed 1.0 for that segment, matching the chassis web UI MAX SPEED setting.",
@@ -2655,6 +2688,22 @@
       return result;
     }
 
+    async function setMouthText({ text = "", mode = "center", duration = 5, clear = false } = {}) {
+      const payload = {};
+      if (clear) {
+        payload.auto = true;
+      } else {
+        const value = String(text || "").trim();
+        if (!value) throw new Error("Missing mouth text");
+        payload.text = value.slice(0, 96);
+        payload.mode = String(mode || "center").toLowerCase() === "marquee" ? "marquee" : "center";
+        payload.duration = Math.max(0, Math.min(30, Number(duration) || 0));
+      }
+      const result = await postFace("mouth", payload);
+      noteFaceVisualHold(clear ? 0.2 : (payload.duration || 5));
+      return result;
+    }
+
     async function setChassis({ action, left, right, velocity, turn, duration_s = 0 } = {}) {
       const normalizedAction = String(action || "").trim().toLowerCase();
       if (!normalizedAction) throw new Error("Missing chassis action");
@@ -3068,6 +3117,7 @@
       if (name === "set_eye_style") return setEyeStyle(args);
       if (name === "set_eye_gaze") return setEyeGaze(args);
       if (name === "set_mouth") return setMouth(args);
+      if (name === "set_mouth_text") return setMouthText(args);
       if (name === "set_chassis") return setChassis(args);
       if (name === "remember_fact") return rememberMemoryFact(args);
       if (name === "forget_fact") return forgetMemoryFact(args);

@@ -4,6 +4,7 @@ import base64
 import html
 import re
 import logging
+from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -118,10 +119,9 @@ def _compact_ddgs_results(hits: list[object], result_count: int) -> list[dict[st
 
 def _search_bing_html(query: str, result_count: int) -> list[dict[str, str]]:
     try:
-        import bs4
         import httpx
     except ImportError as exc:
-        logger.warning("bing html search fallback unavailable because a dependency is not installed: %s", exc)
+        logger.warning("bing html search fallback unavailable because httpx is not installed: %s", exc)
         return []
 
     try:
@@ -143,6 +143,11 @@ def _search_bing_html(query: str, result_count: int) -> list[dict[str, str]]:
         logger.warning("bing html search fallback failed for %r: %s", query, exc)
         return []
 
+    try:
+        import bs4
+    except ImportError:
+        return _parse_bing_html_results(response.text, query, result_count)
+
     soup = bs4.BeautifulSoup(response.text, "html.parser")
     results: list[dict[str, str]] = []
     for item in soup.select("li.b_algo"):
@@ -153,6 +158,85 @@ def _search_bing_html(query: str, result_count: int) -> list[dict[str, str]]:
         url = _clean_bing_url(str(link.get("href") or ""))
         snippet_node = item.select_one(".b_caption p") or item.select_one("p")
         snippet = snippet_node.get_text(" ", strip=True) if snippet_node is not None else ""
+        if not title or not url:
+            continue
+        if not _search_result_is_relevant(query, title, snippet, url):
+            continue
+        results.append({"title": title, "snippet": html.unescape(snippet), "url": url})
+        if len(results) >= result_count:
+            break
+    return results
+
+
+class _BingHtmlParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.results: list[dict[str, str]] = []
+        self._li_depth = 0
+        self._in_result = False
+        self._in_h2 = False
+        self._in_link = False
+        self._in_caption = False
+        self._in_caption_p = False
+        self._current: dict[str, str] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr = dict(attrs)
+        classes = set((attr.get("class") or "").split())
+        if tag == "li" and "b_algo" in classes:
+            self._in_result = True
+            self._li_depth = 1
+            self._current = {"title": "", "url": "", "snippet": ""}
+            return
+        if not self._in_result:
+            return
+        if tag == "li":
+            self._li_depth += 1
+        elif tag == "h2":
+            self._in_h2 = True
+        elif tag == "a" and self._in_h2 and not self._current.get("url"):
+            self._in_link = True
+            self._current["url"] = attr.get("href") or ""
+        elif tag == "div" and "b_caption" in classes:
+            self._in_caption = True
+        elif tag == "p" and self._in_caption:
+            self._in_caption_p = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if not self._in_result:
+            return
+        if tag == "a":
+            self._in_link = False
+        elif tag == "h2":
+            self._in_h2 = False
+        elif tag == "p":
+            self._in_caption_p = False
+        elif tag == "div":
+            self._in_caption = False
+        elif tag == "li":
+            self._li_depth -= 1
+            if self._li_depth <= 0:
+                self.results.append({key: value.strip() for key, value in self._current.items()})
+                self._in_result = False
+                self._current = {}
+
+    def handle_data(self, data: str) -> None:
+        if not self._in_result:
+            return
+        if self._in_link:
+            self._current["title"] = f"{self._current.get('title', '')} {data}".strip()
+        elif self._in_caption_p:
+            self._current["snippet"] = f"{self._current.get('snippet', '')} {data}".strip()
+
+
+def _parse_bing_html_results(html_text: str, query: str, result_count: int) -> list[dict[str, str]]:
+    parser = _BingHtmlParser()
+    parser.feed(html_text)
+    results: list[dict[str, str]] = []
+    for item in parser.results:
+        title = item.get("title", "").strip()
+        url = _clean_bing_url(item.get("url", ""))
+        snippet = item.get("snippet", "").strip()
         if not title or not url:
             continue
         if not _search_result_is_relevant(query, title, snippet, url):

@@ -44,6 +44,8 @@ constexpr uint32_t API_DEFAULT_MOUTH_MS = 2500;
 constexpr uint32_t MOUTH_TRANSITION_MS = 220;
 constexpr uint32_t MOUTH_TALK_ATTACK_MS = 90;
 constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
+constexpr uint8_t MOUTH_TEXT_MAX = 96;
+constexpr uint32_t MOUTH_TEXT_FRAME_MS = 80;
 constexpr float API_NORMALIZED_GAZE_X_MM = 190.0f;
 constexpr float API_NORMALIZED_GAZE_Y_MM = 110.0f;
 constexpr float API_NORMALIZED_GAZE_Z_MM = 360.0f;
@@ -852,12 +854,17 @@ struct MouthState {
   MouthShape renderedShape = MouthShape::Neutral;
   bool overrideShape = false;
   bool talking = false;
+  bool textMode = false;
+  bool textMarquee = false;
   bool poseInitialized = false;
   uint32_t overrideUntil = 0;
+  uint32_t textUntil = 0;
+  uint32_t textStarted = 0;
   uint32_t poseStarted = 0;
   uint32_t talkUpdated = 0;
   float energy = 0.45f;
   float talkLevel = 0.0f;
+  char text[MOUTH_TEXT_MAX] = {};
   MouthPose poseFrom;
   MouthPose poseTo;
   MouthPose poseNow;
@@ -2038,6 +2045,9 @@ void renderEye(bool leftEye, uint32_t now) {
 }
 
 void updateMouth(uint32_t now) {
+  if (mouthState.textMode && mouthState.textUntil != 0 && deadlineReached(now, mouthState.textUntil)) {
+    mouthState.textMode = false;
+  }
   if (mouthState.overrideShape && mouthState.overrideUntil != 0 && deadlineReached(now, mouthState.overrideUntil)) {
     mouthState.overrideShape = false;
     mouthState.talking = false;
@@ -2049,6 +2059,40 @@ void updateMouth(uint32_t now) {
   const uint32_t rateMs = target > mouthState.talkLevel ? MOUTH_TALK_ATTACK_MS : MOUTH_TALK_RELEASE_MS;
   const float step = rateMs == 0 ? 1.0f : clampf(float(elapsed) / float(rateMs), 0.0f, 1.0f);
   mouthState.talkLevel += (target - mouthState.talkLevel) * step;
+}
+
+bool mouthTextActive(uint32_t now) {
+  if (!mouthState.textMode) return false;
+  if (mouthState.textUntil != 0 && deadlineReached(now, mouthState.textUntil)) {
+    mouthState.textMode = false;
+    return false;
+  }
+  return mouthState.text[0] != '\0';
+}
+
+void clearMouthText() {
+  mouthState.textMode = false;
+  mouthState.textMarquee = false;
+  mouthState.textUntil = 0;
+  mouthState.textStarted = 0;
+  mouthState.text[0] = '\0';
+}
+
+void setMouthText(const char *text, bool marquee, uint32_t holdMs, uint32_t now) {
+  size_t out = 0;
+  const char *source = text == nullptr ? "" : text;
+  while (*source != '\0' && out < MOUTH_TEXT_MAX - 1) {
+    const char c = *source++;
+    mouthState.text[out++] = (c >= 32 && c <= 126) ? c : ' ';
+  }
+  while (out > 0 && mouthState.text[out - 1] == ' ') --out;
+  mouthState.text[out] = '\0';
+  mouthState.textMode = out > 0;
+  mouthState.textMarquee = marquee;
+  mouthState.textStarted = now;
+  mouthState.textUntil = holdMs == 0 ? 0 : now + holdMs;
+  mouthState.overrideShape = false;
+  mouthState.talking = false;
 }
 
 MouthShape activeMouthShape(uint32_t now) {
@@ -2305,7 +2349,58 @@ void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now) {
   }
 }
 
+uint8_t mouthTextSizeFor(int16_t w, size_t len, bool marquee) {
+  uint8_t size = w >= 300 ? 4 : 3;
+  if (len > 16) size = w >= 300 ? 3 : 2;
+  if (len > 28) size = 2;
+  if (marquee && w < 300) size = 2;
+  return size;
+}
+
+void drawMouthTextPanel(Adafruit_GFX &g, int16_t w, int16_t h, uint32_t now) {
+  const char *text = mouthState.text;
+  const size_t len = strlen(text);
+  const bool forceMarquee = mouthState.textMarquee;
+  const uint8_t size = mouthTextSizeFor(w, len, forceMarquee);
+  const int16_t textW = int16_t(len) * 6 * size;
+  const int16_t textH = 8 * size;
+  const int16_t availableW = w - 28;
+  const bool marquee = forceMarquee || textW > availableW;
+  const uint16_t bg = rgb(1, 5, 9);
+  const uint16_t panel = rgb(7, 18, 25);
+  const uint16_t line = rgb(30, 110, 128);
+  const uint16_t glow = rgb(44, 220, 232);
+  const uint16_t dim = rgb(10, 58, 74);
+  const int16_t panelX = 8;
+  const int16_t panelY = maxi16(10, h / 2 - 44);
+  const int16_t panelW = w - 16;
+  const int16_t panelH = mini16(92, h - panelY - 10);
+
+  g.fillScreen(bg);
+  g.fillRoundRect(panelX, panelY, panelW, panelH, 16, panel);
+  g.drawRoundRect(panelX, panelY, panelW, panelH, 16, line);
+  g.drawFastHLine(panelX + 18, panelY + panelH - 12, panelW - 36, dim);
+  g.setTextWrap(false);
+  g.setTextSize(size);
+  g.setTextColor(glow);
+
+  const int16_t y = panelY + (panelH - textH) / 2;
+  int16_t x = panelX + (panelW - textW) / 2;
+  if (marquee) {
+    const uint32_t elapsed = now - mouthState.textStarted;
+    const int16_t travel = textW + panelW + 42;
+    const int16_t offset = int16_t((elapsed / 35) % uint32_t(maxi16(1, travel)));
+    x = panelX + panelW + 18 - offset;
+  }
+  g.setCursor(x, y);
+  g.print(text);
+}
+
 void renderMouth(uint32_t now) {
+  if (mouthTextActive(now)) {
+    drawMouthTextPanel(frame, SCREEN_W, SCREEN_H, now);
+    return;
+  }
   const MouthShape shape = activeMouthShape(now);
   const MouthPose pose = easedMouthPose(shape, now);
   if (mouthState.style == MouthStyle::Robot) {
@@ -2446,6 +2541,17 @@ void renderAuxMouthMirror(uint32_t now) {
   const int16_t screenW = auxTft.width();
   const int16_t screenH = auxTft.height();
   const int16_t yOffset = AUX_MOUTH_CANVAS_Y;
+  if (mouthTextActive(now)) {
+    if (now - lastAuxFrame < MOUTH_TEXT_FRAME_MS && !auxNeedsFullPaint) return;
+    lastAuxFrame = now;
+    deselectDisplayBus();
+    drawMouthTextPanel(auxMouthFrame, AUX_MOUTH_CANVAS_W, AUX_MOUTH_CANVAS_H, now);
+    auxTft.drawRGBBitmap(0, AUX_MOUTH_CANVAS_Y, auxMouthFrame.getBuffer(), AUX_MOUTH_CANVAS_W, AUX_MOUTH_CANVAS_H);
+    auxNeedsFullPaint = false;
+    auxMouthRendered = true;
+    deselectDisplayBus();
+    return;
+  }
   MouthShape shape = activeMouthShape(now);
   const bool poseSettled = mouthState.poseInitialized &&
                            uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS;
@@ -3488,6 +3594,11 @@ void addState(JsonDocument &doc, uint32_t now) {
   mouth["manual"] = mouthState.overrideShape;
   mouth["talking"] = mouthState.talking;
   mouth["energy"] = mouthState.energy;
+  mouth["text_mode"] = mouthState.textMode;
+  if (mouthState.textMode) {
+    mouth["text"] = mouthState.text;
+    mouth["text_marquee"] = mouthState.textMarquee;
+  }
 #if REACHY_MOUTH_STATUS_DISPLAY
   mouth["display_role"] = "status";
 #elif REACHY_HAS_MOUTH
@@ -3728,6 +3839,7 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
   if (value.is<const char *>()) {
     const char *text = value.as<const char *>();
     if (releaseToken(text)) {
+      clearMouthText();
       mouthState.overrideShape = false;
       mouthState.talking = false;
       return true;
@@ -3737,6 +3849,7 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
       sendError("unknown mouth shape");
       return false;
     }
+    clearMouthText();
     mouthState.shape = shape;
     mouthState.overrideShape = true;
     const uint32_t holdMs = jsonMs(durationValue, API_DEFAULT_MOUTH_MS);
@@ -3747,10 +3860,22 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
 
   JsonObjectConst mouth = value.as<JsonObjectConst>();
   if (jsonBool(mouth["release"], false) || jsonBool(mouth["auto"], false)) {
+    clearMouthText();
     mouthState.overrideShape = false;
     mouthState.talking = false;
   }
+  if (mouth["text"].is<const char *>()) {
+    const char *mode = mouth["mode"].is<const char *>() ? mouth["mode"].as<const char *>() : "";
+    const bool marquee = equalsIgnoreCase(mode, "marquee") || equalsIgnoreCase(mode, "scroll");
+    const uint32_t holdMs = jsonMilliseconds(
+      mouth["duration_ms"],
+      jsonMs(mouth["duration"], jsonMs(durationValue, API_DEFAULT_MOUTH_MS))
+    );
+    setMouthText(mouth["text"].as<const char *>(), marquee, holdMs, now);
+    return true;
+  }
   if (mouth["style"].is<const char *>()) {
+    clearMouthText();
     MouthStyle style;
     if (!parseMouthStyleName(mouth["style"].as<const char *>(), style)) {
       sendError("unknown mouth style");
@@ -3760,6 +3885,7 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
     saveFacePreferences();
   }
   if (mouth["shape"].is<const char *>()) {
+    clearMouthText();
     MouthShape shape;
     if (!parseMouthShapeName(mouth["shape"].as<const char *>(), shape)) {
       sendError("unknown mouth shape");
