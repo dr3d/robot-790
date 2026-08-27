@@ -34,6 +34,23 @@ def test_note_files_read_possessive_title_as_snake_case_filename(tmp_path: Path)
     assert read.content == "Remember this by title."
 
 
+def test_note_files_read_unique_title_from_subfolder(tmp_path: Path) -> None:
+    write_note_file(tmp_path, "core/robot_build", "Build facts.")
+
+    read = read_note_file(tmp_path, "Robot Build")
+
+    assert read.filename == "core/robot_build.txt"
+    assert read.content == "Build facts."
+
+
+def test_note_files_reject_ambiguous_title_from_subfolders(tmp_path: Path) -> None:
+    write_note_file(tmp_path, "core/robot_build", "Core build.")
+    write_note_file(tmp_path, "experiments/robot_build", "Experiment build.")
+
+    with pytest.raises(ValueError, match="Multiple note files match"):
+        read_note_file(tmp_path, "Robot Build")
+
+
 def test_note_files_allow_named_markdown(tmp_path: Path) -> None:
     written = write_note_file(tmp_path, "logs/today.md", "# Today\n")
 

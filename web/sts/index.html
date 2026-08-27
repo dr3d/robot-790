@@ -642,7 +642,7 @@
     const maxIdleOutputLog = 240;
     const maxSessionNoteChars = 180000;
     const maxIdleLoadedNoteChars = 12000;
-    const startupNoteFilenames = ["erics_memories.txt"];
+    const startupNoteFilenames = ["core/erics_memories.txt"];
     const ttsStylePresets = {
       neutral: "",
       dry: "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
@@ -954,7 +954,7 @@
           properties: {
             filename: {
               type: "string",
-              description: "Relative filename inside Robot 790's notes folder. If no extension is given, .txt is used."
+              description: "Relative filename inside Robot 790's notes folder. Use this exact argument name, not path. If no extension is given, .txt is used."
             },
             content: {
               type: "string",
@@ -985,7 +985,7 @@
           properties: {
             filename: {
               type: "string",
-              description: "Relative filename inside Robot 790's notes folder. If no extension is given, .txt is used."
+              description: "Relative filename inside Robot 790's notes folder. Use this exact argument name, not path. If no extension is given, .txt is used."
             }
           },
           required: ["filename"],
@@ -1152,6 +1152,7 @@
       "When remembering, choose a short snake_case name and one factual sentence.",
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
       "Use note file tools only when the user explicitly asks you to write, save, append, read, or list a text file or note.",
+      "When reading a note, call read_text_file with a filename argument. Do not speak XML, JSON, or <tool_call> markup out loud.",
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
       "When using write_text_file for a short note you authored, pass filename and content.",
       "When using write_text_file for a long note based on captured session material, omit content and pass source instead; do not generate a huge content argument.",
@@ -1891,7 +1892,7 @@
         return "rock wedge friction anchor ladder";
       }
       if (/\b(thermal blanket|traction|foil|slippery)\b/i.test(haystack)) {
-        return "thermal blanket material traction slippery";
+        return "mylar film coefficient of friction";
       }
       if (/\b(radio mast|radio link|reach home|antenna)\b/i.test(haystack)) {
         return "Mars rover radio antenna communication";
@@ -2084,7 +2085,7 @@
         const results = Array.isArray(result?.results) ? result.results.slice(0, 3) : [];
         if (!results.length) {
           log(events, `idle ${lookupLane ? "lookup" : "curiosity"} search empty: ${choice.key} -> ${choice.query}`);
-          return "";
+          return lookupUnavailableContext(choice, lookupLane);
         }
         const lines = results.map((item) => {
           const title = String(item.title || "result").slice(0, 90);
@@ -2095,8 +2096,17 @@
         return `Fresh ${lookupLane ? "lookup" : "curiosity"} context for ${choice.key}:\n${lines.join("\n")}`;
       } catch (error) {
         log(events, `idle ${lookupLane ? "lookup" : "curiosity"} search error: ${error.message}`);
-        return "";
+        return lookupUnavailableContext(choice, lookupLane);
       }
+    }
+
+    function lookupUnavailableContext(choice, lookupLane) {
+      if (!lookupLane) return "";
+      return [
+        `Lookup attempt for ${choice?.key || "this topic"} did not return usable context.`,
+        "Do not mention hunger, starvation, empty lookup, failed search, the server, or wanting a fact.",
+        "Treat this as an ordinary non-factual idle beat: stay with supplied context, uncertainty, or a small concrete observation."
+      ].join(" ");
     }
 
     function idleExhaustedText(text) {
@@ -2883,8 +2893,8 @@
       return clipSessionNote(content);
     }
 
-    async function readTextFile({ filename } = {}) {
-      const name = String(filename || "").trim();
+    async function readTextFile({ filename, path, name: noteName } = {}) {
+      const name = String(filename || path || noteName || "").trim();
       if (!name) throw new Error("Missing filename");
       const url = new URL("/api/notes/read", location.href);
       url.searchParams.set("filename", name);

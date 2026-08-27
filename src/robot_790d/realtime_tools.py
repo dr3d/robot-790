@@ -475,7 +475,7 @@ TOOLS: list[dict[str, object]] = [
                 "filename": {
                     "type": "string",
                     "description": (
-                        "Relative filename inside Robot 790's notes folder. "
+                        "Relative filename inside Robot 790's notes folder. Use this exact argument name, not path. "
                         "If no extension is given, .txt is used."
                     ),
                 }
@@ -847,7 +847,7 @@ def _write_text_file(arguments: dict[str, object]) -> dict[str, object]:
 
 
 def _read_text_file(arguments: dict[str, object]) -> dict[str, object]:
-    filename = str(arguments.get("filename") or arguments.get("name") or "").strip()
+    filename = str(arguments.get("filename") or arguments.get("path") or arguments.get("name") or "").strip()
     if not filename:
         return {"status": "error", "error": "Missing required argument: filename"}
 

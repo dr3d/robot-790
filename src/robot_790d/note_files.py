@@ -73,12 +73,24 @@ def find_existing_note_path(filename: str, instance_path: str | Path | None = No
         return requested
 
     root = notes_root_for_instance(instance_path).resolve()
-    requested_key = note_lookup_key(requested.relative_to(root))
+    requested_relative = requested.relative_to(root)
+    requested_key = note_lookup_key(requested_relative)
+    basename_matches: list[Path] = []
+    requested_basename_key = note_lookup_key(Path(requested_relative.name))
     for candidate in root.rglob("*"):
         if not candidate.is_file() or candidate.suffix.lower() not in ALLOWED_EXTENSIONS:
             continue
-        if note_lookup_key(candidate.resolve().relative_to(root)) == requested_key:
-            return candidate.resolve()
+        candidate_resolved = candidate.resolve()
+        candidate_relative = candidate_resolved.relative_to(root)
+        if note_lookup_key(candidate_relative) == requested_key:
+            return candidate_resolved
+        if len(requested_relative.parts) == 1 and note_lookup_key(Path(candidate_relative.name)) == requested_basename_key:
+            basename_matches.append(candidate_resolved)
+    if len(basename_matches) == 1:
+        return basename_matches[0]
+    if len(basename_matches) > 1:
+        names = ", ".join(relative_note_name(path, instance_path) for path in basename_matches)
+        raise ValueError(f"Multiple note files match {filename!r}: {names}. Include the folder name.")
     return requested
 
 
