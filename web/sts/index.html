@@ -1321,8 +1321,8 @@
     }
 
     function noteFileWriteAllowed(text) {
-      return /\b(write|save|append|put|record|log|create|produce|generate|make)\b[\s\S]{0,80}\b(file|note|notes|txt|text|md|markdown|summary)\b/i.test(text || "")
-        || /\b(file|note|notes|txt|text|md|markdown|summary)\b[\s\S]{0,80}\b(write|save|append|put|record|log|create|produce|generate|make)\b/i.test(text || "");
+      return /\b(write|save|append|put|record|log|create|produce|generate|make|update|edit|revise|amend|replace)\b[\s\S]{0,80}\b(file|note|notes|txt|text|md|markdown|summary)\b/i.test(text || "")
+        || /\b(file|note|notes|txt|text|md|markdown|summary)\b[\s\S]{0,80}\b(write|save|append|put|record|log|create|produce|generate|make|update|edit|revise|amend|replace)\b/i.test(text || "");
     }
 
     function memorySaveArmed() {
