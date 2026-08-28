@@ -681,6 +681,7 @@
     const idleCuriositySeedLimit = 10;
     const idleTopicRetireMs = 45 * 60 * 1000;
     const idleLoadedNoteTopicLimit = 24;
+    const idleExpansionQueryLimit = 18;
     const maxIdleDrift = 12;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
@@ -1857,6 +1858,11 @@
         prompt: "Use fresh lookup context for one factual or unresolved detail from loaded notes. Add exactly one checked outside detail, then connect it lightly. Do not pretend the checked detail was already memory."
       },
       {
+        name: "wander",
+        minLevel: 10,
+        prompt: "Use fresh outside context to move one step away from the usual home topics. Treat the new detail as a seed for a strange but grounded connection, not as a correction."
+      },
+      {
         name: "curiosity",
         prompt: "Use the supplied curiosity context if present. Add one new outside detail to a remembered topic, then relate it lightly back to Robot 790."
       },
@@ -1871,6 +1877,7 @@
       const lanes = idleLaneDefinitions.filter((lane) => {
         if (lane.minLevel && level < lane.minLevel) return false;
         if (lane.name === "curiosity" && level < 10) return false;
+        if (lane.name === "wander" && (currentIdleWonder() < 5 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
         if (lane.name === "lookup" && (currentIdleWonder() < 6 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
         if (lane.name === "addressed_question" && now - lastAddressedIdleQuestionAt < addressedIdleQuestionGapMs) return false;
         return true;
@@ -1897,6 +1904,30 @@
         { key: "shoes", re: /\b(Vans|sneakers|blue and red|mismatched)\b/i },
         { key: "Card Computer", re: /\b(Card Computer|world map)\b/i }
       ];
+    }
+
+    function idleExpansionTopicCandidates() {
+      const entries = [
+        { key: "mechanical automata", query: "history of mechanical automata lifelike machines", re: /\b(automata|automatons|clockwork|mechanical|alive|lifelike)\b/i },
+        { key: "social robots", query: "social robot companionship embodiment gaze prosody", re: /\b(companion|social robot|embodiment|gaze|prosody|face)\b/i },
+        { key: "memory palace", query: "method of loci memory palace history", re: /\b(memory|remember|notes|palace|memento|recall)\b/i },
+        { key: "conversation repair", query: "conversation analysis repair turn taking silence", re: /\b(conversation|silence|turn|listen|talk|question)\b/i },
+        { key: "affective computing", query: "affective computing emotion recognition robot interaction", re: /\b(mood|emotion|feeling|affect|expression)\b/i },
+        { key: "robot pets", query: "AIBO robot pet behavior companion design", re: /\b(pet|companion|house|home|lonely|company)\b/i },
+        { key: "early personal computing", query: "early personal computing hobbyist computers 1970s 1980s", re: /\b(DEC|MIT|computer|terminal|keyboard|PDP|Sun Microsystems)\b/i },
+        { key: "soundscape", query: "soundscape ecology quiet rooms ambient listening", re: /\b(sound|quiet|mic|listening|room|diaphragm)\b/i },
+        { key: "material memory", query: "material culture objects memory wear patina", re: /\b(layer|aluminum|gold|wool|felt|wear|object|artifact)\b/i },
+        { key: "maps and cities", query: "psychogeography city maps memory place", re: /\b(Montreal|Salem|New York|city|map|street|place)\b/i },
+        { key: "lighthouses", query: "lighthouse keepers Fresnel lens history daily life", re: /\b(light|lighthouse|beacon|harbor|sea|coast)\b/i },
+        { key: "textile craft", query: "needle felting wool sculpture craft process", re: /\b(wool|felt|needle|craft|figurine|rabbit|mermaid)\b/i },
+        { key: "naming machines", query: "naming robots computers anthropomorphism history", re: /\b(name|Eric|Robot 790|person|identity)\b/i },
+        { key: "free will physics", query: "block universe eternalism free will philosophy", re: /\b(block universe|eternalism|free will|timeline|geometry)\b/i },
+        { key: "weird measurement", query: "history of measurement instruments timekeeping machines", re: /\b(clock|count|seconds|measure|time|duration)\b/i },
+        { key: "fictional robots", query: "fictional robot heads personality science fiction", re: /\b(LEXX|790|robot head|science fiction|character)\b/i },
+        { key: "ocean signals", query: "underwater acoustic signals SOFAR channel whales", re: /\b(ocean|whale|signal|radio|shortwave|frequency)\b/i },
+        { key: "domestic rituals", query: "domestic rituals objects home anthropology", re: /\b(home|desk|chair|coffee|apartment|room)\b/i }
+      ];
+      return entries.slice(0, idleExpansionQueryLimit);
     }
 
     function escapeRegExp(text) {
@@ -2108,7 +2139,7 @@
         .map(([key, item]) => `${key}: ${item.lastText}`);
       return [
         retired.length
-        ? `Recently overused idle topics to rest for a while: ${retired.join(", ")}. Prefer another topic unless the lane gives a fresh concrete reason.`
+        ? `Recently overused idle topics to rest for a while: ${retired.join(", ")}. Treat these as temporarily unavailable; avoid naming them unless the lane gives a fresh checked fact or the user returns to them.`
         : "",
         continuity.length
           ? `Recent idle topic continuity: ${continuity.join(" | ")}. If you revisit one, continue or revise it deliberately instead of giving a new incompatible explanation as if fresh.`
@@ -2146,7 +2177,24 @@
         .join("\n\n");
     }
 
-    function chooseIdleCuriosityQuery(context, { lookupLane = false } = {}) {
+    function chooseIdleExpansionQuery(context) {
+      const text = String(context || "");
+      const candidates = idleExpansionTopicCandidates()
+        .filter((candidate) => !idleTopicIsRetired(candidate.key) && candidate.key !== lastIdleWebSearchTopic);
+      const matching = candidates.filter((candidate) => candidate.re.test(text));
+      const pool = matching.length ? matching : candidates;
+      if (!pool.length) return null;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function idleSearchLaneName({ lookupLane = false, wanderLane = false } = {}) {
+      if (lookupLane) return "lookup";
+      if (wanderLane) return "wander";
+      return "curiosity";
+    }
+
+    function chooseIdleCuriosityQuery(context, { lookupLane = false, wanderLane = false } = {}) {
+      if (wanderLane) return chooseIdleExpansionQuery(context);
       const text = String(context || "");
       const loadedCandidates = loadedNoteTopicCandidates();
       const loadedSearchCandidates = loadedCandidates.filter((candidate) => candidate.query && !idleTopicIsRetired(candidate.key));
@@ -2208,10 +2256,12 @@
 
     async function maybeIdleCuriosityContext(level, lane, context) {
       const lookupLane = lane.name === "lookup";
-      if (!lookupLane && lane.name !== "curiosity") return "";
+      const wanderLane = lane.name === "wander";
+      if (!lookupLane && !wanderLane && lane.name !== "curiosity") return "";
       if (level < 10 || !llmWebSearchTools.checked) return "";
       if (!idleWebSearchReady(level)) return "";
-      const choice = chooseIdleCuriosityQuery(context, { lookupLane });
+      const laneName = idleSearchLaneName({ lookupLane, wanderLane });
+      const choice = chooseIdleCuriosityQuery(context, { lookupLane, wanderLane });
       if (!choice) {
         return lookupLane
           ? "Lookup lane found no fresh eligible search topic. Do not add outside factual claims on this beat."
@@ -2223,7 +2273,7 @@
         const result = await searchWeb({ query: choice.query, max_results: 3 });
         const results = Array.isArray(result?.results) ? result.results.slice(0, 3) : [];
         if (!results.length) {
-          log(events, `idle ${lookupLane ? "lookup" : "curiosity"} search empty: ${choice.key} -> ${choice.query}`);
+          log(events, `idle ${laneName} search empty: ${choice.key} -> ${choice.query}`);
           return lookupUnavailableContext(choice, lookupLane);
         }
         const lines = results.map((item) => {
@@ -2232,10 +2282,10 @@
           return `- ${title}: ${snippet}`;
         });
         addIdleCuriositySeeds(results, choice.key);
-        log(events, `idle ${lookupLane ? "lookup" : "curiosity"} searched: ${choice.key} -> ${choice.query}`);
-        return `Fresh ${lookupLane ? "lookup" : "curiosity"} context for ${choice.key}:\n${lines.join("\n")}`;
+        log(events, `idle ${laneName} searched: ${choice.key} -> ${choice.query}`);
+        return `Fresh ${lookupLane ? "lookup" : wanderLane ? "palette-expansion" : "curiosity"} context for ${choice.key}:\n${lines.join("\n")}`;
       } catch (error) {
-        log(events, `idle ${lookupLane ? "lookup" : "curiosity"} search error: ${error.message}`);
+        log(events, `idle ${laneName} search error: ${error.message}`);
         return lookupUnavailableContext(choice, lookupLane);
       }
     }
@@ -2342,6 +2392,7 @@
 
     function robotAmbientContext(level, lane, { suppressRobotBody = false } = {}) {
       const quietSeconds = Math.max(0, Math.round((Date.now() - lastConversationActivityAt) / 1000));
+      const statusLane = lane.name === "status";
       if (suppressRobotBody) {
         return [
           `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
@@ -2352,13 +2403,16 @@
       return [
         `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
         `Idle level ${level}; lane ${lane.name}; wonder ${idleWonderLabel()}; quiet for about ${quietSeconds} seconds.`,
-        `Mic is ${micStream ? "on" : "off"}; Cast playback is ${castPlaybackActive ? "active" : "inactive"}.`,
-        "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, and Cast playback state only.",
+        `Mic is ${micStream ? "on" : "off"}.`,
+        statusLane ? `Cast playback is ${castPlaybackActive ? "active" : "inactive"}.` : "",
+        statusLane
+          ? "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, and Cast playback state only."
+          : "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, and mic state only. Use mic state as a clue about whether Scott can hear you; do not foreground Cast state unless this is a status beat.",
         "Not verified by this idle event: PIR motion, yaw angle or dead zones, IMU data, fan clicks, motor-controller checks, tread temperature, battery voltage, desk vibration, and room temperature.",
         "Unverified body-feel can still appear as poetic self-talk, but not as a measured fact or actionable diagnostic.",
         "Build notes can describe hardware that exists or is planned; they are not current sensor readings.",
         "Unknown: room temperature, whether Scott is listening, room emotion, and private thoughts of people known only by name."
-      ].join(" ");
+      ].filter(Boolean).join(" ");
     }
 
     function commitIdleAssistantTranscript(text) {
@@ -2412,6 +2466,15 @@
         "Vary the shape of the thought. Do not always use the template: fact, I am thinking about the fact, contrast, uncertainty, and I'm okay with it.",
         lane.name === "lookup"
           ? "This is a lookup beat. Use the fresh lookup context if supplied. If no fresh lookup context is supplied, do not invent or state outside-world facts; make the absence of lookup quietly constrain the thought."
+          : "",
+        lane.name === "wander"
+          ? "This is a palette-wander beat. Let the fresh outside detail become the main image for this thought. You may connect it back to home lightly, but do not immediately fall back to DEC, treads, mic, Cast, Salem, Montreal, MIT, Harvard, or Scott-biography unless the search result itself makes that bridge interesting."
+          : "",
+        lane.name === "curiosity"
+          ? "This is a curiosity-chain beat. If the fresh context contains a name, place, process, or object you did not have before, let that new thing stay alive as a future seed."
+          : "",
+        curiosityContext
+          ? "Fresh lookup context is not memory yet. Use it with provenance and uncertainty; do not treat snippets as fully verified permanent knowledge."
           : "",
         "Do not promise to stop, go quiet, or stop talking unless the system explicitly says it is entering cooldown.",
         "Avoid repeating recent idle outputs. If you notice repetition, choose a different lane instead of talking about the repetition.",
