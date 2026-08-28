@@ -299,6 +299,12 @@
     .copy-link:hover {
       text-decoration: underline;
     }
+    .log-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
     .log {
       height: var(--log-pane-height);
       min-height: var(--log-pane-height);
@@ -514,14 +520,20 @@
       <div>
         <div class="log-header">
           <label>Conversation</label>
-          <button id="copyConversation" class="copy-link" type="button">Copy</button>
+          <span class="log-actions">
+            <button id="copyConversation" class="copy-link" type="button">Copy</button>
+            <button id="recordConversation" class="copy-link" type="button">Record</button>
+          </span>
         </div>
         <div id="conversation" class="log"></div>
       </div>
       <div>
         <div class="log-header">
           <label>Events</label>
-          <button id="copyEvents" class="copy-link" type="button">Copy</button>
+          <span class="log-actions">
+            <button id="copyEvents" class="copy-link" type="button">Copy</button>
+            <button id="recordEvents" class="copy-link" type="button">Record</button>
+          </span>
         </div>
         <div id="events" class="log"></div>
       </div>
@@ -571,6 +583,8 @@
     const clearLogButton = document.querySelector("#clearLog");
     const copyConversationButton = document.querySelector("#copyConversation");
     const copyEventsButton = document.querySelector("#copyEvents");
+    const recordConversationButton = document.querySelector("#recordConversation");
+    const recordEventsButton = document.querySelector("#recordEvents");
     const micPanel = document.querySelector("#micPanel");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
@@ -1757,6 +1771,30 @@
         button.textContent = "Copied";
       } catch {
         button.textContent = "Failed";
+      }
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 1400);
+    }
+
+    async function recordLogPane(button, target, source) {
+      const originalText = button.textContent;
+      const text = target.textContent.trimEnd();
+      try {
+        const response = await fetch(new URL("/api/logs/record", location.href), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source, content: text })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        button.textContent = "Recorded";
+        log(events, `recorded ${source}: ${result.filename}`);
+      } catch (error) {
+        button.textContent = "Failed";
+        log(events, `record ${source} error: ${error.message}`);
       }
       setTimeout(() => {
         button.textContent = originalText;
@@ -4026,6 +4064,12 @@
     });
     copyEventsButton.addEventListener("click", () => {
       copyLogPane(copyEventsButton, events);
+    });
+    recordConversationButton.addEventListener("click", () => {
+      recordLogPane(recordConversationButton, conversation, "conversation");
+    });
+    recordEventsButton.addEventListener("click", () => {
+      recordLogPane(recordEventsButton, events, "events");
     });
     settingsPanel.addEventListener("toggle", saveSettingsPanelState);
     micPanel.addEventListener("toggle", saveMicPanelState);

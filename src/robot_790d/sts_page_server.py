@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+from datetime import datetime
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -32,6 +33,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path == "/api/notes/write":
             self._handle_note_write()
+            return
+        if parsed.path == "/api/logs/record":
+            self._handle_log_record()
             return
         if parsed.path == "/api/cast":
             self._handle_cast()
@@ -95,6 +99,18 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 "characters": len(note.content),
             },
         )
+
+    def _handle_log_record(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = record_log_snapshot(
+                str(payload.get("source") or "session"),
+                str(payload.get("content") or ""),
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
 
     def _handle_cast(self) -> None:
         try:
@@ -178,6 +194,48 @@ def _first_param(params: dict[str, list[str]], name: str) -> str | None:
     if not values:
         return None
     return values[0]
+
+
+def record_log_snapshot(source: str, content: str, repo_root: Path | None = None) -> dict[str, object]:
+    safe_source = _safe_log_source(source)
+    normalized_content = str(content).replace("\r\n", "\n").strip()
+    if not normalized_content:
+        raise ValueError("Nothing to record.")
+
+    root = repo_root or Path(__file__).resolve().parents[2]
+    live_dir = root / "logs" / "live"
+    live_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"{timestamp}-{safe_source}.txt"
+    latest_name = f"latest-{safe_source}.txt"
+    header = [
+        "Robot 790 Live Log Snapshot",
+        "===========================",
+        f"Recorded: {datetime.now().isoformat(timespec='seconds')}",
+        f"Source: {safe_source}",
+        "",
+    ]
+    body = "\n".join(header) + normalized_content + "\n"
+    path = live_dir / filename
+    latest_path = live_dir / latest_name
+    path.write_text(body, encoding="utf-8")
+    latest_path.write_text(body, encoding="utf-8")
+    return {
+        "status": "ok",
+        "tool": "record_log_snapshot",
+        "source": safe_source,
+        "filename": f"logs/live/{filename}",
+        "latest": f"logs/live/{latest_name}",
+        "path": str(path),
+        "characters": len(body),
+    }
+
+
+def _safe_log_source(source: str) -> str:
+    value = str(source or "session").strip().lower()
+    if value not in {"conversation", "events", "session"}:
+        value = "session"
+    return value
 
 
 def _dispatch_cast(payload: dict[str, Any]) -> dict[str, object]:
