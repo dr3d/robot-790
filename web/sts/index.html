@@ -1662,10 +1662,29 @@
 
     function renderMemory() {
       const facts = loadMemoryFacts();
-      memoryStatus.textContent = `${facts.length} fact${facts.length === 1 ? "" : "s"} in ${location.origin} localStorage:${memoryStorageKey}`;
-      memoryPreview.value = facts.length
-        ? facts.map((item) => `${item.name}: ${item.fact}`).join("\n")
-        : "No saved facts";
+      const loadedNotes = loadedNoteContexts.map((item) => item.filename);
+      memoryStatus.textContent = [
+        `${facts.length} browser fact${facts.length === 1 ? "" : "s"}`,
+        `${loadedNotes.length} loaded note${loadedNotes.length === 1 ? "" : "s"}`,
+        `${location.origin} localStorage:${memoryStorageKey}`
+      ].join(" / ");
+      const lines = [];
+      lines.push("Browser memory facts");
+      lines.push("--------------------");
+      if (facts.length) {
+        facts.forEach((item) => lines.push(`${item.name}: ${item.fact}`));
+      } else {
+        lines.push("No browser facts saved in this origin.");
+      }
+      lines.push("");
+      lines.push("Loaded note context");
+      lines.push("-------------------");
+      if (loadedNotes.length) {
+        loadedNotes.forEach((filename) => lines.push(filename));
+      } else {
+        lines.push("No notes loaded in this browser session yet.");
+      }
+      memoryPreview.value = lines.join("\n");
     }
 
     function loadToolPrefs() {
@@ -3179,6 +3198,7 @@
       }
       if (loadedNoteContextDirty) {
         loadedNoteContextDirty = false;
+        renderMemory();
         updateSessionTools();
       }
     }
