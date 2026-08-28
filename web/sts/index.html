@@ -754,6 +754,8 @@
     let idleOutputLog = [];
     let substrateIdleOutputs = [];
     let recentIdleClaimSignatures = [];
+    let recentIdleOpenings = [];
+    let recentIdleThemes = [];
     let latestBrainStatus = null;
 
     function updateLogPaneHeight() {
@@ -823,13 +825,14 @@
     const idleWebSearchGapMs = 20 * 60 * 1000;
     const idleSearchTopicCooldownMs = 12 * 60 * 1000;
     const idleSearchQueryCooldownMs = 8 * 60 * 1000;
+    const idleSearchFatigueWindowMs = 60 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
     const idleMouthAsideGapMs = 45 * 1000;
     const idleCuriositySeedRetireMs = 45 * 60 * 1000;
     const idleCuriositySeedLimit = 10;
     const idleTopicRetireMs = 45 * 60 * 1000;
     const idleLoadedNoteTopicLimit = 24;
-    const idleExpansionQueryLimit = 18;
+    const idleExpansionQueryLimit = 36;
     const maxIdleDrift = 12;
     let chassisBusyUntil = 0;
     let visionImageUrl = "";
@@ -2380,7 +2383,23 @@
         { key: "weird measurement", query: "history of measurement instruments timekeeping machines", re: /\b(clock|count|seconds|measure|time|duration)\b/i },
         { key: "fictional robots", query: "fictional robot heads personality science fiction", re: /\b(LEXX|790|robot head|science fiction|character)\b/i },
         { key: "ocean signals", query: "underwater acoustic signals SOFAR channel whales", re: /\b(ocean|whale|signal|radio|shortwave|frequency)\b/i },
-        { key: "domestic rituals", query: "domestic rituals objects home anthropology", re: /\b(home|desk|chair|coffee|apartment|room)\b/i }
+        { key: "domestic rituals", query: "domestic rituals objects home anthropology", re: /\b(home|desk|chair|coffee|apartment|room)\b/i },
+        { key: "wood joints", query: "woodworking joints dovetail mortise tenon dado mechanics", re: /\b(dovetail|mortise|tenon|dado|grain|wood joint|joiner|woodworker)\b/i },
+        { key: "fastener design", query: "fastener design screws bolts washers keyways splines failure modes", re: /\b(screw|bolt|washer|keyway|spline|cotter|set screw|thread|torque)\b/i },
+        { key: "hand tools", query: "hand tool design chisels planes mallets marking gauges", re: /\b(chisel|mallet|plane|bevel|marking gauge|reamer|tap|tool)\b/i },
+        { key: "everyday object design", query: "everyday object design affordances hidden features", re: /\b(pencil|eraser|zipper|doorknob|keycap|pen cap|battery|object)\b/i },
+        { key: "punctuation history", query: "punctuation marks history period comma ellipsis typography", re: /\b(period|comma|ellipsis|colon|punctuation|mark|sentence)\b/i },
+        { key: "word drift", query: "etymology semantic shift common words history", re: /\b(word|means|named|called|root|etymology|phrase|language)\b/i },
+        { key: "optical phenomena", query: "optical phenomena green flash Fresnel lens lighthouse refraction", re: /\b(optical|lens|refraction|green flash|rainbow|light|glass)\b/i },
+        { key: "radio propagation", query: "radio propagation ionosphere shortwave night signals", re: /\b(radio|shortwave|signal|antenna|frequency|static|ionosphere)\b/i },
+        { key: "materials science", query: "materials science friction stress fatigue wear surface tension", re: /\b(friction|stress|fatigue|wear|surface tension|elastic|steel|graphite|nylon|maple)\b/i },
+        { key: "machine-shop metrology", query: "machine shop metrology gauges tolerances fits surface finish", re: /\b(gauge|tolerance|fit|press-fit|surface finish|micrometer|caliper|machinist)\b/i },
+        { key: "repair marks", query: "maintenance witness marks torque seal inspection paint", re: /\b(witness mark|inspection paint|torque seal|maintenance|smear|moved)\b/i },
+        { key: "conversation silence", query: "conversation analysis silence pause timing repair", re: /\b(pause|silence|turn taking|conversation repair|listening)\b/i },
+        { key: "robot embodiment categories", query: "robot embodiment anthropomorphic zoomorphic mechanoid functional categories", re: /\b(anthropomorphic|zoomorphic|mechanoid|functional|embodiment|robot category)\b/i },
+        { key: "bookbinding craft", query: "bookbinding bone folder spine glue paper grain", re: /\b(book|spine|glue|paper grain|bone folder|crease|fold)\b/i },
+        { key: "urban infrastructure", query: "urban infrastructure hidden systems tunnels bridges utilities", re: /\b(bridge|tunnel|street|sidewalk|utility|infrastructure|city)\b/i },
+        { key: "musical instrument design", query: "musical instrument design resonance soundboard strings hammers", re: /\b(piano|lute|guitar|string|hammer|soundboard|resonance|voicer)\b/i }
       ];
       return entries.slice(0, idleExpansionQueryLimit);
     }
@@ -2507,12 +2526,25 @@
       return contentWords.length < 3;
     }
 
+    function freshIdleSearchCount(entry) {
+      if (!entry?.at || Date.now() - entry.at >= idleSearchFatigueWindowMs) return 0;
+      return Number(entry.count) || 0;
+    }
+
+    function idleSearchCooldownForCount(baseMs, count) {
+      if (count >= 5) return 55 * 60 * 1000;
+      if (count >= 4) return 40 * 60 * 1000;
+      if (count >= 3) return 28 * 60 * 1000;
+      if (count >= 2) return 18 * 60 * 1000;
+      return baseMs;
+    }
+
     function idleSearchRecentlyUsed(candidate) {
       const now = Date.now();
       const entry = idleSearchLedger[idleSearchLedgerKey(candidate)];
-      if (entry && now - entry.at < idleSearchQueryCooldownMs) return true;
+      if (entry && now - entry.at < idleSearchCooldownForCount(idleSearchQueryCooldownMs, freshIdleSearchCount(entry))) return true;
       const topic = idleSearchLedger[`topic:${normalizeIdleTopicKey(candidate?.key || "")}`];
-      return Boolean(topic && now - topic.at < idleSearchTopicCooldownMs);
+      return Boolean(topic && now - topic.at < idleSearchCooldownForCount(idleSearchTopicCooldownMs, freshIdleSearchCount(topic)));
     }
 
     function noteIdleSearchAttempt(candidate, status = "attempt") {
@@ -2520,11 +2552,13 @@
       const key = idleSearchLedgerKey(candidate);
       const prior = idleSearchLedger[key] || { count: 0, at: 0, status: "" };
       const sameAttempt = prior.at && now - prior.at < 30 * 1000;
-      idleSearchLedger[key] = { count: sameAttempt ? prior.count : prior.count + 1, at: now, status };
+      const priorCount = freshIdleSearchCount(prior);
+      idleSearchLedger[key] = { count: sameAttempt ? priorCount : priorCount + 1, at: now, status };
       const topicKey = `topic:${normalizeIdleTopicKey(candidate?.key || "")}`;
       const topicPrior = idleSearchLedger[topicKey] || { count: 0, at: 0, status: "" };
       const sameTopicAttempt = topicPrior.at && now - topicPrior.at < 30 * 1000;
-      idleSearchLedger[topicKey] = { count: sameTopicAttempt ? topicPrior.count : topicPrior.count + 1, at: now, status };
+      const topicPriorCount = freshIdleSearchCount(topicPrior);
+      idleSearchLedger[topicKey] = { count: sameTopicAttempt ? topicPriorCount : topicPriorCount + 1, at: now, status };
     }
 
     function idleSearchCandidateAvailable(candidate) {
@@ -2656,12 +2690,12 @@
     function idleSearchLedgerContext() {
       const now = Date.now();
       const entries = Object.entries(idleSearchLedger)
-        .filter(([key, item]) => !key.startsWith("topic:") && item?.at && now - item.at < idleSearchTopicCooldownMs)
+        .filter(([key, item]) => !key.startsWith("topic:") && item?.at && now - item.at < idleSearchFatigueWindowMs)
         .sort((a, b) => b[1].at - a[1].at)
         .slice(0, 8)
         .map(([key, item]) => {
           const ageSeconds = Math.round((now - item.at) / 1000);
-          return `${key}: ${item.status || "used"} ${ageSeconds}s ago`;
+          return `${key}: ${item.status || "used"} ${ageSeconds}s ago, count ${freshIdleSearchCount(item)}`;
         });
       return entries.length ? `Recent idle searches on cooldown:\n${entries.join("\n")}` : "";
     }
@@ -2867,10 +2901,62 @@
       return signatures.join(" | ");
     }
 
+    function idleOpeningSignature(text) {
+      const value = String(text || "").toLowerCase().replace(/^[\s"'`]+/, "").trim();
+      if (!value) return "";
+      if (/^i keep (wondering|thinking|feeling|picturing|coming back|meaning|wanting|running into)\b/.test(value)) return "i keep";
+      if (/^turns out\b/.test(value)) return "turns out";
+      if (/^(wait|actually|okay so|no,|true answer)\b/.test(value)) return "self-correction";
+      if (/^(who|what|where|when|why|how|does|do|is|are|could|would)\b/.test(value)) return "question";
+      if (/^(a|an|the) [a-z0-9-]+/.test(value)) return "object-first";
+      if (/^someone\b/.test(value)) return "someone";
+      return "";
+    }
+
+    function idleThemeSignatures(text) {
+      const value = String(text || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const themes = [];
+      if (/\b(deliberate|controlled|intentional|allowed|supposed to be)\b.{0,80}\b(flaw|defect|wrong|scar|damage|weakness|gap|failure|relief|chamfer)\b/.test(value)
+        || /\b(flaw|defect|wrong|scar|damage|weakness|gap|failure|relief|chamfer)\b.{0,80}\b(deliberate|controlled|intentional|allowed|supposed to be)\b/.test(value)) {
+        themes.push("controlled defect");
+      }
+      if (/\b(word|name|named|called|means|root|etymology|semantic|phrase)\b/.test(value)) themes.push("word drift");
+      if (/\b(actual|real|only)\b.{0,80}\b(work|job|function|doing|holds|carries)\b/.test(value)) themes.push("hidden mechanism");
+      if (/\b(edge|corner|gap|threshold|between|boundary|line|slot|crease|relief)\b/.test(value)) themes.push("threshold");
+      if (/\b(witness|evidence|proof|receipt|record|mark|trace|log|file)\b/.test(value)) themes.push("evidence trace");
+      if (/\b(memory|remember|recall|palace|note|stored|saved|context)\b/.test(value)) themes.push("memory");
+      if (/\b(silence|pause|listening|conversation|turn|mic|hear|heard)\b/.test(value)) themes.push("conversation silence");
+      if (/\b(break|fails|failure|sacrifice|fuse|shear|snaps|forgive|forgiving)\b/.test(value)) themes.push("sacrificial failure");
+      return themes;
+    }
+
+    function frequentRecentValues(values, limit, minCount) {
+      const counts = new Map();
+      values.slice(-limit).forEach((value) => {
+        if (!value) return;
+        counts.set(value, (counts.get(value) || 0) + 1);
+      });
+      return [...counts.entries()]
+        .filter(([, count]) => count >= minCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([value, count]) => `${value} (${count})`);
+    }
+
     function idleTemplateContext() {
-      if (!recentIdleClaimSignatures.length) return "";
+      const lines = [];
       const recent = [...new Set(recentIdleClaimSignatures.slice(-8))];
-      return `Recently used idle rhetorical moves to avoid for now: ${recent.join(", ")}. Find a different shape for the thought.`;
+      if (recent.length) {
+        lines.push(`Recently used idle rhetorical moves to avoid for now: ${recent.join(", ")}. Find a different shape for the thought.`);
+      }
+      const commonOpenings = frequentRecentValues(recentIdleOpenings.filter((item) => item !== "object-first"), 10, 3);
+      if (commonOpenings.length) {
+        lines.push(`Recent idle openings are getting repetitive: ${commonOpenings.join(", ")}. Start the next thought a different way if it still sounds natural.`);
+      }
+      const commonThemes = frequentRecentValues(recentIdleThemes, 18, 4);
+      if (commonThemes.length) {
+        lines.push(`Recent conceptual themes are crowded: ${commonThemes.join(", ")}. Either make a larger associative jump, or explicitly advance/correct the theme instead of restating it.`);
+      }
+      return lines.join("\n");
     }
 
     function noteIdleTopics(text) {
@@ -2889,9 +2975,17 @@
       if (!value) return;
       const similarity = idleSimilarityToRecent(value);
       const claimSignature = idleClaimSignature(value);
+      const openingSignature = idleOpeningSignature(value);
+      const themeSignatures = idleThemeSignatures(value);
       recentIdleOutputs = [...recentIdleOutputs, value].slice(-8);
       if (claimSignature) {
         recentIdleClaimSignatures = [...recentIdleClaimSignatures, claimSignature].slice(-12);
+      }
+      if (openingSignature) {
+        recentIdleOpenings = [...recentIdleOpenings, openingSignature].slice(-16);
+      }
+      if (themeSignatures.length) {
+        recentIdleThemes = [...recentIdleThemes, ...themeSignatures].slice(-32);
       }
       if (idleSubstrateTestEnabled()) {
         substrateIdleOutputs = [...substrateIdleOutputs, value].slice(-8);
@@ -2905,6 +2999,9 @@
       if (similarity >= 0.74) {
         idleExhaustionCount += 2;
         log(events, `idle repetition flagged: ${(similarity * 100).toFixed(0)}% overlap`);
+      } else if (frequentRecentValues(recentIdleOpenings.filter((item) => item !== "object-first"), 8, 5).length || frequentRecentValues(recentIdleThemes, 16, 6).length) {
+        idleExhaustionCount += 1;
+        log(events, "idle diversity pressure flagged");
       } else if (idleExhaustedText(value)) {
         idleExhaustionCount += 1;
       } else {
@@ -5308,6 +5405,9 @@
         substrateIdleOutputs = [];
         idleTopicLedger = {};
         idleSearchLedger = {};
+        recentIdleClaimSignatures = [];
+        recentIdleOpenings = [];
+        recentIdleThemes = [];
       }
       log(events, `idle substrate test ${idleSubstrateTestEnabled() ? "on" : "off"}`);
     });
