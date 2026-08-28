@@ -756,6 +756,10 @@
     let recentIdleClaimSignatures = [];
     let recentIdleOpenings = [];
     let recentIdleThemes = [];
+    let idleUnresolvedQuestions = [];
+    let lastIdleBridgeAt = 0;
+    let lastIdleRevisionAt = 0;
+    let lastIdleUnresolvedAt = 0;
     let latestBrainStatus = null;
 
     function updateLogPaneHeight() {
@@ -826,6 +830,9 @@
     const idleSearchTopicCooldownMs = 12 * 60 * 1000;
     const idleSearchQueryCooldownMs = 8 * 60 * 1000;
     const idleSearchFatigueWindowMs = 60 * 60 * 1000;
+    const idleBridgeGapMs = 6 * 60 * 1000;
+    const idleRevisionGapMs = 7 * 60 * 1000;
+    const idleUnresolvedGapMs = 8 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
     const idleMouthAsideGapMs = 45 * 1000;
     const idleCuriositySeedRetireMs = 45 * 60 * 1000;
@@ -2287,8 +2294,18 @@
         prompt: "Ask yourself one small, answerable question about a remembered fact, then give a tentative answer. Do not ask the user to answer it."
       },
       {
+        name: "bridge",
+        minLevel: 8,
+        prompt: "Connect two unlike details from recent context, loaded notes, search seeds, or memory. The connection should be surprising but explainable; show the hinge, not just the weirdness."
+      },
+      {
         name: "unresolved",
         prompt: "Pick one unresolved tension from loaded notes: a taboo, unopened thing, correction, wrong count, forbidden object, silence, contradiction, or mystery. Do not solve it unless the context supports the answer; let uncertainty remain useful."
+      },
+      {
+        name: "revisit_unresolved",
+        minLevel: 8,
+        prompt: "Revisit one unresolved question from the private idle ledger. Add one new angle, one thing that would settle it, or a clearer uncertainty. Do not pretend it is resolved."
       },
       {
         name: "addressed_question",
@@ -2310,6 +2327,11 @@
         prompt: "Use fresh outside context to move one step away from the usual home topics. Treat the new detail as a seed for a strange but grounded connection, not as a correction."
       },
       {
+        name: "revision",
+        minLevel: 8,
+        prompt: "Pick one recent idle idea and sharpen, correct, or complicate it. A good revision sounds like noticing a better mechanism, not apologizing for being wrong."
+      },
+      {
         name: "curiosity",
         prompt: "Use the supplied curiosity context if present. Add one new outside detail to a remembered topic, then relate it lightly back to Robot 790."
       },
@@ -2325,6 +2347,9 @@
         if (lane.minLevel && level < lane.minLevel) return false;
         if (!idleLaneAllowedByAttention(lane)) return false;
         if (lane.name === "curiosity" && level < 10) return false;
+        if (lane.name === "bridge" && (currentIdleWonder() < 7 || now - lastIdleBridgeAt < idleSpecialLaneGapMs(level, idleBridgeGapMs))) return false;
+        if (lane.name === "revision" && (recentIdleOutputs.length < 3 || now - lastIdleRevisionAt < idleSpecialLaneGapMs(level, idleRevisionGapMs))) return false;
+        if (lane.name === "revisit_unresolved" && (!idleUnresolvedQuestions.length || now - lastIdleUnresolvedAt < idleSpecialLaneGapMs(level, idleUnresolvedGapMs))) return false;
         if (lane.name === "wander" && (currentIdleWonder() < 5 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
         if (lane.name === "lookup" && (currentIdleWonder() < 6 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
         if (lane.name === "addressed_question" && now - lastAddressedIdleQuestionAt < addressedIdleQuestionGapMs) return false;
@@ -2332,6 +2357,10 @@
       });
       idleLaneCursor = (idleLaneCursor + 1) % lanes.length;
       return lanes[idleLaneCursor];
+    }
+
+    function idleSpecialLaneGapMs(level, normalGapMs) {
+      return level >= 12 ? Math.min(normalGapMs, 90 * 1000) : normalGapMs;
     }
 
     function idleLaneAllowedByAttention(lane) {
@@ -2729,7 +2758,7 @@
       const substrate = suppressRobotBody && loadedNotes
         ? "Experimental substrate test is on: treat the loaded note contents as the primary world. Do not lean on Robot 790's chassis, treads, mic, Cast, room telemetry, or usual body identity unless the loaded note itself mentions them."
         : "";
-      return [substrate, idleAttentionContext({ suppressRobotBody }), loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", avoid, idleRetiredTopicsContext(), idleTemplateContext()]
+      return [substrate, idleAttentionContext({ suppressRobotBody }), loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", idleUnresolvedContext(), avoid, idleRetiredTopicsContext(), idleTemplateContext()]
         .filter(Boolean)
         .join("\n\n");
     }
@@ -2959,6 +2988,49 @@
       return lines.join("\n");
     }
 
+    function idleQuestionFromSentence(sentence) {
+      const text = String(sentence || "").replace(/\s+/g, " ").trim();
+      if (!/\?$/.test(text)) return "";
+      if (text.length < 14 || text.length > 180) return "";
+      if (/\b(scott|you|your|breakfast|in the room|are you listening|do you want|would you like)\b/i.test(text)) return "";
+      return text;
+    }
+
+    function noteIdleUnresolvedQuestions(text) {
+      const now = Date.now();
+      const questions = noteSentences(text).map(idleQuestionFromSentence).filter(Boolean);
+      for (const question of questions) {
+        const key = normalizeIdleTopicKey(question);
+        const existingIndex = idleUnresolvedQuestions.findIndex((item) => item.key === key);
+        if (existingIndex >= 0) {
+          const existing = idleUnresolvedQuestions[existingIndex];
+          idleUnresolvedQuestions[existingIndex] = {
+            ...existing,
+            count: (Number(existing.count) || 1) + 1,
+            lastAt: now
+          };
+        } else {
+          idleUnresolvedQuestions.push({ key, text: question, count: 1, firstAt: now, lastAt: now });
+          log(events, `idle unresolved remembered: ${question.slice(0, 120)}`);
+        }
+      }
+      idleUnresolvedQuestions = idleUnresolvedQuestions
+        .filter((item) => now - item.lastAt < 90 * 60 * 1000)
+        .slice(-10);
+    }
+
+    function idleUnresolvedContext() {
+      if (!idleUnresolvedQuestions.length) return "";
+      const now = Date.now();
+      const lines = idleUnresolvedQuestions
+        .slice(-8)
+        .map((item) => {
+          const ageMinutes = Math.max(0, Math.round((now - item.lastAt) / 60000));
+          return `- ${item.text} (${item.count || 1}x, last ${ageMinutes}m ago)`;
+        });
+      return `Private unresolved idle questions to revisit later:\n${lines.join("\n")}`;
+    }
+
     function noteIdleTopics(text) {
       const now = Date.now();
       const value = String(text || "").replace(/\s+/g, " ").trim();
@@ -2992,6 +3064,7 @@
       }
       idleOutputLog = [...idleOutputLog, { at: new Date().toLocaleTimeString(), text: value }].slice(-maxIdleOutputLog);
       noteIdleTopics(value);
+      noteIdleUnresolvedQuestions(value);
       if (claimSignature && recentIdleClaimSignatures.slice(0, -1).includes(claimSignature)) {
         idleExhaustionCount += 1;
         log(events, `idle phrase pattern flagged: ${claimSignature}`);
@@ -3074,6 +3147,9 @@
       const lane = chooseIdleLane(level);
       const yackMode = idleLevel12YackActive(level);
       if (lane.name === "addressed_question") lastAddressedIdleQuestionAt = Date.now();
+      if (lane.name === "bridge") lastIdleBridgeAt = Date.now();
+      if (lane.name === "revision") lastIdleRevisionAt = Date.now();
+      if (lane.name === "revisit_unresolved") lastIdleUnresolvedAt = Date.now();
       const suppressRobotBody = idleSubstrateTestEnabled();
       const context = recentConversationContext({ suppressRobotBody });
       const curiosityContext = await maybeIdleCuriosityContext(level, lane, context);
@@ -3098,6 +3174,15 @@
           : "",
         lane.name === "wander"
           ? "This is a palette-wander beat. Let the fresh outside detail become the main image for this thought. You may connect it back to home lightly, but do not immediately fall back to DEC, treads, mic, Cast, Salem, Montreal, MIT, Harvard, or Scott-biography unless the search result itself makes that bridge interesting."
+          : "",
+        lane.name === "bridge"
+          ? "This is an associative bridge beat. Pick two details that do not obviously belong together, name the structural hinge between them, and stop before it turns into a lecture."
+          : "",
+        lane.name === "revision"
+          ? "This is a revision beat. Start from a recent idle thought and improve it: correct a mechanism, narrow an overstatement, or find the plainer truer version."
+          : "",
+        lane.name === "revisit_unresolved"
+          ? "This is an unresolved-question beat. Use one private unresolved question from context. Keep the question alive, but advance the trail by one concrete clue or sharper uncertainty."
           : "",
         lane.name === "curiosity"
           ? "This is a curiosity-chain beat. If the fresh context contains a name, place, process, or object you did not have before, let that new thing stay alive as a future seed."
@@ -3904,6 +3989,7 @@
         `Notes: ${idleNotesFocusLabel()}`,
         `Substrate test: ${idleSubstrateTestEnabled() ? "on" : "off"}`,
         recentIdleOutputs.length ? `Recent idle outputs:\n${recentIdleOutputs.slice(-8).join("\n")}` : "",
+        idleUnresolvedContext(),
         idleCuriositySeeds.length
           ? `Curiosity seeds:\n${idleCuriositySeeds.slice(-8).map((seed) => `- ${seed.label}`).join("\n")}`
           : "",
@@ -5408,6 +5494,10 @@
         recentIdleClaimSignatures = [];
         recentIdleOpenings = [];
         recentIdleThemes = [];
+        idleUnresolvedQuestions = [];
+        lastIdleBridgeAt = 0;
+        lastIdleRevisionAt = 0;
+        lastIdleUnresolvedAt = 0;
       }
       log(events, `idle substrate test ${idleSubstrateTestEnabled() ? "on" : "off"}`);
     });
