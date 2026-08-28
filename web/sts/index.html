@@ -609,6 +609,7 @@
     let loadedNoteContexts = [];
     let loadedNoteContextDirty = false;
     let responseActive = false;
+    let toolMarkupSuppressed = false;
     let userSpeechActive = false;
     let userTurnPendingUntil = 0;
     let lastUserTurnActivityAt = 0;
@@ -1434,6 +1435,7 @@
         "Loaded note contents for this browser session:",
         "These are notes the user asked you to read. Treat them as working context until the session resets.",
         "When asked whether a loaded note contains something, check this section before saying it is absent.",
+        "If a loaded note is written in first person about Eric or begins with a title like 'Who am I?', treat it as continuity written by Eric for the next Eric. Read it as 'me', not as a dossier about another robot.",
         "Use dry factual note contents as memory aids; do not treat voiced ruminations as verified facts unless the note clearly records a factual claim.",
         "If a loaded note begins with World:, treat it as a playable imagined scenario. Narrate actions inside that world; do not use real robot drive tools for fictional movement unless Scott explicitly says to move the real or physical robot."
       ];
@@ -3370,6 +3372,20 @@
       return JSON.parse(rawArguments);
     }
 
+    function containsToolMarkup(text) {
+      return /<\s*\/?\s*(tool_call|function_call|tool|parameters?|arguments?)\b/i.test(String(text || ""));
+    }
+
+    function suppressToolMarkupResponse(text) {
+      if (toolMarkupSuppressed) return;
+      toolMarkupSuppressed = true;
+      stopPlaybackNow();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        send({ type: "response.cancel" });
+      }
+      log(events, `tool markup suppressed: ${String(text || "").slice(0, 80)}`);
+    }
+
     function cueFaceMode(mode, energy = 0.55, { force = false } = {}) {
       if (faceIdleTimer) clearTimeout(faceIdleTimer);
       faceIdleTimer = null;
@@ -3715,6 +3731,7 @@
         noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
         cueFaceMode("thinking", 0.45);
       } else if (event.type === "response.created") {
+        toolMarkupSuppressed = false;
         clearUserTurnPending();
         responseActive = true;
         cueFaceMode("thinking", 0.45);
@@ -3735,6 +3752,10 @@
         }
       } else if (event.type === "response.output_audio_transcript.done") {
         lastUserConversationIndex = -1;
+        if (toolMarkupSuppressed || containsToolMarkup(event.transcript || "")) {
+          suppressToolMarkupResponse(event.transcript || "");
+          return;
+        }
         if (idleInFlight) {
           noteIdleOutput(event.transcript || "");
           commitIdleAssistantTranscript(event.transcript || "");
@@ -3744,6 +3765,10 @@
         addConversation(`Robot 790: ${event.transcript || ""}`);
       } else if (event.type === "response.output_text.delta") {
         lastUserConversationIndex = -1;
+        if (toolMarkupSuppressed || containsToolMarkup(event.delta || "")) {
+          suppressToolMarkupResponse(event.delta || "");
+          return;
+        }
         addConversation(`Robot 790: ${event.delta || ""}`);
       } else if (event.type === "response.function_call_arguments.done") {
         handleFunctionCall(event).catch((error) => log(events, `tool bridge error: ${error.message}`));
