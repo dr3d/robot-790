@@ -424,7 +424,7 @@
           </div>
           <label>
             Interrupt <span id="interruptSensitivityValue">6/10</span>
-            <input id="interruptSensitivity" type="range" min="1" max="10" step="1" value="6">
+            <input id="interruptSensitivity" type="range" min="0" max="10" step="1" value="6">
           </label>
           <button id="startMic" disabled>Start Mic</button>
           <button id="stopMic" disabled>Stop Mic</button>
@@ -1575,16 +1575,18 @@
     }
 
     function currentInterruptSensitivity() {
-      return Math.max(1, Math.min(10, Number(interruptSensitivity.value) || 6));
+      const value = Number(interruptSensitivity.value);
+      return Number.isFinite(value) ? Math.max(0, Math.min(10, value)) : 6;
     }
 
     function interruptPeakThreshold(level = currentInterruptSensitivity()) {
+      if (level <= 0) return Infinity;
       return 0.68 - level * 0.05;
     }
 
     function loadInterruptSensitivity() {
       const saved = Number(localStorage.getItem(interruptSensitivityStorageKey));
-      interruptSensitivity.value = Number.isFinite(saved) ? String(Math.max(1, Math.min(10, saved))) : "6";
+      interruptSensitivity.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "6";
       updateInterruptSensitivityUi();
     }
 
@@ -1594,7 +1596,7 @@
 
     function updateInterruptSensitivityUi() {
       const level = currentInterruptSensitivity();
-      interruptSensitivityValue.textContent = `${level}/10`;
+      interruptSensitivityValue.textContent = level <= 0 ? "Off" : `${level}/10`;
       saveInterruptSensitivity();
     }
 
@@ -3622,6 +3624,7 @@
 
     function maybeBargeInFromMicPeak(peak) {
       if (!outputAudioActive()) return;
+      if (currentInterruptSensitivity() <= 0) return;
       if (peak < interruptPeakThreshold()) return;
       const now = Date.now();
       if (now - lastBargeInAt < bargeInCooldownMs) return;
@@ -3631,7 +3634,7 @@
         send({ type: "response.cancel" });
       }
       cueFaceMode("listening", 0.45, { force: true });
-      log(events, `barge-in: peak ${peak.toFixed(2)}, sensitivity ${currentInterruptSensitivity()}/10`);
+      log(events, `barge-in: peak ${peak.toFixed(2)}, sensitivity ${interruptSensitivityValue.textContent}`);
     }
 
     function joinAudioChunks() {
