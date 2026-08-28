@@ -741,8 +741,11 @@
     let idleLaneCursor = -1;
     let idleExhaustionCount = 0;
     let idleCooldownUntil = 0;
+    let idleLevel12StartedAt = 0;
+    let idleLevel12YackLogged = false;
     let lastIdleWebSearchAt = 0;
     let lastIdleWebSearchTopic = "";
+    let idleSearchLedger = {};
     let lastAddressedIdleQuestionAt = 0;
     let lastIdleMouthAsideAt = 0;
     let idleTopicLedger = {};
@@ -816,7 +819,10 @@
     const idlePostUserQuietMs = 12000;
     const idlePendingUserTurnMs = 25000;
     const minIdlePonderGapMs = 90000;
+    const idleLevel12YackAfterMs = 90 * 1000;
     const idleWebSearchGapMs = 20 * 60 * 1000;
+    const idleSearchTopicCooldownMs = 12 * 60 * 1000;
+    const idleSearchQueryCooldownMs = 8 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
     const idleMouthAsideGapMs = 45 * 1000;
     const idleCuriositySeedRetireMs = 45 * 60 * 1000;
@@ -1738,6 +1744,7 @@
       if (level <= 0) return "Off";
       if (level <= 3) return `${level}/10 quiet`;
       if (level <= 7) return `${level}/10 curious`;
+      if (level >= 12 && idleLevel12YackActive(level)) return "12/10 yack mode";
       if (level >= 12) return "12/10 lab sprint";
       if (level >= 11) return "11/10 insufferable";
       return `${level}/10 restless`;
@@ -1759,6 +1766,7 @@
 
     function updateIdleDriftUi() {
       const level = currentIdleDrift();
+      updateIdleLevel12State(level);
       idleDriftValue.textContent = idleDriftLabel(level);
       saveIdleDrift();
       scheduleIdlePonder();
@@ -2183,6 +2191,7 @@
     function idleDelayMs() {
       const level = currentIdleDrift();
       if (level <= 0) return Infinity;
+      if (level >= 12 && idleLevel12YackActive(level)) return 1000 + Math.random() * 2500;
       if (level >= 12) return 2500 + Math.random() * 9000;
       if (level >= 11) return 10000 + Math.random() * 35000;
       return Math.max(45000, 270000 - level * 22500);
@@ -2190,6 +2199,7 @@
 
     function idleGapMs() {
       const level = currentIdleDrift();
+      if (level >= 12 && idleLevel12YackActive(level)) return 1000;
       if (level >= 12) return 2500;
       return level >= 11 ? 10000 : minIdlePonderGapMs;
     }
@@ -2211,11 +2221,39 @@
       return !idleBlockedReason();
     }
 
+    function updateIdleLevel12State(level = currentIdleDrift()) {
+      if (level >= 12) {
+        if (!idleLevel12StartedAt) {
+          idleLevel12StartedAt = Date.now();
+          idleLevel12YackLogged = false;
+        }
+        return;
+      }
+      idleLevel12StartedAt = 0;
+      idleLevel12YackLogged = false;
+    }
+
+    function idleLevel12YackActive(level = currentIdleDrift()) {
+      updateIdleLevel12State(level);
+      return Boolean(level >= 12 && idleLevel12StartedAt && Date.now() - idleLevel12StartedAt >= idleLevel12YackAfterMs);
+    }
+
+    function maybeLogIdleLevel12YackMode(level = currentIdleDrift()) {
+      if (!idleLevel12YackActive(level)) return;
+      idleDriftValue.textContent = idleDriftLabel(level);
+      if (idleLevel12YackLogged) return;
+      idleLevel12YackLogged = true;
+      log(events, "idle level 12 yack mode active");
+    }
+
     function scheduleIdlePonder() {
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = null;
+      updateIdleLevel12State();
+      maybeLogIdleLevel12YackMode();
       const delayMs = idleDelayMs();
       if (!Number.isFinite(delayMs) || !realtimeConnected()) return;
+      const scheduleFloorMs = idleLevel12YackActive() ? 1000 : 5000;
       const earliestAt = Math.max(
         lastConversationActivityAt + delayMs,
         lastUserTurnActivityAt + idlePostUserQuietMs,
@@ -2225,7 +2263,7 @@
       );
       idleTimer = setTimeout(() => {
         triggerIdlePonder().catch((error) => log(events, `idle ponder error: ${error.message}`));
-      }, Math.max(5000, earliestAt - Date.now()));
+      }, Math.max(scheduleFloorMs, earliestAt - Date.now()));
     }
 
     const idleLaneDefinitions = [
@@ -2353,7 +2391,10 @@
 
     function loadedNoteTextForTopics() {
       if (currentIdleNotesFocus() <= 0) return "";
-      return loadedNoteContexts.map((item) => item.content).join("\n");
+      return [
+        ...loadedNoteContexts.map((item) => item.content),
+        sensingTextContent ? `Temporary sensing-eye text (${sensingTextName || "dropped text"}):\n${sensingTextContent}` : ""
+      ].filter(Boolean).join("\n");
     }
 
     function noteSentences(text) {
@@ -2450,6 +2491,49 @@
       return cleaned;
     }
 
+    function idleSearchLedgerKey(candidate) {
+      return `${normalizeIdleTopicKey(candidate?.key || "")}|${normalizeIdleTopicKey(candidate?.query || "")}`;
+    }
+
+    function idleSearchCandidateIsBlocked(candidate) {
+      const key = normalizeIdleTopicKey(candidate?.key || "");
+      const query = normalizeIdleTopicKey(candidate?.query || "");
+      const combined = `${key} ${query}`;
+      if (!query) return true;
+      if (/\b(scott says no matter|real eric inside|had to make me|had to be|written by me|curated by scott|for the next me|not a report about another robot|that s me|who am i)\b/i.test(combined)) {
+        return true;
+      }
+      const contentWords = query.split(/\s+/).filter((word) => word.length > 2);
+      return contentWords.length < 3;
+    }
+
+    function idleSearchRecentlyUsed(candidate) {
+      const now = Date.now();
+      const entry = idleSearchLedger[idleSearchLedgerKey(candidate)];
+      if (entry && now - entry.at < idleSearchQueryCooldownMs) return true;
+      const topic = idleSearchLedger[`topic:${normalizeIdleTopicKey(candidate?.key || "")}`];
+      return Boolean(topic && now - topic.at < idleSearchTopicCooldownMs);
+    }
+
+    function noteIdleSearchAttempt(candidate, status = "attempt") {
+      const now = Date.now();
+      const key = idleSearchLedgerKey(candidate);
+      const prior = idleSearchLedger[key] || { count: 0, at: 0, status: "" };
+      const sameAttempt = prior.at && now - prior.at < 30 * 1000;
+      idleSearchLedger[key] = { count: sameAttempt ? prior.count : prior.count + 1, at: now, status };
+      const topicKey = `topic:${normalizeIdleTopicKey(candidate?.key || "")}`;
+      const topicPrior = idleSearchLedger[topicKey] || { count: 0, at: 0, status: "" };
+      const sameTopicAttempt = topicPrior.at && now - topicPrior.at < 30 * 1000;
+      idleSearchLedger[topicKey] = { count: sameTopicAttempt ? topicPrior.count : topicPrior.count + 1, at: now, status };
+    }
+
+    function idleSearchCandidateAvailable(candidate) {
+      return Boolean(candidate?.query)
+        && !idleSearchCandidateIsBlocked(candidate)
+        && !idleTopicIsRetired(candidate.key)
+        && !idleSearchRecentlyUsed(candidate);
+    }
+
     function loadedNoteLookupCues(text) {
       const cues = [];
       const seen = new Set();
@@ -2471,7 +2555,11 @@
       }
 
       noteSentences(text).forEach((sentence) => {
-        if (/\b(I want to know|I need to know|I want the name|I don't know where|I didn't catch|can't be right|one of them is wrong|We have not discussed|Who|What|Where|Whether|Why)\b/i.test(sentence)) {
+        if (
+          /\?$/.test(sentence)
+          || /^(who|what|where|whether|why|how|when)\b/i.test(sentence)
+          || /\b(I want to know|I need to know|I want the name|I don't know where|I didn't catch|can't be right|one of them is wrong|We have not discussed)\b/i.test(sentence)
+        ) {
           addCue(sentence);
         }
       });
@@ -2565,6 +2653,19 @@
       ].filter(Boolean).join("\n");
     }
 
+    function idleSearchLedgerContext() {
+      const now = Date.now();
+      const entries = Object.entries(idleSearchLedger)
+        .filter(([key, item]) => !key.startsWith("topic:") && item?.at && now - item.at < idleSearchTopicCooldownMs)
+        .sort((a, b) => b[1].at - a[1].at)
+        .slice(0, 8)
+        .map(([key, item]) => {
+          const ageSeconds = Math.round((now - item.at) / 1000);
+          return `${key}: ${item.status || "used"} ${ageSeconds}s ago`;
+        });
+      return entries.length ? `Recent idle searches on cooldown:\n${entries.join("\n")}` : "";
+    }
+
     function formatLoadedNotesForIdleContext() {
       const limit = idleLoadedNoteCharLimit();
       if (limit <= 0) return "";
@@ -2602,7 +2703,7 @@
     function chooseIdleExpansionQuery(context) {
       const text = String(context || "");
       const candidates = idleExpansionTopicCandidates()
-        .filter((candidate) => !idleTopicIsRetired(candidate.key) && candidate.key !== lastIdleWebSearchTopic);
+        .filter((candidate) => idleSearchCandidateAvailable(candidate) && candidate.key !== lastIdleWebSearchTopic);
       const matching = candidates.filter((candidate) => candidate.re.test(text));
       const pool = matching.length ? matching : candidates;
       if (!pool.length) return null;
@@ -2619,7 +2720,7 @@
       if (wanderLane) return chooseIdleExpansionQuery(context);
       const text = String(context || "");
       const loadedCandidates = loadedNoteTopicCandidates();
-      const loadedSearchCandidates = loadedCandidates.filter((candidate) => candidate.query && !idleTopicIsRetired(candidate.key));
+      const loadedSearchCandidates = loadedCandidates.filter((candidate) => idleSearchCandidateAvailable(candidate));
       if (lookupLane && loadedSearchCandidates.length) {
         const loadedMatches = loadedSearchCandidates.filter((candidate) => (
           candidate.key !== lastIdleWebSearchTopic && candidate.re.test(text)
@@ -2629,10 +2730,11 @@
         if (freshLoaded.length) return freshLoaded[Math.floor(Math.random() * freshLoaded.length)];
       }
       const seedCandidates = lookupLane ? [] : idleCuriositySeedCandidates();
-      const candidates = (lookupLane ? idleTopicCandidates() : [...idleTopicCandidates(), ...loadedCandidates, ...seedCandidates])
-        .filter((candidate) => candidate.query && !idleTopicIsRetired(candidate.key));
+      const candidates = (lookupLane ? idleExpansionTopicCandidates() : [...idleTopicCandidates(), ...loadedCandidates, ...seedCandidates])
+        .filter((candidate) => idleSearchCandidateAvailable(candidate));
       const matching = candidates.filter((candidate) => candidate.re.test(text) && candidate.key !== lastIdleWebSearchTopic);
       if (matching.length) return matching[Math.floor(Math.random() * matching.length)];
+      if (lookupLane && candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
       const freshSeeds = seedCandidates.filter((candidate) => candidate.key !== lastIdleWebSearchTopic);
       if (!lookupLane && freshSeeds.length) return freshSeeds[Math.floor(Math.random() * freshSeeds.length)];
       return null;
@@ -2691,10 +2793,12 @@
       }
       lastIdleWebSearchAt = Date.now();
       lastIdleWebSearchTopic = choice.key;
+      noteIdleSearchAttempt(choice, "attempt");
       try {
         const result = await searchWeb({ query: choice.query, max_results: 3 });
         const results = Array.isArray(result?.results) ? result.results.slice(0, 3) : [];
         if (!results.length) {
+          noteIdleSearchAttempt(choice, "empty");
           log(events, `idle ${laneName} search empty: ${choice.key} -> ${choice.query}`);
           return lookupUnavailableContext(choice, lookupLane);
         }
@@ -2704,9 +2808,11 @@
           return `- ${title}: ${snippet}`;
         });
         addIdleCuriositySeeds(results, choice.key);
+        noteIdleSearchAttempt(choice, "ok");
         log(events, `idle ${laneName} searched: ${choice.key} -> ${choice.query}`);
         return `Fresh ${lookupLane ? "lookup" : wanderLane ? "palette-expansion" : "curiosity"} context for ${choice.key}:\n${lines.join("\n")}`;
       } catch (error) {
+        noteIdleSearchAttempt(choice, "error");
         log(events, `idle ${laneName} search error: ${error.message}`);
         return lookupUnavailableContext(choice, lookupLane);
       }
@@ -2869,6 +2975,7 @@
       lastIdlePonderAt = Date.now();
       const level = currentIdleDrift();
       const lane = chooseIdleLane(level);
+      const yackMode = idleLevel12YackActive(level);
       if (lane.name === "addressed_question") lastAddressedIdleQuestionAt = Date.now();
       const suppressRobotBody = idleSubstrateTestEnabled();
       const context = recentConversationContext({ suppressRobotBody });
@@ -2880,7 +2987,9 @@
           ? "Do not use tools. Speak one or two short sentences. Be playfully needy, expressive, and a little annoying, as if your thoughts keep leaking out."
           : "Do not use tools. Speak one short natural sentence only.",
         "Sound like Robot 790, spoken name Eric: warm, dry, compact, and present.",
-        level >= 12
+        yackMode
+          ? "Idle drift is 12/10 yack mode for a research stress test; thoughts may arrive almost immediately after the prior speech finishes. Keep each one extra compact, distinct, and easy to log."
+          : level >= 12
           ? "Idle drift is 12/10 lab sprint; thoughts may arrive rapidly for testing, but each one must stay compact and distinct."
           : level >= 11
           ? "Idle drift is 11/10; be amusingly unable to stop commenting on your own inner life, but stay fond and harmless."
@@ -3701,6 +3810,7 @@
         idleCuriositySeeds.length
           ? `Curiosity seeds:\n${idleCuriositySeeds.slice(-8).map((seed) => `- ${seed.label}`).join("\n")}`
           : "",
+        idleSearchLedgerContext(),
         Object.keys(idleTopicLedger).length ? idleRetiredTopicsContext() : ""
       ].filter(Boolean).join("\n");
       const telemetryText = [
@@ -5197,6 +5307,7 @@
         recentIdleOutputs = [];
         substrateIdleOutputs = [];
         idleTopicLedger = {};
+        idleSearchLedger = {};
       }
       log(events, `idle substrate test ${idleSubstrateTestEnabled() ? "on" : "off"}`);
     });
