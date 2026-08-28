@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import mimetypes
 import re
 import subprocess
 from datetime import datetime
@@ -9,9 +10,10 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from robot_790d.brain_status import get_brain_status
+from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
@@ -21,6 +23,9 @@ from robot_790d.web_search import search_web
 class StsPageHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlsplit(self.path)
+        if parsed.path.startswith(GENERATED_IMAGE_URL_PREFIX):
+            self._handle_generated_image(parsed.path)
+            return
         if parsed.path == "/api/search":
             self._handle_search(parsed.query)
             return
@@ -46,6 +51,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/logs/record":
             self._handle_log_record()
             return
+        if parsed.path == "/api/images/generate":
+            self._handle_image_generate()
+            return
         if parsed.path == "/api/cast":
             self._handle_cast()
             return
@@ -57,7 +65,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
     def _handle_search(self, query_string: str) -> None:
         params = parse_qs(query_string)
         query = _first_param(params, "q") or _first_param(params, "query") or ""
-        max_results = _first_param(params, "max_results") or "5"
+        max_results = _int_param(params, "max_results", 5)
         payload = search_web(query, max_results=max_results)
         status_code = 200 if payload.get("status") == "ok" else 400
         self._send_json(status_code, payload)
@@ -135,6 +143,41 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         self._send_json(200, result)
+
+    def _handle_image_generate(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = generate_image(
+                str(payload.get("prompt") or ""),
+                title=str(payload.get("title") or ""),
+                provider=str(payload.get("provider") or "").strip() or None,
+                size=str(payload.get("size") or "").strip() or None,
+                repo_root=Path(__file__).resolve().parents[2],
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        status_code = 200 if result.get("status") == "ok" else 400
+        self._send_json(status_code, result)
+
+    def _handle_generated_image(self, path: str) -> None:
+        filename = unquote(path.removeprefix(GENERATED_IMAGE_URL_PREFIX))
+        try:
+            image_path = generated_image_path(filename, Path(__file__).resolve().parents[2])
+        except ValueError:
+            self.send_error(404, "Generated image not found.")
+            return
+        if not image_path.is_file():
+            self.send_error(404, "Generated image not found.")
+            return
+        content = image_path.read_bytes()
+        content_type = mimetypes.guess_type(image_path.name)[0] or "application/octet-stream"
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
 
     def _handle_cast(self) -> None:
         try:
@@ -230,6 +273,14 @@ def _first_param(params: dict[str, list[str]], name: str) -> str | None:
     if not values:
         return None
     return values[0]
+
+
+def _int_param(params: dict[str, list[str]], name: str, default: int) -> int:
+    value = _first_param(params, name)
+    try:
+        return int(value) if value is not None else default
+    except ValueError:
+        return default
 
 
 def record_log_snapshot(source: str, content: str, repo_root: Path | None = None) -> dict[str, object]:

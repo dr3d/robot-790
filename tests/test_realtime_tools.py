@@ -86,6 +86,7 @@ def test_realtime_tool_catalog_exposes_robot_actions() -> None:
         "get_weather",
         "get_brain_status",
         "show_web_page",
+        "generate_image",
         "cast_media",
         "write_text_file",
         "read_text_file",
@@ -337,6 +338,39 @@ def test_show_web_page_rejects_non_http_url() -> None:
     result = realtime_tools._show_web_page({"url": "file:///secret.html"})
 
     assert result == {"status": "error", "error": "url must be an HTTP or HTTPS web page URL"}
+
+
+def test_generate_image_tool_uses_shared_helper(monkeypatch) -> None:
+    def fake_generate_image(
+        prompt: str,
+        *,
+        title: str = "",
+        provider: str | None = None,
+        size: str | None = None,
+    ) -> dict[str, object]:
+        return {
+            "status": "ok",
+            "tool": "generate_image",
+            "prompt": prompt,
+            "title": title,
+            "provider": provider,
+            "size": size,
+            "url": "/generated-images/test.png",
+        }
+
+    monkeypatch.setattr(realtime_tools, "generate_image", fake_generate_image)
+
+    result = realtime_tools._generate_image({"prompt": "a clockwork lighthouse", "title": "lighthouse"})
+
+    assert result == {
+        "status": "ok",
+        "tool": "generate_image",
+        "prompt": "a clockwork lighthouse",
+        "title": "lighthouse",
+        "provider": None,
+        "size": None,
+        "url": "/generated-images/test.png",
+    }
 
 
 def test_text_file_tools_use_instance_notes_folder(tmp_path, monkeypatch) -> None:

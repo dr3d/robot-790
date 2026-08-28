@@ -213,11 +213,33 @@ The realtime page can expose these tools to the LLM:
 - `search_web`: compact web search results.
 - `get_weather`: current weather lookup.
 - `show_web_page`: open a web page in the UI.
+- `generate_image`: create one still image from a visual prompt, save it under
+  `logs/generated-images/`, and show it in the STS page.
 - `cast_media`: list Cast receivers, play YouTube, show direct image URLs, or
   stop Cast playback.
 - `write_text_file`, `read_text_file`, `list_text_files`: text-note file tools.
 - `get_brain_status`: local diagnostics such as model, context, token pressure,
   latency, TTS timing, and approximate browser context contribution.
+
+Image generation is opt-in from the `LLM image generation` checkbox because a
+cloud provider may charge per image. The default provider is OpenAI:
+
+```powershell
+$env:OPENAI_API_KEY = "..."
+$env:ROBOT_790_IMAGE_PROVIDER = "openai"
+$env:ROBOT_790_OPENAI_IMAGE_MODEL = "gpt-image-1-mini"
+```
+
+For plumbing tests without cloud calls:
+
+```powershell
+$env:ROBOT_790_IMAGE_PROVIDER = "mock"
+```
+
+The image tool contract is intentionally small for now: Eric supplies a prompt,
+optional title, and optional size. Provider-specific controls such as aspect
+ratio, style, quality, and ComfyUI workflows can be added behind the same tool
+later.
 
 Face and chassis tool calls should still be short and explicit. The model
 proposes; deterministic tool and firmware layers decide what is actually safe

@@ -11,6 +11,7 @@ from robot_790d.behavior import BehaviorDaemon
 from robot_790d.brain_status import get_brain_status as read_brain_status
 from robot_790d.devices.esp32_chassis import DEFAULT_CHASSIS_URL, ChassisSettings, Esp32ChassisClient
 from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, FaceSettings
+from robot_790d.image_generation import generate_image
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.memory import forget_fact, remember_fact
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
@@ -474,6 +475,35 @@ TOOLS: list[dict[str, object]] = [
     },
     {
         "type": "function",
+        "name": "generate_image",
+        "description": (
+            "Generate one still image from a visual prompt when the user asks Robot 790 to imagine, draw, "
+            "render, make an AI image, or show what is in its head. Return the saved local image URL; do not "
+            "use for ordinary conversation or idle rumination unless the user explicitly invites image generation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "Concrete visual prompt for the image generator.",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Optional short filename/display title for the generated image.",
+                },
+                "size": {
+                    "type": "string",
+                    "default": "1024x1024",
+                    "description": "Optional image size. Keep 1024x1024 unless the user asks otherwise.",
+                },
+            },
+            "required": ["prompt"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
         "name": "write_text_file",
         "description": (
             "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, "
@@ -563,6 +593,8 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_cast_media, parsed)
     elif name == "show_web_page":
         result = await asyncio.to_thread(_show_web_page, parsed)
+    elif name == "generate_image":
+        result = await asyncio.to_thread(_generate_image, parsed)
     elif name == "write_text_file":
         result = await asyncio.to_thread(_write_text_file, parsed)
     elif name == "read_text_file":
@@ -815,7 +847,7 @@ def _forget_fact(arguments: dict[str, object]) -> dict[str, object]:
 
 def _search_web(arguments: dict[str, object]) -> dict[str, object]:
     query = str(arguments.get("query", "")).strip()
-    max_results = arguments.get("max_results", 5)
+    max_results = int(_clamp(_float_argument(arguments.get("max_results"), default=5.0), 1.0, 10.0))
     return search_web(query, max_results=max_results)
 
 
@@ -879,6 +911,14 @@ def _show_web_page(arguments: dict[str, object]) -> dict[str, object]:
     if title:
         result["title"] = title[:80]
     return result
+
+
+def _generate_image(arguments: dict[str, object]) -> dict[str, object]:
+    prompt = str(arguments.get("prompt") or "").strip()
+    title = str(arguments.get("title") or "").strip()
+    size = str(arguments.get("size") or "").strip() or None
+    provider = str(arguments.get("provider") or "").strip() or None
+    return generate_image(prompt, title=title, provider=provider, size=size)
 
 
 def _write_text_file(arguments: dict[str, object]) -> dict[str, object]:
@@ -952,7 +992,7 @@ def _parse_arguments(arguments: dict[str, object] | str | None) -> dict[str, obj
 
 def _float_argument(value: object, default: float) -> float:
     try:
-        return float(value)
+        return float(str(value))
     except (TypeError, ValueError):
         return default
 

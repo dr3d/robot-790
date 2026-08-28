@@ -11,6 +11,7 @@ qwen3_tts.env
 *.log
 logs/runs/
 logs/live/
+logs/generated-images/
 samples/
 notes/
 backups/

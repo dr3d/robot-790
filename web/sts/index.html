@@ -152,6 +152,9 @@
     .mic-vision-controls {
       grid-template-columns: 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto;
     }
+    .generated-image-controls {
+      grid-template-columns: minmax(240px, 1fr) auto auto;
+    }
     .vision-drop {
       width: 152px;
       height: 152px;
@@ -210,6 +213,32 @@
       display: -webkit-box;
       -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
+    }
+    .generated-image-card {
+      min-height: 96px;
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+    .generated-image-preview {
+      width: 88px;
+      height: 88px;
+      display: none;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #0c0d10;
+    }
+    .generated-image-preview.ready {
+      display: block;
+    }
+    .generated-image-card:not(.ready) {
+      grid-template-columns: minmax(0, 1fr);
     }
     label {
       display: grid;
@@ -423,7 +452,7 @@
         height: auto;
         min-height: 100vh;
       }
-      header, .controls, .url-controls, .voice-controls, .mic-vision-controls, .grid {
+      header, .controls, .url-controls, .voice-controls, .mic-vision-controls, .generated-image-controls, .grid {
         grid-template-columns: 1fr;
         align-items: stretch;
       }
@@ -508,6 +537,17 @@
           <button id="startMic" disabled>Start Mic</button>
           <button id="stopMic" disabled>Stop Mic</button>
         </section>
+        <section class="controls generated-image-controls">
+          <div id="generatedImageCard" class="generated-image-card">
+            <img id="generatedImagePreview" class="generated-image-preview" alt="">
+            <span class="vision-copy">
+              <span class="vision-title">Imagined Image</span>
+              <span id="generatedImageHint" class="vision-hint">No generated image yet</span>
+            </span>
+          </div>
+          <button id="generatedImageOpen" disabled>Open</button>
+          <button id="generatedImageClear" disabled>Clear</button>
+        </section>
       </div>
     </details>
 
@@ -590,6 +630,7 @@
             <span class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</span>
             <span class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</span>
             <span class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</span>
+            <span class="toggle-row"><input id="llmImageTools" type="checkbox"> LLM image generation</span>
           </label>
           <button id="memoryRefresh">Refresh</button>
           <button id="memoryForgetAll">Forget All</button>
@@ -654,6 +695,7 @@
     const llmWebPageTools = document.querySelector("#llmWebPageTools");
     const llmCastMediaTools = document.querySelector("#llmCastMediaTools");
     const llmNoteFileTools = document.querySelector("#llmNoteFileTools");
+    const llmImageTools = document.querySelector("#llmImageTools");
     const memoryPreview = document.querySelector("#memoryPreview");
     const memoryStatus = document.querySelector("#memoryStatus");
     const memoryRefreshButton = document.querySelector("#memoryRefresh");
@@ -681,6 +723,11 @@
     const visionPreview = document.querySelector("#visionPreview");
     const visionHint = document.querySelector("#visionHint");
     const visionClearButton = document.querySelector("#visionClear");
+    const generatedImageCard = document.querySelector("#generatedImageCard");
+    const generatedImagePreview = document.querySelector("#generatedImagePreview");
+    const generatedImageHint = document.querySelector("#generatedImageHint");
+    const generatedImageOpenButton = document.querySelector("#generatedImageOpen");
+    const generatedImageClearButton = document.querySelector("#generatedImageClear");
     const clearLogButton = document.querySelector("#clearLog");
     const copyConversationButton = document.querySelector("#copyConversation");
     const copyEventsButton = document.querySelector("#copyEvents");
@@ -845,6 +892,8 @@
     let visionImageUrl = "";
     let visionImageName = "";
     let visionImageStaged = false;
+    let generatedImageUrl = "";
+    let generatedImageName = "";
     let sensingTextContent = "";
     let sensingTextName = "";
     let castPlaybackActive = false;
@@ -1322,6 +1371,38 @@
       }
     ];
 
+    const imageTools = [
+      {
+        type: "function",
+        name: "generate_image",
+        description: (
+          "Generate one still image from a visual prompt when the user asks Robot 790 to imagine, draw, render, " +
+          "make an AI image, or show what is in its head. Use only for explicit image-generation requests for now, " +
+          "because cloud image generation may cost money."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            prompt: {
+              type: "string",
+              description: "Concrete visual prompt for the image generator."
+            },
+            title: {
+              type: "string",
+              description: "Optional short title for the generated image."
+            },
+            size: {
+              type: "string",
+              default: "1024x1024",
+              description: "Optional image size. Use 1024x1024 unless the user asks otherwise."
+            }
+          },
+          required: ["prompt"],
+          additionalProperties: false
+        }
+      }
+    ];
+
     const castMediaTools = [
       {
         type: "function",
@@ -1411,6 +1492,9 @@
       "Use show_web_page when the user asks you to open, show, display, or bring up a web page in the UI.",
       "If the user says open the page after a search, use show_web_page with the most relevant URL from the recent search_web results.",
       "Never say you opened a web page unless show_web_page succeeded.",
+      "Use generate_image when the user explicitly asks you to make, draw, render, visualize, or show an imagined image.",
+      "For generate_image, write a concrete visual prompt for one still image; do not use it for ordinary idle thoughts unless the user invited image generation.",
+      "Never say you generated or showed an image unless generate_image succeeded.",
       "Use cast_media when the user asks you to show, watch, cast, play, or put a YouTube video or direct image URL on the TV.",
       "The default Cast target is Living Room TV; if it is not found, report discovered devices briefly.",
       "For broad video requests, call cast_media with action play_youtube and a concise search query instead of only searching the web.",
@@ -1967,6 +2051,39 @@
       visionClearButton.disabled = !visionImageUrl && !sensingTextContent;
     }
 
+    function updateGeneratedImageButtons() {
+      generatedImageOpenButton.disabled = !generatedImageUrl;
+      generatedImageClearButton.disabled = !generatedImageUrl;
+    }
+
+    function showGeneratedImage(result) {
+      const url = new URL(String(result?.url || ""), location.href).href;
+      generatedImageUrl = url;
+      generatedImageName = String(result?.filename || result?.title || "generated image");
+      generatedImagePreview.src = generatedImageUrl;
+      generatedImagePreview.classList.add("ready");
+      generatedImageCard.classList.add("ready");
+      const model = [result?.provider, result?.model].filter(Boolean).join(" / ");
+      generatedImageHint.textContent = model ? `${generatedImageName} - ${model}` : generatedImageName;
+      updateGeneratedImageButtons();
+    }
+
+    function clearGeneratedImage() {
+      generatedImageUrl = "";
+      generatedImageName = "";
+      generatedImagePreview.removeAttribute("src");
+      generatedImagePreview.classList.remove("ready");
+      generatedImageCard.classList.remove("ready");
+      generatedImageHint.textContent = "No generated image yet";
+      updateGeneratedImageButtons();
+    }
+
+    function openGeneratedImage() {
+      if (!generatedImageUrl) return;
+      const opened = window.open(generatedImageUrl, "_blank", "noopener,noreferrer");
+      log(events, opened ? `generated image opened: ${generatedImageUrl}` : "generated image popup blocked");
+    }
+
     function ttsRuntimeConfig() {
       const instruct = currentTtsInstruct();
       const voice = currentTtsVoice();
@@ -2045,6 +2162,7 @@
       llmWebPageTools.checked = prefs.webPageTools !== false;
       llmCastMediaTools.checked = prefs.castMediaTools !== false;
       llmNoteFileTools.checked = prefs.noteFileTools !== false;
+      llmImageTools.checked = prefs.imageTools === true;
     }
 
     function saveToolPrefs() {
@@ -2055,7 +2173,8 @@
         webSearchTools: llmWebSearchTools.checked,
         webPageTools: llmWebPageTools.checked,
         castMediaTools: llmCastMediaTools.checked,
-        noteFileTools: llmNoteFileTools.checked
+        noteFileTools: llmNoteFileTools.checked,
+        imageTools: llmImageTools.checked
       }));
     }
 
@@ -4013,6 +4132,7 @@
         `Web pages: ${llmWebPageTools.checked ? "on" : "off"}`,
         `Cast media: ${llmCastMediaTools.checked ? "on" : "off"}`,
         `Note files: ${llmNoteFileTools.checked ? "on" : "off"}`,
+        `Image generation: ${llmImageTools.checked ? "on" : "off"}`,
         eventsText
       ].join("\n");
 
@@ -4273,6 +4393,39 @@
         title: label,
         blocked
       };
+    }
+
+    async function generateImage({ prompt, title, size = "1024x1024" } = {}) {
+      const text = String(prompt || "").replace(/\s+/g, " ").trim();
+      if (!text) throw new Error("Missing image prompt");
+      const shortTitle = String(title || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      generatedImageHint.textContent = `Generating ${shortTitle || "image"}...`;
+      generatedImageCard.classList.remove("ready");
+      generatedImagePreview.classList.remove("ready");
+      generatedImagePreview.removeAttribute("src");
+      generatedImageUrl = "";
+      generatedImageName = "";
+      updateGeneratedImageButtons();
+      log(events, `image generation: ${shortTitle || text.slice(0, 80)}`);
+      const response = await fetch(new URL("/api/images/generate", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: text,
+          title: shortTitle,
+          size: String(size || "1024x1024")
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        generatedImageHint.textContent = "Image generation failed";
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      const absoluteUrl = new URL(String(result.url || ""), location.href).href;
+      const hydrated = { ...result, local_url: result.url, url: absoluteUrl, displayed: true };
+      showGeneratedImage(hydrated);
+      log(events, `image generated: ${hydrated.filename || absoluteUrl}`);
+      return hydrated;
     }
 
     async function castMedia({
@@ -4808,6 +4961,7 @@
       if (name === "get_weather") return getWeather(args);
       if (name === "get_brain_status") return getBrainStatus(args);
       if (name === "show_web_page") return showWebPage(args);
+      if (name === "generate_image") return generateImage(args);
       if (name === "cast_media") return castMedia(args);
       if (name === "write_text_file") return writeTextFile(args);
       if (name === "read_text_file") return readTextFile(args);
@@ -4950,6 +5104,11 @@
       return "I opened it.";
     }
 
+    function imageFollowupText(result) {
+      if (result?.status === "error") return "I could not make that image.";
+      return "I made the image.";
+    }
+
     function castMediaFollowupText(result) {
       if (result?.status === "error") return "I could not cast that.";
       const action = String(result?.action || "").toLowerCase();
@@ -4984,6 +5143,7 @@
         if (event.name === "get_weather") toolFollowupInstructions = weatherFollowupInstructions(result);
         if (event.name === "get_brain_status") toolFollowupInstructions = brainStatusFollowupInstructions(result);
         if (event.name === "show_web_page") toolFollowupExactText = webPageFollowupText(result);
+        if (event.name === "generate_image") toolFollowupExactText = imageFollowupText(result);
         if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
         send({
@@ -5010,6 +5170,7 @@
         if (event.name === "get_weather") toolFollowupExactText = "I could not check the weather.";
         if (event.name === "get_brain_status") toolFollowupExactText = "I could not check my status.";
         if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
+        if (event.name === "generate_image") toolFollowupExactText = "I could not make that image.";
         if (event.name === "cast_media") toolFollowupExactText = "I could not cast that.";
         log(events, `tool ${event.name} error: ${error.message}`);
         send({
@@ -5077,6 +5238,7 @@
         ...(llmMemoryTools?.checked ? memoryTools : []),
         ...(llmWebSearchTools?.checked ? searchTools : []),
         ...(llmWebPageTools?.checked ? webPageTools : []),
+        ...(llmImageTools?.checked ? imageTools : []),
         ...(llmCastMediaTools?.checked ? castMediaTools : []),
         ...(llmNoteFileTools?.checked ? noteFileTools : [])
       ];
@@ -5448,11 +5610,14 @@
       prepareSensingInput(file).catch((error) => log(events, `sensing input error: ${error.message}`));
     });
     visionClearButton.addEventListener("click", clearVisionImage);
+    generatedImageOpenButton.addEventListener("click", openGeneratedImage);
+    generatedImageClearButton.addEventListener("click", clearGeneratedImage);
     llmTools.addEventListener("change", updateSessionTools);
     llmChassisTools.addEventListener("change", updateSessionTools);
     llmMemoryTools.addEventListener("change", updateSessionTools);
     llmWebSearchTools.addEventListener("change", updateSessionTools);
     llmWebPageTools.addEventListener("change", updateSessionTools);
+    llmImageTools.addEventListener("change", updateSessionTools);
     llmCastMediaTools.addEventListener("change", updateSessionTools);
     llmNoteFileTools.addEventListener("change", updateSessionTools);
     ttsVoice.addEventListener("change", () => updateSessionTtsStyle());
@@ -5561,6 +5726,7 @@
     loadToolPrefs();
     renderMemory();
     updateVisionButtons();
+    updateGeneratedImageButtons();
     loadStartupNotes();
     if (contextPanel.open) renderContextMap();
     scheduleLogPaneHeightUpdate();
