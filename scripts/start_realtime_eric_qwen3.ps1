@@ -20,6 +20,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$EnvLoader = Join-Path $PSScriptRoot "load_env.ps1"
+if (Test-Path -LiteralPath $EnvLoader) {
+    . $EnvLoader -Quiet
+}
+
 if ($TextMaxTokens -gt 0) {
     $env:ROBOT_790_TEXT_MAX_TOKENS = [string] $TextMaxTokens
 } else {

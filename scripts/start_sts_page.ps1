@@ -7,6 +7,11 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Python = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 $PageRoot = Join-Path $RepoRoot "web\sts"
+$EnvLoader = Join-Path $PSScriptRoot "load_env.ps1"
+
+if (Test-Path -LiteralPath $EnvLoader) {
+    . $EnvLoader -Quiet
+}
 
 if (-not (Test-Path $Python)) {
     throw "Missing project venv at $Python."

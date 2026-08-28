@@ -61,6 +61,16 @@ Install the optional Qwen3-TTS endpoint stack when using
 .\.venv\Scripts\python.exe -m pip install -e .[tts]
 ```
 
+Private runtime settings can live in `.env`. Start from the checked-in example:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+`start_sts_page.ps1` and `start_realtime_eric_qwen3.ps1` load `.env`
+automatically. The real `.env` file is ignored by git.
+
 ## Daily STS Startup
 
 The usual all-local STS setup has three moving parts:
