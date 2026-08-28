@@ -83,6 +83,8 @@ def test_realtime_tool_catalog_exposes_robot_actions() -> None:
         "remember_fact",
         "forget_fact",
         "search_web",
+        "get_weather",
+        "get_brain_status",
         "show_web_page",
         "cast_media",
         "write_text_file",
@@ -268,6 +270,35 @@ def test_search_web_tool_uses_shared_helper(monkeypatch) -> None:
         "query": "current robot news",
         "max_results": 3,
         "results": [],
+    }
+
+
+def test_get_weather_tool_uses_shared_helper(monkeypatch) -> None:
+    def fake_weather(location: str, unit: str = "fahrenheit") -> dict[str, object]:
+        return {"status": "ok", "tool": "get_weather", "location": location, "unit": unit}
+
+    monkeypatch.setattr(realtime_tools, "lookup_weather", fake_weather)
+
+    result = realtime_tools._get_weather({"unit": "celsius"})
+
+    assert result == {
+        "status": "ok",
+        "tool": "get_weather",
+        "location": "Salem, Massachusetts",
+        "unit": "celsius",
+    }
+
+
+def test_get_brain_status_tool_uses_shared_helper(monkeypatch) -> None:
+    def fake_brain_status() -> dict[str, object]:
+        return {"status": "ok", "tool": "get_brain_status", "context": {"pressure_estimate": "light"}}
+
+    monkeypatch.setattr(realtime_tools, "read_brain_status", fake_brain_status)
+
+    assert realtime_tools._get_brain_status() == {
+        "status": "ok",
+        "tool": "get_brain_status",
+        "context": {"pressure_estimate": "light"},
     }
 
 

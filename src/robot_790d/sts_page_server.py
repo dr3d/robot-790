@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from datetime import datetime
 from functools import partial
@@ -10,8 +11,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from robot_790d.brain_status import get_brain_status
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
+from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
 
 
@@ -20,6 +23,12 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path == "/api/search":
             self._handle_search(parsed.query)
+            return
+        if parsed.path == "/api/weather":
+            self._handle_weather(parsed.query)
+            return
+        if parsed.path == "/api/brain/status":
+            self._handle_brain_status()
             return
         if parsed.path == "/api/notes/read":
             self._handle_note_read(parsed.query)
@@ -52,6 +61,21 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         payload = search_web(query, max_results=max_results)
         status_code = 200 if payload.get("status") == "ok" else 400
         self._send_json(status_code, payload)
+
+    def _handle_weather(self, query_string: str) -> None:
+        params = parse_qs(query_string)
+        location = (
+            _first_param(params, "location")
+            or _first_param(params, "q")
+            or DEFAULT_WEATHER_LOCATION
+        )
+        unit = _first_param(params, "unit") or "fahrenheit"
+        payload = lookup_weather(location, unit=unit)
+        status_code = 200 if payload.get("status") == "ok" else 400
+        self._send_json(status_code, payload)
+
+    def _handle_brain_status(self) -> None:
+        self._send_json(200, get_brain_status())
 
     def _handle_note_read(self, query_string: str) -> None:
         params = parse_qs(query_string)
@@ -128,6 +152,16 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if not script_path.exists():
             self._send_json(500, {"status": "error", "error": f"Missing restart script at {script_path}."})
             return
+        try:
+            payload = self._read_json_body()
+        except (json.JSONDecodeError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        preset = str(payload.get("preset") or "qwen27").strip()
+        allowed_presets = {"qwen27", "qwen9", "qwen4", "nemotron30"}
+        if preset not in allowed_presets:
+            self._send_json(400, {"status": "error", "error": f"Unsupported model preset: {preset}."})
+            return
 
         logs_dir = repo_root / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -144,6 +178,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                         "Bypass",
                         "-File",
                         str(script_path),
+                        "-Preset",
+                        preset,
                     ],
                     cwd=repo_root,
                     stdout=stdout,
@@ -159,7 +195,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             {
                 "status": "ok",
                 "tool": "restart_realtime_server",
-                "preset": "gold",
+                "preset": preset,
                 "pid": process.pid,
                 "message": "Realtime backend restart started.",
             },
@@ -208,11 +244,13 @@ def record_log_snapshot(source: str, content: str, repo_root: Path | None = None
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     filename = f"{timestamp}-{safe_source}.txt"
     latest_name = f"latest-{safe_source}.txt"
+    model_string = _current_model_string(root)
     header = [
         "Robot 790 Live Log Snapshot",
         "===========================",
         f"Recorded: {datetime.now().isoformat(timespec='seconds')}",
         f"Source: {safe_source}",
+        f"Model: {model_string}",
         "",
     ]
     body = "\n".join(header) + normalized_content + "\n"
@@ -224,6 +262,7 @@ def record_log_snapshot(source: str, content: str, repo_root: Path | None = None
         "status": "ok",
         "tool": "record_log_snapshot",
         "source": safe_source,
+        "model": model_string,
         "filename": f"logs/live/{filename}",
         "latest": f"logs/live/{latest_name}",
         "path": str(path),
@@ -236,6 +275,98 @@ def _safe_log_source(source: str) -> str:
     if value not in {"conversation", "events", "session"}:
         value = "session"
     return value
+
+
+def _current_model_string(repo_root: Path) -> str:
+    runtime = _read_realtime_runtime_args()
+    try:
+        status = get_brain_status(repo_root)
+    except Exception:
+        status = {}
+
+    model = status.get("model")
+    if not isinstance(model, dict):
+        model = {}
+
+    parts: list[str] = []
+    lm_studio = model.get("lm_studio")
+    active_model = lm_studio.get("active_model") if isinstance(lm_studio, dict) else None
+    llm_model = runtime.get("model_name")
+    if isinstance(active_model, dict):
+        llm_model = llm_model or active_model.get("identifier") or active_model.get("model")
+    if not llm_model:
+        llm_model = model.get("llm_model")
+    if llm_model:
+        parts.append(f"llm={llm_model}")
+
+    reasoning = runtime.get("responses_api_reasoning_effort")
+    if not reasoning and runtime.get("_running"):
+        reasoning = "omitted"
+    if not reasoning:
+        reasoning = model.get("reasoning_effort")
+    if reasoning:
+        parts.append(f"reasoning={reasoning}")
+
+    audio_max_tokens = runtime.get("responses_api_audio_max_tokens") or model.get("audio_max_tokens")
+    if audio_max_tokens:
+        parts.append(f"audio_max_tokens={audio_max_tokens}")
+
+    if isinstance(active_model, dict):
+        context_window = active_model.get("context_window_tokens")
+        parallel = active_model.get("parallel_predictions")
+        status_text = active_model.get("status")
+        if context_window:
+            parts.append(f"context={context_window}")
+        if parallel:
+            parts.append(f"parallel={parallel}")
+        if status_text:
+            parts.append(f"lm_status={status_text}")
+
+    return " / ".join(parts) if parts else "unknown"
+
+
+def _read_realtime_runtime_args() -> dict[str, str]:
+    command = _read_realtime_commandline()
+    if not command:
+        return {}
+    args = {
+        key: value
+        for key in ("model_name", "responses_api_reasoning_effort", "responses_api_audio_max_tokens")
+        if (value := _command_arg(command, key))
+    }
+    args["_running"] = "true"
+    return args
+
+
+def _read_realtime_commandline() -> str:
+    try:
+        completed = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-Command",
+                (
+                    "Get-CimInstance Win32_Process | "
+                    "Where-Object { $_.CommandLine -match '-m robot_790d\\.realtime_entry' } | "
+                    "Select-Object -First 1 -ExpandProperty CommandLine"
+                ),
+            ],
+            check=False,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return (completed.stdout or "").strip()
+
+
+def _command_arg(command: str, name: str) -> str | None:
+    match = re.search(rf"--{re.escape(name)}\s+(?:\"([^\"]+)\"|'([^']+)'|(\S+))", command)
+    if not match:
+        return None
+    return next((group for group in match.groups() if group), None)
 
 
 def _dispatch_cast(payload: dict[str, Any]) -> dict[str, object]:

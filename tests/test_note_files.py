@@ -25,6 +25,15 @@ def test_note_files_read_human_title_as_snake_case_filename(tmp_path: Path) -> N
     assert read.content == "Readable by title."
 
 
+def test_note_files_read_camel_case_title_as_snake_case_filename(tmp_path: Path) -> None:
+    write_note_file(tmp_path, "last_time", "Readable by camel case.")
+
+    read = read_note_file(tmp_path, "LastTime")
+
+    assert read.filename == "last_time.txt"
+    assert read.content == "Readable by camel case."
+
+
 def test_note_files_read_possessive_title_as_snake_case_filename(tmp_path: Path) -> None:
     write_note_file(tmp_path, "erics_memories", "Remember this by title.")
 

@@ -10,6 +10,7 @@ build/
 qwen3_tts.env
 *.log
 logs/runs/
+logs/live/
 samples/
 notes/
 backups/

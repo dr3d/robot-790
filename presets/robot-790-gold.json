@@ -11,6 +11,11 @@
     "stream_batch_sentences": 1,
     "audio_max_tokens": 64
   },
+  "lm_studio": {
+    "context_length": 131072,
+    "parallel": 1,
+    "note": "Keep parallel at 1 for a single Eric client to reduce VRAM pressure on the 27B model."
+  },
   "tts": {
     "engine": "qwen3",
     "model_path": "C:/Users/dr3d/ComfyUI_windows_portable/ComfyUI/models/TTS/Qwen3-TTS-12Hz-0.6B-CustomVoice",

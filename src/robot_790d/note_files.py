@@ -63,7 +63,8 @@ def note_lookup_key(path: Path) -> tuple[str, ...]:
 
 
 def _slug_text(value: str) -> str:
-    without_apostrophes = value.casefold().replace("'", "").replace("’", "")
+    split_camel = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", value)
+    without_apostrophes = split_camel.casefold().replace("'", "").replace("’", "")
     return re.sub(r"[^a-z0-9]+", "_", without_apostrophes).strip("_")
 
 
@@ -84,7 +85,10 @@ def find_existing_note_path(filename: str, instance_path: str | Path | None = No
         candidate_relative = candidate_resolved.relative_to(root)
         if note_lookup_key(candidate_relative) == requested_key:
             return candidate_resolved
-        if len(requested_relative.parts) == 1 and note_lookup_key(Path(candidate_relative.name)) == requested_basename_key:
+        if (
+            len(requested_relative.parts) == 1
+            and note_lookup_key(Path(candidate_relative.name)) == requested_basename_key
+        ):
             basename_matches.append(candidate_resolved)
     if len(basename_matches) == 1:
         return basename_matches[0]

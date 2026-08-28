@@ -1,43 +1,45 @@
 # Robot 790
 
-Robot 790 is a daemon-driven animatronic robot head/body project inspired by the
-LEXX 790 character. It starts from the working ESP32 face, chassis, and camera
-experiments in the Reachy Mini conversation app, but this repository is meant
-to become its own platform rather than a Reachy Mini enhancement branch.
+Robot 790 is a local, daemon-driven animatronic robot project inspired by
+LEXX 790. The project combines ESP32 device controllers, a browser STS control
+page, local STT/TTS, local LLMs through LM Studio, and a small Python daemon
+package for robot tools and storage.
 
-The guiding split is:
+The operating idea is simple:
 
 ```text
-conversation clients / local voice / Jetson brain
+conversation UI / voice client
         |
-      robot-790d
+   realtime STS server
         |
-  device adapters
+   robot_790d tools
         |
-ESP32 face, chassis, camera, servos, audio
+ESP32 face, chassis, camera, notes, memory, web, media
 ```
 
-`robot-790d` should own behavior timing: mood, gaze, mouth energy, idle beats,
-sleep/wake state, and eventual prosody mapping. Clients should send semantic
-intent instead of micromanaging displays or motors.
+Clients should send semantic intent such as "listening", "thinking", "look
+left", "smile", "stop", "read this note", or "search this", while firmware and
+tool adapters own timing, GPIO details, display updates, and motor commands.
 
-## Current Contents
+## Current Pieces
 
-- `firmware/esp32-face`: four-display ESP32-S3 face firmware ported from the
-  Reachy Mini conversation app. It currently supports two eyes, rectangular
-  mouth on GPIO18, and round status display on GPIO17.
-- `firmware/esp32-chassis`: ESP32 tracked chassis firmware.
-- `firmware/esp32-cam`: ESP32 camera firmware.
-- `src/robot_790d`: first-pass daemon/client package for semantic face cues.
-- `src/robot_790_tts`: local OpenAI-compatible Qwen3-TTS speech endpoint.
+- `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`.
+- `src/robot_790d`: Python helpers, local page APIs, realtime entrypoint
+  patches, tools, memory, notes, weather, web search, and Cast media support.
+- `src/robot_790_tts`: OpenAI-shaped Qwen3-TTS speech endpoint.
+- `firmware/esp32-face`: ESP32 face firmware lineage. The active controller is
+  still commonly reached at `http://esp32-eyes.local/`.
+- `firmware/esp32-chassis`: tracked chassis controller.
+- `firmware/esp32-cam`: ESP32 camera controller experiments.
+- `presets/robot-790-gold.json`: the current Qwen 27B / Eric voice baseline.
 
-The copied firmware still contains some Reachy-oriented names internally. That
-is intentional for the first move: preserve the stable working hardware before
-renaming and generalizing.
+Some names still say `eyes` or `Reachy` in older firmware/UI paths. That is
+intentional for now: preserve working hardware behavior first, rename only when
+the project settles.
 
-## First Bring-Up
+## First Setup
 
-Create an environment:
+Create and install the project environment:
 
 ```powershell
 cd D:\_PROJECTS\robot-790
@@ -46,39 +48,206 @@ python -m venv .venv
 pip install -e .[dev]
 ```
 
-Point the daemon client at the ESP32 face:
+Install the optional realtime voice stack:
 
 ```powershell
-$env:ROBOT_790_FACE_URL = "http://esp32-eyes.local/"
-robot-790d state
-robot-790d listen
-robot-790d speak --energy 0.7
-robot-790d beat mischief
-robot-790d idle
+.\.venv\Scripts\python.exe -m pip install -e .[realtime]
 ```
 
-Build the face firmware:
+Install the optional Qwen3-TTS endpoint stack when using
+`src/robot_790_tts` directly:
 
 ```powershell
-cd firmware\esp32-face
-pio run
-pio device list
-pio run -t upload --upload-port COM8
+.\.venv\Scripts\python.exe -m pip install -e .[tts]
 ```
 
-Use the COM port reported for your ESP32-S3; `COM8` is the current board on
-this workstation.
+## Daily STS Startup
 
-## Local Speech
+The usual all-local STS setup has three moving parts:
 
-Robot 790 includes a local Qwen3-TTS endpoint so the project can speak without
-depending on Hugging Face Spaces, Pollen services, or the Reachy Mini app.
+1. LM Studio serving an OpenAI-compatible chat endpoint on `127.0.0.1:1234`.
+2. Robot 790 realtime STS server on `127.0.0.1:8765`.
+3. Robot 790 browser page on `127.0.0.1:8790`.
 
-Install the speech server dependencies:
+For the current gold setup, load Qwen 27B in LM Studio with one parallel
+prediction:
 
 ```powershell
-pip install -e .[tts]
+lms unload qwen/qwen3.8-27b
+lms load qwen/qwen3.8-27b --parallel 1 --context-length 131072 --gpu max --identifier qwen/qwen3.8-27b -y
 ```
+
+Start the realtime backend:
+
+```powershell
+.\scripts\start_realtime_gold.ps1
+```
+
+Start the browser page:
+
+```powershell
+.\scripts\start_sts_page.ps1
+```
+
+Open:
+
+```text
+http://127.0.0.1:8790/
+```
+
+The page connects to:
+
+```text
+ws://127.0.0.1:8765/v1/realtime
+```
+
+If Ctrl-C does not stop a stuck process, use:
+
+```powershell
+.\scripts\stop_sts.ps1
+```
+
+Or stop one side:
+
+```powershell
+.\scripts\stop_sts.ps1 -RealtimeOnly
+.\scripts\stop_sts.ps1 -PageOnly
+```
+
+## Brain Presets
+
+The STS page Realtime Server panel has a `Brain` dropdown. Pick a model and hit
+`Restart` to stop realtime, unload the current LM Studio model, load the chosen
+model, and start realtime again with Eric's Qwen3-TTS voice.
+
+Current presets:
+
+| Preset | LM Studio model | Context | Reasoning | Notes |
+| --- | --- | ---: | --- | --- |
+| Qwen 27B | `qwen/qwen3.8-27b` | 131K | `low` | Gold Eric baseline. Best current personality and overnight rumination choice. |
+| Qwen 9B | `qwen/qwen3.5-9b` | 131K | `low` | Middle-size comparison model. |
+| Qwen 4B | `qwen3.5-4b` | 131K | `none` | Small/fast comparison model. |
+| Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like. |
+
+The restart script behind the dropdown is:
+
+```powershell
+.\scripts\restart_realtime_gold.ps1 -Preset qwen27
+.\scripts\restart_realtime_gold.ps1 -Preset qwen9
+.\scripts\restart_realtime_gold.ps1 -Preset qwen4
+.\scripts\restart_realtime_gold.ps1 -Preset nemotron30
+```
+
+Chat text is uncapped by default so note reads, summaries, and longer thoughts
+can complete instead of being clipped. A hard text cap is available only for
+debug runs:
+
+```powershell
+.\scripts\start_realtime_eric_qwen3.ps1 -TextMaxTokens 192
+```
+
+`AudioMaxTokens` is still passed to the upstream realtime/TTS stack, but it
+should not silently clip chat text unless `-TextMaxTokens` is explicitly used.
+
+## STS Page
+
+The browser page is the main live control surface. It includes:
+
+- Realtime server connection and model restart controls.
+- Sensing Eye drop target for images or text files.
+- Mic start/stop, audio meter, and interruption sensitivity.
+- Face, chassis, voice, memory, web, weather, Cast, and note tool switches.
+- Idle controls for drift, wonder, self-focus, notes-focus, and substrate tests.
+- Conversation and event panes with copy and record buttons.
+- Context Map for a rough view of what Eric can draw from.
+
+The page sends a compact Robot 790/Eric identity prompt with `session.update`
+when it connects. It also drives deterministic face lifecycle cues:
+
+- user speech: listening
+- STT/LLM work: thinking
+- output audio: speaking
+- response completion: release back to idle
+
+This keeps the face responsive even when the LLM is slow or odd.
+
+## Idle And Rumination
+
+Idle pondering is page-driven, not firmware-driven. The `Idle drift` slider is
+off at `0`; higher levels let the page request one-sentence ponders after quiet
+periods. Level `11` is intentionally overactive, and level `12` is a lab sprint
+for fast context-growth tests.
+
+Idle ponders use lanes such as object noticing, callback, status, question,
+addressed question, craft, curiosity, unresolved, lookup, and aside. Recent
+idle outputs are fed back so thoughts can build on each other, while repetition
+and exhaustion checks can put idle into cooldown.
+
+The related controls matter:
+
+- `Wonder`: raises the chance of curiosity, unresolved, and lookup lanes.
+- `Self-focus`: controls how much Eric centers body, identity, and self-model.
+- `Notes`: controls how strongly loaded notes shape idle material.
+- `Substrate test`: suppresses ordinary Robot 790 self-reference so a loaded
+  note can act as the temporary world for an experiment.
+
+Substrate mode is for experiments, not ordinary Eric. It helps answer whether a
+note can become the world of the rumination loop without the chassis and normal
+identity pulling everything home.
+
+## Tools
+
+The realtime page can expose these tools to the LLM:
+
+- `set_robot_mode`: `idle`, `listening`, `thinking`, `speaking`, or `sleeping`.
+- `play_face_beat`: named face animation beats.
+- `set_face_mood`: named face mood for a short visual hold.
+- `set_eye_style`: eye renderer style such as `robot`, `friendly`, `classic`,
+  `cartoony`, `sinister`, or `sleepy`.
+- `set_eye_gaze`: normalized gaze target.
+- `set_mouth`: mouth style, shape, talking state, text display, energy, or
+  release back to autonomous control.
+- `set_chassis`: one explicit status, stop, e-stop, clear, tank, or twist
+  command for the tracked chassis.
+- `remember_fact` / `forget_fact`: explicit named browser memory facts.
+- `search_web`: compact web search results.
+- `get_weather`: current weather lookup.
+- `show_web_page`: open a web page in the UI.
+- `cast_media`: list Cast receivers, play YouTube, show direct image URLs, or
+  stop Cast playback.
+- `write_text_file`, `read_text_file`, `list_text_files`: text-note file tools.
+- `get_brain_status`: local diagnostics such as model, context, token pressure,
+  latency, TTS timing, and approximate browser context contribution.
+
+Face and chassis tool calls should still be short and explicit. The model
+proposes; deterministic tool and firmware layers decide what is actually safe
+and timed.
+
+## Memory, Notes, And Logs
+
+There are two memory-like layers:
+
+- Browser memory facts live in browser `localStorage` under
+  `robot790.memory.v1` and are injected into session instructions.
+- Daemon memory facts use `memory.v1.json`; set `ROBOT_790_MEMORY_PATH` or
+  `ROBOT_790_INSTANCE_PATH` to move that file.
+
+Notes are different from named facts. They live under `notes/` by default,
+missing extensions become `.txt`, and only `.txt` or explicitly named `.md`
+files are allowed. Set `ROBOT_790_NOTES_PATH` to move the folder.
+
+The note tools are intended as explicit storage: Eric should only write, append,
+read, or list files when asked. Note writing should keep user-supplied facts,
+session events, tool-verified facts, and Eric's own ruminations distinct. Weird
+thoughts are allowed as thoughts; unverified outside facts should not be saved
+as settled truth.
+
+Live page captures are written under `logs/live/` by the Record buttons. Those
+files are local lab artifacts and are ignored by git.
+
+## Local Qwen3-TTS Endpoint
+
+Robot 790 also includes a separate OpenAI-shaped Qwen3-TTS endpoint.
 
 Run a mock endpoint first:
 
@@ -104,7 +273,7 @@ then start without `-Mock`:
 .\scripts\start_qwen3_tts.ps1 -Voice Eric -HostAddress 127.0.0.1 -Port 8000
 ```
 
-The endpoint is intentionally OpenAI-shaped:
+The endpoint exposes:
 
 - `GET /health`
 - `GET /v1/voices`
@@ -114,329 +283,59 @@ The endpoint is intentionally OpenAI-shaped:
 Settings can be provided with environment variables; see
 `qwen3_tts.example.env`.
 
-## Realtime Voice
+## Firmware Bring-Up
 
-The target shape is close to Hugging Face's realtime voice demo: microphone
-audio enters a realtime server, VAD finds speech turns, STT creates text, an
-LLM decides what to say, TTS streams audio back, and tool calls can actuate the
-robot face.
-
-Install the optional realtime stack:
+Point the daemon client at the active ESP32 face:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -e .[realtime]
+$env:ROBOT_790_FACE_URL = "http://esp32-eyes.local/"
+robot-790d state
+robot-790d listen
+robot-790d speak --energy 0.7
+robot-790d beat mischief
+robot-790d idle
 ```
 
-Start a `/v1/realtime` server for browser clients:
+Build and upload the face firmware:
 
 ```powershell
-.\scripts\start_realtime_server.ps1
+cd firmware\esp32-face
+pio run
+pio device list
+pio run -t upload --upload-port COM8
 ```
 
-That exposes the default endpoint at:
-
-```text
-ws://127.0.0.1:8765/v1/realtime
-```
-
-The launcher defaults to four realtime session pipelines and sends TTS one
-sentence batch at a time. For smoother but slightly slower speech, raise the
-batch size:
-
-```powershell
-.\scripts\start_realtime_server.ps1 -StreamBatchSentences 2
-```
-
-For the packaged all-local microphone/speaker loop, attach Robot 790's face
-tool module:
-
-```powershell
-.\scripts\start_realtime_local.ps1 -FaceUrl "http://esp32-eyes.local/"
-```
-
-The tool module is `robot_790d.realtime_tools`. It currently exposes:
-
-- `set_robot_mode`: maps voice turn states to `idle`, `listening`, `thinking`,
-  `speaking`, or `sleeping`.
-- `play_face_beat`: lets an agent trigger a named firmware beat.
-- `set_face_mood`: sets a named ESP32 face mood for a short visual hold.
-- `set_eye_style`: changes the ESP32 eye renderer style, such as `robot`,
-  `friendly`, `classic`, `cartoony`, `sinister`, or `sleepy`.
-- `set_eye_gaze`: aims the eyes at a normalized left/right and up/down gaze
-  target when the user explicitly asks Robot 790 to look somewhere.
-- `set_mouth`: changes the ESP32 mouth style, shape, talking state, energy, or
-  releases the mouth back to autonomous control.
-- `set_chassis`: sends one status, stop, e-stop, clear, tank, or twist command
-  to the ESP32 chassis controller.
-- `remember_fact`: saves or updates one persistent named fact.
-- `forget_fact`: removes one persistent named fact by name.
-- `search_web`: searches the web and returns compact title/snippet/URL results.
-- `show_web_page`: opens or displays an HTTP(S) web page in the client UI.
-- `cast_media`: lists Cast receivers, searches YouTube, plays a YouTube result
-  or video ID/URL, shows direct image URLs, and stops playback on the configured
-  Cast receiver.
-- `write_text_file`: writes or appends a plain text note under `notes/`.
-- `read_text_file`: reads a `.txt` or explicitly named `.md` note.
-- `list_text_files`: lists available Robot 790 note files.
-
-The browser STS page sends a compact Robot 790/Eric identity instruction with
-`session.update` when it connects. Its deterministic lifecycle drives the face
-by default: user speech cues listening, transcription/LLM work cues thinking,
-audio output cues speaking, and response completion releases the face to idle.
-Listening uses a focused centered gaze, thinking alternates a small side glance,
-and speaking drives the mouth/talking state.
-The `Idle drift` slider is off at `0`. Higher values let the page create an
-occasional one-sentence autonomous ponder after a quiet period, using recent
-conversation and saved facts as light context while disabling tools for that
-turn. Level `11` is a deliberately overactive mode: it schedules ponders every
-10-45 seconds when the system is otherwise idle and lets Robot 790 sound a bit
-more expressive. Idle ponders rotate through deterministic lanes such as object
-noticing, callback, status, self-question, addressed question, craft, curiosity,
-and aside so they do not always use the same fact/contrast/uncertainty shape.
-The addressed-question lane appears at level `9` and above: Robot 790 may ask
-Scott one small question into the room and then keep pondering later if no
-answer arrives. Addressed questions are cooldown-limited so they remain
-occasional punctuation, not the default mode. Idle ponders are generated as
-out-of-band internal events rather than fake user turns; the spoken idle line is
-then committed back as an assistant item so Robot 790 can keep continuity if the
-user responds. The page also distinguishes build inventory from live telemetry:
-saved notes may say a PIR, yaw turntable, IMU, or fans exist, but idle ponders
-should not present exact sensor states, faults, diagnostics, or measurements as
-verified unless the ambient context or a tool result actually supplied them.
-First-person body-feel is allowed to be poetic and present tense; the listener
-can understand it as inner life rather than calibrated telemetry. At levels `10`
-and `11`,
-the curiosity lane may perform one rate-limited web search when `LLM web search`
-is enabled and fold a compact outside detail into the next idle thought. If the
-page detects repeated "I'm out / same loop / nothing new" style outputs, it
-puts idle pondering into a short cooldown instead of letting the loop narrate
-its own exhaustion forever. The `Ponder` button triggers the same path manually
-for testing.
-The `Voice style` control sends a `qwen3_tts_instruct` runtime hint to Qwen3-TTS
-and stores the current style in browser `localStorage` under
-`robot790.ttsStyle.v1`. Presets include neutral, dry Eric, happy, ominous,
-troll-ish, sleepy, and excited. CustomVoice models still anchor to the selected
-speaker, so this should be treated as performance direction rather than a hard
-guarantee of a totally different voice.
-The optional `LLM face tools` checkbox exposes `set_robot_mode`,
-`set_face_mood`, `play_face_beat`, `set_eye_style`, `set_eye_gaze`, and
-`set_mouth` to the model. It is enabled by default so voice requests like
-"look all the way left", "use robot eyes", or "make the mouth smile" can
-actuate the face. Face tool calls are executed in the page by posting to the
-configured ESP32 face URL, which defaults to `http://esp32-eyes.local/`.
-
-The optional `LLM chassis tools` checkbox exposes `set_chassis`. Chassis tool
-calls target `http://esp32-chassis.local/` and are limited to one explicit
-command at a time: status, stop, e-stop, clear, tank, or twist. Voice movement
-should stay slow, short, and firmware-timed; "full speed" and "max speed" map
-to the same normalized `1.0` value as the chassis web UI, and the firmware
-applies the voltage duty cap. The tool contract forbids queued routes or
-multi-step routines.
-
-The optional `LLM web search` checkbox exposes `search_web`. This was adapted
-from the Reachy Mini conversation app's search-tool contract, but runs locally
-through the Robot 790 STS page at `/api/search`. The implementation uses the
-`ddgs` package and returns title, snippet, and URL results. It is useful for
-current facts, newsy questions, and quick lookups; it is still an internet
-tool, so it depends on network availability and upstream search behavior.
-
-The optional `LLM web pages` checkbox exposes `show_web_page`, ported from the
-Reachy Mini conversation app. In the standalone STS page this opens an HTTP(S)
-URL in a new browser tab/window from the Robot 790 UI. If the browser blocks
-automatic tabs, the events log records the target URL. This pairs naturally
-with `search_web`: Robot 790 can search first, then open a selected result when
-asked to bring up the page.
-
-The optional `LLM cast media` checkbox exposes `cast_media`, ported from the
-Reachy Mini conversation app. Browser STS calls run through the local page
-server at `/api/cast`; daemon calls use `robot_790d.media_cast` directly. The
-tool can list receivers, search YouTube, play the first YouTube result for a
-query, play a YouTube video ID or URL, show a direct `jpg`/`jpeg`/`png`/`webp`/
-`gif` image URL, and stop playback. Configure the default target with:
-
-```powershell
-$env:ROBOT_790_CAST_DEVICE_NAME = "Living Room TV"
-$env:ROBOT_790_CAST_TIMEOUT_S = "10"
-$env:ROBOT_790_CAST_KNOWN_HOSTS = "192.168.0.45"
-```
-
-`ROBOT_790_CAST_KNOWN_HOSTS` is optional, but useful when mDNS discovery misses
-the receiver. Generic web pages and image-search result pages will not cast
-through this path; the TV needs a direct media URL it can fetch.
-When the browser STS page starts YouTube playback through `cast_media`, it
-auto-pauses an active mic to avoid transcribing TV audio as user speech. If
-Robot 790 later stops that Cast playback through the same tool, the page
-restores the mic only if it was the thing that paused it.
-
-The browser STS page also coalesces near-duplicate final STT transcripts in its
-visible conversation and local grounding buffer, so speculative endpointing
-fragments do not become repeated user lines. Sensing-eye prompts are framed as
-visual impressions: Robot 790 should separate what is visible from guesses and
-ask before relying on uncertain vision for action.
-
-The `LLM memory tools` checkbox is enabled by default on the STS page. It
-exposes `remember_fact` and `forget_fact` so explicit instructions such as
-"remember my name as Dave" or "forget user_name" can update persistent named
-facts. If Robot 790 asks the user to provide a fact so it can save it, the next
-user turn can also be saved. The page refuses inferred placeholder facts such as
-"not yet known" and rejects facts that are not grounded in the current save turn.
-The current browser STS path stores those facts in browser `localStorage` under
-`robot790.memory.v1` and injects them into session instructions on connect,
-refresh, and memory updates. The Python daemon path stores the same named-fact
-shape in `memory.v1.json`; set `ROBOT_790_MEMORY_PATH` for an exact file path,
-or `ROBOT_790_INSTANCE_PATH` for an instance directory.
-
-The optional `LLM note files` checkbox exposes `write_text_file`,
-`read_text_file`, and `list_text_files`. This is intentionally simpler than
-memory: Robot 790 only touches files when explicitly asked to save, write,
-append, read, or list a note. Files live under the local `notes/` folder by
-default, missing extensions become `.txt`, and only `.txt` or explicitly named
-`.md` files are allowed. Set `ROBOT_790_NOTES_PATH` to move the notes folder.
-Because notes are memory aids, the note-writing prompt asks Eric to keep the
-record clearer than the live idle voice: user-supplied facts, observed session
-events, tool-verified facts, and Eric's own ruminations should stay distinct.
-Poetic thoughts can be preserved as thoughts, but unverified outside facts
-should not be written as settled truth, and vague time phrases should be made
-session-relative or omitted.
-This gives future summarizer/reflection jobs a safe storage layer to reuse
-without changing the voice UI contract.
-
-For a fully local LLM, run an OpenAI-compatible server such as llama.cpp or
-vLLM, then pass backend arguments through `-ExtraArgs`:
-
-```powershell
-.\scripts\start_realtime_server.ps1 -ExtraArgs @(
-  "--llm_backend", "responses-api",
-  "--responses_api_base_url", "http://127.0.0.1:8080/v1",
-  "--responses_api_api_key", "",
-  "--model_name", "local"
-)
-```
-
-The same `-ExtraArgs` pattern works for `start_realtime_local.ps1`.
-
-For the Windows RTX 5090 bring-up path, use Eric through Qwen3-TTS directly in
-the realtime server:
-
-```powershell
-.\scripts\start_realtime_eric_qwen3.ps1
-```
-
-The current gold personality preset is the 27B/Eric tuning that felt fast,
-present, and characterful during live testing:
-
-```powershell
-.\scripts\start_realtime_gold.ps1
-```
-
-It pins `qwen/qwen3.8-27b`, reasoning `low`, one realtime pipeline, one-sentence
-TTS batching, `64` audio tokens, the `Eric` speaker, and the dry Eric voice
-style. The matching snapshot lives at:
-
-```text
-presets\robot-790-gold.json
-```
-
-That launcher uses one realtime session pipeline by default, the
-local
-`C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice`
-model, the CUDA `torch` backend, the `Eric` speaker, and the local
-`qwen/qwen3.8-27b` LLM through LM Studio's Chat Completions endpoint. Reasoning
-uses `reasoning_effort=low`, and spoken LLM output is capped at 64
-tokens by default to keep turns responsive without forcing clipped answers.
-Use `-NumPipelines 2` only when you want two simultaneous clients; increase
-above that only after checking VRAM and latency.
-The launcher sets a dry Eric TTS instruction by default. Override it at launch
-with:
-
-```powershell
-.\scripts\start_realtime_eric_qwen3.ps1 -TtsInstruct "Speak as Eric with a low raspy texture, mischievous theatrical energy, and playful menace."
-```
-
-The browser page can also change `qwen3_tts_instruct` live for the active
-session. This works through the project-owned realtime entrypoint
-`robot_790d.realtime_entry`, which applies a small runtime patch to the upstream
-`speech-to-speech` Qwen3-TTS handler without editing the installed dependency.
-
-If Ctrl-C does not stop a stuck standalone STS page or realtime backend, stop
-both Robot 790 STS processes with:
-
-```powershell
-.\scripts\stop_sts.ps1
-```
-
-To stop only one side:
-
-```powershell
-.\scripts\stop_sts.ps1 -RealtimeOnly
-.\scripts\stop_sts.ps1 -PageOnly
-```
-
-The launcher reads its system prompt from:
-
-```text
-prompts\robot-790-reachy-no-tools.md
-```
-
-That prompt is adapted from the Reachy Mini conversation app's default profile
-body. It keeps the spoken Robot 790 identity, compact response rules, and sparse
-face/memory tool guidance, while leaving Reachy SDK movement instructions out
-of this repo's first pass.
-
-To try another local model without editing the script:
-
-```powershell
-.\scripts\start_realtime_eric_qwen3.ps1 -LlmModel "qwen/qwen3.5-9b"
-```
-
-To temporarily drop back to the small default LM Studio model:
-
-```powershell
-.\scripts\start_realtime_eric_qwen3.ps1 -LlmModel "qwen3.5-4b"
-```
-
-To try the larger local CustomVoice model:
-
-```powershell
-.\scripts\start_realtime_eric_qwen3.ps1 -TtsModel "C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-1.7B-CustomVoice"
-```
-
-## Behavior Model
-
-The first daemon layer speaks in coarse robot states:
-
-- `idle`: release the face back to firmware autonomy.
-- `listening`: curious eyes, neutral non-talking mouth.
-- `thinking`: thoughtful/focused visual cue.
-- `speaking`: happy eyes, talking mouth, configurable energy.
-- `sleeping`: sleep/blank face.
-
-This mirrors the useful parts of the Reachy app but removes the Reachy SDK from
-the center. The next layer should add an affect vector:
-
-```json
-{
-  "energy": 0.7,
-  "valence": 0.3,
-  "attention": 0.9,
-  "certainty": 0.6,
-  "mischief": 0.4
-}
-```
-
-That affect vector can eventually be driven by transcript content, turn-taking,
-audio RMS, pitch movement, speaking rate, pauses, and camera/person tracking.
+Use the COM port reported for your ESP32-S3. `COM8` was the current board on
+the original workstation during bring-up.
 
 ## Hardware Direction
 
-The face shell is being designed around a 790-like printed mask with display
-openings for eyes and mouth. The current electronics vocabulary is:
+The physical build is moving toward a 790-like printed face with display
+openings for eyes and mouth. Current electronics vocabulary:
 
 - ESP32-S3 face controller
 - round GC9A01 eye displays
 - rectangular ILI9341 mouth display
 - optional round status/debug display
-- optional ESP32 chassis and camera controllers
+- ESP32 chassis controller
+- ESP32 camera experiments
+- optional neck yaw/pitch hardware
 
-Longer term, a Jetson Nano or similar host can run local voice, vision, and the
+Longer term, a Jetson Nano or another local host can run voice, vision, and the
 behavior daemon while ESP32 boards remain dedicated device controllers.
+
+## Development
+
+Run the current focused tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest
+```
+
+Useful diagnostics:
+
+```powershell
+.\.venv\Scripts\python.exe -m robot_790d.brain_status --json
+lms ps
+Get-NetTCPConnection -LocalPort 8765,8790,1234 -State Listen
+```

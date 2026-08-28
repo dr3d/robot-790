@@ -16,6 +16,7 @@
       --warn: #ffcf5a;
       --bad: #ff6b6b;
       --log-pane-height: clamp(18rem, 42vh, 34rem);
+      --log-pane-live-height: var(--log-pane-height);
     }
     * { box-sizing: border-box; }
     html {
@@ -137,7 +138,7 @@
       grid-template-columns: minmax(260px, 460px) auto auto minmax(0, 1fr);
     }
     .server-controls {
-      grid-template-columns: minmax(260px, 1fr) auto auto auto;
+      grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px) auto auto auto;
     }
     .url-controls .toggle-row {
       justify-self: start;
@@ -146,7 +147,7 @@
       grid-template-columns: minmax(120px, 160px) minmax(260px, 420px) minmax(140px, 180px) auto auto;
     }
     .idle-controls {
-      grid-template-columns: minmax(220px, 1fr) minmax(180px, 260px) auto auto;
+      grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
     }
     .mic-vision-controls {
       grid-template-columns: 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto;
@@ -172,6 +173,9 @@
     .vision-drop.dragover {
       border-color: rgba(96, 211, 148, 0.75);
       background: #17231d;
+    }
+    .vision-drop.text-ready {
+      align-items: stretch;
     }
     .vision-preview {
       display: none;
@@ -200,6 +204,12 @@
       overflow: hidden;
       white-space: nowrap;
       color: var(--text);
+    }
+    .vision-drop.text-ready .vision-hint {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
     }
     label {
       display: grid;
@@ -271,12 +281,15 @@
     }
     .log-grid {
       flex: 0 0 auto;
+      height: var(--log-pane-live-height);
       min-height: var(--log-pane-height);
-      max-height: var(--log-pane-height);
+      max-height: var(--log-pane-live-height);
+      overflow: hidden;
       padding-bottom: 0;
     }
     .log-grid > div {
       min-height: 0;
+      overflow: hidden;
       display: grid;
       grid-template-rows: auto minmax(0, 1fr);
     }
@@ -306,14 +319,65 @@
       flex: 0 0 auto;
     }
     .log {
-      height: var(--log-pane-height);
-      min-height: var(--log-pane-height);
-      max-height: var(--log-pane-height);
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 6px;
       background: var(--panel);
       padding: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .context-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .context-map {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .context-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 12px;
+    }
+    .context-card h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+    .context-meta {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .context-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .context-list li {
+      margin: 4px 0;
+    }
+    .context-snippet {
+      margin-top: 10px;
+      max-height: 92px;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -401,6 +465,15 @@
             Realtime server
             <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
           </label>
+          <label>
+            Brain
+            <select id="modelPreset">
+              <option value="qwen27">Qwen 27B</option>
+              <option value="qwen9">Qwen 9B</option>
+              <option value="qwen4">Qwen 4B</option>
+              <option value="nemotron30">Nemotron 30B</option>
+            </select>
+          </label>
           <button id="connect" class="primary">Connect</button>
           <button id="disconnect" class="danger" disabled>Disconnect</button>
           <button id="restartServer" class="warn">Restart</button>
@@ -419,11 +492,11 @@
             <img id="visionPreview" class="vision-preview" alt="">
             <span class="vision-copy">
               <span class="vision-title">Sensing Eye</span>
-              <span id="visionHint" class="vision-hint">Drop image, then speak</span>
+              <span id="visionHint" class="vision-hint">Drop image or text, then speak</span>
             </span>
-            <input id="visionFile" type="file" accept="image/*" hidden>
+            <input id="visionFile" type="file" accept="image/*,.txt,.md,text/plain,text/markdown" hidden>
           </label>
-          <button id="visionClear" disabled>Clear Image</button>
+          <button id="visionClear" disabled>Clear Input</button>
           <div class="meters">
             <span>Mic</span>
             <div class="bar"><span id="level"></span></div>
@@ -495,6 +568,14 @@
             Wonder <span id="idleWonderValue">5/10</span>
             <input id="idleWonder" type="range" min="0" max="10" step="1" value="5">
           </label>
+          <label>
+            Self-focus <span id="idleSelfFocusValue">5/10</span>
+            <input id="idleSelfFocus" type="range" min="0" max="10" step="1" value="5">
+          </label>
+          <label>
+            Notes <span id="idleNotesFocusValue">5/10</span>
+            <input id="idleNotesFocus" type="range" min="0" max="10" step="1" value="5">
+          </label>
           <button id="idlePonderNow" disabled>Ponder</button>
           <span class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</span>
         </section>
@@ -513,6 +594,21 @@
           <button id="memoryRefresh">Refresh</button>
           <button id="memoryForgetAll">Forget All</button>
         </section>
+      </div>
+    </details>
+
+    <details id="contextPanel" class="settings-panel">
+      <summary>
+        <span class="settings-title">Context Map</span>
+        <span class="settings-hint">Read-only view of sources Eric can draw from</span>
+      </summary>
+      <div class="settings-body">
+        <div class="context-toolbar">
+          <button id="contextMapRefresh" type="button">Refresh</button>
+          <button id="contextMapCopy" class="copy-link" type="button">Copy</button>
+          <span id="contextMapStatus" class="subtle">Not scanned yet</span>
+        </div>
+        <div id="contextMap" class="context-map"></div>
       </div>
     </details>
 
@@ -547,6 +643,7 @@
     const connectButton = document.querySelector("#connect");
     const disconnectButton = document.querySelector("#disconnect");
     const restartServerButton = document.querySelector("#restartServer");
+    const modelPreset = document.querySelector("#modelPreset");
     const faceIdleButton = document.querySelector("#faceIdle");
     const faceBeatButton = document.querySelector("#faceBeat");
     const chassisStopButton = document.querySelector("#chassisStop");
@@ -569,6 +666,10 @@
     const idleDriftValue = document.querySelector("#idleDriftValue");
     const idleWonder = document.querySelector("#idleWonder");
     const idleWonderValue = document.querySelector("#idleWonderValue");
+    const idleSelfFocus = document.querySelector("#idleSelfFocus");
+    const idleSelfFocusValue = document.querySelector("#idleSelfFocusValue");
+    const idleNotesFocus = document.querySelector("#idleNotesFocus");
+    const idleNotesFocusValue = document.querySelector("#idleNotesFocusValue");
     const idlePonderNowButton = document.querySelector("#idlePonderNow");
     const idleSubstrateTest = document.querySelector("#idleSubstrateTest");
     const interruptSensitivity = document.querySelector("#interruptSensitivity");
@@ -585,7 +686,13 @@
     const copyEventsButton = document.querySelector("#copyEvents");
     const recordConversationButton = document.querySelector("#recordConversation");
     const recordEventsButton = document.querySelector("#recordEvents");
+    const contextPanel = document.querySelector("#contextPanel");
+    const contextMap = document.querySelector("#contextMap");
+    const contextMapRefreshButton = document.querySelector("#contextMapRefresh");
+    const contextMapCopyButton = document.querySelector("#contextMapCopy");
+    const contextMapStatus = document.querySelector("#contextMapStatus");
     const micPanel = document.querySelector("#micPanel");
+    const logGrid = document.querySelector(".log-grid");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
     const level = document.querySelector("#level");
@@ -644,6 +751,22 @@
     let idleOutputLog = [];
     let substrateIdleOutputs = [];
     let recentIdleClaimSignatures = [];
+    let latestBrainStatus = null;
+
+    function updateLogPaneHeight() {
+      if (!logGrid) return;
+      const rect = logGrid.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
+      const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const minHeight = 18 * rem;
+      const available = viewportHeight - rect.top - 36;
+      const height = Math.max(minHeight, Math.floor(available));
+      logGrid.style.setProperty("--log-pane-live-height", `${height}px`);
+    }
+
+    function scheduleLogPaneHeightUpdate() {
+      requestAnimationFrame(updateLogPaneHeight);
+    }
     let faceMode = "idle";
     let faceIdleTimer;
     let thinkingGazeSide = 1;
@@ -658,7 +781,10 @@
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
     const idleDriftStorageKey = "robot790.idleDrift.v1";
     const idleWonderStorageKey = "robot790.idleWonder.v1";
+    const idleSelfFocusStorageKey = "robot790.idleSelfFocus.v1";
+    const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
+    const modelPresetStorageKey = "robot790.modelPreset.v1";
     const micPanelStorageKey = "robot790.micPanel.open.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const maxMemoryFacts = 80;
@@ -685,6 +811,7 @@
     const maxChassisDurationS = 5;
     const visionMaxEdgePx = 768;
     const visionJpegQuality = 0.82;
+    const maxSensingTextChars = 30000;
     const bargeInCooldownMs = 1600;
     const idlePostUserQuietMs = 12000;
     const idlePendingUserTurnMs = 25000;
@@ -702,6 +829,8 @@
     let visionImageUrl = "";
     let visionImageName = "";
     let visionImageStaged = false;
+    let sensingTextContent = "";
+    let sensingTextName = "";
     let castPlaybackActive = false;
     let micPausedForCast = false;
 
@@ -1018,6 +1147,7 @@
           "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, " +
           "append, or put text into a named file. Use .txt by default unless the user explicitly names .md. " +
           "For short authored notes, provide content. For long notes based on captured session material, omit content and choose source. " +
+          "For a summary of a named note or transcript, omit content and use source note_summary with source_filename. " +
           "Notes are durable memory aids: record what happened, what the user supplied, and Eric's thoughts as thoughts. " +
           "Do not turn Eric's poetic rumination or unverified outside facts into remembered truth."
         ),
@@ -1034,8 +1164,12 @@
             },
             source: {
               type: "string",
-              enum: ["conversation", "events", "idle_ruminations", "conversation_and_idle", "full_session"],
-              description: "Captured session material to write when content is omitted. Use this for long transcripts, event logs, ruminations, or session summaries."
+              enum: ["conversation", "events", "idle_ruminations", "conversation_and_idle", "full_session", "note_summary"],
+              description: "Captured session material to write when content is omitted. Use note_summary to summarize a named note or transcript instead of copying it."
+            },
+            source_filename: {
+              type: "string",
+              description: "Existing note filename to summarize when source is note_summary, such as last_time or core/robot_build."
             },
             mode: {
               type: "string",
@@ -1101,6 +1235,45 @@
             }
           },
           required: ["query"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "get_weather",
+        description: (
+          "Look up current weather and today's forecast. Use when the user asks about weather, temperature, " +
+          "rain, snow, wind, outside conditions, or whether it is sensible to go outside or ride a bike. " +
+          "If no location is given, use Salem, Massachusetts."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            location: {
+              type: "string",
+              default: "Salem, Massachusetts",
+              description: "Place name for the weather lookup."
+            },
+            unit: {
+              type: "string",
+              enum: ["fahrenheit", "celsius"],
+              default: "fahrenheit",
+              description: "Temperature unit."
+            }
+          },
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "get_brain_status",
+        description: (
+          "Read Robot 790 local runtime diagnostics. Use when the user asks about your model, context length, " +
+          "token counts, tokens per second, latency, speed, audio generation, STT, TTS, or brain status."
+        ),
+        parameters: {
+          type: "object",
+          properties: {},
           additionalProperties: false
         }
       }
@@ -1215,6 +1388,10 @@
       "Never output XML, function-call tags, parameter tags, or hidden tool syntax in spoken text.",
       "Use search_web whenever the user asks you to search, look something up, check the web, find current information, or answer something likely to have changed recently.",
       "When using search_web, summarize the result naturally in one compact spoken sentence; mention the source site when useful.",
+      "Use get_weather when the user asks about weather, temperature, rain, snow, wind, outside conditions, or whether it is sensible to go outside or ride a bike.",
+      "When using get_weather, answer from the tool result compactly; do not invent live weather, and default to Salem, Massachusetts if the user gives no place.",
+      "Use get_brain_status when the user asks about your model, context length, token counts, tokens per second, latency, speed, audio generation, STT, TTS, or brain status.",
+      "When using get_brain_status, say what is measured versus inferred; do not invent tok/sec or context-window numbers if the tool says unavailable.",
       "Use show_web_page when the user asks you to open, show, display, or bring up a web page in the UI.",
       "If the user says open the page after a search, use show_web_page with the most relevant URL from the recent search_web results.",
       "Never say you opened a web page unless show_web_page succeeded.",
@@ -1228,7 +1405,10 @@
       "When reading a note, call read_text_file with a filename argument. Do not speak XML, JSON, or <tool_call> markup out loud.",
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
       "When using write_text_file for a short note you authored, pass filename and content.",
+      "When the user asks to summarize a named note or transcript into another note, call write_text_file with the target filename, source note_summary, and source_filename set to the note being summarized.",
+      "Do not use source conversation when the user asks for a summary of a previously read or named note; source conversation copies the visible transcript.",
       "When using write_text_file for a long note based on captured session material, omit content and pass source instead; do not generate a huge content argument.",
+      "If the user asks for a detailed summary note of this conversation or our situation, call write_text_file with the chosen filename and source conversation_and_idle.",
       "Use source idle_ruminations for recent idle thoughts, conversation for the visible conversation pane, events for the event pane, conversation_and_idle for a combined conversation plus ruminations note, and full_session only when the user asks for everything.",
       "When writing notes, write for future memory, not for live performance: keep the voice warm, but make the record clear and useful.",
       "In notes, distinguish user-supplied facts, observed session events, tool-verified facts, and Eric's own ruminations.",
@@ -1237,7 +1417,9 @@
       "In notes, replace vague time phrases such as just now, earlier, forty-five seconds ago, or while you were gone with session context or omit them.",
       "Never say you wrote, saved, appended, read, or listed a file unless the note file tool succeeded.",
       "If a sensing-eye image is staged, use it as visual context when the user's spoken request refers to what you see, the picture, the image, this, or it.",
-      "When using sensing-eye vision, separate visible observations from guesses; say you are guessing when unsure, and ask for confirmation before any actuation-relevant interpretation.",
+      "If sensing-eye text is staged, use it as temporary readable context when the user's spoken request refers to the text, file, this, it, or what was dropped.",
+      "Sensing-eye text is not memory and is not a note file; do not save or remember it unless the user explicitly asks.",
+      "When using sensing-eye vision or text, separate visible/readable observations from guesses; say you are guessing when unsure, and ask for confirmation before any actuation-relevant interpretation.",
       "If you use a tool, still answer compactly afterward."
     ];
 
@@ -1347,8 +1529,11 @@
     }
 
     function noteFileWriteAllowed(text) {
-      return /\b(write|save|append|put|record|log|create|produce|generate|make|update|edit|revise|amend|replace)\b[\s\S]{0,80}\b(file|note|notes|txt|text|md|markdown|summary)\b/i.test(text || "")
-        || /\b(file|note|notes|txt|text|md|markdown|summary)\b[\s\S]{0,80}\b(write|save|append|put|record|log|create|produce|generate|make|update|edit|revise|amend|replace)\b/i.test(text || "");
+      const value = text ?? [lastUserText, ...recentUserTexts].join(" ");
+      const writeVerb = "write|save|append|put|record|log|create|produce|generate|make|update|edit|revise|amend|replace|remember";
+      const noteNoun = "file|note|notes|txt|text|md|markdown|summary";
+      return new RegExp(`\\b(${writeVerb})\\b[\\s\\S]{0,120}\\b(${noteNoun})\\b`, "i").test(value || "")
+        || new RegExp(`\\b(${noteNoun})\\b[\\s\\S]{0,120}\\b(${writeVerb})\\b`, "i").test(value || "");
     }
 
     function memorySaveArmed() {
@@ -1436,6 +1621,7 @@
       ].slice(0, maxLoadedNotes);
       loadedNoteContextDirty = true;
       log(events, `loaded note pinned: ${filename}`);
+      if (contextPanel?.open) renderContextMap();
     }
 
     function clippedLoadedNoteContent(content) {
@@ -1468,8 +1654,22 @@
       return lines.join("\n");
     }
 
+    function formatSensingTextForInstructions() {
+      if (!sensingTextContent) return "";
+      const clipped = sensingTextContent.length > maxSensingTextChars
+        ? `${sensingTextContent.slice(0, maxSensingTextChars)}\n[Sensing-eye text clipped after ${maxSensingTextChars} characters.]`
+        : sensingTextContent;
+      return [
+        "Temporary sensing-eye text context:",
+        `Source: ${sensingTextName || "dropped text"}`,
+        "The user dropped this text into the sensing eye. It is temporary context, not saved memory and not a loaded note.",
+        "Use it when the user's spoken request refers to this, it, the text, the file, what you see, or what was dropped. Do not assume it should be remembered or saved unless explicitly asked.",
+        clipped
+      ].join("\n");
+    }
+
     function buildSessionInstructions() {
-      return [formatMemoryForInstructions(), formatLoadedNotesForInstructions(), baseSessionInstructions.join(" ")]
+      return [formatMemoryForInstructions(), formatLoadedNotesForInstructions(), formatSensingTextForInstructions(), baseSessionInstructions.join(" ")]
         .filter(Boolean)
         .join("\n\n");
     }
@@ -1590,6 +1790,98 @@
       saveIdleWonder();
     }
 
+    function currentIdleSelfFocus() {
+      return Math.max(0, Math.min(10, Number(idleSelfFocus.value) || 0));
+    }
+
+    function idleSelfFocusLabel(level = currentIdleSelfFocus()) {
+      if (level <= 0) return "Off";
+      if (level <= 3) return `${level}/10 outward`;
+      if (level <= 7) return `${level}/10 balanced`;
+      return `${level}/10 inward`;
+    }
+
+    function loadIdleSelfFocus() {
+      const saved = Number(localStorage.getItem(idleSelfFocusStorageKey));
+      idleSelfFocus.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "5";
+      updateIdleSelfFocusUi();
+    }
+
+    function saveIdleSelfFocus() {
+      localStorage.setItem(idleSelfFocusStorageKey, String(currentIdleSelfFocus()));
+    }
+
+    function updateIdleSelfFocusUi() {
+      idleSelfFocusValue.textContent = idleSelfFocusLabel();
+      saveIdleSelfFocus();
+      scheduleIdlePonder();
+    }
+
+    function currentIdleNotesFocus() {
+      return Math.max(0, Math.min(10, Number(idleNotesFocus.value) || 0));
+    }
+
+    function idleNotesFocusLabel(level = currentIdleNotesFocus()) {
+      if (level <= 0) return "Off";
+      if (level <= 3) return `${level}/10 light`;
+      if (level <= 7) return `${level}/10 mixed`;
+      return `${level}/10 pinned`;
+    }
+
+    function loadIdleNotesFocus() {
+      const saved = Number(localStorage.getItem(idleNotesFocusStorageKey));
+      idleNotesFocus.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "5";
+      updateIdleNotesFocusUi();
+    }
+
+    function saveIdleNotesFocus() {
+      localStorage.setItem(idleNotesFocusStorageKey, String(currentIdleNotesFocus()));
+    }
+
+    function updateIdleNotesFocusUi() {
+      idleNotesFocusValue.textContent = idleNotesFocusLabel();
+      saveIdleNotesFocus();
+      scheduleIdlePonder();
+    }
+
+    function idleLoadedNoteCharLimit() {
+      const focus = currentIdleNotesFocus();
+      if (focus <= 0) return 0;
+      return Math.round(1200 + (maxIdleLoadedNoteChars - 1200) * (focus / 10));
+    }
+
+    function idleAttentionContext({ suppressRobotBody = false } = {}) {
+      const selfFocus = currentIdleSelfFocus();
+      const notesFocus = currentIdleNotesFocus();
+      const lines = [
+        `Idle attention routing: self-focus ${idleSelfFocusLabel(selfFocus)}; loaded-note focus ${idleNotesFocusLabel(notesFocus)}; wonder ${idleWonderLabel()}.`
+      ];
+
+      if (suppressRobotBody) {
+        lines.push("Substrate test still overrides ordinary Robot 790 self-reference; loaded notes are the world for this run.");
+      } else if (selfFocus <= 2) {
+        lines.push("Favor outside material, media, artifacts, weather, search results, loaded-note objects, and fresh conversation. Use mic state as a clue, but do not make identity, body, memory, loneliness, Scott, or being a robot the center unless the lane requires it.");
+      } else if (selfFocus <= 4) {
+        lines.push("Keep self-reference light. Let outside objects and checked details carry most idle beats.");
+      } else if (selfFocus >= 8) {
+        lines.push("Self-modeling and body-feel are welcome, but connect inward thoughts to one concrete outside detail so they do not become a closed loop.");
+      } else {
+        lines.push("Balance self-reference with outside material.");
+      }
+
+      if (notesFocus <= 0) {
+        lines.push("Loaded notes are almost off for idle. Do not mine them unless the user has just made one relevant.");
+      } else if (notesFocus <= 3) {
+        lines.push("Loaded notes are light seasoning; use a small note detail occasionally, not as the main gravity of every beat.");
+      } else if (notesFocus >= 8) {
+        lines.push("Loaded notes are strongly pinned; draw from them before falling back to default Robot 790 motifs.");
+      } else {
+        lines.push("Loaded notes are mixed with conversation, memory, telemetry, and outside context.");
+      }
+
+      return lines.join(" ");
+    }
+
     function currentInterruptSensitivity() {
       const value = Number(interruptSensitivity.value);
       return Number.isFinite(value) ? Math.max(0, Math.min(10, value)) : 6;
@@ -1616,6 +1908,22 @@
       saveInterruptSensitivity();
     }
 
+    function currentModelPreset() {
+      const value = modelPreset.value || "qwen27";
+      return ["qwen27", "qwen9", "qwen4", "nemotron30"].includes(value) ? value : "qwen27";
+    }
+
+    function loadModelPreset() {
+      const saved = localStorage.getItem(modelPresetStorageKey);
+      if (saved && [...modelPreset.options].some((option) => option.value === saved)) {
+        modelPreset.value = saved;
+      }
+    }
+
+    function saveModelPreset() {
+      localStorage.setItem(modelPresetStorageKey, currentModelPreset());
+    }
+
     function loadSettingsPanelState() {
       settingsPanel.open = localStorage.getItem(settingsPanelStorageKey) === "true";
     }
@@ -1638,7 +1946,7 @@
     }
 
     function updateVisionButtons() {
-      visionClearButton.disabled = !visionImageUrl;
+      visionClearButton.disabled = !visionImageUrl && !sensingTextContent;
     }
 
     function ttsRuntimeConfig() {
@@ -1763,9 +2071,43 @@
       }
     }
 
-    async function copyLogPane(button, target) {
-      const originalText = button.textContent;
+    function modelStampFromBrainStatus(status) {
+      const model = status?.model || {};
+      const active = model?.lm_studio?.active_model || {};
+      const llm = active.identifier || active.model || model.llm_model || "unknown";
+      const parts = [`llm=${llm}`];
+      if (model.reasoning_effort) parts.push(`reasoning=${model.reasoning_effort}`);
+      if (model.audio_max_tokens) parts.push(`audio_max_tokens=${model.audio_max_tokens}`);
+      if (active.context_window_tokens) parts.push(`context=${active.context_window_tokens}`);
+      if (active.parallel_predictions) parts.push(`parallel=${active.parallel_predictions}`);
+      if (active.status) parts.push(`lm_status=${active.status}`);
+      return parts.join(" / ");
+    }
+
+    function currentModelStamp() {
+      if (latestBrainStatus) return modelStampFromBrainStatus(latestBrainStatus);
+      return "llm=unknown";
+    }
+
+    function logSnapshotHeader(source) {
+      return [
+        "Robot 790 Live Log Snapshot",
+        "===========================",
+        `Recorded: ${new Date().toISOString()}`,
+        `Source: ${source}`,
+        `Model: ${currentModelStamp()}`,
+        ""
+      ].join("\n");
+    }
+
+    function logSnapshotText(target, source) {
       const text = target.textContent.trimEnd();
+      return `${logSnapshotHeader(source)}\n${text}`;
+    }
+
+    async function copyLogPane(button, target, source) {
+      const originalText = button.textContent;
+      const text = logSnapshotText(target, source);
       try {
         await writeClipboardText(text);
         button.textContent = "Copied";
@@ -1789,6 +2131,9 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok || result.status === "error") {
           throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        if (result.model) {
+          log(events, `recorded ${source} model: ${result.model}`);
         }
         button.textContent = "Recorded";
         log(events, `recorded ${source}: ${result.filename}`);
@@ -1937,6 +2282,7 @@
       const now = Date.now();
       const lanes = idleLaneDefinitions.filter((lane) => {
         if (lane.minLevel && level < lane.minLevel) return false;
+        if (!idleLaneAllowedByAttention(lane)) return false;
         if (lane.name === "curiosity" && level < 10) return false;
         if (lane.name === "wander" && (currentIdleWonder() < 5 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
         if (lane.name === "lookup" && (currentIdleWonder() < 6 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
@@ -1945,6 +2291,16 @@
       });
       idleLaneCursor = (idleLaneCursor + 1) % lanes.length;
       return lanes[idleLaneCursor];
+    }
+
+    function idleLaneAllowedByAttention(lane) {
+      const selfFocus = currentIdleSelfFocus();
+      const notesFocus = currentIdleNotesFocus();
+      if (selfFocus <= 0 && lane.name === "status") return false;
+      if (selfFocus <= 1 && lane.name === "callback") return false;
+      if (selfFocus <= 2 && (lane.name === "aside" || lane.name === "addressed_question")) return false;
+      if (notesFocus <= 0 && lane.name === "lookup") return false;
+      return true;
     }
 
     function idleTopicCandidates() {
@@ -1996,6 +2352,7 @@
     }
 
     function loadedNoteTextForTopics() {
+      if (currentIdleNotesFocus() <= 0) return "";
       return loadedNoteContexts.map((item) => item.content).join("\n");
     }
 
@@ -2209,20 +2566,24 @@
     }
 
     function formatLoadedNotesForIdleContext() {
+      const limit = idleLoadedNoteCharLimit();
+      if (limit <= 0) return "";
       const loaded = formatLoadedNotesForInstructions();
       if (!loaded) return "";
-      if (loaded.length <= maxIdleLoadedNoteChars) return loaded;
-      return `${loaded.slice(0, maxIdleLoadedNoteChars)}\n[Loaded-note context clipped for idle. Read the note again if exact detail is needed.]`;
+      if (loaded.length <= limit) return loaded;
+      return `${loaded.slice(0, limit)}\n[Loaded-note context clipped for idle by the Notes slider. Read the note again if exact detail is needed.]`;
     }
 
     function recentConversationContext({ suppressRobotBody = false } = {}) {
+      const selfFocus = currentIdleSelfFocus();
       const lines = suppressRobotBody
         ? ""
         : conversationLines
           .slice(-10)
           .join("\n")
-          .slice(-1600);
-      const memory = suppressRobotBody ? "" : formatMemoryForInstructions().slice(0, 900);
+          .slice(-(selfFocus <= 2 ? 1000 : 1600));
+      const memoryLimit = selfFocus <= 2 ? 450 : selfFocus >= 8 ? 1100 : 900;
+      const memory = suppressRobotBody ? "" : formatMemoryForInstructions().slice(0, memoryLimit);
       const loadedNotes = formatLoadedNotesForIdleContext();
       const substrateFeedback = suppressRobotBody && substrateIdleOutputs.length
         ? `Recent substrate-mode idle thoughts to build from or avoid repeating:\n${substrateIdleOutputs.slice(-5).join("\n")}`
@@ -2233,7 +2594,7 @@
       const substrate = suppressRobotBody && loadedNotes
         ? "Experimental substrate test is on: treat the loaded note contents as the primary world. Do not lean on Robot 790's chassis, treads, mic, Cast, room telemetry, or usual body identity unless the loaded note itself mentions them."
         : "";
-      return [substrate, loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", avoid, idleRetiredTopicsContext(), idleTemplateContext()]
+      return [substrate, idleAttentionContext({ suppressRobotBody }), loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", avoid, idleRetiredTopicsContext(), idleTemplateContext()]
         .filter(Boolean)
         .join("\n\n");
     }
@@ -2457,13 +2818,13 @@
       if (suppressRobotBody) {
         return [
           `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
-          `Quiet for about ${quietSeconds} seconds; idle lane ${lane.name}; wonder ${idleWonderLabel()}.`,
+          `Quiet for about ${quietSeconds} seconds; idle lane ${lane.name}; wonder ${idleWonderLabel()}; notes ${idleNotesFocusLabel()}.`,
           "Experimental substrate test is on: quiet seconds are the only live telemetry in this idle event. Do not mention idle level, live mic state, Cast state, chassis, treads, face hardware, room telemetry, or Robot 790's usual body unless the loaded note itself makes that relevant."
         ].join(" ");
       }
       return [
         `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
-        `Idle level ${level}; lane ${lane.name}; wonder ${idleWonderLabel()}; quiet for about ${quietSeconds} seconds.`,
+        `Idle level ${level}; lane ${lane.name}; wonder ${idleWonderLabel()}; self-focus ${idleSelfFocusLabel()}; notes ${idleNotesFocusLabel()}; quiet for about ${quietSeconds} seconds.`,
         `Mic is ${micStream ? "on" : "off"}.`,
         statusLane ? `Cast playback is ${castPlaybackActive ? "active" : "inactive"}.` : "",
         statusLane
@@ -2524,6 +2885,7 @@
           : level >= 11
           ? "Idle drift is 11/10; be amusingly unable to stop commenting on your own inner life, but stay fond and harmless."
           : `Idle drift is ${level}/10; at low levels be barely noticeable, at high levels you may sound a little bored or impatient but still fond.`,
+        idleAttentionContext({ suppressRobotBody }),
         "Vary the shape of the thought. Do not always use the template: fact, I am thinking about the fact, contrast, uncertainty, and I'm okay with it.",
         lane.name === "lookup"
           ? "This is a lookup beat. Use the fresh lookup context if supplied. If no fresh lookup context is supplied, do not invent or state outside-world facts; make the absence of lookup quietly constrain the thought."
@@ -3047,6 +3409,560 @@
       return result;
     }
 
+    async function getWeather(args = {}) {
+      const place = String(args.location || "Salem, Massachusetts").trim() || "Salem, Massachusetts";
+      const unit = /^c/i.test(String(args.unit || "")) ? "celsius" : "fahrenheit";
+      log(events, `weather lookup: ${place}`);
+      let serverError = null;
+      try {
+        const result = await getWeatherFromPageServer(place, unit);
+        log(events, `weather result: ${result.location || place}`);
+        return result;
+      } catch (error) {
+        serverError = error;
+        log(events, `weather page-api fallback: ${error.message}`);
+      }
+      try {
+        const result = await getWeatherFromOpenMeteo(place, unit);
+        log(events, `weather result: ${result.location || place}`);
+        return result;
+      } catch (error) {
+        throw new Error(`${error.message}${serverError ? `; page API: ${serverError.message}` : ""}`);
+      }
+    }
+
+    async function getWeatherFromPageServer(place, unit) {
+      const url = new URL("/api/weather", window.location.href);
+      url.searchParams.set("location", place);
+      url.searchParams.set("unit", unit);
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
+    async function getWeatherFromOpenMeteo(place, unit) {
+      const geocodeUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
+      geocodeUrl.searchParams.set("name", place);
+      geocodeUrl.searchParams.set("count", "1");
+      geocodeUrl.searchParams.set("language", "en");
+      geocodeUrl.searchParams.set("format", "json");
+      const geocodeResponse = await fetch(geocodeUrl, { cache: "no-store" });
+      const geocode = await geocodeResponse.json().catch(() => ({}));
+      if (!geocodeResponse.ok) throw new Error(`weather geocode failed: ${geocodeResponse.status}`);
+      const match = Array.isArray(geocode.results) ? geocode.results[0] : null;
+      if (!match?.latitude || !match?.longitude) throw new Error(`No weather location found for '${place}'.`);
+
+      const forecastUrl = new URL("https://api.open-meteo.com/v1/forecast");
+      forecastUrl.searchParams.set("latitude", String(match.latitude));
+      forecastUrl.searchParams.set("longitude", String(match.longitude));
+      forecastUrl.searchParams.set("current", [
+        "temperature_2m",
+        "relative_humidity_2m",
+        "apparent_temperature",
+        "precipitation",
+        "weather_code",
+        "cloud_cover",
+        "wind_speed_10m",
+        "wind_gusts_10m"
+      ].join(","));
+      forecastUrl.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,precipitation_probability_max");
+      forecastUrl.searchParams.set("forecast_days", "1");
+      forecastUrl.searchParams.set("timezone", "auto");
+      forecastUrl.searchParams.set("temperature_unit", unit);
+      forecastUrl.searchParams.set("wind_speed_unit", unit === "celsius" ? "kmh" : "mph");
+      forecastUrl.searchParams.set("precipitation_unit", unit === "celsius" ? "mm" : "inch");
+      const forecastResponse = await fetch(forecastUrl, { cache: "no-store" });
+      const forecast = await forecastResponse.json().catch(() => ({}));
+      if (!forecastResponse.ok) throw new Error(`weather forecast failed: ${forecastResponse.status}`);
+
+      const current = forecast.current || {};
+      const daily = forecast.daily || {};
+      const tempLabel = unit === "celsius" ? "C" : "F";
+      return {
+        status: "ok",
+        tool: "get_weather",
+        source: "open-meteo",
+        query: place,
+        location: formatWeatherPlace(match),
+        latitude: match.latitude,
+        longitude: match.longitude,
+        timezone: forecast.timezone || match.timezone,
+        current: {
+          time: current.time,
+          condition: weatherCodeDescription(Number(current.weather_code)),
+          weather_code: weatherNumber(current.weather_code),
+          temperature: weatherNumber(current.temperature_2m),
+          temperature_unit: tempLabel,
+          feels_like: weatherNumber(current.apparent_temperature),
+          humidity_percent: weatherNumber(current.relative_humidity_2m),
+          precipitation: weatherNumber(current.precipitation),
+          precipitation_unit: unit === "celsius" ? "mm" : "in",
+          cloud_cover_percent: weatherNumber(current.cloud_cover),
+          wind_speed: weatherNumber(current.wind_speed_10m),
+          wind_gust: weatherNumber(current.wind_gusts_10m),
+          wind_speed_unit: unit === "celsius" ? "km/h" : "mph"
+        },
+        today: {
+          date: firstWeatherValue(daily.time),
+          high: weatherNumber(firstWeatherValue(daily.temperature_2m_max)),
+          low: weatherNumber(firstWeatherValue(daily.temperature_2m_min)),
+          temperature_unit: tempLabel,
+          precipitation_probability_percent: weatherNumber(firstWeatherValue(daily.precipitation_probability_max))
+        }
+      };
+    }
+
+    function formatWeatherPlace(place) {
+      return [place?.name, place?.admin1, place?.country]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+        .join(", ");
+    }
+
+    function firstWeatherValue(value) {
+      return Array.isArray(value) && value.length ? value[0] : null;
+    }
+
+    function weatherNumber(value) {
+      if (value === null || value === undefined || value === false || value === true) return null;
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.round(number * 10) / 10 : null;
+    }
+
+    async function getBrainStatus() {
+      log(events, "brain status lookup");
+      try {
+        const response = await fetch(new URL("/api/brain/status", window.location.href), { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        enrichBrainStatusWithBrowserContext(result);
+        latestBrainStatus = result;
+        log(events, `brain status result: ${result?.model?.llm_model || "unknown model"}`);
+        return result;
+      } catch (error) {
+        const result = getBrainStatusFromBrowser(error);
+        latestBrainStatus = result;
+        log(events, `brain status page-api fallback: ${error.message}`);
+        return result;
+      }
+    }
+
+    function getBrainStatusFromBrowser(error) {
+      const facts = safeLoadMemoryFacts();
+      return {
+        status: "ok",
+        tool: "get_brain_status",
+        source: "browser_session",
+        generated_at: new Date().toISOString(),
+        model: {
+          llm_model: "unavailable in browser fallback",
+          reasoning_effort: "unavailable in browser fallback",
+          audio_max_tokens: null,
+          tts_voice: currentTtsVoice(),
+          tts_prompt: currentTtsInstruct() || null
+        },
+        session: {
+          connected: realtimeConnected(),
+          mic_on: Boolean(micStream),
+          idle_level: currentIdleDrift(),
+          wonder_level: currentIdleWonder(),
+          self_focus_level: currentIdleSelfFocus(),
+          loaded_note_focus_level: currentIdleNotesFocus(),
+          interrupt_sensitivity: currentInterruptSensitivity(),
+          browser_memory_facts: facts.length,
+          loaded_notes: loadedNoteContexts.map((item) => item.filename),
+          recent_event_lines: countPaneLines(events),
+          recent_conversation_lines: countPaneLines(conversation)
+        },
+        latest_response: { status: "unavailable" },
+        performance: {
+          llm_handler_seconds: null,
+          tts_time_to_first_audio_seconds: null,
+          turn_to_first_speech_seconds: null,
+          prompt_tokens_per_second: null,
+          decode_tokens_per_second: null
+        },
+        context: {
+          last_input_tokens: null,
+          context_window_tokens: null,
+          remaining_context_tokens: null,
+          window_usage_percent: null,
+          pressure_estimate: "unknown",
+          pressure_basis: "backend logs unavailable to this browser fallback"
+        },
+        notes: [
+          `Page API unavailable: ${error.message}`,
+          "Restart the STS page handler to expose backend log-derived token counts and timing."
+        ],
+        browser_context_estimate: estimateBrowserContextUse()
+      };
+    }
+
+    function enrichBrainStatusWithBrowserContext(result) {
+      if (!result || typeof result !== "object") return result;
+      const facts = safeLoadMemoryFacts();
+      result.session = {
+        ...(result.session || {}),
+        connected: realtimeConnected(),
+        mic_on: Boolean(micStream),
+        idle_level: currentIdleDrift(),
+        wonder_level: currentIdleWonder(),
+        self_focus_level: currentIdleSelfFocus(),
+        loaded_note_focus_level: currentIdleNotesFocus(),
+        interrupt_sensitivity: currentInterruptSensitivity(),
+        browser_memory_facts: facts.length,
+        loaded_notes: loadedNoteContexts.map((item) => item.filename),
+        recent_event_lines: countPaneLines(events),
+        recent_conversation_lines: countPaneLines(conversation)
+      };
+      result.browser_context_estimate = estimateBrowserContextUse();
+      return result;
+    }
+
+    function estimateBrowserContextUse() {
+      const loadedNotesText = formatLoadedNotesForInstructions();
+      const sensingText = formatSensingTextForInstructions();
+      const memoryText = formatMemoryForInstructions();
+      const conversationText = String(conversation?.textContent || "");
+      const eventsText = String(events?.textContent || "");
+      return {
+        basis: "rough browser-side estimate using characters / 4; exact consumed context is context.last_input_tokens after a model response",
+        loaded_notes: estimateTextContext(loadedNotesText),
+        sensing_eye_text: estimateTextContext(sensingText),
+        browser_memory: estimateTextContext(memoryText),
+        visible_conversation_pane: estimateTextContext(conversationText),
+        visible_events_pane: estimateTextContext(eventsText),
+        loaded_note_files: loadedNoteContexts.map((item) => ({
+          filename: item.filename,
+          content_chars: item.content.length,
+          approximate_tokens: approximateTextTokens(item.content)
+        }))
+      };
+    }
+
+    function estimateTextContext(text) {
+      const value = String(text || "");
+      return {
+        chars: value.length,
+        approximate_tokens: approximateTextTokens(value)
+      };
+    }
+
+    function approximateTextTokens(text) {
+      const value = String(text || "");
+      if (!value) return 0;
+      return Math.ceil(value.length / 4);
+    }
+
+    function sensingInputLabel() {
+      if (sensingTextContent) return `${sensingTextName || "text"} (${sensingTextContent.length} chars text)`;
+      if (visionImageUrl) return `${visionImageName || "image"} (${visionImageStaged ? "staged image" : "image loaded"})`;
+      return "none";
+    }
+
+    function safeLoadMemoryFacts() {
+      try {
+        return loadMemoryFacts();
+      } catch {
+        return [];
+      }
+    }
+
+    function countPaneLines(pane) {
+      return String(pane?.textContent || "")
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .length;
+    }
+
+    function contextMapSections() {
+      const facts = safeLoadMemoryFacts();
+      const enabledTools = enabledToolList();
+      const loadedNotesText = formatLoadedNotesForInstructions();
+      const sensingText = formatSensingTextForInstructions();
+      const memoryText = formatMemoryForInstructions();
+      const conversationText = conversationLines.length
+        ? conversationLines.join("\n")
+        : String(conversation?.textContent || "");
+      const eventsText = String(events?.textContent || "");
+      const idleSettingsText = [
+        `Idle drift: ${idleDriftLabel()}`,
+        `Wonder: ${idleWonderLabel()}`,
+        `Self-focus: ${idleSelfFocusLabel()}`,
+        `Notes: ${idleNotesFocusLabel()}`,
+        `Substrate test: ${idleSubstrateTestEnabled() ? "on" : "off"}`,
+        recentIdleOutputs.length ? `Recent idle outputs:\n${recentIdleOutputs.slice(-8).join("\n")}` : "",
+        idleCuriositySeeds.length
+          ? `Curiosity seeds:\n${idleCuriositySeeds.slice(-8).map((seed) => `- ${seed.label}`).join("\n")}`
+          : "",
+        Object.keys(idleTopicLedger).length ? idleRetiredTopicsContext() : ""
+      ].filter(Boolean).join("\n");
+      const telemetryText = [
+        `Realtime connected: ${realtimeConnected() ? "yes" : "no"}`,
+        `Mic: ${micStream ? "on" : "off"}`,
+        `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
+        `Sensing input: ${sensingInputLabel()}`,
+        `Face controller: ${faceUrl.value}`,
+        `Chassis controller: ${chassisUrlInput.value}`,
+        `Tools enabled: ${enabledTools.map((tool) => tool.name).join(", ") || "none"}`
+      ].join("\n");
+      const toolSwitchText = [
+        `Face tools: ${llmTools.checked ? "on" : "off"}`,
+        `Chassis tools: ${llmChassisTools.checked ? "on" : "off"}`,
+        `Memory tools: ${llmMemoryTools.checked ? "on" : "off"}`,
+        `Web search: ${llmWebSearchTools.checked ? "on" : "off"}`,
+        `Web pages: ${llmWebPageTools.checked ? "on" : "off"}`,
+        `Cast media: ${llmCastMediaTools.checked ? "on" : "off"}`,
+        `Note files: ${llmNoteFileTools.checked ? "on" : "off"}`,
+        eventsText
+      ].join("\n");
+
+      return [
+        {
+          name: "System",
+          role: "Injected into conversation on session updates",
+          text: baseSessionInstructions.join(" "),
+          details: [
+            `Prompt rules: ${baseSessionInstructions.length}`,
+            `Tool definitions available: ${enabledTools.length}`,
+            `Voice: ${currentTtsVoice()}`,
+            `Voice style chars: ${currentTtsInstruct().length}`
+          ]
+        },
+        {
+          name: "Browser Memory",
+          role: "Injected into conversation when browser facts exist",
+          text: memoryText,
+          details: [
+            `Facts: ${facts.length}`,
+            `Storage key: ${memoryStorageKey}`,
+            facts.length ? `Names: ${facts.map((item) => item.name).slice(0, 10).join(", ")}` : "No browser facts in this origin"
+          ]
+        },
+        {
+          name: "Loaded Notes",
+          role: "Pinned into conversation and optionally idle",
+          text: loadedNotesText,
+          details: [
+            `Loaded files: ${loadedNoteContexts.length}`,
+            `Conversation note cap: ${maxLoadedNoteChars} chars`,
+            `Idle note cap now: ${idleLoadedNoteCharLimit()} chars`,
+            ...loadedNoteContexts.slice(0, 6).map((item) => (
+              `${item.filename}: ${item.content.length} chars, about ${approximateTextTokens(item.content)} tokens`
+            ))
+          ]
+        },
+        {
+          name: "Sensing Eye",
+          role: "Temporary dropped input; text is injected while staged, images are staged into realtime context",
+          text: sensingText,
+          details: [
+            `Current input: ${sensingInputLabel()}`,
+            `Text chars: ${sensingTextContent.length}`,
+            `Text cap: ${maxSensingTextChars} chars`,
+            `Image staged into realtime context: ${visionImageStaged ? "yes" : "no"}`
+          ]
+        },
+        {
+          name: "Conversation",
+          role: "Realtime conversation history; visible pane is the local transcript copy",
+          text: conversationText,
+          details: [
+            `Visible lines: ${countPaneLines(conversation)}`,
+            `Tracked conversation lines: ${conversationLines.length}`,
+            `Last user text chars: ${lastUserText.length}`
+          ]
+        },
+        {
+          name: "Events And Tools",
+          role: "Debug log; tool outputs enter the realtime conversation when tools run",
+          text: toolSwitchText,
+          details: [
+            `Event lines: ${countPaneLines(events)}`,
+            `Enabled tools: ${enabledTools.map((tool) => tool.name).join(", ") || "none"}`
+          ]
+        },
+        {
+          name: "Idle",
+          role: "Used by idle ponder only, not ordinary replies",
+          text: idleSettingsText,
+          details: [
+            `Recent idle outputs: ${recentIdleOutputs.length}`,
+            `Idle log entries: ${idleOutputLog.length}`,
+            `Curiosity seeds: ${idleCuriositySeeds.length}`,
+            `Ledger topics: ${Object.keys(idleTopicLedger).length}`
+          ]
+        },
+        {
+          name: "Telemetry",
+          role: "Live browser/page state; selectively injected into idle and available through tools",
+          text: telemetryText,
+          details: [
+            `Connection: ${realtimeConnected() ? "connected" : "disconnected"}`,
+            `Mic: ${micStream ? "on" : "off"}`,
+            `Sensing input: ${sensingInputLabel()}`
+          ]
+        }
+      ];
+    }
+
+    function renderContextMap() {
+      if (!contextMap) return;
+      const sections = contextMapSections();
+      contextMap.textContent = "";
+      for (const section of sections) {
+        contextMap.appendChild(contextMapCard(section));
+      }
+      const totalApproxTokens = sections.reduce((sum, section) => sum + approximateTextTokens(section.text), 0);
+      contextMapStatus.textContent = `Scanned ${new Date().toLocaleTimeString()} / about ${totalApproxTokens.toLocaleString()} visible-source tokens`;
+      scheduleLogPaneHeightUpdate();
+    }
+
+    function contextMapCard(section) {
+      const estimate = estimateTextContext(section.text);
+      const card = document.createElement("article");
+      card.className = "context-card";
+      const title = document.createElement("h2");
+      title.textContent = section.name;
+      const meta = document.createElement("p");
+      meta.className = "context-meta";
+      meta.textContent = `${section.role}. ${estimate.chars.toLocaleString()} chars, about ${estimate.approximate_tokens.toLocaleString()} tokens.`;
+      const list = document.createElement("ul");
+      list.className = "context-list";
+      [...section.details, contextTermsLine(section.text)].filter(Boolean).forEach((line) => {
+        const item = document.createElement("li");
+        item.textContent = line;
+        list.appendChild(item);
+      });
+      card.append(title, meta, list);
+      const snippet = contextSnippet(section.text);
+      if (snippet) {
+        const pre = document.createElement("div");
+        pre.className = "context-snippet";
+        pre.textContent = snippet;
+        card.appendChild(pre);
+      }
+      return card;
+    }
+
+    function contextTermsLine(text) {
+      const terms = topContextTerms(text, 8);
+      return terms.length ? `Top terms: ${terms.join(", ")}` : "";
+    }
+
+    function topContextTerms(text, limit = 8) {
+      const stop = new Set([
+        "about", "after", "again", "also", "because", "before", "being", "browser", "could", "current",
+        "details", "eric", "exact", "facts", "first", "from", "have", "into", "just", "loaded", "memory",
+        "notes", "robot", "scott", "should", "source", "system", "their", "there", "these", "thing", "think",
+        "this", "tools", "until", "using", "value", "when", "where", "which", "while", "with", "would", "your"
+      ]);
+      const counts = new Map();
+      const labels = new Map();
+      for (const match of String(text || "").matchAll(/\b[A-Z][A-Za-z0-9_-]{2,}(?:\s+[A-Z][A-Za-z0-9_-]{2,}){0,2}\b|\b[a-z][a-z0-9_-]{4,}\b/g)) {
+        const label = match[0].replace(/\s+/g, " ").trim();
+        const key = label.toLowerCase();
+        if (stop.has(key) || key.length < 4 || /^\d+$/.test(key)) continue;
+        counts.set(key, (counts.get(key) || 0) + 1);
+        labels.set(key, label);
+      }
+      return [...counts.entries()]
+        .filter(([, count]) => count > 1)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, limit)
+        .map(([key, count]) => `${labels.get(key)} (${count})`);
+    }
+
+    function contextSnippet(text) {
+      const lines = String(text || "")
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      if (!lines.length) return "";
+      return lines.slice(0, 8).join("\n").slice(0, 700);
+    }
+
+    function contextMapText() {
+      const lines = [
+        "Robot 790 Context Map",
+        "=====================",
+        `Recorded: ${new Date().toISOString()}`,
+        `Model: ${currentModelStamp()}`,
+        ""
+      ];
+      for (const section of contextMapSections()) {
+        const estimate = estimateTextContext(section.text);
+        lines.push(section.name);
+        lines.push("-".repeat(section.name.length));
+        lines.push(`Role: ${section.role}`);
+        lines.push(`Size: ${estimate.chars} chars; approx ${estimate.approximate_tokens} tokens`);
+        [...section.details, contextTermsLine(section.text)].filter(Boolean).forEach((detail) => {
+          lines.push(`- ${detail}`);
+        });
+        const snippet = contextSnippet(section.text);
+        if (snippet) {
+          lines.push("");
+          lines.push("Snippet:");
+          lines.push(snippet);
+        }
+        lines.push("");
+      }
+      return lines.join("\n");
+    }
+
+    async function copyContextMap() {
+      const originalText = contextMapCopyButton.textContent;
+      try {
+        await writeClipboardText(contextMapText());
+        contextMapCopyButton.textContent = "Copied";
+      } catch {
+        contextMapCopyButton.textContent = "Failed";
+      }
+      setTimeout(() => {
+        contextMapCopyButton.textContent = originalText;
+      }, 1400);
+    }
+
+    function weatherCodeDescription(code) {
+      const descriptions = {
+        0: "clear sky",
+        1: "mainly clear",
+        2: "partly cloudy",
+        3: "overcast",
+        45: "fog",
+        48: "depositing rime fog",
+        51: "light drizzle",
+        53: "drizzle",
+        55: "heavy drizzle",
+        56: "light freezing drizzle",
+        57: "freezing drizzle",
+        61: "light rain",
+        63: "rain",
+        65: "heavy rain",
+        66: "light freezing rain",
+        67: "freezing rain",
+        71: "light snow",
+        73: "snow",
+        75: "heavy snow",
+        77: "snow grains",
+        80: "light rain showers",
+        81: "rain showers",
+        82: "heavy rain showers",
+        85: "light snow showers",
+        86: "snow showers",
+        95: "thunderstorm",
+        96: "thunderstorm with hail",
+        99: "thunderstorm with heavy hail"
+      };
+      return descriptions[code] || `weather code ${code}`;
+    }
+
     async function showWebPage({ url, title } = {}) {
       const targetUrl = String(url || "").trim();
       if (!/^https?:\/\/[^/\s?#]+/i.test(targetUrl)) {
@@ -3125,15 +4041,15 @@
       }
     }
 
-    async function writeTextFile({ filename, content, source, mode = "overwrite" } = {}) {
+    async function writeTextFile({ filename, content, source, source_filename, mode = "overwrite" } = {}) {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Missing filename");
-      if (!noteFileWriteAllowed(lastUserText)) {
+      if (!noteFileWriteAllowed()) {
         throw new Error("File writes require an explicit user request.");
       }
       const normalizedContent = typeof content === "string" && content.trim()
         ? content
-        : formatSessionNote({ source });
+        : await formatSessionNote({ source, sourceFilename: source_filename });
       const payload = {
         filename: name,
         content: normalizedContent,
@@ -3180,13 +4096,17 @@
       return `${text.slice(0, maxSessionNoteChars)}\n\n[Session note clipped after ${maxSessionNoteChars} characters. Copy panes manually or save a narrower source for the rest.]`;
     }
 
-    function formatSessionNote({ source = "conversation_and_idle" } = {}) {
+    async function formatSessionNote({ source = "conversation_and_idle", sourceFilename = "" } = {}) {
       const normalizedSource = String(source || "conversation_and_idle");
+      if (normalizedSource === "note_summary") {
+        return formatLoadedNoteSummary(await noteForSummary(sourceFilename));
+      }
       const lines = [
         "Robot 790 Session Note",
         "======================",
         `Created: ${new Date().toLocaleString()}`,
         `Source: ${normalizedSource}`,
+        `Model: ${currentModelStamp()}`,
         "",
         "This note was captured from the STS browser session. Treat idle thoughts as ruminations, not verified facts.",
         ""
@@ -3213,6 +4133,150 @@
       const content = lines.filter((line) => line !== "").join("\n");
       if (!content.trim()) throw new Error("No captured session material is available to write.");
       return clipSessionNote(content);
+    }
+
+    async function noteForSummary(sourceFilename = "") {
+      const requested = String(sourceFilename || "").trim();
+      if (requested) {
+        const loaded = findLoadedNoteContext(requested);
+        if (loaded) return loaded;
+        const read = await readTextFile({ filename: requested });
+        return { filename: read.filename || requested, content: String(read.content || "") };
+      }
+      if (loadedNoteContexts.length) return loadedNoteContexts[0];
+      throw new Error("No loaded note is available to summarize.");
+    }
+
+    function findLoadedNoteContext(filename) {
+      const wanted = noteFilenameKey(filename);
+      return loadedNoteContexts.find((item) => {
+        const full = noteFilenameKey(item.filename);
+        const stem = noteFilenameKey(String(item.filename || "").replace(/\.[^.]+$/, ""));
+        return full === wanted || stem === wanted;
+      }) || null;
+    }
+
+    function noteFilenameKey(filename) {
+      return String(filename || "")
+        .replace(/\\/g, "/")
+        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .replace(/\.[a-z0-9]+$/i, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9/]+/g, "_")
+        .replace(/(^|\/)_+|_+(?=\/|$)/g, "$1")
+        .replace(/\/+/g, "/")
+        .replace(/^\/+|\/+$/g, "");
+    }
+
+    function formatLoadedNoteSummary(note) {
+      const filename = String(note?.filename || "loaded note").trim();
+      const content = String(note?.content || "").replace(/\r\n/g, "\n").trim();
+      if (!content) throw new Error("The note to summarize is empty.");
+      const entries = transcriptEntries(content);
+      const lines = [
+        "Robot 790 Note Summary",
+        "======================",
+        `Created: ${new Date().toLocaleString()}`,
+        `Source note: ${filename}`,
+        "",
+        "Purpose",
+        "-------",
+        "This is a compact memory aid generated from a note or transcript. It is a summary, not a verbatim transcript.",
+        ""
+      ];
+      if (entries.length) {
+        const first = entries[0];
+        const last = entries[entries.length - 1];
+        lines.push("Transcript Shape");
+        lines.push("----------------");
+        lines.push(`Time span: ${first.time || "unknown"} to ${last.time || "unknown"}.`);
+        lines.push(`Lines: ${entries.length}; user turns: ${entries.filter((entry) => entry.speaker === "You").length}; Robot 790 turns: ${entries.filter((entry) => entry.speaker === "Robot 790").length}.`);
+        lines.push("");
+        appendTopicSections(lines, entries);
+        appendTranscriptHighlights(lines, entries);
+        appendOpenItems(lines, entries);
+      } else {
+        lines.push("Summary");
+        lines.push("-------");
+        noteSentences(content).slice(0, 30).forEach((sentence) => lines.push(`- ${sentence}`));
+      }
+      return clipSessionNote(lines.join("\n"));
+    }
+
+    function transcriptEntries(content) {
+      const pattern = /^\[([^\]]+)\]\s+(You|Robot 790):\s+(.+)$/;
+      return String(content || "")
+        .split(/\n+/)
+        .map((line) => {
+          const match = line.match(pattern);
+          if (!match) return null;
+          return {
+            time: match[1],
+            speaker: match[2],
+            text: match[3].replace(/\s+/g, " ").trim()
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function appendTopicSections(lines, entries) {
+      const topics = [
+        { label: "Identity and introspection", re: /\b(soul|real|fake|witness|introspection|remember|memory|first meeting|fresh canvas|echo|choice)\b/i },
+        { label: "Face, body, and display work", re: /\b(face|eyes?|mouth|display|ESP32|chassis|treads?|body|mask|glitchy|caption|weather|time|clock)\b/i },
+        { label: "Wonder, idle, and learning", re: /\b(wonder|idle|ruminat|curiosity|search|web|look up|tool|question|learn)\b/i },
+        { label: "Games, bits, and banter", re: /\b(game|genius|wizard|brain|pompous|ask me anything|funny|joke|gargoyle|fortune|Chappie)\b/i },
+        { label: "Audio and session friction", re: /\b(mic|microphone|fan|garbled|repeat|hear|STT|Alexa|confused)\b/i }
+      ];
+      lines.push("Main Threads");
+      lines.push("------------");
+      for (const topic of topics) {
+        const samples = uniqueSnippets(entries
+          .filter((entry) => topic.re.test(entry.text))
+          .map((entry) => `${entry.speaker}: ${entry.text}`), 4);
+        if (!samples.length) continue;
+        lines.push(`${topic.label}:`);
+        samples.forEach((sample) => lines.push(`- ${sample}`));
+      }
+      lines.push("");
+    }
+
+    function appendTranscriptHighlights(lines, entries) {
+      const highlights = uniqueSnippets(entries
+        .filter((entry) => entry.text.length >= 35)
+        .filter((entry) => !/^(Let me|Got it|Sure|Right|Fair|Yeah|Okay|I'm listening)\b/i.test(entry.text))
+        .map((entry) => `[${entry.time}] ${entry.speaker}: ${entry.text}`), 18);
+      if (!highlights.length) return;
+      lines.push("Timeline Highlights");
+      lines.push("-------------------");
+      highlights.forEach((item) => lines.push(`- ${item}`));
+      lines.push("");
+    }
+
+    function appendOpenItems(lines, entries) {
+      const items = uniqueSnippets(entries
+        .filter((entry) => entry.speaker === "You")
+        .filter((entry) => /\b(can you|could you|we need|need to|want to|should|feature|fix|add|give you|going to)\b/i.test(entry.text))
+        .map((entry) => entry.text), 12);
+      if (!items.length) return;
+      lines.push("Open Or Useful Follow-Ups");
+      lines.push("-------------------------");
+      items.forEach((item) => lines.push(`- ${item}`));
+      lines.push("");
+    }
+
+    function uniqueSnippets(values, limit) {
+      const seen = new Set();
+      const result = [];
+      for (const value of values) {
+        const text = String(value || "").trim();
+        if (!text) continue;
+        const key = normalizeIdleTopicKey(text).slice(0, 80);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.push(text.length > 260 ? `${text.slice(0, 257)}...` : text);
+        if (result.length >= limit) break;
+      }
+      return result;
     }
 
     async function readTextFile({ filename, path, name: noteName } = {}) {
@@ -3289,26 +4353,78 @@
       ctx.fillStyle = "#101114";
       ctx.fillRect(0, 0, width, height);
       ctx.drawImage(image, 0, 0, width, height);
+      sensingTextContent = "";
+      sensingTextName = "";
       visionImageUrl = canvas.toDataURL("image/jpeg", visionJpegQuality);
       visionImageName = file.name || "image";
       visionImageStaged = false;
       visionPreview.src = visionImageUrl;
       visionPreview.classList.add("ready");
+      visionDrop.classList.remove("text-ready");
       visionHint.textContent = `${visionImageName} (${width}x${height})`;
       updateVisionButtons();
+      updateSessionTools();
       log(events, `vision image loaded: ${visionHint.textContent}`);
       stageVisionImage();
+    }
+
+    async function prepareSensingText(file) {
+      if (!isSensingTextFile(file)) {
+        throw new Error("Choose an image, .txt, or .md file.");
+      }
+      const raw = await file.text();
+      const content = raw.replace(/\r\n/g, "\n").trim();
+      if (!content) throw new Error("Text file is empty.");
+      visionImageUrl = "";
+      visionImageName = "";
+      visionImageStaged = false;
+      visionPreview.removeAttribute("src");
+      visionPreview.classList.remove("ready");
+      sensingTextContent = content;
+      sensingTextName = file.name || "text";
+      visionDrop.classList.add("text-ready");
+      const clipped = content.length > maxSensingTextChars;
+      visionHint.textContent = `${sensingTextName} - ${approximateTextTokens(content).toLocaleString()} tok temporary text${clipped ? " clipped" : ""}`;
+      updateVisionButtons();
+      updateSessionTools();
+      if (contextPanel?.open) renderContextMap();
+      log(events, `sensing text staged: ${sensingTextName} (${content.length} chars${clipped ? `, clipped to ${maxSensingTextChars}` : ""})`);
+    }
+
+    function isSensingTextFile(file) {
+      if (!file) return false;
+      const name = String(file.name || "").toLowerCase();
+      const type = String(file.type || "").toLowerCase();
+      return type.startsWith("text/") || /\.(txt|md|markdown)$/.test(name);
+    }
+
+    async function prepareSensingInput(file) {
+      if (!file) throw new Error("Choose an image, .txt, or .md file.");
+      try {
+        if (file.type?.startsWith("image/")) {
+          await prepareVisionImage(file);
+          return;
+        }
+        await prepareSensingText(file);
+      } finally {
+        visionFile.value = "";
+      }
     }
 
     function clearVisionImage() {
       visionImageUrl = "";
       visionImageName = "";
       visionImageStaged = false;
+      sensingTextContent = "";
+      sensingTextName = "";
       visionFile.value = "";
       visionPreview.removeAttribute("src");
       visionPreview.classList.remove("ready");
-      visionHint.textContent = "Drop image, then speak";
+      visionDrop.classList.remove("text-ready");
+      visionHint.textContent = "Drop image or text, then speak";
       updateVisionButtons();
+      updateSessionTools();
+      if (contextPanel?.open) renderContextMap();
     }
 
     function stageVisionImage() {
@@ -3396,6 +4512,8 @@
       if (name === "remember_fact") return rememberMemoryFact(args);
       if (name === "forget_fact") return forgetMemoryFact(args);
       if (name === "search_web") return searchWeb(args);
+      if (name === "get_weather") return getWeather(args);
+      if (name === "get_brain_status") return getBrainStatus(args);
       if (name === "show_web_page") return showWebPage(args);
       if (name === "cast_media") return castMedia(args);
       if (name === "write_text_file") return writeTextFile(args);
@@ -3513,6 +4631,26 @@
       );
     }
 
+    function weatherFollowupInstructions(result) {
+      if (result?.status === "error") return exactSpeechInstruction("I could not check the weather.");
+      return (
+        "Use the get_weather tool output to answer naturally in one compact spoken sentence. " +
+        "Mention the place, current condition, temperature, and one practical detail such as rain, wind, high, or low when useful. " +
+        "Do not say you cannot check weather."
+      );
+    }
+
+    function brainStatusFollowupInstructions(result) {
+      if (result?.status === "error") return exactSpeechInstruction("I could not check my status.");
+      return (
+        "Use the get_brain_status tool output to answer the user's diagnostics question compactly. " +
+        "For context questions, answer with context.last_input_tokens, context.context_window_tokens, context.remaining_context_tokens, and context.window_usage_percent when available; this is how much context the last request consumed. " +
+        "If browser_context_estimate is present, use it to explain roughly how much loaded notes, visible transcript, or event panes contribute. " +
+        "State measured values such as model, context window, parallel count, token counts, latency, and TTS timing when available. " +
+        "If exact llama.cpp tok/sec is unavailable but estimated_end_to_end_output_tokens_per_second is present, call it an end-to-end estimate and give the value."
+      );
+    }
+
     function webPageFollowupText(result) {
       if (result?.status === "error") return "I could not open that page.";
       if (result?.blocked) return "The browser blocked the new tab.";
@@ -3550,6 +4688,8 @@
           toolFollowupInstructions = noteFileFollowupInstructions(event.name, result);
         }
         if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
+        if (event.name === "get_weather") toolFollowupInstructions = weatherFollowupInstructions(result);
+        if (event.name === "get_brain_status") toolFollowupInstructions = brainStatusFollowupInstructions(result);
         if (event.name === "show_web_page") toolFollowupExactText = webPageFollowupText(result);
         if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
@@ -3558,7 +4698,7 @@
           item: {
             type: "function_call_output",
             call_id: event.call_id,
-            output: JSON.stringify(event.name === "search_web" ? result : { status: "ok", result })
+            output: JSON.stringify(["search_web", "get_weather", "get_brain_status"].includes(event.name) ? result : { status: "ok", result })
           }
         });
         if (event.name === "remember_fact" || event.name === "forget_fact" || loadedNoteContextDirty) {
@@ -3574,6 +4714,8 @@
           toolFollowupExactText = "I could not touch that file.";
         }
         if (event.name === "search_web") toolFollowupExactText = "I could not search.";
+        if (event.name === "get_weather") toolFollowupExactText = "I could not check the weather.";
+        if (event.name === "get_brain_status") toolFollowupExactText = "I could not check my status.";
         if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
         if (event.name === "cast_media") toolFollowupExactText = "I could not cast that.";
         log(events, `tool ${event.name} error: ${error.message}`);
@@ -3613,15 +4755,7 @@
     function updateSessionTools() {
       saveToolPrefs();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      const enabledTools = [
-        ...(llmTools?.checked ? faceTools : []),
-        ...(llmChassisTools?.checked ? chassisTools : []),
-        ...(llmMemoryTools?.checked ? memoryTools : []),
-        ...(llmWebSearchTools?.checked ? searchTools : []),
-        ...(llmWebPageTools?.checked ? webPageTools : []),
-        ...(llmCastMediaTools?.checked ? castMediaTools : []),
-        ...(llmNoteFileTools?.checked ? noteFileTools : [])
-      ];
+      const enabledTools = enabledToolList();
       send({
         type: "session.update",
         session: {
@@ -3641,6 +4775,18 @@
           ? `LLM tools attached: ${enabledTools.map((tool) => tool.name).join(", ")}`
           : "LLM tools disabled; STS lifecycle controls face"
       );
+    }
+
+    function enabledToolList() {
+      return [
+        ...(llmTools?.checked ? faceTools : []),
+        ...(llmChassisTools?.checked ? chassisTools : []),
+        ...(llmMemoryTools?.checked ? memoryTools : []),
+        ...(llmWebSearchTools?.checked ? searchTools : []),
+        ...(llmWebPageTools?.checked ? webPageTools : []),
+        ...(llmCastMediaTools?.checked ? castMediaTools : []),
+        ...(llmNoteFileTools?.checked ? noteFileTools : [])
+      ];
     }
 
     async function ensurePlayback() {
@@ -3887,13 +5033,15 @@
       try {
         const response = await fetch(new URL("/api/realtime/restart", location.href), {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preset: currentModelPreset() }),
           cache: "no-store"
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok || result.status === "error") {
           throw new Error(result.error || `${response.status} ${response.statusText}`);
         }
-        log(events, `realtime restart started: pid ${result.pid || "unknown"}`);
+        log(events, `realtime restart started: ${result.preset || currentModelPreset()} pid ${result.pid || "unknown"}`);
         setTimeout(() => {
           restartServerButton.disabled = false;
           connectButton.disabled = false;
@@ -3955,6 +5103,10 @@
 
     connectButton.addEventListener("click", connect);
     disconnectButton.addEventListener("click", () => ws?.close());
+    modelPreset.addEventListener("change", () => {
+      saveModelPreset();
+      log(events, `model preset ${modelPreset.options[modelPreset.selectedIndex]?.text || currentModelPreset()}`);
+    });
     restartServerButton.addEventListener("click", () => {
       restartRealtimeServer().catch((error) => log(events, `realtime restart error: ${error.message}`));
     });
@@ -3996,11 +5148,11 @@
       event.preventDefault();
       visionDrop.classList.remove("dragover");
       const file = event.dataTransfer?.files?.[0];
-      prepareVisionImage(file).catch((error) => log(events, `vision image error: ${error.message}`));
+      prepareSensingInput(file).catch((error) => log(events, `sensing input error: ${error.message}`));
     });
     visionFile.addEventListener("change", () => {
       const file = visionFile.files?.[0];
-      prepareVisionImage(file).catch((error) => log(events, `vision image error: ${error.message}`));
+      prepareSensingInput(file).catch((error) => log(events, `sensing input error: ${error.message}`));
     });
     visionClearButton.addEventListener("click", clearVisionImage);
     llmTools.addEventListener("change", updateSessionTools);
@@ -4032,6 +5184,14 @@
       updateIdleWonderUi();
       log(events, `idle wonder ${idleWonderLabel()}`);
     });
+    idleSelfFocus.addEventListener("input", () => {
+      updateIdleSelfFocusUi();
+      log(events, `idle self-focus ${idleSelfFocusLabel()}`);
+    });
+    idleNotesFocus.addEventListener("input", () => {
+      updateIdleNotesFocusUi();
+      log(events, `idle notes ${idleNotesFocusLabel()}`);
+    });
     idleSubstrateTest.addEventListener("change", () => {
       if (idleSubstrateTestEnabled()) {
         recentIdleOutputs = [];
@@ -4046,12 +5206,14 @@
     memoryRefreshButton.addEventListener("click", () => {
       renderMemory();
       updateSessionTools();
+      if (contextPanel.open) renderContextMap();
       log(events, "memory refreshed");
     });
     memoryForgetAllButton.addEventListener("click", () => {
       if (!window.confirm("Forget all Robot 790 browser memory facts?")) return;
       saveMemoryFacts([]);
       updateSessionTools();
+      if (contextPanel.open) renderContextMap();
       log(events, "memory cleared");
     });
     clearLogButton.addEventListener("click", () => {
@@ -4060,10 +5222,10 @@
       events.textContent = "";
     });
     copyConversationButton.addEventListener("click", () => {
-      copyLogPane(copyConversationButton, conversation);
+      copyLogPane(copyConversationButton, conversation, "conversation");
     });
     copyEventsButton.addEventListener("click", () => {
-      copyLogPane(copyEventsButton, events);
+      copyLogPane(copyEventsButton, events, "events");
     });
     recordConversationButton.addEventListener("click", () => {
       recordLogPane(recordConversationButton, conversation, "conversation");
@@ -4071,9 +5233,21 @@
     recordEventsButton.addEventListener("click", () => {
       recordLogPane(recordEventsButton, events, "events");
     });
+    contextMapRefreshButton.addEventListener("click", renderContextMap);
+    contextMapCopyButton.addEventListener("click", () => {
+      copyContextMap();
+    });
+    window.addEventListener("resize", scheduleLogPaneHeightUpdate);
+    document.querySelectorAll(".settings-panel").forEach((panel) => {
+      panel.addEventListener("toggle", scheduleLogPaneHeightUpdate);
+    });
+    contextPanel.addEventListener("toggle", () => {
+      if (contextPanel.open) renderContextMap();
+    });
     settingsPanel.addEventListener("toggle", saveSettingsPanelState);
     micPanel.addEventListener("toggle", saveMicPanelState);
     populateTtsVoices();
+    loadModelPreset();
     loadSettingsPanelState();
     loadMicPanelState();
     loadTtsVoice();
@@ -4081,10 +5255,14 @@
     loadInterruptSensitivity();
     loadIdleDrift();
     loadIdleWonder();
+    loadIdleSelfFocus();
+    loadIdleNotesFocus();
     loadToolPrefs();
     renderMemory();
     updateVisionButtons();
     loadStartupNotes();
+    if (contextPanel.open) renderContextMap();
+    scheduleLogPaneHeightUpdate();
   </script>
 </body>
 </html>

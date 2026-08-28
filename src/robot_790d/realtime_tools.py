@@ -8,12 +8,14 @@ from typing import Any
 from urllib.parse import urlparse
 
 from robot_790d.behavior import BehaviorDaemon
+from robot_790d.brain_status import get_brain_status as read_brain_status
 from robot_790d.devices.esp32_chassis import DEFAULT_CHASSIS_URL, ChassisSettings, Esp32ChassisClient
 from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, FaceSettings
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.memory import forget_fact, remember_fact
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
 from robot_790d.state import Affect, RobotMode
+from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
 
 try:
@@ -371,6 +373,42 @@ TOOLS: list[dict[str, object]] = [
     },
     {
         "type": "function",
+        "name": "get_weather",
+        "description": (
+            "Look up current weather and today's forecast. Use when the user asks about weather, temperature, "
+            "rain, snow, wind, outside conditions, or whether it is sensible to go outside or ride a bike. "
+            "If no location is given, use Salem, Massachusetts."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "default": DEFAULT_WEATHER_LOCATION,
+                    "description": "Place name for the weather lookup.",
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": ["fahrenheit", "celsius"],
+                    "default": "fahrenheit",
+                    "description": "Temperature unit.",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "get_brain_status",
+        "description": (
+            "Read local Robot 790 realtime diagnostics from logs. Use when the user asks about your LLM model, "
+            "context size, token counts, tokens per second, latency, speed, audio generation, STT, TTS, "
+            "or brain status."
+        ),
+        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+    },
+    {
+        "type": "function",
         "name": "cast_media",
         "description": (
             "Search YouTube, play videos, show direct image URLs, list Cast receivers, or stop playback on "
@@ -517,6 +555,10 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_forget_fact, parsed)
     elif name == "search_web":
         result = await asyncio.to_thread(_search_web, parsed)
+    elif name == "get_weather":
+        result = await asyncio.to_thread(_get_weather, parsed)
+    elif name == "get_brain_status":
+        result = await asyncio.to_thread(_get_brain_status)
     elif name == "cast_media":
         result = await asyncio.to_thread(_cast_media, parsed)
     elif name == "show_web_page":
@@ -775,6 +817,20 @@ def _search_web(arguments: dict[str, object]) -> dict[str, object]:
     query = str(arguments.get("query", "")).strip()
     max_results = arguments.get("max_results", 5)
     return search_web(query, max_results=max_results)
+
+
+def _get_weather(arguments: dict[str, object]) -> dict[str, object]:
+    location = str(
+        arguments.get("location")
+        or os.getenv("ROBOT_790_DEFAULT_WEATHER_LOCATION")
+        or DEFAULT_WEATHER_LOCATION
+    ).strip()
+    unit = str(arguments.get("unit") or os.getenv("ROBOT_790_WEATHER_UNIT") or "fahrenheit").strip()
+    return lookup_weather(location or DEFAULT_WEATHER_LOCATION, unit=unit)
+
+
+def _get_brain_status() -> dict[str, object]:
+    return read_brain_status()
 
 
 def _cast_media(arguments: dict[str, object]) -> dict[str, object]:
