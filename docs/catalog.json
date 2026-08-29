@@ -1,0 +1,135 @@
+{
+    "generated":  "2026-08-29 15:23:18",
+    "articles":  [
+                     {
+                         "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",
+                         "excerpt":  "Iâ€™ve been building a robot named Eric â€” Robot 790.",
+                         "source":  "articles/eric_pinocchio_x_article_draft.md",
+                         "bytes":  15278
+                     },
+                     {
+                         "title":  "I Built a Robot That Wakes Up New Every Time",
+                         "excerpt":  "The strangest part isnâ€™t what he knows. Itâ€™s how he becomes himself.",
+                         "source":  "articles/eric_wakes_up_new_every_time.md",
+                         "bytes":  9424
+                     },
+                     {
+                         "title":  "The Magic of Assembly: Finding Eric\u0027s Voice and the Architecture of Robot 790",
+                         "excerpt":  "Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM serving, or social robotics from scratch. Instead, it exists because these individual pieces have finally become good enough to combine.",
+                         "source":  "articles/robot_790_lineage_article.md",
+                         "bytes":  2876
+                     },
+                     {
+                         "title":  "The Architecture of a Held Breath: Building a Robot That Thinks in the Dark",
+                         "excerpt":  "Most AI is purely reactive. It sits in a void, completely static, until a user pushes a prompt into it. Its mind is empty until you fill it.",
+                         "source":  "articles/robot_790_x_draft.md",
+                         "bytes":  2829
+                     },
+                     {
+                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
+                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain â€” and see what survives. Almost everything survived. I have the logs.",
+                         "source":  "articles/robot-790-article-3 (1).md",
+                         "bytes":  11843
+                     },
+                     {
+                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
+                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain â€” and see what survives. Almost everything survived. I have the logs.",
+                         "source":  "articles/robot-790-article-3.md",
+                         "bytes":  10720
+                     }
+                 ],
+    "logs":  [
+                 {
+                     "title":  "20260829 074039 conversation",
+                     "source":  "logs/20260829-074039-conversation.txt",
+                     "bytes":  51128,
+                     "modified":  "2026-08-29 07:40"
+                 },
+                 {
+                     "title":  "20260829 012619 conversation",
+                     "source":  "logs/20260829-012619-conversation.txt",
+                     "bytes":  35248,
+                     "modified":  "2026-08-29 01:26"
+                 },
+                 {
+                     "title":  "20260828 235932 conversation",
+                     "source":  "logs/20260828-235932-conversation.txt",
+                     "bytes":  9431,
+                     "modified":  "2026-08-28 23:59"
+                 }
+             ],
+    "media":  [
+                  {
+                      "title":  "Gemini Generated Image 1powen1powen1pow",
+                      "kind":  "image",
+                      "source":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
+                      "preview":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
+                      "bytes":  2790239,
+                      "modified":  "2026-08-28 02:11"
+                  },
+                  {
+                      "title":  "Gemini Generated Image dbr977dbr977dbr9",
+                      "kind":  "image",
+                      "source":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
+                      "preview":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
+                      "bytes":  2696263,
+                      "modified":  "2026-08-27 04:19"
+                  },
+                  {
+                      "title":  "Gemini Generated Image qst2a9qst2a9qst2",
+                      "kind":  "image",
+                      "source":  "media/images/Gemini_Generated_Image_qst2a9qst2a9qst2.jpg",
+                      "preview":  "media/images/Gemini_Generated_Image_qst2a9qst2a9qst2.jpg",
+                      "bytes":  696018,
+                      "modified":  "2026-08-27 23:25"
+                  },
+                  {
+                      "title":  "Gemini Generated Image rkrn6rkrn6rkrn6r",
+                      "kind":  "image",
+                      "source":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
+                      "preview":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
+                      "bytes":  2934037,
+                      "modified":  "2026-08-27 23:22"
+                  },
+                  {
+                      "title":  "VID20260824135110",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260824135110.mp4",
+                      "preview":  "media/previews/VID20260824135110.jpg",
+                      "bytes":  2005329,
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
+                      "title":  "VID20260825210600",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260825210600.mp4",
+                      "preview":  "media/previews/VID20260825210600.jpg",
+                      "bytes":  4240086,
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
+                      "title":  "VID20260825211801",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260825211801.mp4",
+                      "preview":  "media/previews/VID20260825211801.jpg",
+                      "bytes":  3634269,
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
+                      "title":  "VID20260827013001",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260827013001.mp4",
+                      "preview":  "media/previews/VID20260827013001.jpg",
+                      "bytes":  7319818,
+                      "modified":  "2026-08-29 10:32"
+                  },
+                  {
+                      "title":  "VID20260827042607",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260827042607.mp4",
+                      "preview":  "media/previews/VID20260827042607.jpg",
+                      "bytes":  8796127,
+                      "modified":  "2026-08-29 10:32"
+                  }
+              ]
+}

@@ -10,7 +10,13 @@ pinocchio-and-the-wooden-boy.md
 empty-brain-test.md
 ```
 
-For each article, add a link from `../index.md`.
+After adding articles, rebuild `../catalog.json`:
+
+```powershell
+.\scripts\build_docs_catalog.ps1
+```
+
+The static page lists Markdown files from this folder automatically.
 
 Keep these public-safe:
 
