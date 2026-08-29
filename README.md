@@ -21,6 +21,38 @@ Clients should send semantic intent such as "listening", "thinking", "look
 left", "smile", "stop", "read this note", or "search this", while firmware and
 tool adapters own timing, GPIO details, display updates, and motor commands.
 
+## Lineage And Contribution
+
+Robot 790 does not claim to invent realtime voice, text-to-speech, speech
+recognition, local LLM serving, tool calling, or social robotics from scratch.
+It exists because those pieces already became good enough to combine.
+
+The project grew out of experiments with Hugging Face realtime voice work,
+Reachy Mini conversation tooling, local Qwen and Qwen3-TTS models, LM Studio,
+OpenAI-compatible APIs, ESP32 firmware, browser UIs, and a long history of
+robotics, animation, speech, and character-interface research. It stands on a
+lot of shoulders.
+
+What Robot 790 adds is the arrangement:
+
+- a local-first speech-to-speech robot loop with a visible face
+- semantic tools for face, mouth, gaze, chassis, notes, memory, web, weather,
+  media, and image generation
+- deterministic lifecycle cues so the body listens, thinks, speaks, and idles
+  without waiting for the model to choreograph every frame
+- an idle rumination system that can keep thinking from loaded context while
+  the user is quiet or away
+- a notes/worlds/library structure for giving the robot continuity, reference
+  material, and temporary imagined substrates
+- public logs, articles, and curated sessions that show the seams instead of
+  hiding them
+
+The contribution is not a secret new model. It is a facade in the architectural
+sense: an interface, body, timing layer, tool contract, memory practice, and
+curation loop around powerful existing systems. The interesting question is how
+far character and continuity can emerge from that assembly when the machinery is
+kept visible.
+
 ## Current Pieces
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`.
@@ -39,8 +71,12 @@ the project settles.
 
 ## Design Notes
 
+- [Public Page](docs/index.md): GitHub Pages landing page and article shelf.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
   touch, camera, and possible tilt/rotate head direction.
+- [Future Directions](docs/future_directions.md): public-safe notes on the
+  desk-show idea, singing, associative drift, library files, world substrates,
+  vision, and media.
 
 ## First Setup
 
@@ -143,6 +179,7 @@ Current presets:
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | `none` | Small/fast comparison model. |
 | Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like. |
+| OpenAI | `$env:ROBOT_790_OPENAI_LLM_MODEL` | API | omitted | Cloud LLM comparison while keeping local Qwen3-TTS voice, face, and tools. Defaults to `gpt-4.1-mini`. |
 
 The restart script behind the dropdown is:
 
@@ -151,6 +188,14 @@ The restart script behind the dropdown is:
 .\scripts\restart_realtime_gold.ps1 -Preset qwen9
 .\scripts\restart_realtime_gold.ps1 -Preset qwen4
 .\scripts\restart_realtime_gold.ps1 -Preset nemotron30
+.\scripts\restart_realtime_gold.ps1 -Preset openai
+```
+
+The OpenAI preset uses `OPENAI_API_KEY` from `.env` and skips LM Studio model
+loading. Override the model without changing code:
+
+```powershell
+$env:ROBOT_790_OPENAI_LLM_MODEL = "gpt-4.1-mini"
 ```
 
 Chat text is uncapped by default so note reads, summaries, and longer thoughts

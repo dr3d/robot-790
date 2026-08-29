@@ -201,7 +201,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         preset = str(payload.get("preset") or "qwen27").strip()
-        allowed_presets = {"qwen27", "qwen9", "qwen4", "nemotron30"}
+        allowed_presets = {"qwen27", "qwen9", "qwen4", "nemotron30", "openai"}
         if preset not in allowed_presets:
             self._send_json(400, {"status": "error", "error": f"Unsupported model preset: {preset}."})
             return

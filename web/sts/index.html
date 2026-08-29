@@ -541,6 +541,7 @@
               <option value="qwen9">Qwen 9B</option>
               <option value="qwen4">Qwen 4B</option>
               <option value="nemotron30">Nemotron 30B</option>
+              <option value="openai">OpenAI</option>
             </select>
           </label>
           <button id="connect" class="primary">Connect</button>
@@ -2071,7 +2072,7 @@
 
     function currentModelPreset() {
       const value = modelPreset.value || "qwen27";
-      return ["qwen27", "qwen9", "qwen4", "nemotron30"].includes(value) ? value : "qwen27";
+      return ["qwen27", "qwen9", "qwen4", "nemotron30", "openai"].includes(value) ? value : "qwen27";
     }
 
     function loadModelPreset() {

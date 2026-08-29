@@ -54,9 +54,12 @@ $qwenArgs = @(
     "--qwen3_tts_instruct", $TtsInstruct,
     "--qwen3_tts_language", "English",
     "--llm_backend", "chat-completions",
-    "--responses_api_base_url", $LlmBaseUrl,
-    "--responses_api_api_key", $LlmApiKey
+    "--responses_api_base_url", $LlmBaseUrl
 )
+
+if ($LlmApiKey -and $LlmApiKey -ne "__env__") {
+    $qwenArgs += @("--responses_api_api_key", $LlmApiKey)
+}
 
 if ($OmitReasoningEffort) {
     $ReasoningEffort = ""
