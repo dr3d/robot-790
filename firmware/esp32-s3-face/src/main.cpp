@@ -1993,9 +1993,9 @@ void drawIntegratedStatus(Arduino_GFX &g, uint32_t now)
   g.fillRect(0, INTEGRATED_STATUS_Y, FACE_LCD_WIDTH, INTEGRATED_STATUS_H, BLACK);
 
   const int16_t noseX = FACE_LCD_WIDTH / 2;
-  const int16_t noseY = INTEGRATED_STATUS_Y + INTEGRATED_STATUS_H / 2 - 6;
+  const int16_t noseY = INTEGRATED_STATUS_Y + INTEGRATED_STATUS_H / 2 - 8;
   const int16_t noseRx = 73;
-  const int16_t noseRy = 45;
+  const int16_t noseRy = 47;
   fillEllipse(g, noseX, noseY, noseRx, noseRy, rgb(5, 20, 30));
   g.drawEllipse(noseX, noseY, noseRx, noseRy, rgb(34, 92, 112));
   g.drawEllipse(noseX, noseY, noseRx - 5, noseRy - 5, rgb(12, 48, 64));
