@@ -57,10 +57,14 @@ kept visible.
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`.
 - `src/robot_790d`: Python helpers, local page APIs, realtime entrypoint
-  patches, tools, memory, notes, weather, web search, and Cast media support.
+  patches, tools, memory, notes, weather, web search, Cast media, image
+  generation, and smart-home proxy support.
 - `src/robot_790_tts`: OpenAI-shaped Qwen3-TTS speech endpoint.
-- `firmware/esp32-face`: ESP32 face firmware lineage. The active controller is
-  still commonly reached at `http://esp32-eyes.local/`.
+- `firmware/esp32-s3-face`: active one-piece portrait face firmware for the
+  ESP32-S3-Touch-LCD-2. Current hostname: `http://esp32-s3-face.local/`.
+- `firmware/esp32-face`: older external-display face firmware lineage. The
+  working rig may still be reachable at `http://esp32-eyes.local/`.
+- `firmware/esp32-s3-face-brain`: parked ESP32-S3 external-eye experiment.
 - `firmware/esp32-chassis`: tracked chassis controller.
 - `firmware/esp32-cam`: ESP32 camera controller experiments.
 - `presets/robot-790-gold.json`: the current Qwen 27B / Eric voice baseline.
@@ -69,9 +73,25 @@ Some names still say `eyes` or `Reachy` in older firmware/UI paths. That is
 intentional for now: preserve working hardware behavior first, rename only when
 the project settles.
 
-## Design Notes
+## Project Folders
+
+- `docs/`: public GitHub Pages shelf for articles, curated transcripts, and
+  publishable media. This is the public memory palace.
+- `notes/`: private local working notes, identity files, library books, world
+  substrates, and experiment scratch. This folder is ignored by git by default.
+- `logs/`: local live captures, event logs, generated images, and audio/video
+  recordings. This folder is ignored by git by default.
+- `scripts/`: startup, shutdown, model restart, docs catalog, and media helper
+  scripts.
+- `web/`: browser-facing control surfaces.
+- `firmware/`: ESP32 face, chassis, camera, and hardware experiments.
+- `src/`: Python daemons, tool adapters, and the Qwen3-TTS endpoint.
+- `tests/`: focused tests for the Python helpers and page-server APIs.
+
+## Public Docs
 
 - [Public Page](docs/index.md): GitHub Pages landing page and article shelf.
+- [Docs Folder](docs/README.md): how the static site is organized.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
   touch, camera, and possible tilt/rotate head direction.
 - [Future Directions](docs/future_directions.md): public-safe notes on the
@@ -216,13 +236,26 @@ The browser page is the main live control surface. It includes:
 - Realtime server connection and model restart controls.
 - Sensing Eye drop target for images or text files.
 - Mic start/stop, audio meter, and interruption sensitivity.
-- Face, chassis, voice, memory, web, weather, Cast, and note tool switches.
+- Audio recording to trimmed local MP4 with the latest generated image as
+  cover art; raw source audio is kept under `logs/audio/`.
+- Generated-image preview plus operator-side image model and cost controls.
+- Face, chassis, voice, memory, web, weather, Cast, image, smart-home, and
+  note tool switches.
 - Idle controls for drift, wonder, self-focus, notes-focus, and substrate tests.
 - Conversation and event panes with copy and record buttons.
 - Context Map for a rough view of what Eric can draw from.
 
 The page sends a compact Robot 790/Eric identity prompt with `session.update`
 when it connects. It also drives deterministic face lifecycle cues:
+
+Current embodiment is injected separately from the permanent Eric identity so
+hardware changes do not require hand-editing the page prompt. Override these in
+`.env` when the body changes:
+
+```powershell
+$env:ROBOT_790_CURRENT_EMBODIMENT = "Your current embodiment is ..."
+$env:ROBOT_790_BODY_TRAJECTORY = "Your body is an evolving ..."
+```
 
 - user speech: listening
 - STT/LLM work: thinking
@@ -277,6 +310,8 @@ The realtime page can expose these tools to the LLM:
   `logs/generated-images/`, and show it in the STS page.
 - `cast_media`: list Cast receivers, play YouTube, show direct image URLs, or
   stop Cast playback.
+- `set_smart_home_device`: list, check, turn on, turn off, or toggle
+  allowlisted Home Assistant `light`, `switch`, or `fan` entities.
 - `write_text_file`, `read_text_file`, `list_text_files`: text-note file tools.
 - `get_brain_status`: local diagnostics such as model, context, token pressure,
   latency, TTS timing, and approximate browser context contribution.
@@ -288,7 +323,12 @@ cloud provider may charge per image. The default provider is OpenAI:
 $env:OPENAI_API_KEY = "..."
 $env:ROBOT_790_IMAGE_PROVIDER = "openai"
 $env:ROBOT_790_OPENAI_IMAGE_MODEL = "gpt-image-1-mini"
+$env:ROBOT_790_OPENAI_IMAGE_QUALITY = "low"
 ```
+
+The STS page also has an operator-side image model and cost/quality selector.
+Use `gpt-image-1-mini`/`low` for cheap iteration, then switch to `gpt-image-1`
+and `medium` or `high` when one of Eric's visual ideas deserves a better pass.
 
 For plumbing tests without cloud calls:
 
@@ -297,13 +337,29 @@ $env:ROBOT_790_IMAGE_PROVIDER = "mock"
 ```
 
 The image tool contract is intentionally small for now: Eric supplies a prompt,
-optional title, and optional size. Provider-specific controls such as aspect
-ratio, style, quality, and ComfyUI workflows can be added behind the same tool
-later.
+optional title, and optional size. Costlier model and quality choices stay in
+the operator UI or `.env`, so Eric can imagine freely without silently spending
+more. Aspect ratio, style, and ComfyUI workflows can be added behind the same
+tool later.
 
 Face and chassis tool calls should still be short and explicit. The model
 proposes; deterministic tool and firmware layers decide what is actually safe
 and timed.
+
+Smart-home control uses the same rule: Eric gets simple aliases and reversible
+verbs, while the local proxy owns the real entity IDs and safety policy. The
+first backend is Home Assistant:
+
+```powershell
+$env:ROBOT_790_HOME_ASSISTANT_URL = "http://homeassistant.local:8123"
+$env:ROBOT_790_HOME_ASSISTANT_TOKEN = "..."
+$env:ROBOT_790_SMART_HOME_DEVICE_LIVING_ROOM_LIGHT = "light.living_room"
+$env:ROBOT_790_SMART_HOME_DEVICE_EXTRA_LIGHT = "light.extra_light"
+```
+
+The smart-home proxy only allows configured aliases in the `light`, `switch`,
+and `fan` domains. Locks, doors, thermostats, HVAC, appliances, purchases, and
+other safety-critical actions are intentionally outside this first tool.
 
 ## Memory, Notes, And Logs
 
@@ -370,7 +426,7 @@ Settings can be provided with environment variables; see
 Point the daemon client at the active ESP32 face:
 
 ```powershell
-$env:ROBOT_790_FACE_URL = "http://esp32-eyes.local/"
+$env:ROBOT_790_FACE_URL = "http://esp32-s3-face.local/"
 robot-790d state
 robot-790d listen
 robot-790d speak --energy 0.7
@@ -378,27 +434,32 @@ robot-790d beat mischief
 robot-790d idle
 ```
 
-Build and upload the face firmware:
+Build and upload the active ESP32-S3 portrait face firmware:
 
 ```powershell
-cd firmware\esp32-face
-pio run
-pio device list
-pio run -t upload --upload-port COM8
+pio run -d firmware\esp32-s3-face -e esp32-s3-face
+pio run -d firmware\esp32-s3-face -e esp32-s3-face-ota -t upload
 ```
 
-Use the COM port reported for your ESP32-S3. `COM8` was the current board on
-the original workstation during bring-up.
+For a USB upload, use the COM port reported for the connected ESP32-S3:
+
+```powershell
+pio device list
+pio run -d firmware\esp32-s3-face -e esp32-s3-face -t upload --upload-port COM8
+```
+
+The older external-display face rig can still be built from
+`firmware/esp32-face` when working on `esp32-eyes.local`.
 
 ## Hardware Direction
 
 The physical build is moving toward a 790-like printed face with display
 openings for eyes and mouth. Current electronics vocabulary:
 
-- ESP32-S3 face controller
-- round GC9A01 eye displays
-- rectangular ILI9341 mouth display
-- optional round status/debug display
+- ESP32-S3 portrait face controller with eyes, status nose, mouth, touch, IMU,
+  SD, and camera direction
+- older external-display face rig with round GC9A01 eye displays, rectangular
+  ILI9341 mouth display, and optional round status/debug display
 - ESP32 chassis controller
 - ESP32 camera experiments
 - optional neck yaw/pitch hardware
