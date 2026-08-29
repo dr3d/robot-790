@@ -88,6 +88,7 @@ def test_realtime_tool_catalog_exposes_robot_actions() -> None:
         "show_web_page",
         "generate_image",
         "cast_media",
+        "set_smart_home_device",
         "write_text_file",
         "read_text_file",
         "list_text_files",
@@ -322,6 +323,22 @@ def test_cast_media_tool_dispatches_to_client(monkeypatch) -> None:
     }
 
 
+def test_smart_home_tool_uses_shared_helper(monkeypatch) -> None:
+    def fake_smart_home(device: str = "", action: str = "status") -> dict[str, object]:
+        return {"status": "ok", "tool": "set_smart_home_device", "device": device, "action": action}
+
+    monkeypatch.setattr(realtime_tools, "control_smart_home_device", fake_smart_home)
+
+    result = realtime_tools._set_smart_home_device({"device": "living room light", "action": "turn_on"})
+
+    assert result == {
+        "status": "ok",
+        "tool": "set_smart_home_device",
+        "device": "living room light",
+        "action": "turn_on",
+    }
+
+
 def test_show_web_page_accepts_http_url() -> None:
     result = realtime_tools._show_web_page({"url": "https://example.com/robot", "title": "Robot"})
 
@@ -344,19 +361,23 @@ def test_generate_image_tool_uses_shared_helper(monkeypatch) -> None:
     def fake_generate_image(
         prompt: str,
         *,
-        title: str = "",
-        provider: str | None = None,
-        size: str | None = None,
-    ) -> dict[str, object]:
-        return {
-            "status": "ok",
-            "tool": "generate_image",
-            "prompt": prompt,
-            "title": title,
-            "provider": provider,
-            "size": size,
-            "url": "/generated-images/test.png",
-        }
+            title: str = "",
+            provider: str | None = None,
+            size: str | None = None,
+            model: str | None = None,
+            quality: str | None = None,
+        ) -> dict[str, object]:
+            return {
+                "status": "ok",
+                "tool": "generate_image",
+                "prompt": prompt,
+                "title": title,
+                "provider": provider,
+                "size": size,
+                "model": model,
+                "quality": quality,
+                "url": "/generated-images/test.png",
+            }
 
     monkeypatch.setattr(realtime_tools, "generate_image", fake_generate_image)
 
@@ -369,6 +390,8 @@ def test_generate_image_tool_uses_shared_helper(monkeypatch) -> None:
         "title": "lighthouse",
         "provider": None,
         "size": None,
+        "model": None,
+        "quality": None,
         "url": "/generated-images/test.png",
     }
 

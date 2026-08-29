@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import os
 import re
 import subprocess
 from datetime import datetime
@@ -16,8 +17,11 @@ from robot_790d.brain_status import get_brain_status
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
+from robot_790d.smart_home import control_smart_home_device
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
+
+AUDIO_RECORDING_URL_PREFIX = "/recorded-audio/"
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
@@ -25,6 +29,12 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path.startswith(GENERATED_IMAGE_URL_PREFIX):
             self._handle_generated_image(parsed.path)
+            return
+        if parsed.path.startswith(AUDIO_RECORDING_URL_PREFIX):
+            self._handle_audio_recording(parsed.path)
+            return
+        if parsed.path == "/api/runtime-config":
+            self._handle_runtime_config()
             return
         if parsed.path == "/api/search":
             self._handle_search(parsed.query)
@@ -51,11 +61,17 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/logs/record":
             self._handle_log_record()
             return
+        if parsed.path == "/api/audio/record":
+            self._handle_audio_record()
+            return
         if parsed.path == "/api/images/generate":
             self._handle_image_generate()
             return
         if parsed.path == "/api/cast":
             self._handle_cast()
+            return
+        if parsed.path == "/api/smart-home":
+            self._handle_smart_home()
             return
         if parsed.path == "/api/realtime/restart":
             self._handle_realtime_restart()
@@ -84,6 +100,31 @@ class StsPageHandler(SimpleHTTPRequestHandler):
 
     def _handle_brain_status(self) -> None:
         self._send_json(200, get_brain_status())
+
+    def _handle_runtime_config(self) -> None:
+        current_embodiment = (
+            _env_text("ROBOT_790_CURRENT_EMBODIMENT")
+            or (
+                "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, "
+                "and optional tracked chassis tools when connected."
+            )
+        )
+        body_trajectory = (
+            _env_text("ROBOT_790_BODY_TRAJECTORY")
+            or (
+                "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results "
+                "as the authority on what you can currently do."
+            )
+        )
+        self._send_json(
+            200,
+            {
+                "status": "ok",
+                "current_embodiment": current_embodiment,
+                "body_trajectory": body_trajectory,
+                "idle_level12_cooldown_s": _env_float("ROBOT_790_IDLE_LEVEL12_COOLDOWN_S", 12.0),
+            },
+        )
 
     def _handle_note_read(self, query_string: str) -> None:
         params = parse_qs(query_string)
@@ -144,6 +185,19 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(200, result)
 
+    def _handle_audio_record(self) -> None:
+        try:
+            content = self._read_binary_body(max_bytes=250 * 1024 * 1024)
+            result = record_audio_snapshot(
+                content,
+                self.headers.get("Content-Type") or "",
+                image_filename=self.headers.get("X-Robot-790-Image-Filename") or "",
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
     def _handle_image_generate(self) -> None:
         try:
             payload = self._read_json_body()
@@ -152,6 +206,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 title=str(payload.get("title") or ""),
                 provider=str(payload.get("provider") or "").strip() or None,
                 size=str(payload.get("size") or "").strip() or None,
+                model=str(payload.get("model") or "").strip() or None,
+                quality=str(payload.get("quality") or "").strip() or None,
                 repo_root=Path(__file__).resolve().parents[2],
             )
         except (OSError, ValueError) as exc:
@@ -179,11 +235,43 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
+    def _handle_audio_recording(self, path: str) -> None:
+        filename = unquote(path.removeprefix(AUDIO_RECORDING_URL_PREFIX))
+        try:
+            audio_path = recorded_audio_path(filename, Path(__file__).resolve().parents[2])
+        except ValueError:
+            self.send_error(404, "Audio recording not found.")
+            return
+        if not audio_path.is_file():
+            self.send_error(404, "Audio recording not found.")
+            return
+        content = audio_path.read_bytes()
+        content_type = mimetypes.guess_type(audio_path.name)[0] or "application/octet-stream"
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
     def _handle_cast(self) -> None:
         try:
             payload = self._read_json_body()
             result = _dispatch_cast(payload)
         except (ModuleNotFoundError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        status_code = 200 if result.get("status") == "ok" else 400
+        self._send_json(status_code, result)
+
+    def _handle_smart_home(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = control_smart_home_device(
+                str(payload.get("device") or ""),
+                str(payload.get("action") or "status"),
+            )
+        except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         status_code = 200 if result.get("status") == "ok" else 400
@@ -258,6 +346,18 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             raise ValueError("JSON body must be an object.")
         return parsed
 
+    def _read_binary_body(self, max_bytes: int) -> bytes:
+        length_header = self.headers.get("Content-Length") or "0"
+        try:
+            length = int(length_header)
+        except ValueError as exc:
+            raise ValueError("Invalid Content-Length.") from exc
+        if length <= 0:
+            raise ValueError("Nothing to record.")
+        if length > max_bytes:
+            raise ValueError("Recording is too large.")
+        return self.rfile.read(length)
+
     def _send_json(self, status_code: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status_code)
@@ -281,6 +381,22 @@ def _int_param(params: dict[str, list[str]], name: str, default: int) -> int:
         return int(value) if value is not None else default
     except ValueError:
         return default
+
+
+def _env_text(name: str) -> str:
+    return " ".join((os.getenv(name) or "").split())
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, ""))
+    except ValueError:
+        return default
+
+
+def _bounded_float_env(name: str, default: float, *, minimum: float, maximum: float) -> float:
+    value = _env_float(name, default)
+    return max(minimum, min(maximum, value))
 
 
 def record_log_snapshot(source: str, content: str, repo_root: Path | None = None) -> dict[str, object]:
@@ -326,6 +442,316 @@ def _safe_log_source(source: str) -> str:
     if value not in {"conversation", "events", "session"}:
         value = "session"
     return value
+
+
+def record_audio_snapshot(
+    content: bytes,
+    mime_type: str,
+    repo_root: Path | None = None,
+    *,
+    image_filename: str = "",
+) -> dict[str, object]:
+    if not content:
+        raise ValueError("Nothing to record.")
+
+    root = repo_root or Path(__file__).resolve().parents[2]
+    audio_dir = root / "logs" / "audio"
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    extension = _audio_extension(mime_type)
+    raw_filename = f"{timestamp}-sts-audio-source.{extension}"
+    raw_latest_name = f"latest-sts-audio-source.{extension}"
+    raw_path = audio_dir / raw_filename
+    raw_latest_path = audio_dir / raw_latest_name
+    raw_path.write_bytes(content)
+    raw_latest_path.write_bytes(content)
+
+    image_path = _selected_recording_image(root, image_filename)
+    mp4_filename = f"{timestamp}-sts-audio-picture.mp4"
+    mp4_latest_name = "latest-sts-audio-picture.mp4"
+    mp4_path = audio_dir / mp4_filename
+    mp4_latest_path = audio_dir / mp4_latest_name
+    conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root)
+    if conversion.get("status") != "ok":
+        return {
+            "status": "error",
+            "tool": "record_audio_snapshot",
+            "error": str(conversion.get("error") or "Could not convert audio recording to MP4."),
+            "raw_filename": f"logs/audio/{raw_filename}",
+            "raw_latest": f"logs/audio/{raw_latest_name}",
+            "raw_path": str(raw_path),
+            "bytes": len(content),
+            "mime_type": mime_type or "application/octet-stream",
+        }
+    mp4_latest_path.write_bytes(mp4_path.read_bytes())
+    return {
+        "status": "ok",
+        "tool": "record_audio_snapshot",
+        "filename": f"logs/audio/{mp4_filename}",
+        "latest": f"logs/audio/{mp4_latest_name}",
+        "url": f"{AUDIO_RECORDING_URL_PREFIX}{mp4_filename}",
+        "latest_url": f"{AUDIO_RECORDING_URL_PREFIX}{mp4_latest_name}",
+        "path": str(mp4_path),
+        "raw_filename": f"logs/audio/{raw_filename}",
+        "raw_latest": f"logs/audio/{raw_latest_name}",
+        "raw_path": str(raw_path),
+        "bytes": mp4_path.stat().st_size,
+        "raw_bytes": len(content),
+        "mime_type": mime_type or "application/octet-stream",
+        "image_filename": image_path.name,
+        "image_path": str(image_path),
+        "duration_s": conversion.get("duration_s"),
+        "trimmed_silence": conversion.get("trimmed_silence", False),
+    }
+
+
+def recorded_audio_path(filename: str, repo_root: Path | None = None) -> Path:
+    safe_name = _safe_media_filename(filename)
+    if not safe_name:
+        raise ValueError("Missing audio filename.")
+    root = repo_root or Path(__file__).resolve().parents[2]
+    return root / "logs" / "audio" / safe_name
+
+
+def _audio_extension(mime_type: str) -> str:
+    value = mime_type.split(";", 1)[0].strip().lower()
+    if value in {"audio/webm", "video/webm"}:
+        return "webm"
+    if value in {"audio/mp4", "audio/x-m4a"}:
+        return "m4a"
+    if value in {"audio/wav", "audio/wave", "audio/x-wav"}:
+        return "wav"
+    if value == "audio/ogg":
+        return "ogg"
+    return "webm"
+
+
+def _selected_recording_image(repo_root: Path, image_filename: str = "") -> Path:
+    if image_filename.strip():
+        try:
+            path = generated_image_path(image_filename, repo_root)
+            if path.is_file() and _is_ffmpeg_image(path):
+                return path
+        except ValueError:
+            pass
+
+    image_dir = generated_image_path("placeholder.png", repo_root).parent
+    candidates = [
+        path
+        for path in image_dir.glob("*")
+        if path.is_file() and _is_ffmpeg_image(path)
+    ]
+    if candidates:
+        return max(candidates, key=lambda path: path.stat().st_mtime)
+    return _write_recording_placeholder(repo_root)
+
+
+def _is_ffmpeg_image(path: Path) -> bool:
+    return path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+
+
+def _write_recording_placeholder(repo_root: Path) -> Path:
+    image_dir = generated_image_path("placeholder.png", repo_root).parent
+    image_dir.mkdir(parents=True, exist_ok=True)
+    path = image_dir / "recording-placeholder.svg"
+    if not path.exists():
+        path.write_text(
+            """<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<rect width="1024" height="1024" fill="#101114"/>
+<rect x="64" y="64" width="896" height="896" rx="48" fill="#151b1d" stroke="#60d394" stroke-width="6"/>
+<text x="512" y="470" fill="#f4efe6" text-anchor="middle"
+      font-family="Segoe UI, sans-serif" font-size="76" font-weight="700">Robot 790</text>
+<text x="512" y="560" fill="#9ec7d8" text-anchor="middle"
+      font-family="Segoe UI, sans-serif" font-size="42">STS recording</text>
+</svg>
+""",
+            encoding="utf-8",
+        )
+    return path
+
+
+def _make_picture_audio_mp4(
+    audio_path: Path,
+    output_path: Path,
+    image_path: Path,
+    repo_root: Path,
+) -> dict[str, object]:
+    temp_audio = output_path.with_name(f"{output_path.stem}.tmp.m4a")
+    trimmed = False
+    try:
+        audio_filter = _recording_audio_filter(trim_silence=True)
+        _run_ffmpeg(
+            [
+                "-y",
+                "-i",
+                str(audio_path),
+                "-vn",
+                "-af",
+                audio_filter,
+                "-c:a",
+                "aac",
+                "-b:a",
+                "48k",
+                "-ac",
+                "1",
+                "-ar",
+                "24000",
+                str(temp_audio),
+            ],
+            repo_root,
+        )
+        duration = _probe_duration(temp_audio, repo_root)
+        if duration <= 0:
+            raise ValueError("Converted audio has no measurable duration.")
+        trimmed = _audio_recording_trim_enabled()
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        if not _audio_recording_trim_enabled():
+            return {"status": "error", "error": str(exc)}
+        try:
+            temp_audio.unlink()
+        except FileNotFoundError:
+            pass
+        try:
+            _run_ffmpeg(
+                [
+                    "-y",
+                    "-i",
+                    str(audio_path),
+                    "-vn",
+                    "-af",
+                    _recording_audio_filter(trim_silence=False),
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "48k",
+                    "-ac",
+                    "1",
+                    "-ar",
+                    "24000",
+                    str(temp_audio),
+                ],
+                repo_root,
+            )
+            duration = _probe_duration(temp_audio, repo_root)
+            if duration <= 0:
+                raise ValueError("Converted audio has no measurable duration.")
+        except (OSError, subprocess.SubprocessError, ValueError) as fallback_exc:
+            return {"status": "error", "error": f"{exc}; fallback failed: {fallback_exc}"}
+
+    try:
+        _run_ffmpeg(
+            [
+                "-y",
+                "-loop",
+                "1",
+                "-i",
+                str(image_path),
+                "-i",
+                str(temp_audio),
+                "-t",
+                f"{duration:.3f}",
+                "-vf",
+                "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black,fps=1",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryslow",
+                "-tune",
+                "stillimage",
+                "-profile:v",
+                "baseline",
+                "-level",
+                "3.0",
+                "-pix_fmt",
+                "yuv420p",
+                "-crf",
+                "34",
+                "-c:a",
+                "copy",
+                "-shortest",
+                "-movflags",
+                "+faststart",
+                str(output_path),
+            ],
+            repo_root,
+        )
+        return {"status": "ok", "duration_s": round(duration, 3), "trimmed_silence": trimmed}
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
+    finally:
+        try:
+            temp_audio.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _recording_audio_filter(*, trim_silence: bool) -> str:
+    filters = ["aresample=async=1:first_pts=0"]
+    if trim_silence and _audio_recording_trim_enabled():
+        threshold = _env_text("ROBOT_790_AUDIO_TRIM_THRESHOLD") or "-45dB"
+        silence_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_SILENCE_S", 0.8, minimum=0.1, maximum=5.0)
+        keep_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_KEEP_S", 0.15, minimum=0.0, maximum=2.0)
+        edge_trim = (
+            "silenceremove="
+            "start_periods=1:"
+            f"start_duration={silence_s:.3f}:"
+            f"start_threshold={threshold}:"
+            f"start_silence={keep_s:.3f}"
+        )
+        filters.extend([edge_trim, "areverse", edge_trim, "areverse"])
+    return ",".join(filters)
+
+
+def _audio_recording_trim_enabled() -> bool:
+    value = os.getenv("ROBOT_790_AUDIO_TRIM_SILENCE", "true").strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _run_ffmpeg(args: list[str], cwd: Path) -> None:
+    completed = subprocess.run(
+        ["ffmpeg", *args],
+        check=False,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=str(cwd),
+        timeout=180,
+    )
+    if completed.returncode != 0:
+        tail = (completed.stderr or completed.stdout or "").strip().splitlines()[-4:]
+        raise ValueError("ffmpeg failed: " + " | ".join(tail))
+
+
+def _probe_duration(path: Path, cwd: Path) -> float:
+    completed = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        check=False,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=str(cwd),
+        timeout=30,
+    )
+    if completed.returncode != 0:
+        raise ValueError("ffprobe failed.")
+    try:
+        return float((completed.stdout or "").strip())
+    except ValueError as exc:
+        raise ValueError("ffprobe returned no duration.") from exc
+
+
+def _safe_media_filename(filename: str) -> str:
+    value = Path(str(filename or "").replace("\\", "/")).name
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip(".-")
 
 
 def _current_model_string(repo_root: Path) -> str:

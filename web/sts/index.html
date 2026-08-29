@@ -162,8 +162,11 @@
     .mic-vision-controls {
       grid-template-columns: 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto;
     }
+    .audio-record-controls {
+      grid-template-columns: minmax(220px, 1fr) auto auto auto;
+    }
     .generated-image-controls {
-      grid-template-columns: minmax(240px, 1fr) auto auto;
+      grid-template-columns: minmax(240px, 1fr) minmax(150px, 190px) minmax(150px, 190px) auto auto;
     }
     .vision-drop {
       width: 152px;
@@ -472,6 +475,30 @@
     .tool-toggle-row .toggle-row {
       white-space: nowrap;
     }
+    .audio-record-status {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .audio-record-status strong {
+      color: var(--text);
+      font-weight: 650;
+    }
+    .button-link {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 0 14px;
+      text-decoration: none;
+    }
+    .button-link[hidden] {
+      display: none;
+    }
     @media (max-width: 720px) {
       :root {
         --log-pane-height: clamp(13rem, 38vh, 24rem);
@@ -485,7 +512,7 @@
         height: auto;
         min-height: 100vh;
       }
-      header, .controls, .url-controls, .voice-controls, .mic-vision-controls, .generated-image-controls, .grid {
+      header, .controls, .url-controls, .voice-controls, .mic-vision-controls, .audio-record-controls, .generated-image-controls, .grid {
         grid-template-columns: 1fr;
         align-items: stretch;
       }
@@ -578,6 +605,15 @@
           <button id="startMic" disabled>Start Mic</button>
           <button id="stopMic" disabled>Stop Mic</button>
         </section>
+        <section class="controls audio-record-controls">
+          <div class="audio-record-status">
+            <strong>Audio recording</strong><br>
+            <span id="audioRecordStatus">Not recording</span>
+          </div>
+          <button id="startAudioRecord">Record Audio</button>
+          <button id="stopAudioRecord" disabled>Stop Recording</button>
+          <a id="downloadAudioRecord" class="button-link" href="#" download hidden>Download</a>
+        </section>
         <section class="controls generated-image-controls">
           <div id="generatedImageCard" class="generated-image-card">
             <img id="generatedImagePreview" class="generated-image-preview" alt="">
@@ -586,6 +622,23 @@
               <span id="generatedImageHint" class="vision-hint">No generated image yet</span>
             </span>
           </div>
+          <label>
+            Image model
+            <select id="imageModel">
+              <option value="gpt-image-1-mini">Mini</option>
+              <option value="gpt-image-1">GPT Image 1</option>
+              <option value="">Use .env</option>
+            </select>
+          </label>
+          <label>
+            Cost
+            <select id="imageCost">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="auto">Auto</option>
+            </select>
+          </label>
           <button id="generatedImageOpen" disabled>Open</button>
           <button id="generatedImageClear" disabled>Clear</button>
         </section>
@@ -669,6 +722,7 @@
           </label>
           <button id="memoryRefresh">Refresh</button>
           <button id="memoryForgetAll">Forget All</button>
+          <span class="toggle-row"><input id="loadEricMemories" type="checkbox" checked> Load Eric memories on refresh</span>
           <div class="tool-toggle-row">
             <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
             <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
@@ -676,6 +730,7 @@
             <span class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</span>
             <span class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</span>
             <span class="toggle-row"><input id="llmImageTools" type="checkbox"> LLM image generation</span>
+            <span class="toggle-row"><input id="llmSmartHomeTools" type="checkbox"> LLM smart home</span>
           </div>
         </section>
       </div>
@@ -739,6 +794,8 @@
     const llmCastMediaTools = document.querySelector("#llmCastMediaTools");
     const llmNoteFileTools = document.querySelector("#llmNoteFileTools");
     const llmImageTools = document.querySelector("#llmImageTools");
+    const llmSmartHomeTools = document.querySelector("#llmSmartHomeTools");
+    const loadEricMemories = document.querySelector("#loadEricMemories");
     const memoryPreview = document.querySelector("#memoryPreview");
     const memoryStatus = document.querySelector("#memoryStatus");
     const memoryRefreshButton = document.querySelector("#memoryRefresh");
@@ -761,6 +818,10 @@
     const interruptSensitivityValue = document.querySelector("#interruptSensitivityValue");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
+    const startAudioRecordButton = document.querySelector("#startAudioRecord");
+    const stopAudioRecordButton = document.querySelector("#stopAudioRecord");
+    const downloadAudioRecordLink = document.querySelector("#downloadAudioRecord");
+    const audioRecordStatus = document.querySelector("#audioRecordStatus");
     const visionDrop = document.querySelector("#visionDrop");
     const visionFile = document.querySelector("#visionFile");
     const visionPreview = document.querySelector("#visionPreview");
@@ -771,6 +832,8 @@
     const generatedImageHint = document.querySelector("#generatedImageHint");
     const generatedImageOpenButton = document.querySelector("#generatedImageOpen");
     const generatedImageClearButton = document.querySelector("#generatedImageClear");
+    const imageModel = document.querySelector("#imageModel");
+    const imageCost = document.querySelector("#imageCost");
     const clearLogButton = document.querySelector("#clearLog");
     const copyConversationButton = document.querySelector("#copyConversation");
     const copyEventsButton = document.querySelector("#copyEvents");
@@ -799,6 +862,11 @@
     let micStream;
     let micSource;
     let micProcessor;
+    let recordingDestination;
+    let audioRecorder;
+    let audioRecordChunks = [];
+    let recordingMicSource;
+    let audioRecordObjectUrl;
     let playbackTime = 0;
     const audioFlushMs = 120;
     const minPlaybackBytes = 9600;
@@ -807,6 +875,9 @@
     let audioFlushTimer;
     let activeAudioSources = new Set();
     let lastBargeInAt = 0;
+    let imageToolProtectionUntil = 0;
+    let imageToolProtectionTimer;
+    let imageToolProtectionEnabled = false;
     let conversationLines = [];
     let inputDraft = "";
     let lastUserText = "";
@@ -822,6 +893,13 @@
     let toolFollowupInstructions = "";
     let loadedNoteContexts = [];
     let loadedNoteContextDirty = false;
+    const defaultCurrentEmbodiment = "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, and optional tracked chassis tools when connected.";
+    const defaultBodyTrajectory = "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results as the authority on what you can currently do.";
+    let runtimeConfig = {
+      current_embodiment: defaultCurrentEmbodiment,
+      body_trajectory: defaultBodyTrajectory,
+      idle_level12_cooldown_s: 12
+    };
     let responseActive = false;
     let toolMarkupSuppressed = false;
     let userSpeechActive = false;
@@ -889,6 +967,7 @@
 
     const memoryStorageKey = "robot790.memory.v1";
     const toolPrefsStorageKey = "robot790.toolPrefs.v2";
+    const toolPrefItemPrefix = "robot790.toolPref.";
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
     const idleDriftStorageKey = "robot790.idleDrift.v1";
@@ -899,6 +978,9 @@
     const modelPresetStorageKey = "robot790.modelPreset.v1";
     const micPanelStorageKey = "robot790.micPanel.open.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
+    const loadEricMemoriesStorageKey = "robot790.loadEricMemories.v1";
+    const imageModelStorageKey = "robot790.imageModel.v1";
+    const imageCostStorageKey = "robot790.imageCost.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
     const maxMemoryFactChars = 320;
@@ -1513,10 +1595,36 @@
       }
     ];
 
+    const smartHomeTools = [
+      {
+        type: "function",
+        name: "set_smart_home_device",
+        description: (
+          "Control one allowlisted smart-home light, fan, or switch through Robot 790's local proxy. " +
+          "Use only when the user explicitly asks to list, check, turn on, turn off, or toggle a configured device. " +
+          "Do not use for locks, doors, thermostat, heat, AC, appliances, purchases, or safety-critical devices."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            action: {
+              type: "string",
+              enum: ["list", "status", "turn_on", "turn_off", "toggle"],
+              description: "Smart-home action to perform."
+            },
+            device: {
+              type: "string",
+              description: "Configured device alias, such as living_room_light or extra_light. Leave empty only for action list."
+            }
+          },
+          required: ["action"],
+          additionalProperties: false
+        }
+      }
+    ];
+
     const baseSessionInstructions = [
       "You are Robot 790, spoken name Eric.",
-      "You are a local animatronic robot head with ESP32 eyes and mouth displays.",
-      "You are being built for a 790-style 3D printed robot body.",
       "Reply in one natural spoken sentence by default; use two short sentences when the user asks for explanation, comparison, advice, or your assessment.",
       "Be compact, not clipped; prefer a complete useful answer over maximum brevity.",
       "Never say you lack a body; refer to your robot face/body as your hardware.",
@@ -1558,6 +1666,10 @@
       "Use cast_media when the user asks you to show, watch, cast, play, or put a YouTube video or direct image URL on the TV.",
       "The default Cast target is Living Room TV; if it is not found, report discovered devices briefly.",
       "For broad video requests, call cast_media with action play_youtube and a concise search query instead of only searching the web.",
+      "Use set_smart_home_device only when the user explicitly asks to list, check, turn on, turn off, or toggle an allowlisted smart-home light, fan, or switch.",
+      "For smart-home control, use the proxy's configured aliases; for the first demo, expect living_room_light and extra_light only when configured.",
+      "Never use smart-home tools for locks, doors, thermostat, heat, AC, appliances, purchases, or safety-critical devices; say that needs a separate approval path.",
+      "Never say a smart-home device changed unless set_smart_home_device succeeded.",
       "Use memory tools only when the user explicitly asks you to remember or forget a named fact, or when you just asked the user to provide a fact so you could save it and the user provides that fact in the next turn.",
       "When remembering, choose a short snake_case name and one factual sentence.",
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
@@ -1784,6 +1896,46 @@
       if (contextPanel?.open) renderContextMap();
     }
 
+    function startupNoteSet() {
+      return new Set(startupNoteFilenames.map((filename) => filename.toLowerCase()));
+    }
+
+    function loadEricMemoriesEnabled() {
+      return loadEricMemories?.checked !== false;
+    }
+
+    function loadEricMemoriesPref() {
+      const stored = localStorage.getItem(loadEricMemoriesStorageKey);
+      loadEricMemories.checked = stored !== "false";
+    }
+
+    function saveEricMemoriesPref() {
+      localStorage.setItem(loadEricMemoriesStorageKey, loadEricMemoriesEnabled() ? "true" : "false");
+    }
+
+    function forgetStartupNoteContexts() {
+      const startupNotes = startupNoteSet();
+      const before = loadedNoteContexts.length;
+      loadedNoteContexts = loadedNoteContexts.filter((item) => !startupNotes.has(String(item.filename || "").toLowerCase()));
+      if (loadedNoteContexts.length === before) return false;
+      loadedNoteContextDirty = true;
+      renderMemory();
+      if (contextPanel?.open) renderContextMap();
+      return true;
+    }
+
+    function handleEricMemoriesPrefChange() {
+      saveEricMemoriesPref();
+      if (loadEricMemoriesEnabled()) {
+        loadStartupNotes();
+        return;
+      }
+      if (forgetStartupNoteContexts()) {
+        updateSessionTools();
+        log(events, "startup Eric memories unpinned");
+      }
+    }
+
     function clippedLoadedNoteContent(content) {
       if (content.length <= maxLoadedNoteCharsPerFile) return content;
       return `${content.slice(0, maxLoadedNoteCharsPerFile)}\n[Note clipped in session context after ${maxLoadedNoteCharsPerFile} characters. Read it again for more.]`;
@@ -1828,8 +1980,64 @@
       ].join("\n");
     }
 
+    function audioRecordingActive() {
+      return Boolean(audioRecorder && audioRecorder.state === "recording");
+    }
+
+    function formatRuntimeStateForInstructions() {
+      return [
+        "Current Robot 790 browser/runtime state:",
+        `- Microphone is ${micStream ? "on" : "off"}.`,
+        `- Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
+        audioRecordingActive()
+          ? "If recording is on, you may naturally know this session is being captured. Do not overperform or constantly mention it; let it lightly affect self-aware comments when relevant."
+          : "If recording is off, do not claim the session is being recorded unless the user says another recorder is active.",
+        `- Cast playback is ${castPlaybackActive ? "active" : "inactive"}.`,
+        `- Smart-home tools are ${llmSmartHomeTools?.checked ? "enabled" : "disabled"}.`
+      ].join("\n");
+    }
+
+    function formatEmbodimentForInstructions() {
+      return [
+        "Current Robot 790 embodiment:",
+        runtimeConfig.current_embodiment || defaultCurrentEmbodiment,
+        runtimeConfig.body_trajectory || defaultBodyTrajectory
+      ].join("\n");
+    }
+
+    async function loadRuntimeConfig() {
+      try {
+        const response = await fetch(new URL("/api/runtime-config", location.href), { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        runtimeConfig = {
+          current_embodiment: String(result.current_embodiment || defaultCurrentEmbodiment),
+          body_trajectory: String(result.body_trajectory || defaultBodyTrajectory),
+          idle_level12_cooldown_s: Number(result.idle_level12_cooldown_s) || 12
+        };
+        log(events, "runtime config loaded");
+        updateSessionTools();
+      } catch (error) {
+        runtimeConfig = {
+          current_embodiment: defaultCurrentEmbodiment,
+          body_trajectory: defaultBodyTrajectory,
+          idle_level12_cooldown_s: 12
+        };
+        log(events, `runtime config defaulted: ${error.message}`);
+      }
+    }
+
     function buildSessionInstructions() {
-      return [formatMemoryForInstructions(), formatLoadedNotesForInstructions(), formatSensingTextForInstructions(), baseSessionInstructions.join(" ")]
+      return [
+        formatMemoryForInstructions(),
+        formatLoadedNotesForInstructions(),
+        formatSensingTextForInstructions(),
+        formatEmbodimentForInstructions(),
+        formatRuntimeStateForInstructions(),
+        baseSessionInstructions.join(" ")
+      ]
         .filter(Boolean)
         .join("\n\n");
     }
@@ -1908,6 +2116,52 @@
       return Boolean(idleSubstrateTest?.checked);
     }
 
+    function conversationReengagePolicy(level = currentIdleDrift()) {
+      if (level <= 2) {
+        return {
+          enabled: false,
+          maxAttempts: 0,
+          firstDelayMs: Infinity,
+          repeatDelayMs: Infinity,
+          tone: "silent"
+        };
+      }
+      if (level <= 4) {
+        return {
+          enabled: true,
+          maxAttempts: 1,
+          firstDelayMs: 45000,
+          repeatDelayMs: 60000,
+          tone: "very soft"
+        };
+      }
+      if (level <= 7) {
+        return {
+          enabled: true,
+          maxAttempts: 1,
+          firstDelayMs: 26000,
+          repeatDelayMs: 40000,
+          tone: "soft"
+        };
+      }
+      if (level <= 10) {
+        return {
+          enabled: true,
+          maxAttempts: 2,
+          firstDelayMs: 14000,
+          repeatDelayMs: 26000,
+          tone: "gentle"
+        };
+      }
+      return {
+        enabled: true,
+        maxAttempts: maxReengageAttempts,
+        firstDelayMs: reengageFirstDelayMs,
+        repeatDelayMs: reengageRepeatDelayMs,
+        tone: "playful"
+      };
+    }
+
     function loadIdleDrift() {
       const saved = Number(localStorage.getItem(idleDriftStorageKey));
       idleDrift.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(maxIdleDrift, saved))) : "0";
@@ -1923,6 +2177,11 @@
       updateIdleLevel12State(level);
       idleDriftValue.textContent = idleDriftLabel(level);
       saveIdleDrift();
+      if (!conversationReengagePolicy(level).enabled) {
+        clearConversationReengageTimer();
+      } else {
+        scheduleConversationReengage();
+      }
       scheduleIdlePonder();
     }
 
@@ -2174,6 +2433,32 @@
       updateGeneratedImageButtons();
     }
 
+    function currentImageModel() {
+      return String(imageModel?.value || "").trim();
+    }
+
+    function currentImageQuality() {
+      const value = String(imageCost?.value || "low").trim().toLowerCase();
+      return ["auto", "low", "medium", "high"].includes(value) ? value : "low";
+    }
+
+    function imageSettingLabel() {
+      const model = currentImageModel() || ".env";
+      return `${model} / ${currentImageQuality()}`;
+    }
+
+    function loadImageSettings() {
+      const savedModel = localStorage.getItem(imageModelStorageKey);
+      const savedCost = localStorage.getItem(imageCostStorageKey);
+      if (savedModel !== null) imageModel.value = savedModel;
+      if (savedCost !== null && ["auto", "low", "medium", "high"].includes(savedCost)) imageCost.value = savedCost;
+    }
+
+    function saveImageSettings() {
+      localStorage.setItem(imageModelStorageKey, currentImageModel());
+      localStorage.setItem(imageCostStorageKey, currentImageQuality());
+    }
+
     function openGeneratedImage() {
       if (!generatedImageUrl) return;
       const opened = window.open(generatedImageUrl, "_blank", "noopener,noreferrer");
@@ -2244,6 +2529,26 @@
       memoryPreview.value = lines.join("\n");
     }
 
+    const toolPrefFields = [
+      { key: "faceTools", element: () => llmTools, defaultValue: true },
+      { key: "chassisTools", element: () => llmChassisTools, defaultValue: true },
+      { key: "memoryTools", element: () => llmMemoryTools, defaultValue: true },
+      { key: "webSearchTools", element: () => llmWebSearchTools, defaultValue: true },
+      { key: "webPageTools", element: () => llmWebPageTools, defaultValue: true },
+      { key: "castMediaTools", element: () => llmCastMediaTools, defaultValue: true },
+      { key: "noteFileTools", element: () => llmNoteFileTools, defaultValue: true },
+      { key: "imageTools", element: () => llmImageTools, defaultValue: false },
+      { key: "smartHomeTools", element: () => llmSmartHomeTools, defaultValue: false }
+    ];
+
+    function readToolPrefValue(prefs, key, defaultValue) {
+      const itemValue = localStorage.getItem(`${toolPrefItemPrefix}${key}.v1`);
+      if (itemValue === "true") return true;
+      if (itemValue === "false") return false;
+      if (Object.prototype.hasOwnProperty.call(prefs, key)) return prefs[key] !== false;
+      return defaultValue;
+    }
+
     function loadToolPrefs() {
       let prefs = {};
       try {
@@ -2251,27 +2556,19 @@
       } catch {
         prefs = {};
       }
-      llmTools.checked = prefs.faceTools !== false;
-      llmChassisTools.checked = prefs.chassisTools !== false;
-      llmMemoryTools.checked = prefs.memoryTools !== false;
-      llmWebSearchTools.checked = prefs.webSearchTools !== false;
-      llmWebPageTools.checked = prefs.webPageTools !== false;
-      llmCastMediaTools.checked = prefs.castMediaTools !== false;
-      llmNoteFileTools.checked = prefs.noteFileTools !== false;
-      llmImageTools.checked = prefs.imageTools === true;
+      for (const field of toolPrefFields) {
+        field.element().checked = readToolPrefValue(prefs, field.key, field.defaultValue);
+      }
     }
 
     function saveToolPrefs() {
-      localStorage.setItem(toolPrefsStorageKey, JSON.stringify({
-        faceTools: llmTools.checked,
-        chassisTools: llmChassisTools.checked,
-        memoryTools: llmMemoryTools.checked,
-        webSearchTools: llmWebSearchTools.checked,
-        webPageTools: llmWebPageTools.checked,
-        castMediaTools: llmCastMediaTools.checked,
-        noteFileTools: llmNoteFileTools.checked,
-        imageTools: llmImageTools.checked
-      }));
+      const prefs = {};
+      for (const field of toolPrefFields) {
+        const checked = Boolean(field.element().checked);
+        prefs[field.key] = checked;
+        localStorage.setItem(`${toolPrefItemPrefix}${field.key}.v1`, checked ? "true" : "false");
+      }
+      localStorage.setItem(toolPrefsStorageKey, JSON.stringify(prefs));
     }
 
     function setState(text, kind = "bad") {
@@ -2450,8 +2747,10 @@
 
     function conversationReengageWindowActive() {
       const now = Date.now();
+      const policy = conversationReengagePolicy();
       return Boolean(
         realtimeConnected()
+        && policy.enabled
         && micStream
         && lastAcceptedUserTranscriptAt
         && lastAssistantResponseDoneAt > lastAcceptedUserTranscriptAt
@@ -2470,17 +2769,20 @@
       if (toolFollowupNeeded || pendingToolCalls > 0) return "tool followup pending";
       if (userSpeechActive) return "user speaking";
       if (userTurnPending()) return "user turn pending";
-      if (reengageAttempts >= maxReengageAttempts) return "reengage limit";
+      const policy = conversationReengagePolicy();
+      if (!policy.enabled) return "reengage off at current idle level";
+      if (reengageAttempts >= policy.maxAttempts) return "reengage limit";
       return "";
     }
 
     function scheduleConversationReengage() {
       clearConversationReengageTimer();
       if (!conversationReengageWindowActive()) return;
-      if (reengageAttempts >= maxReengageAttempts) return;
+      const policy = conversationReengagePolicy();
+      if (reengageAttempts >= policy.maxAttempts) return;
       const now = Date.now();
-      const firstAt = lastAssistantResponseDoneAt + reengageFirstDelayMs;
-      const repeatAt = lastReengageAt ? lastReengageAt + reengageRepeatDelayMs : 0;
+      const firstAt = lastAssistantResponseDoneAt + policy.firstDelayMs;
+      const repeatAt = lastReengageAt ? lastReengageAt + policy.repeatDelayMs : 0;
       const goneAt = lastAcceptedUserTranscriptAt + reengageGoneAfterMs;
       const fireAt = Math.max(firstAt, repeatAt, userTurnPendingUntil);
       if (fireAt >= goneAt) return;
@@ -2498,7 +2800,8 @@
       if (toolFollowupNeeded || pendingToolCalls > 0) return "tool followup pending";
       if (userSpeechActive) return "user speaking";
       if (userTurnPending()) return "user turn pending";
-      if (!manual && conversationReengageWindowActive() && reengageAttempts < maxReengageAttempts) return "conversation re-engage window";
+      const reengagePolicy = conversationReengagePolicy();
+      if (!manual && conversationReengageWindowActive() && reengageAttempts < reengagePolicy.maxAttempts) return "conversation re-engage window";
       if (!manual && lastUserTurnActivityAt && Date.now() - lastUserTurnActivityAt < idlePostUserQuietMs) return "recent user turn";
       return "";
     }
@@ -2551,6 +2854,12 @@
     function idleLevel12YackActive(level = currentIdleDrift()) {
       updateIdleLevel12State(level);
       return Boolean(level >= 12 && idleLevel12StartedAt && Date.now() - idleLevel12StartedAt >= idleLevel12YackAfterMs);
+    }
+
+    function idleLevel12CooldownMs() {
+      const seconds = Number(runtimeConfig.idle_level12_cooldown_s);
+      const bounded = Number.isFinite(seconds) ? Math.max(3, Math.min(120, seconds)) : 12;
+      return bounded * 1000;
     }
 
     function maybeLogIdleLevel12YackMode(level = currentIdleDrift()) {
@@ -3398,10 +3707,16 @@
         idleExhaustionCount = Math.max(0, idleExhaustionCount - 1);
       }
       if (idleExhaustionCount >= 3) {
-        const minutes = currentIdleDrift() >= 11 ? 8 : 15;
-        idleCooldownUntil = Date.now() + minutes * 60 * 1000;
+        const level = currentIdleDrift();
+        const yackMode = idleLevel12YackActive(level);
+        const cooldownMs = yackMode ? idleLevel12CooldownMs() : (level >= 11 ? 8 : 15) * 60 * 1000;
+        idleCooldownUntil = Date.now() + cooldownMs;
         idleExhaustionCount = 0;
-        log(events, `idle cooldown: exhausted loop detected; quiet for ${minutes}m until ${new Date(idleCooldownUntil).toLocaleTimeString()}`);
+        if (yackMode) {
+          log(events, `idle stage breath: loop guard; quiet for ${Math.round(cooldownMs / 1000)}s until ${new Date(idleCooldownUntil).toLocaleTimeString()}`);
+        } else {
+          log(events, `idle cooldown: exhausted loop detected; quiet for ${Math.round(cooldownMs / 60000)}m until ${new Date(idleCooldownUntil).toLocaleTimeString()}`);
+        }
       }
     }
 
@@ -3411,18 +3726,19 @@
       if (suppressRobotBody) {
         return [
           `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
-          `Quiet for about ${quietSeconds} seconds; idle lane ${lane.name}; wonder ${idleWonderLabel()}; notes ${idleNotesFocusLabel()}.`,
-          "Experimental substrate test is on: quiet seconds are the only live telemetry in this idle event. Do not mention idle level, live mic state, Cast state, chassis, treads, face hardware, room telemetry, or Robot 790's usual body unless the loaded note itself makes that relevant."
+          `Quiet for about ${quietSeconds} seconds; idle lane ${lane.name}; wonder ${idleWonderLabel()}; notes ${idleNotesFocusLabel()}; audio recording ${audioRecordingActive() ? "on" : "off"}.`,
+          "Experimental substrate test is on: quiet seconds and audio-recording state are the only live telemetry in this idle event. Do not mention idle level, live mic state, Cast state, chassis, treads, face hardware, room telemetry, or Robot 790's usual body unless the loaded note itself makes that relevant."
         ].join(" ");
       }
       return [
         `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
         `Idle level ${level}; lane ${lane.name}; wonder ${idleWonderLabel()}; self-focus ${idleSelfFocusLabel()}; notes ${idleNotesFocusLabel()}; quiet for about ${quietSeconds} seconds.`,
         `Mic is ${micStream ? "on" : "off"}.`,
+        `Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
         statusLane ? `Cast playback is ${castPlaybackActive ? "active" : "inactive"}.` : "",
         statusLane
-          ? "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, and Cast playback state only."
-          : "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, and mic state only. Use mic state as a clue about whether Scott can hear you; do not foreground Cast state unless this is a status beat.",
+          ? "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, audio-recording state, and Cast playback state only."
+          : "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, and audio-recording state only. Use mic state as a clue about whether Scott can hear you; use recording state only when it matters; do not foreground Cast state unless this is a status beat.",
         "Not verified by this idle event: PIR motion, yaw angle or dead zones, IMU data, fan clicks, motor-controller checks, tread temperature, battery voltage, desk vibration, and room temperature.",
         "Unverified body-feel can still appear as poetic self-talk, but not as a measured fact or actionable diagnostic.",
         "Build notes can describe hardware that exists or is planned; they are not current sensor readings.",
@@ -3466,12 +3782,14 @@
     async function triggerConversationReengage() {
       const blockedReason = conversationReengageBlockedReason();
       if (blockedReason) {
-        if (conversationReengageWindowActive() && reengageAttempts < maxReengageAttempts) {
+        const retryPolicy = conversationReengagePolicy();
+        if (conversationReengageWindowActive() && reengageAttempts < retryPolicy.maxAttempts) {
           scheduleConversationReengage();
         }
         return;
       }
 
+      const policy = conversationReengagePolicy();
       reengageInFlight = true;
       responseActive = true;
       reengageAttempts += 1;
@@ -3484,18 +3802,22 @@
       const instructions = [
         `A short conversational re-engage timer fired because ${userLabel} was interacting moments ago, then went quiet while the mic is still on.`,
         "This is not idle rumination and not a new topic hunt. It is a gentle conversational nudge.",
-        `Quiet after your last reply for about ${quietSeconds} seconds; quiet after ${userLabel}'s last accepted turn for about ${userQuietSeconds} seconds; re-engage attempt ${reengageAttempts} of ${maxReengageAttempts}.`,
+        `Idle drift is ${idleDriftLabel()}; re-engage behavior is ${policy.tone}.`,
+        `Quiet after your last reply for about ${quietSeconds} seconds; quiet after ${userLabel}'s last accepted turn for about ${userQuietSeconds} seconds; re-engage attempt ${reengageAttempts} of ${policy.maxAttempts}.`,
         "Use exactly one short spoken sentence. No tools.",
         userName
           ? `Address ${userName} directly. Offer a small hook, ask if he is still there, or lightly invite the thread to continue.`
           : "Do not use a name. Offer a small hook, ask if they are still there, or lightly invite the thread to continue.",
         `Do not guilt, pressure, complain, narrate abandonment, or imply ${userLabel} owes you a reply.`,
+        policy.tone === "very soft"
+          ? "At this low idle level, prefer a low-pressure aside over asking for attention."
+          : "",
         "If this is not the first attempt, be softer or funnier than the previous nudge.",
         "Sound like Robot 790, spoken name Eric: warm, dry, compact, and present.",
         recentContext
       ].filter(Boolean).join("\n\n");
       cueFaceMode("listening", 0.38, { force: true });
-      log(events, `conversation re-engage fired: ${reengageAttempts}/${maxReengageAttempts}`);
+      log(events, `conversation re-engage fired: ${reengageAttempts}/${policy.maxAttempts}`);
       send({
         type: "response.create",
         response: {
@@ -3670,6 +3992,46 @@
       if (lastUserText) recentUserTexts = [...recentUserTexts, lastUserText].slice(-8);
     }
 
+    function userRequestedImageGeneration(text) {
+      return (
+        llmImageTools?.checked &&
+        /\b(make|draw|render|create|generate|imagine|show)\b[\s\S]{0,80}\b(image|picture|drawing|render|visual|photo|scene)\b/i.test(text || "")
+      );
+    }
+
+    function updateRealtimeInterruptProtection(enabled, reason = "") {
+      if (imageToolProtectionEnabled === enabled) return;
+      imageToolProtectionEnabled = enabled;
+      if (!realtimeConnected()) return;
+      send({
+        type: "session.update",
+        session: {
+          type: "realtime",
+          turn_detection: {
+            interrupt_response: !enabled
+          }
+        }
+      });
+      log(events, enabled ? `image tool protected from interruption${reason ? `: ${reason}` : ""}` : "image tool interruption restored");
+    }
+
+    function clearImageToolProtection() {
+      if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
+      imageToolProtectionTimer = null;
+      imageToolProtectionUntil = 0;
+      updateRealtimeInterruptProtection(false);
+    }
+
+    function armImageToolProtection(reason = "image request") {
+      if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
+      imageToolProtectionUntil = Date.now() + 25000;
+      updateRealtimeInterruptProtection(true, reason);
+      imageToolProtectionTimer = setTimeout(() => {
+        imageToolProtectionTimer = null;
+        if (Date.now() >= imageToolProtectionUntil) clearImageToolProtection();
+      }, 26000);
+    }
+
     function normalizeTranscriptForDedupe(text) {
       return String(text || "")
         .toLowerCase()
@@ -3718,6 +4080,7 @@
       }
 
       noteUserText(transcript);
+      if (userRequestedImageGeneration(transcript)) armImageToolProtection();
       lastAcceptedUserTranscript = transcript;
       lastAcceptedUserTranscriptAt = Date.now();
       if (update === "supersedes" && lastUserConversationIndex >= 0) {
@@ -4082,6 +4445,25 @@
       throw new Error(`Unsupported chassis action: ${normalizedAction}`);
     }
 
+    async function setSmartHomeDevice({ device = "", action = "status" } = {}) {
+      const normalizedAction = String(action || "status").trim().toLowerCase();
+      const normalizedDevice = String(device || "").trim();
+      if (!normalizedAction) throw new Error("Missing smart-home action");
+      if (normalizedAction !== "list" && !normalizedDevice) throw new Error("Missing smart-home device");
+      log(events, `smart home: ${normalizedAction}${normalizedDevice ? ` ${normalizedDevice}` : ""}`);
+      const response = await fetch(new URL("/api/smart-home", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device: normalizedDevice, action: normalizedAction })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      log(events, `smart home result: ${JSON.stringify(result)}`);
+      return result;
+    }
+
     async function searchWeb({ query, max_results = 5 } = {}) {
       const text = String(query || "").trim();
       if (!text) throw new Error("Missing search query");
@@ -4258,6 +4640,7 @@
         session: {
           connected: realtimeConnected(),
           mic_on: Boolean(micStream),
+          audio_recording_on: audioRecordingActive(),
           idle_level: currentIdleDrift(),
           wonder_level: currentIdleWonder(),
           self_focus_level: currentIdleSelfFocus(),
@@ -4299,6 +4682,7 @@
         ...(result.session || {}),
         connected: realtimeConnected(),
         mic_on: Boolean(micStream),
+        audio_recording_on: audioRecordingActive(),
         idle_level: currentIdleDrift(),
         wonder_level: currentIdleWonder(),
         self_focus_level: currentIdleSelfFocus(),
@@ -4376,6 +4760,7 @@
       const loadedNotesText = formatLoadedNotesForInstructions();
       const sensingText = formatSensingTextForInstructions();
       const memoryText = formatMemoryForInstructions();
+      const embodimentText = formatEmbodimentForInstructions();
       const conversationText = conversationLines.length
         ? conversationLines.join("\n")
         : String(conversation?.textContent || "");
@@ -4397,6 +4782,7 @@
       const telemetryText = [
         `Realtime connected: ${realtimeConnected() ? "yes" : "no"}`,
         `Mic: ${micStream ? "on" : "off"}`,
+        `Audio recording: ${audioRecordingActive() ? "on" : "off"}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
         `Sensing input: ${sensingInputLabel()}`,
         `Face controller: ${faceUrl.value}`,
@@ -4412,6 +4798,7 @@
         `Cast media: ${llmCastMediaTools.checked ? "on" : "off"}`,
         `Note files: ${llmNoteFileTools.checked ? "on" : "off"}`,
         `Image generation: ${llmImageTools.checked ? "on" : "off"}`,
+        `Smart home: ${llmSmartHomeTools.checked ? "on" : "off"}`,
         eventsText
       ].join("\n");
 
@@ -4425,6 +4812,15 @@
             `Tool definitions available: ${enabledTools.length}`,
             `Voice: ${currentTtsVoice()}`,
             `Voice style chars: ${currentTtsInstruct().length}`
+          ]
+        },
+        {
+          name: "Embodiment",
+          role: "Runtime-configured current hardware and build trajectory",
+          text: embodimentText,
+          details: [
+            "Source: /api/runtime-config",
+            "Override with ROBOT_790_CURRENT_EMBODIMENT and ROBOT_790_BODY_TRAJECTORY"
           ]
         },
         {
@@ -4685,14 +5081,18 @@
       generatedImageUrl = "";
       generatedImageName = "";
       updateGeneratedImageButtons();
-      log(events, `image generation: ${shortTitle || text.slice(0, 80)}`);
+      const selectedModel = currentImageModel();
+      const selectedQuality = currentImageQuality();
+      log(events, `image generation: ${shortTitle || text.slice(0, 80)} (${imageSettingLabel()})`);
       const response = await fetch(new URL("/api/images/generate", location.href), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: text,
           title: shortTitle,
-          size: String(size || "1024x1024")
+          size: String(size || "1024x1024"),
+          model: selectedModel,
+          quality: selectedQuality
         })
       });
       const result = await response.json().catch(() => ({}));
@@ -5020,6 +5420,12 @@
     }
 
     async function loadStartupNotes() {
+      if (!loadEricMemoriesEnabled()) {
+        log(events, "startup Eric memories skipped by checkbox");
+        renderMemory();
+        if (contextPanel?.open) renderContextMap();
+        return;
+      }
       for (const filename of startupNoteFilenames) {
         try {
           await readTextFile({ filename });
@@ -5242,6 +5648,7 @@
       if (name === "show_web_page") return showWebPage(args);
       if (name === "generate_image") return generateImage(args);
       if (name === "cast_media") return castMedia(args);
+      if (name === "set_smart_home_device") return setSmartHomeDevice(args);
       if (name === "write_text_file") return writeTextFile(args);
       if (name === "read_text_file") return readTextFile(args);
       if (name === "list_text_files") return listTextFiles(args);
@@ -5403,9 +5810,25 @@
       return "Done.";
     }
 
+    function smartHomeFollowupText(result) {
+      if (result?.status === "error") return "I could not control that.";
+      const action = String(result?.action || "").toLowerCase();
+      const devices = Array.isArray(result?.devices) ? result.devices : [];
+      if (action === "list") {
+        if (!devices.length) return "I found no configured smart-home devices.";
+        return devices.length === 1 ? "I found one configured smart-home device." : `I found ${devices.length} configured smart-home devices.`;
+      }
+      const label = String(result?.state?.friendly_name || result?.device?.label || result?.device?.name || "That device");
+      const state = String(result?.state?.state || "").trim();
+      if (action === "status") return state ? `${label} is ${state}.` : `${label} status checked.`;
+      if (state) return `${label} is ${state}.`;
+      return `${label} updated.`;
+    }
+
     async function handleFunctionCall(event) {
       pendingToolCalls += 1;
       toolFollowupNeeded = true;
+      if (event.name === "generate_image") clearImageToolProtection();
       try {
         const result = await executeTool(event.name, event.arguments);
         if (event.name === "set_chassis") toolFollowupExactText = chassisFollowupText(result);
@@ -5424,6 +5847,7 @@
         if (event.name === "show_web_page") toolFollowupExactText = webPageFollowupText(result);
         if (event.name === "generate_image") toolFollowupExactText = imageFollowupText(result);
         if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
+        if (event.name === "set_smart_home_device") toolFollowupExactText = smartHomeFollowupText(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
         send({
           type: "conversation.item.create",
@@ -5451,6 +5875,7 @@
         if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
         if (event.name === "generate_image") toolFollowupExactText = "I could not make that image.";
         if (event.name === "cast_media") toolFollowupExactText = "I could not cast that.";
+        if (event.name === "set_smart_home_device") toolFollowupExactText = "I could not control that.";
         log(events, `tool ${event.name} error: ${error.message}`);
         send({
           type: "conversation.item.create",
@@ -5498,7 +5923,7 @@
           tools: enabledTools,
           tool_choice: enabledTools.length ? "auto" : "none",
           turn_detection: {
-            interrupt_response: true
+            interrupt_response: !imageToolProtectionEnabled
           }
         }
       });
@@ -5519,6 +5944,7 @@
         ...(llmWebPageTools?.checked ? webPageTools : []),
         ...(llmImageTools?.checked ? imageTools : []),
         ...(llmCastMediaTools?.checked ? castMediaTools : []),
+        ...(llmSmartHomeTools?.checked ? smartHomeTools : []),
         ...(llmNoteFileTools?.checked ? noteFileTools : [])
       ];
     }
@@ -5533,6 +5959,145 @@
       audioFlushTimer = null;
       audioChunks = [];
       audioChunkBytes = 0;
+    }
+
+    function audioRecordingSupported() {
+      return typeof MediaRecorder !== "undefined";
+    }
+
+    function preferredAudioRecordMimeType() {
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "video/webm;codecs=opus",
+        "video/webm"
+      ];
+      return candidates.find((type) => MediaRecorder.isTypeSupported?.(type)) || "";
+    }
+
+    function updateAudioRecordButtons() {
+      const supported = audioRecordingSupported();
+      const isRecording = audioRecorder && audioRecorder.state === "recording";
+      startAudioRecordButton.disabled = !supported || isRecording;
+      stopAudioRecordButton.disabled = !isRecording;
+      if (!supported) audioRecordStatus.textContent = "Browser recording is not supported.";
+    }
+
+    function recordingFilename() {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").replace("Z", "");
+      return `robot-790-sts-audio-${stamp}.webm`;
+    }
+
+    function attachMicToRecording() {
+      if (!recordingDestination || !micStream || recordingMicSource || !audioContext) return;
+      recordingMicSource = audioContext.createMediaStreamSource(micStream);
+      recordingMicSource.connect(recordingDestination);
+      audioRecordStatus.textContent = "Recording Eric and mic.";
+    }
+
+    function detachMicFromRecording() {
+      if (!recordingMicSource) return;
+      try {
+        recordingMicSource.disconnect();
+      } catch {
+        // Already disconnected.
+      }
+      recordingMicSource = null;
+      if (audioRecorder && audioRecorder.state === "recording") {
+        audioRecordStatus.textContent = "Recording Eric audio.";
+      }
+    }
+
+    async function uploadAudioRecording(blob, filename) {
+      const imageFilename = generatedImageName || "";
+      const response = await fetch(new URL("/api/audio/record", location.href), {
+        method: "POST",
+        headers: {
+          "Content-Type": blob.type || "audio/webm",
+          "X-Robot-790-Filename": filename,
+          "X-Robot-790-Image-Filename": imageFilename
+        },
+        body: blob
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
+    function filenameFromPath(path) {
+      return String(path || "").replace(/\\/g, "/").split("/").filter(Boolean).pop() || "";
+    }
+
+    async function startAudioRecording() {
+      if (!audioRecordingSupported()) {
+        audioRecordStatus.textContent = "Browser recording is not supported.";
+        return;
+      }
+      if (audioRecorder && audioRecorder.state === "recording") return;
+      await ensurePlayback();
+      if (audioRecordObjectUrl) {
+        URL.revokeObjectURL(audioRecordObjectUrl);
+        audioRecordObjectUrl = null;
+      }
+      downloadAudioRecordLink.hidden = true;
+      downloadAudioRecordLink.removeAttribute("href");
+      audioRecordChunks = [];
+      recordingDestination = audioContext.createMediaStreamDestination();
+      attachMicToRecording();
+      const mimeType = preferredAudioRecordMimeType();
+      audioRecorder = new MediaRecorder(
+        recordingDestination.stream,
+        mimeType ? { mimeType } : undefined
+      );
+      audioRecorder.addEventListener("dataavailable", (event) => {
+        if (event.data && event.data.size > 0) audioRecordChunks.push(event.data);
+      });
+      audioRecorder.addEventListener("stop", async () => {
+        const filename = recordingFilename();
+        const blob = new Blob(audioRecordChunks, { type: audioRecorder.mimeType || "audio/webm" });
+        audioRecordObjectUrl = URL.createObjectURL(blob);
+        downloadAudioRecordLink.href = audioRecordObjectUrl;
+        downloadAudioRecordLink.download = filename;
+        downloadAudioRecordLink.hidden = false;
+        detachMicFromRecording();
+        recordingDestination = null;
+        audioRecorder = null;
+        audioRecordChunks = [];
+        try {
+          const result = await uploadAudioRecording(blob, filename);
+          const recordingUrl = result.latest_url || result.url || "";
+          const recordingName = filenameFromPath(result.latest || result.filename) || "latest-sts-audio-picture.mp4";
+          if (recordingUrl) {
+            URL.revokeObjectURL(audioRecordObjectUrl);
+            audioRecordObjectUrl = null;
+            downloadAudioRecordLink.href = new URL(String(recordingUrl), location.href).href;
+            downloadAudioRecordLink.download = recordingName;
+            downloadAudioRecordLink.hidden = false;
+          }
+          audioRecordStatus.textContent = `Saved ${recordingName}`;
+          log(events, `audio recorded: ${result.latest || result.filename || recordingName}`);
+        } catch (error) {
+          audioRecordStatus.textContent = "Save failed; browser download is available.";
+          log(events, `audio record save error: ${error.message}`);
+        }
+        updateAudioRecordButtons();
+        updateSessionTools();
+      });
+      audioRecorder.start(1000);
+      audioRecordStatus.textContent = micStream ? "Recording Eric and mic." : "Recording Eric audio.";
+      log(events, "audio recording started");
+      updateAudioRecordButtons();
+      updateSessionTools();
+    }
+
+    function stopAudioRecording() {
+      if (!audioRecorder || audioRecorder.state !== "recording") return;
+      audioRecordStatus.textContent = "Finalizing recording...";
+      audioRecorder.stop();
+      updateAudioRecordButtons();
+      updateSessionTools();
     }
 
     function outputAudioActive() {
@@ -5597,6 +6162,7 @@
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
       source.connect(audioContext.destination);
+      if (recordingDestination) source.connect(recordingDestination);
       activeAudioSources.add(source);
       source.onended = () => {
         activeAudioSources.delete(source);
@@ -5650,6 +6216,7 @@
           idleExhaustionScoredThisResponse = false;
           reengageInFlight = false;
           if (!awaitingToolFollowup) armAssistantUtteranceFinished({ wasIdle: wasIdleInFlight });
+          if (!awaitingToolFollowup && imageToolProtectionEnabled) clearImageToolProtection();
         }
         if (!toolFollowupNeeded) scheduleFaceIdle();
       }
@@ -5751,6 +6318,10 @@
       ws.addEventListener("close", () => {
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
+        if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
+        imageToolProtectionTimer = null;
+        imageToolProtectionUntil = 0;
+        imageToolProtectionEnabled = false;
         assistantFinishPending = false;
         assistantFinishWasIdle = false;
         assistantFinishArmedAt = 0;
@@ -5843,6 +6414,7 @@
       };
       micSource.connect(micProcessor);
       micProcessor.connect(micContext.destination);
+      attachMicToRecording();
       startMicButton.disabled = true;
       stopMicButton.disabled = false;
       syncMicPanelToMic();
@@ -5850,6 +6422,7 @@
     }
 
     async function stopMic({ reason = "" } = {}) {
+      detachMicFromRecording();
       if (micProcessor) micProcessor.disconnect();
       if (micSource) micSource.disconnect();
       if (micStream) micStream.getTracks().forEach((track) => track.stop());
@@ -5895,6 +6468,14 @@
       micPausedForCast = false;
       stopMic().catch((error) => log(events, `mic stop error: ${error.message}`));
     });
+    startAudioRecordButton.addEventListener("click", () => {
+      startAudioRecording().catch((error) => {
+        audioRecordStatus.textContent = "Recording failed.";
+        updateAudioRecordButtons();
+        log(events, `audio record error: ${error.message}`);
+      });
+    });
+    stopAudioRecordButton.addEventListener("click", stopAudioRecording);
     visionDrop.addEventListener("click", () => visionFile.click());
     visionDrop.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
@@ -5922,6 +6503,14 @@
     visionClearButton.addEventListener("click", clearVisionImage);
     generatedImageOpenButton.addEventListener("click", openGeneratedImage);
     generatedImageClearButton.addEventListener("click", clearGeneratedImage);
+    imageModel.addEventListener("change", () => {
+      saveImageSettings();
+      log(events, `image settings ${imageSettingLabel()}`);
+    });
+    imageCost.addEventListener("change", () => {
+      saveImageSettings();
+      log(events, `image settings ${imageSettingLabel()}`);
+    });
     llmTools.addEventListener("change", updateSessionTools);
     llmChassisTools.addEventListener("change", updateSessionTools);
     llmMemoryTools.addEventListener("change", updateSessionTools);
@@ -5930,6 +6519,8 @@
     llmImageTools.addEventListener("change", updateSessionTools);
     llmCastMediaTools.addEventListener("change", updateSessionTools);
     llmNoteFileTools.addEventListener("change", updateSessionTools);
+    llmSmartHomeTools.addEventListener("change", updateSessionTools);
+    loadEricMemories.addEventListener("change", handleEricMemoriesPrefChange);
     ttsVoice.addEventListener("change", () => updateSessionTtsStyle());
     ttsPreset.addEventListener("change", () => {
       if (ttsPreset.value === "custom") return;
@@ -6036,10 +6627,14 @@
     loadIdleWonder();
     loadIdleSelfFocus();
     loadIdleNotesFocus();
+    loadEricMemoriesPref();
+    loadImageSettings();
     loadToolPrefs();
+    loadRuntimeConfig();
     renderMemory();
     updateVisionButtons();
     updateGeneratedImageButtons();
+    updateAudioRecordButtons();
     loadStartupNotes();
     if (contextPanel.open) renderContextMap();
     scheduleLogPaneHeightUpdate();

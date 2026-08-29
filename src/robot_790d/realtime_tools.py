@@ -15,6 +15,7 @@ from robot_790d.image_generation import generate_image
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.memory import forget_fact, remember_fact
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
+from robot_790d.smart_home import control_smart_home_device
 from robot_790d.state import Affect, RobotMode
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
@@ -457,6 +458,35 @@ TOOLS: list[dict[str, object]] = [
     },
     {
         "type": "function",
+        "name": "set_smart_home_device",
+        "description": (
+            "Control one allowlisted smart-home light, fan, or switch through Robot 790's local proxy. "
+            "Use only when the user explicitly asks to list, check, turn on, turn off, or toggle a configured "
+            "device. Do not use for locks, doors, thermostat, heat, AC, appliances, purchases, or "
+            "safety-critical devices."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "status", "turn_on", "turn_off", "toggle"],
+                    "description": "Smart-home action to perform.",
+                },
+                "device": {
+                    "type": "string",
+                    "description": (
+                        "Configured device alias, such as living_room_light or extra_light. "
+                        "Leave empty only for action list."
+                    ),
+                },
+            },
+            "required": ["action"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
         "name": "show_web_page",
         "description": (
             "Open or display an HTTP or HTTPS web page from a client UI. Use this when the user asks "
@@ -591,6 +621,8 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_get_brain_status)
     elif name == "cast_media":
         result = await asyncio.to_thread(_cast_media, parsed)
+    elif name == "set_smart_home_device":
+        result = await asyncio.to_thread(_set_smart_home_device, parsed)
     elif name == "show_web_page":
         result = await asyncio.to_thread(_show_web_page, parsed)
     elif name == "generate_image":
@@ -900,6 +932,12 @@ def _cast_media(arguments: dict[str, object]) -> dict[str, object]:
     return {"status": "error", "error": f"Unsupported cast_media action: {action}"}
 
 
+def _set_smart_home_device(arguments: dict[str, object]) -> dict[str, object]:
+    action = str(arguments.get("action") or "status").strip()
+    device = str(arguments.get("device") or "").strip()
+    return control_smart_home_device(device=device, action=action)
+
+
 def _show_web_page(arguments: dict[str, object]) -> dict[str, object]:
     url = str(arguments.get("url") or "").strip()
     title = str(arguments.get("title") or "").strip()
@@ -918,7 +956,9 @@ def _generate_image(arguments: dict[str, object]) -> dict[str, object]:
     title = str(arguments.get("title") or "").strip()
     size = str(arguments.get("size") or "").strip() or None
     provider = str(arguments.get("provider") or "").strip() or None
-    return generate_image(prompt, title=title, provider=provider, size=size)
+    model = str(arguments.get("model") or "").strip() or None
+    quality = str(arguments.get("quality") or "").strip() or None
+    return generate_image(prompt, title=title, provider=provider, size=size, model=model, quality=quality)
 
 
 def _write_text_file(arguments: dict[str, object]) -> dict[str, object]:

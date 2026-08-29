@@ -1,4 +1,6 @@
 import json
+import sys
+import types
 
 import pytest
 
@@ -38,6 +40,39 @@ def test_openai_generation_reports_missing_key(monkeypatch) -> None:
 
     assert result["status"] == "error"
     assert "OPENAI_API_KEY" in str(result["error"])
+
+
+def test_openai_generation_accepts_model_and_quality(tmp_path, monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {"data": [{"b64_json": "aGVsbG8=", "revised_prompt": "revised"}]}
+
+    fake_httpx = types.SimpleNamespace(
+        HTTPError=RuntimeError,
+        post=lambda url, **kwargs: captured.update({"url": url, **kwargs}) or FakeResponse(),
+    )
+    monkeypatch.setitem(sys.modules, "httpx", fake_httpx)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    result = image_generation.generate_image(
+        "a better puppet theater",
+        title="puppet theater",
+        provider="openai",
+        model="gpt-image-1",
+        quality="high",
+        repo_root=tmp_path,
+    )
+
+    assert result["status"] == "ok"
+    assert result["model"] == "gpt-image-1"
+    assert result["quality"] == "high"
+    payload = captured["json"]
+    assert payload["model"] == "gpt-image-1"
+    assert payload["quality"] == "high"
 
 
 def test_generated_image_path_rejects_unsafe_filename(tmp_path) -> None:

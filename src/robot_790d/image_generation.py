@@ -25,6 +25,8 @@ def generate_image(
     title: str = "",
     provider: str | None = None,
     size: str | None = None,
+    model: str | None = None,
+    quality: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     """Generate one image and save it in Robot 790's local generated-image folder."""
@@ -36,7 +38,14 @@ def generate_image(
     if selected_provider == "mock":
         return _generate_mock_image(normalized_prompt, title=title, size=size, repo_root=repo_root)
     if selected_provider == "openai":
-        return _generate_openai_image(normalized_prompt, title=title, size=size, repo_root=repo_root)
+        return _generate_openai_image(
+            normalized_prompt,
+            title=title,
+            size=size,
+            model=model,
+            quality=quality,
+            repo_root=repo_root,
+        )
     if selected_provider in {"comfy", "comfyui"}:
         return {
             "status": "error",
@@ -79,6 +88,8 @@ def _generate_openai_image(
     *,
     title: str = "",
     size: str | None = None,
+    model: str | None = None,
+    quality: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     api_key = os.getenv("ROBOT_790_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
@@ -98,9 +109,9 @@ def _generate_openai_image(
             "provider": "openai",
         }
 
-    model = os.getenv("ROBOT_790_OPENAI_IMAGE_MODEL", DEFAULT_OPENAI_IMAGE_MODEL).strip() or DEFAULT_OPENAI_IMAGE_MODEL
+    model = _normalize_openai_image_model(model)
     image_size = _normalize_size(size or os.getenv("ROBOT_790_IMAGE_SIZE") or DEFAULT_IMAGE_SIZE)
-    quality = os.getenv("ROBOT_790_OPENAI_IMAGE_QUALITY", DEFAULT_IMAGE_QUALITY).strip() or DEFAULT_IMAGE_QUALITY
+    quality = _normalize_openai_image_quality(quality)
     base_url = os.getenv("ROBOT_790_OPENAI_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
     timeout_s = _float_env("ROBOT_790_IMAGE_TIMEOUT_S", 180.0)
 
@@ -173,6 +184,7 @@ def _generate_openai_image(
         "prompt": prompt,
         "revised_prompt": revised_prompt,
         "size": image_size,
+        "quality": quality,
     }
 
 
@@ -301,6 +313,23 @@ def _normalize_size(size: str) -> str:
         return value
     if not re.fullmatch(r"\d{3,4}x\d{3,4}", value):
         return DEFAULT_IMAGE_SIZE
+    return value
+
+
+def _normalize_openai_image_model(model: str | None) -> str:
+    value = str(model or "").strip()
+    if not value:
+        env_model = os.getenv("ROBOT_790_OPENAI_IMAGE_MODEL", DEFAULT_OPENAI_IMAGE_MODEL).strip()
+        return env_model or DEFAULT_OPENAI_IMAGE_MODEL
+    return re.sub(r"[^A-Za-z0-9._:-]", "", value)[:80] or DEFAULT_OPENAI_IMAGE_MODEL
+
+
+def _normalize_openai_image_quality(quality: str | None) -> str:
+    value = str(quality or "").strip().lower()
+    if value not in {"auto", "low", "medium", "high"}:
+        value = os.getenv("ROBOT_790_OPENAI_IMAGE_QUALITY", DEFAULT_IMAGE_QUALITY).strip().lower()
+    if value not in {"auto", "low", "medium", "high"}:
+        return DEFAULT_IMAGE_QUALITY
     return value
 
 

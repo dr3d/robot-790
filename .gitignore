@@ -11,10 +11,13 @@ qwen3_tts.env
 *.log
 logs/runs/
 logs/live/
+logs/audio/
 logs/generated-images/
 samples/
 notes/
 backups/
+docs/media/raw-video/
+docs/media/rejected/
 .pio/
 firmware/**/.pio/
 firmware/**/include/*_private.h
