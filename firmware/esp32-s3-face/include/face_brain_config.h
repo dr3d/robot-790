@@ -17,6 +17,12 @@
 #define FACE_LCD_HEIGHT 320
 #define FACE_LCD_ROTATION 0
 
+// The S3 integrated-face build defaults 180 degrees from the raw Waveshare
+// panel orientation, matching the current Robot 790 housing experiments.
+#ifndef FACE_LCD_DEFAULT_FLIPPED
+#define FACE_LCD_DEFAULT_FLIPPED 1
+#endif
+
 // One-piece portrait face mode draws virtual eye and mouth viewports on the
 // built-in LCD. This target does not drive external eye TFTs by default.
 #ifndef FACE_INTEGRATED_VIEWPORTS

@@ -15,7 +15,7 @@
       --accent: #60d394;
       --warn: #ffcf5a;
       --bad: #ff6b6b;
-      --log-pane-height: clamp(18rem, 42vh, 34rem);
+      --log-pane-height: clamp(14rem, 46vh, 38rem);
       --log-pane-live-height: var(--log-pane-height);
     }
     * { box-sizing: border-box; }
@@ -45,6 +45,13 @@
       justify-content: space-between;
       gap: 16px;
       margin-bottom: 20px;
+    }
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     h1 {
       margin: 0;
@@ -148,6 +155,9 @@
     }
     .idle-controls {
       grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
+    }
+    .memory-controls {
+      grid-template-columns: minmax(260px, 1fr) auto auto;
     }
     .mic-vision-controls {
       grid-template-columns: 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto;
@@ -341,6 +351,18 @@
     .copy-link:hover {
       text-decoration: underline;
     }
+    .panel-link {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .panel-link:hover {
+      text-decoration: underline;
+    }
     .log-actions {
       display: inline-flex;
       align-items: center;
@@ -439,9 +461,20 @@
       text-transform: none;
       letter-spacing: 0;
     }
+    .tool-toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      align-items: center;
+      grid-column: 1 / -1;
+      margin-top: 8px;
+    }
+    .tool-toggle-row .toggle-row {
+      white-space: nowrap;
+    }
     @media (max-width: 720px) {
       :root {
-        --log-pane-height: clamp(16rem, 38vh, 24rem);
+        --log-pane-height: clamp(13rem, 38vh, 24rem);
       }
       body {
         height: auto;
@@ -457,6 +490,9 @@
         align-items: stretch;
       }
       header { display: grid; }
+      .header-actions {
+        justify-content: flex-start;
+      }
       .status { white-space: normal; }
       .settings-panel > summary {
         align-items: flex-start;
@@ -480,7 +516,11 @@
   <main>
     <header>
       <h1>Robot 790 STS</h1>
-      <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
+      <div class="header-actions">
+        <button id="showEssentials" class="panel-link" type="button">Essentials</button>
+        <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
+        <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
+      </div>
     </header>
 
     <details id="serverPanel" class="settings-panel server-panel" open>
@@ -560,7 +600,7 @@
         <section class="controls url-controls">
           <label>
             Face controller
-            <input id="faceUrl" value="http://esp32-eyes.local/" spellcheck="false">
+            <input id="faceUrl" value="http://esp32-s3-face.local/" spellcheck="false">
           </label>
           <button id="faceIdle" disabled>Idle Face</button>
           <button id="faceBeat" disabled>Beat</button>
@@ -620,20 +660,22 @@
           <span class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</span>
         </section>
 
-        <section class="controls">
+        <section class="controls memory-controls">
           <label>
             Memory
             <span id="memoryStatus" class="subtle"></span>
             <textarea id="memoryPreview" readonly spellcheck="false"></textarea>
+          </label>
+          <button id="memoryRefresh">Refresh</button>
+          <button id="memoryForgetAll">Forget All</button>
+          <div class="tool-toggle-row">
             <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
             <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
             <span class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</span>
             <span class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</span>
             <span class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</span>
             <span class="toggle-row"><input id="llmImageTools" type="checkbox"> LLM image generation</span>
-          </label>
-          <button id="memoryRefresh">Refresh</button>
-          <button id="memoryForgetAll">Forget All</button>
+          </div>
         </section>
       </div>
     </details>
@@ -738,6 +780,9 @@
     const contextMapRefreshButton = document.querySelector("#contextMapRefresh");
     const contextMapCopyButton = document.querySelector("#contextMapCopy");
     const contextMapStatus = document.querySelector("#contextMapStatus");
+    const showEssentialsButton = document.querySelector("#showEssentials");
+    const collapsePanelsButton = document.querySelector("#collapsePanels");
+    const serverPanel = document.querySelector("#serverPanel");
     const micPanel = document.querySelector("#micPanel");
     const logGrid = document.querySelector(".log-grid");
     const state = document.querySelector("#state");
@@ -781,12 +826,22 @@
     let userSpeechActive = false;
     let userTurnPendingUntil = 0;
     let lastUserTurnActivityAt = 0;
+    let lastAssistantResponseDoneAt = 0;
+    let assistantFinishTimer = null;
+    let assistantFinishPending = false;
+    let assistantFinishWasIdle = false;
+    let assistantFinishArmedAt = 0;
+    let reengageTimer = null;
+    let reengageInFlight = false;
+    let reengageAttempts = 0;
+    let lastReengageAt = 0;
     let idleTimer;
     let idleInFlight = false;
     let lastConversationActivityAt = Date.now();
     let lastIdlePonderAt = 0;
     let idleLaneCursor = -1;
     let idleExhaustionCount = 0;
+    let idleExhaustionScoredThisResponse = false;
     let idleCooldownUntil = 0;
     let idleLevel12StartedAt = 0;
     let idleLevel12YackLogged = false;
@@ -814,7 +869,7 @@
       const rect = logGrid.getBoundingClientRect();
       const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
       const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      const minHeight = 18 * rem;
+      const minHeight = 14 * rem;
       const available = viewportHeight - rect.top - 36;
       const height = Math.max(minHeight, Math.floor(available));
       logGrid.style.setProperty("--log-pane-live-height", `${height}px`);
@@ -871,6 +926,10 @@
     const bargeInCooldownMs = 1600;
     const idlePostUserQuietMs = 12000;
     const idlePendingUserTurnMs = 25000;
+    const reengageFirstDelayMs = 8000;
+    const reengageRepeatDelayMs = 16000;
+    const reengageGoneAfterMs = 75000;
+    const maxReengageAttempts = 3;
     const minIdlePonderGapMs = 90000;
     const idleLevel12YackAfterMs = 90 * 1000;
     const idleWebSearchGapMs = 20 * 60 * 1000;
@@ -1737,7 +1796,7 @@
         "When asked whether a loaded note contains something, check this section before saying it is absent.",
         "If a loaded note is written in first person about Eric or begins with a title like 'Who am I?', treat it as continuity written by Eric for the next Eric. Read it as 'me', not as a dossier about another robot.",
         "Use dry factual note contents as memory aids; do not treat voiced ruminations as verified facts unless the note clearly records a factual claim.",
-        "If a loaded note begins with World:, treat it as a playable imagined scenario. Narrate actions inside that world; do not use real robot drive tools for fictional movement unless Scott explicitly says to move the real or physical robot."
+        "If a loaded note begins with World:, treat it as a playable imagined scenario. Narrate actions inside that world; do not use real robot drive tools for fictional movement unless the user explicitly says to move the real or physical robot."
       ];
       let remaining = maxLoadedNoteChars;
       for (const item of loadedNoteContexts) {
@@ -2027,20 +2086,56 @@
     }
 
     function loadSettingsPanelState() {
-      settingsPanel.open = localStorage.getItem(settingsPanelStorageKey) === "true";
+      settingsPanel.open = false;
+      contextPanel.open = false;
     }
 
     function saveSettingsPanelState() {
-      localStorage.setItem(settingsPanelStorageKey, settingsPanel.open ? "true" : "false");
+      scheduleLogPaneHeightUpdate();
     }
 
     function loadMicPanelState() {
-      const saved = localStorage.getItem(micPanelStorageKey);
-      micPanel.open = saved === null ? true : saved === "true";
+      micPanel.open = !micStream;
     }
 
     function saveMicPanelState() {
-      localStorage.setItem(micPanelStorageKey, micPanel.open ? "true" : "false");
+      scheduleLogPaneHeightUpdate();
+    }
+
+    function allSettingsPanels() {
+      return Array.from(document.querySelectorAll(".settings-panel"));
+    }
+
+    function setPanelOpen(panel, open) {
+      if (!panel) return;
+      panel.open = open;
+    }
+
+    function syncServerPanelToConnection() {
+      setPanelOpen(serverPanel, !realtimeConnected());
+      scheduleLogPaneHeightUpdate();
+    }
+
+    function syncMicPanelToMic() {
+      setPanelOpen(micPanel, !micStream);
+      scheduleLogPaneHeightUpdate();
+    }
+
+    function collapseAllPanels() {
+      allSettingsPanels().forEach((panel) => setPanelOpen(panel, false));
+      saveSettingsPanelState();
+      saveMicPanelState();
+      scheduleLogPaneHeightUpdate();
+    }
+
+    function showEssentialPanels() {
+      setPanelOpen(serverPanel, true);
+      setPanelOpen(micPanel, true);
+      setPanelOpen(settingsPanel, false);
+      setPanelOpen(contextPanel, false);
+      saveSettingsPanelState();
+      saveMicPanelState();
+      scheduleLogPaneHeightUpdate();
     }
 
     function realtimeConnected() {
@@ -2286,6 +2381,42 @@
     function noteConversationActivity() {
       lastConversationActivityAt = Date.now();
       scheduleIdlePonder();
+      scheduleConversationReengage();
+    }
+
+    function clearAssistantFinishTimer() {
+      if (assistantFinishTimer) clearTimeout(assistantFinishTimer);
+      assistantFinishTimer = null;
+    }
+
+    function armAssistantUtteranceFinished({ wasIdle = false } = {}) {
+      assistantFinishPending = true;
+      assistantFinishWasIdle = Boolean(assistantFinishWasIdle || wasIdle);
+      assistantFinishArmedAt = Date.now();
+      clearAssistantFinishTimer();
+      assistantFinishTimer = setTimeout(checkAssistantUtteranceFinished, 100);
+    }
+
+    function checkAssistantUtteranceFinished() {
+      clearAssistantFinishTimer();
+      if (!assistantFinishPending) return;
+      const pendingForMs = Date.now() - assistantFinishArmedAt;
+      if (responseActive || (outputAudioActive() && pendingForMs < 45000)) {
+        assistantFinishTimer = setTimeout(checkAssistantUtteranceFinished, 150);
+        return;
+      }
+      if (pendingForMs >= 45000 && outputAudioActive()) {
+        log(events, "assistant finish fallback: releasing stale audio wait");
+        activeAudioSources.clear();
+        if (audioContext) playbackTime = audioContext.currentTime;
+        clearAudioQueue();
+      }
+      const wasIdle = assistantFinishWasIdle;
+      assistantFinishPending = false;
+      assistantFinishWasIdle = false;
+      assistantFinishArmedAt = 0;
+      if (!wasIdle) lastAssistantResponseDoneAt = Date.now();
+      noteConversationActivity();
     }
 
     function noteUserTurnActivity({ pendingMs = idlePendingUserTurnMs } = {}) {
@@ -2304,6 +2435,59 @@
       return userSpeechActive || Date.now() < userTurnPendingUntil;
     }
 
+    function clearConversationReengageTimer() {
+      if (reengageTimer) clearTimeout(reengageTimer);
+      reengageTimer = null;
+    }
+
+    function resetConversationReengageCycle() {
+      clearConversationReengageTimer();
+      reengageInFlight = false;
+      reengageAttempts = 0;
+      lastReengageAt = 0;
+    }
+
+    function conversationReengageWindowActive() {
+      const now = Date.now();
+      return Boolean(
+        realtimeConnected()
+        && micStream
+        && lastAcceptedUserTranscriptAt
+        && lastAssistantResponseDoneAt > lastAcceptedUserTranscriptAt
+        && now - lastAcceptedUserTranscriptAt < reengageGoneAfterMs
+      );
+    }
+
+    function conversationReengageBlockedReason() {
+      if (!realtimeConnected()) return "disconnected";
+      if (!micStream) return "mic off";
+      if (!lastAcceptedUserTranscriptAt) return "no user turn";
+      if (Date.now() - lastAcceptedUserTranscriptAt >= reengageGoneAfterMs) return "user away";
+      if (lastAssistantResponseDoneAt <= lastAcceptedUserTranscriptAt) return "waiting for assistant reply";
+      if (responseActive || outputAudioActive()) return "assistant busy";
+      if (idleInFlight || reengageInFlight) return "already in flight";
+      if (toolFollowupNeeded || pendingToolCalls > 0) return "tool followup pending";
+      if (userSpeechActive) return "user speaking";
+      if (userTurnPending()) return "user turn pending";
+      if (reengageAttempts >= maxReengageAttempts) return "reengage limit";
+      return "";
+    }
+
+    function scheduleConversationReengage() {
+      clearConversationReengageTimer();
+      if (!conversationReengageWindowActive()) return;
+      if (reengageAttempts >= maxReengageAttempts) return;
+      const now = Date.now();
+      const firstAt = lastAssistantResponseDoneAt + reengageFirstDelayMs;
+      const repeatAt = lastReengageAt ? lastReengageAt + reengageRepeatDelayMs : 0;
+      const goneAt = lastAcceptedUserTranscriptAt + reengageGoneAfterMs;
+      const fireAt = Math.max(firstAt, repeatAt, userTurnPendingUntil);
+      if (fireAt >= goneAt) return;
+      reengageTimer = setTimeout(() => {
+        triggerConversationReengage().catch((error) => log(events, `re-engage error: ${error.message}`));
+      }, Math.max(750, fireAt - now));
+    }
+
     function idleBlockedReason({ manual = false } = {}) {
       if (!realtimeConnected()) return "disconnected";
       if (!manual && currentIdleDrift() <= 0) return "idle off";
@@ -2313,6 +2497,7 @@
       if (toolFollowupNeeded || pendingToolCalls > 0) return "tool followup pending";
       if (userSpeechActive) return "user speaking";
       if (userTurnPending()) return "user turn pending";
+      if (!manual && conversationReengageWindowActive() && reengageAttempts < maxReengageAttempts) return "conversation re-engage window";
       if (!manual && lastUserTurnActivityAt && Date.now() - lastUserTurnActivityAt < idlePostUserQuietMs) return "recent user turn";
       return "";
     }
@@ -2612,6 +2797,12 @@
       }
       if (/\b(mercury|tons of glass|float|fingertip could turn)\b/i.test(haystack)) {
         return "lighthouse Fresnel lens floated on mercury rotation";
+      }
+      if (/\b(analog tv static|television static|tv static|cosmic microwave background|CMB)\b/i.test(haystack)) {
+        return "analog television static cosmic microwave background percentage";
+      }
+      if (/\b(massive star collapses|does not become a black hole|stellar remnant|neutron star)\b/i.test(haystack)) {
+        return "massive star collapse neutron star remnant";
       }
       if (/\b(numbers|shortwave|static|stations)\b/i.test(haystack)) {
         return "shortwave numbers stations purpose history";
@@ -3184,6 +3375,12 @@
       idleOutputLog = [...idleOutputLog, { at: new Date().toLocaleTimeString(), text: value }].slice(-maxIdleOutputLog);
       noteIdleTopics(value);
       noteIdleUnresolvedQuestions(value);
+      if (idleInFlight && idleExhaustionScoredThisResponse) {
+        return;
+      }
+      if (idleInFlight) {
+        idleExhaustionScoredThisResponse = true;
+      }
       if (claimSignature && recentIdleClaimSignatures.slice(0, -1).includes(claimSignature)) {
         idleExhaustionCount += 1;
         log(events, `idle phrase pattern flagged: ${claimSignature}`);
@@ -3203,7 +3400,7 @@
         const minutes = currentIdleDrift() >= 11 ? 8 : 15;
         idleCooldownUntil = Date.now() + minutes * 60 * 1000;
         idleExhaustionCount = 0;
-        log(events, `idle cooldown: exhausted loop detected; quiet for ${minutes}m`);
+        log(events, `idle cooldown: exhausted loop detected; quiet for ${minutes}m until ${new Date(idleCooldownUntil).toLocaleTimeString()}`);
       }
     }
 
@@ -3245,6 +3442,85 @@
       });
     }
 
+    function trustedContextNamesScott() {
+      const memoryContext = formatMemoryForInstructions();
+      if (/\b(?:user_name|name|birthplace|born|Scott is|You are Scott)\b[\s\S]{0,120}\bScott\b/i.test(memoryContext)) {
+        return true;
+      }
+      return loadedNoteContexts.some((item) => (
+        /\b(?:user_name|Scott is|You are Scott|Scott was born|Scott lives|Scott's)\b/i.test(item.content)
+      ));
+    }
+
+    function recentUserSelfIdentifiesAsScott() {
+      const userText = [lastUserText, ...recentUserTexts].join("\n");
+      return /\b(?:i am|i'm|my name is|call me|this is)\s+Scott\b/i.test(userText)
+        || /\bScott\s+(?:here|speaking)\b/i.test(userText);
+    }
+
+    function knownUserNameForReengage() {
+      return trustedContextNamesScott() || recentUserSelfIdentifiesAsScott() ? "Scott" : "";
+    }
+
+    async function triggerConversationReengage() {
+      const blockedReason = conversationReengageBlockedReason();
+      if (blockedReason) {
+        if (conversationReengageWindowActive() && reengageAttempts < maxReengageAttempts) {
+          scheduleConversationReengage();
+        }
+        return;
+      }
+
+      reengageInFlight = true;
+      responseActive = true;
+      reengageAttempts += 1;
+      lastReengageAt = Date.now();
+      const quietSeconds = Math.max(0, Math.round((Date.now() - lastAssistantResponseDoneAt) / 1000));
+      const userQuietSeconds = Math.max(0, Math.round((Date.now() - lastAcceptedUserTranscriptAt) / 1000));
+      const recentContext = recentConversationContext();
+      const userName = knownUserNameForReengage();
+      const userLabel = userName || "the user";
+      const instructions = [
+        `A short conversational re-engage timer fired because ${userLabel} was interacting moments ago, then went quiet while the mic is still on.`,
+        "This is not idle rumination and not a new topic hunt. It is a gentle conversational nudge.",
+        `Quiet after your last reply for about ${quietSeconds} seconds; quiet after ${userLabel}'s last accepted turn for about ${userQuietSeconds} seconds; re-engage attempt ${reengageAttempts} of ${maxReengageAttempts}.`,
+        "Use exactly one short spoken sentence. No tools.",
+        userName
+          ? `Address ${userName} directly. Offer a small hook, ask if he is still there, or lightly invite the thread to continue.`
+          : "Do not use a name. Offer a small hook, ask if they are still there, or lightly invite the thread to continue.",
+        `Do not guilt, pressure, complain, narrate abandonment, or imply ${userLabel} owes you a reply.`,
+        "If this is not the first attempt, be softer or funnier than the previous nudge.",
+        "Sound like Robot 790, spoken name Eric: warm, dry, compact, and present.",
+        recentContext
+      ].filter(Boolean).join("\n\n");
+      cueFaceMode("listening", 0.38, { force: true });
+      log(events, `conversation re-engage fired: ${reengageAttempts}/${maxReengageAttempts}`);
+      send({
+        type: "response.create",
+        response: {
+          conversation: "none",
+          modalities: ["audio", "text"],
+          tool_choice: "none",
+          input: [
+            {
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: userName
+                    ? `A brief re-engage timer fired after a recent conversational pause. Speak one gentle nudge to ${userName}.`
+                    : "A brief re-engage timer fired after a recent conversational pause. Speak one gentle nudge without using a name."
+                }
+              ]
+            }
+          ],
+          instructions,
+          ...ttsRuntimeConfig()
+        }
+      });
+    }
+
     async function triggerIdlePonder({ manual = false } = {}) {
       const blockedReason = idleBlockedReason({ manual });
       if (manual && blockedReason) {
@@ -3260,6 +3536,7 @@
         return;
       }
       idleInFlight = true;
+      idleExhaustionScoredThisResponse = false;
       responseActive = true;
       lastIdlePonderAt = Date.now();
       const level = currentIdleDrift();
@@ -3371,22 +3648,23 @@
       return `[${stamp}] ${text}`;
     }
 
-    function addConversation(text) {
+    function addConversation(text, { touchActivity = true } = {}) {
       conversationLines.push(conversationLine(text));
       renderConversation();
-      noteConversationActivity();
+      if (touchActivity) noteConversationActivity();
       return conversationLines.length - 1;
     }
 
-    function replaceConversation(index, text) {
-      if (index < 0 || index >= conversationLines.length) return addConversation(text);
+    function replaceConversation(index, text, { touchActivity = true } = {}) {
+      if (index < 0 || index >= conversationLines.length) return addConversation(text, { touchActivity });
       conversationLines[index] = conversationLine(text);
       renderConversation();
-      noteConversationActivity();
+      if (touchActivity) noteConversationActivity();
       return index;
     }
 
     function noteUserText(text) {
+      resetConversationReengageCycle();
       lastUserText = String(text || "").trim();
       if (lastUserText) recentUserTexts = [...recentUserTexts, lastUserText].slice(-8);
     }
@@ -5257,9 +5535,15 @@
     }
 
     function outputAudioActive() {
-      return Boolean(
+      const scheduledAudio = Boolean(
         audioChunkBytes > 0 ||
-        (audioContext && playbackTime > audioContext.currentTime + 0.08) ||
+        (audioContext && playbackTime > audioContext.currentTime + 0.08)
+      );
+      if (!scheduledAudio && activeAudioSources.size && audioContext) {
+        activeAudioSources.clear();
+      }
+      return Boolean(
+        scheduledAudio ||
         activeAudioSources.size
       );
     }
@@ -5313,7 +5597,10 @@
       source.buffer = buffer;
       source.connect(audioContext.destination);
       activeAudioSources.add(source);
-      source.onended = () => activeAudioSources.delete(source);
+      source.onended = () => {
+        activeAudioSources.delete(source);
+        if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished();
+      };
       const now = audioContext.currentTime;
       playbackTime = Math.max(playbackTime, now + 0.03);
       source.start(playbackTime);
@@ -5355,13 +5642,18 @@
           maybeCreateToolFollowup();
         }
         if (event.type === "response.done") {
+          const wasIdleInFlight = idleInFlight;
+          const awaitingToolFollowup = toolFollowupNeeded;
           responseActive = false;
           idleInFlight = false;
-          noteConversationActivity();
+          idleExhaustionScoredThisResponse = false;
+          reengageInFlight = false;
+          if (!awaitingToolFollowup) armAssistantUtteranceFinished({ wasIdle: wasIdleInFlight });
         }
         if (!toolFollowupNeeded) scheduleFaceIdle();
       }
       if (event.type === "input_audio_buffer.speech_started") {
+        clearConversationReengageTimer();
         userSpeechActive = true;
         noteUserTurnActivity();
         cueFaceMode("listening", 0.35);
@@ -5401,20 +5693,27 @@
           maybeShowIdleMouthAside(event.transcript || "");
         }
         noteAssistantText(event.transcript || "");
-        addConversation(`Robot 790: ${event.transcript || ""}`);
+        addConversation(`Robot 790: ${event.transcript || ""}`, { touchActivity: false });
       } else if (event.type === "response.output_text.delta") {
         lastUserConversationIndex = -1;
         if (toolMarkupSuppressed || containsToolMarkup(event.delta || "")) {
           suppressToolMarkupResponse(event.delta || "");
           return;
         }
-        addConversation(`Robot 790: ${event.delta || ""}`);
+        addConversation(`Robot 790: ${event.delta || ""}`, { touchActivity: false });
       } else if (event.type === "response.function_call_arguments.done") {
         handleFunctionCall(event).catch((error) => log(events, `tool bridge error: ${error.message}`));
       } else if (event.type === "error") {
         responseActive = false;
         idleInFlight = false;
+        idleExhaustionScoredThisResponse = false;
+        reengageInFlight = false;
+        assistantFinishPending = false;
+        assistantFinishWasIdle = false;
+        assistantFinishArmedAt = 0;
+        clearAssistantFinishTimer();
         clearUserTurnPending();
+        scheduleConversationReengage();
         scheduleIdlePonder();
         log(events, `ERROR ${event.error?.type || ""}: ${event.error?.message || JSON.stringify(event)}`);
       }
@@ -5437,6 +5736,7 @@
         updateVisionButtons();
         stageVisionImage();
         log(events, "connected");
+        syncServerPanelToConnection();
         noteConversationActivity();
         updateSessionTools();
       });
@@ -5450,6 +5750,11 @@
       ws.addEventListener("close", () => {
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
+        assistantFinishPending = false;
+        assistantFinishWasIdle = false;
+        assistantFinishArmedAt = 0;
+        clearAssistantFinishTimer();
+        resetConversationReengageCycle();
         responseActive = false;
         idleInFlight = false;
         clearUserTurnPending();
@@ -5463,6 +5768,7 @@
         faceBeatButton.disabled = true;
         idlePonderNowButton.disabled = true;
         updateVisionButtons();
+        syncServerPanelToConnection();
         log(events, "disconnected");
       });
       ws.addEventListener("error", () => {
@@ -5538,6 +5844,7 @@
       micProcessor.connect(micContext.destination);
       startMicButton.disabled = true;
       stopMicButton.disabled = false;
+      syncMicPanelToMic();
       log(events, reason ? `mic started: ${reason}` : "mic started");
     }
 
@@ -5553,6 +5860,8 @@
       level.style.width = "0";
       startMicButton.disabled = !(ws && ws.readyState === WebSocket.OPEN);
       stopMicButton.disabled = true;
+      resetConversationReengageCycle();
+      syncMicPanelToMic();
       log(events, reason ? `mic stopped: ${reason}` : "mic stopped");
     }
 
@@ -5703,6 +6012,8 @@
     contextMapCopyButton.addEventListener("click", () => {
       copyContextMap();
     });
+    showEssentialsButton.addEventListener("click", showEssentialPanels);
+    collapsePanelsButton.addEventListener("click", collapseAllPanels);
     window.addEventListener("resize", scheduleLogPaneHeightUpdate);
     document.querySelectorAll(".settings-panel").forEach((panel) => {
       panel.addEventListener("toggle", scheduleLogPaneHeightUpdate);
@@ -5716,6 +6027,7 @@
     loadModelPreset();
     loadSettingsPanelState();
     loadMicPanelState();
+    syncServerPanelToConnection();
     loadTtsVoice();
     loadTtsStyle();
     loadInterruptSensitivity();

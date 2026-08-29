@@ -53,6 +53,7 @@ uint32_t bootMs = 0;
 uint32_t requests = 0;
 int backlight = 255;
 String lastMessage = "booting";
+bool displayFlipped = FACE_LCD_DEFAULT_FLIPPED;
 
 constexpr int16_t EYE_CX = FACE_EYE_WIDTH / 2;
 constexpr int16_t EYE_CY = FACE_EYE_HEIGHT / 2;
@@ -81,15 +82,31 @@ constexpr uint32_t MOUTH_TALK_ATTACK_MS = 90;
 constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
 constexpr uint32_t MOUTH_FRAME_MS = 80;
 constexpr uint32_t EYE_FRAME_MS = 50;
+constexpr size_t MOUTH_TEXT_MAX_CHARS = 96;
 constexpr int16_t INTEGRATED_EYE_BAND_H = 120;
-constexpr int16_t INTEGRATED_MOUTH_BAND_H = 120;
+constexpr int16_t INTEGRATED_MOUTH_BAND_H = 100;
 constexpr int16_t INTEGRATED_MOUTH_Y = FACE_LCD_HEIGHT - INTEGRATED_MOUTH_BAND_H;
 constexpr int16_t INTEGRATED_STATUS_Y = INTEGRATED_EYE_BAND_H;
 constexpr int16_t INTEGRATED_STATUS_H = INTEGRATED_MOUTH_Y - INTEGRATED_STATUS_Y;
+constexpr float INTEGRATED_HUMAN_MOUTH_SCALE = 0.70f;
+constexpr int16_t INTEGRATED_HUMAN_MOUTH_Y_OFFSET = -2;
 
 uint16_t rgb(uint8_t r, uint8_t g, uint8_t b)
 {
   return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+}
+
+uint8_t displayRotationFor(bool flipped)
+{
+  return uint8_t((FACE_LCD_ROTATION + (flipped ? 2 : 0)) & 0x03);
+}
+
+void applyDisplayRotation()
+{
+  if (!displayOk) return;
+  display->setRotation(displayRotationFor(displayFlipped));
+  display->fillScreen(BLACK);
+  if (mouthFrameOk) mouthFrame->fillScreen(BLACK);
 }
 
 uint8_t chanR(uint16_t c) { return (c >> 8) & 0xF8; }
@@ -325,13 +342,18 @@ struct MouthState {
   MouthShape shape = MouthShape::Neutral;
   MouthShape renderedShape = MouthShape::Neutral;
   bool overrideShape = false;
+  bool textActive = false;
+  bool textMarquee = false;
   bool talking = false;
   bool poseInitialized = false;
   uint32_t overrideUntil = 0;
+  uint32_t textUntil = 0;
+  uint32_t textStarted = 0;
   uint32_t poseStarted = 0;
   uint32_t talkUpdated = 0;
   float energy = 0.45f;
   float talkLevel = 0.0f;
+  char text[MOUTH_TEXT_MAX_CHARS + 1] = "";
   MouthPose poseFrom;
   MouthPose poseTo;
   MouthPose poseNow;
@@ -436,6 +458,7 @@ select,input{width:100%;min-width:0;border:1px solid var(--line);background:var(
 <button id="doubleBlink">Double Blink</button>
 <button id="winkL">Wink L</button>
 <button id="winkR">Wink R</button>
+<button id="displayFlip">Unflip Display</button>
 <button class="warn" id="sleep">Sleep</button>
 <button class="primary" id="release">Release</button>
 </div>
@@ -454,7 +477,7 @@ function fill(id,values){$(id).innerHTML=values.map(v=>'<option value="'+v+'">'+
 async function values(path,key,id){try{const r=await fetch(path);const j=await r.json();fill(id,j[key]||fallback[id])}catch(e){fill(id,fallback[id])}}
 async function post(path,payload={}){const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const j=await r.json().catch(()=>({ok:false,error:"bad json"}));if(!r.ok||j.ok===false)throw new Error(j.error||r.statusText);render(j);return j}
 function number(id){return Number($(id).value)}
-function render(j){if(!j||!j.ok)return;const mouth=j.mouth||{};$("dot").className="dot ok";$("summary").textContent=(j.mood||"?")+" / "+(j.style||"?")+" / "+(mouth.shape||"?");$("status").textContent=JSON.stringify(j,null,2)}
+function render(j){if(!j||!j.ok)return;const mouth=j.mouth||{};$("dot").className="dot ok";$("summary").textContent=(j.mood||"?")+" / "+(mouth.shape||"?")+" / "+(j.director||"?");if($("displayFlip"))$("displayFlip").textContent=j.display_flipped?"Unflip Display":"Flip Display";$("status").textContent=JSON.stringify(j,null,2)}
 async function refresh(){try{const r=await fetch("/state");render(await r.json())}catch(e){$("dot").className="dot bad";$("summary").textContent=e.message;$("status").textContent=e.stack||e.message}}
 function payloadFromButton(b){const p={};if(b.dataset.select)p[b.dataset.key||"name"]=$(b.dataset.select).value;if(b.dataset.duration)p.duration=number(b.dataset.duration);return p}
 document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;try{
@@ -472,6 +495,7 @@ else if(b.id==="blink")await post("/control",{blink:true,duration_ms:420});
 else if(b.id==="doubleBlink")await post("/control",{blink:true,double:true,duration_ms:260});
 else if(b.id==="winkL")await post("/control",{wink:true,eye:"left",duration_ms:650});
 else if(b.id==="winkR")await post("/control",{wink:true,eye:"right",duration_ms:650});
+else if(b.id==="displayFlip")await post("/control",{flip:"toggle"});
 else if(b.id==="sleep")await post("/control",{sleep:true,duration:0});
 else if(b.id==="release")await post("/control",{release:true});
 else if(b.id==="refresh")await refresh();
@@ -1555,6 +1579,10 @@ void drawEyesFrame(const String &target = "both")
 
 void updateMouth(uint32_t now)
 {
+  if (mouthState.textActive && mouthState.textUntil != 0 && deadlineReached(now, mouthState.textUntil)) {
+    mouthState.textActive = false;
+    mouthState.text[0] = '\0';
+  }
   if (mouthState.overrideShape && mouthState.overrideUntil != 0 && deadlineReached(now, mouthState.overrideUntil)) {
     mouthState.overrideShape = false;
     mouthState.talking = false;
@@ -1566,6 +1594,69 @@ void updateMouth(uint32_t now)
   const uint32_t rateMs = target > mouthState.talkLevel ? MOUTH_TALK_ATTACK_MS : MOUTH_TALK_RELEASE_MS;
   const float step = rateMs == 0 ? 1.0f : clampf(float(elapsed) / float(rateMs), 0.0f, 1.0f);
   mouthState.talkLevel += (target - mouthState.talkLevel) * step;
+}
+
+uint8_t mouthTextSizeFor(const char *text, int16_t maxWidth, int16_t maxHeight)
+{
+  const size_t len = strlen(text ? text : "");
+  uint8_t size = FACE_INTEGRATED_VIEWPORTS ? 3 : 5;
+  while (size > 1) {
+    if (int16_t(len) * int16_t(6 * size) <= maxWidth && int16_t(8 * size) <= maxHeight) {
+      return size;
+    }
+    --size;
+  }
+  return 1;
+}
+
+void renderMouthText(uint32_t now)
+{
+  if (!displayOk) return;
+  Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
+  const int16_t screenW = g.width();
+  const int16_t mouthY = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_Y : 0;
+  const int16_t screenH = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_BAND_H : g.height();
+  const int16_t padX = FACE_INTEGRATED_VIEWPORTS ? 8 : 14;
+  const int16_t maxTextW = screenW - padX * 2;
+  const int16_t maxTextH = screenH - 18;
+  const char *text = mouthState.text;
+  const size_t len = strlen(text);
+  const uint8_t size = mouthState.textMarquee ? (FACE_INTEGRATED_VIEWPORTS ? 2 : 4)
+                                              : mouthTextSizeFor(text, maxTextW, maxTextH);
+  const int16_t charW = 6 * size;
+  const int16_t charH = 8 * size;
+  const int16_t textW = int16_t(len) * charW;
+  const int16_t baselineY = mouthY + (screenH - charH) / 2;
+
+  g.fillScreen(BLACK);
+  g.setTextWrap(false);
+  g.setTextSize(size);
+  g.setTextColor(rgb(232, 250, 246));
+
+  if (mouthState.textMarquee && textW > maxTextW) {
+    const int16_t travel = textW + screenW + padX * 2;
+    const uint32_t elapsed = now - mouthState.textStarted;
+    const int16_t x = screenW - int16_t((elapsed / 28U) % uint32_t(max(int16_t(1), travel)));
+    g.setCursor(x, baselineY);
+    g.print(text);
+    g.setCursor(x + travel, baselineY);
+    g.print(text);
+  } else if (textW <= maxTextW) {
+    g.setCursor((screenW - textW) / 2, baselineY);
+    g.print(text);
+  } else {
+    char clipped[MOUTH_TEXT_MAX_CHARS + 1];
+    strncpy(clipped, text, sizeof(clipped) - 1);
+    clipped[sizeof(clipped) - 1] = '\0';
+    const size_t maxChars = size_t(maxTextW / max(int16_t(1), charW));
+    if (strlen(clipped) > maxChars) clipped[maxChars] = '\0';
+    g.setCursor(padX, baselineY);
+    g.print(clipped);
+  }
+
+  g.drawFastHLine(padX, mouthY + 8, screenW - padX * 2, rgb(54, 210, 230));
+  g.drawFastHLine(padX, mouthY + screenH - 9, screenW - padX * 2, rgb(8, 72, 86));
+  flushMouthFrame();
 }
 
 MouthShape activeMouthShape(uint32_t now)
@@ -1627,7 +1718,8 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
   const int16_t mouthY = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_Y : 0;
   const int16_t screenH = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_BAND_H : g.height();
   const int16_t cx0 = screenW / 2;
-  const int16_t cy0 = mouthY + screenH / 2;
+  const int16_t cy0 = mouthY + screenH / 2 + (FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_HUMAN_MOUTH_Y_OFFSET : 0);
+  const float mouthScale = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_HUMAN_MOUTH_SCALE : 1.0f;
 
   if (mouthState.talkLevel > 0.01f) {
     const float pulse = clampf(0.58f + 0.32f * sinf(float(now) * 0.037f) +
@@ -1640,7 +1732,7 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
 
   if (shape == MouthShape::Sleep && mouthState.talkLevel <= 0.01f &&
       uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS) {
-    const int16_t sleepW = screenW - 84;
+    const int16_t sleepW = int16_t(float(screenW - 84) * mouthScale);
     const int16_t sleepX = (screenW - sleepW) / 2;
     const int16_t sleepY = cy0 - 8;
     g.fillRoundRect(sleepX, sleepY, sleepW, 16, 8, rgb(118, 28, 44));
@@ -1650,11 +1742,12 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
     return;
   }
 
-  const int16_t mouthW = int16_t(clampf(124.0f + pose.width * 210.0f, 120.0f, float(screenW - 26)));
-  const int16_t openH = int16_t(clampf(7.0f + pose.open * 88.0f, 5.0f,
-                                       float(FACE_INTEGRATED_VIEWPORTS ? screenH - 54 : screenH - 92)));
-  const int16_t lipH = int16_t(clampf(26.0f + pose.open * 28.0f + pose.tension * 7.0f, 24.0f,
-                                      float(FACE_INTEGRATED_VIEWPORTS ? 42 : 58)));
+  const int16_t mouthW = int16_t(clampf((124.0f + pose.width * 210.0f) * mouthScale,
+                                       84.0f * mouthScale, float(screenW - 12)));
+  const int16_t openH = int16_t(clampf((7.0f + pose.open * 88.0f) * mouthScale, 4.0f,
+                                       float(FACE_INTEGRATED_VIEWPORTS ? screenH - 26 : screenH - 92)));
+  const int16_t lipH = int16_t(clampf((26.0f + pose.open * 28.0f + pose.tension * 7.0f) * mouthScale, 17.0f,
+                                      float(FACE_INTEGRATED_VIEWPORTS ? 34 : 58)));
   const int16_t driftX = mouthState.talkLevel > 0.01f
     ? int16_t(5.0f * sinf(float(now) * 0.0031f) + 2.0f * sinf(float(now) * 0.0071f + 1.4f))
     : 0;
@@ -1855,6 +1948,10 @@ void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now)
 
 void renderMouth(uint32_t now)
 {
+  if (mouthState.textActive) {
+    renderMouthText(now);
+    return;
+  }
   const MouthShape shape = activeMouthShape(now);
   const MouthPose pose = easedMouthPose(shape, now);
   if (mouthState.style == MouthStyle::Robot) {
@@ -1871,38 +1968,43 @@ void drawIntegratedEye(Arduino_GFX &target, bool leftEye, int16_t x, int16_t y, 
   target.draw16bitRGBBitmap(x, y, eyeFrame->getFramebuffer(), FACE_EYE_WIDTH, FACE_EYE_HEIGHT);
 }
 
+void printCenteredClipped(Arduino_GFX &g, const char *text, int16_t cx, int16_t y,
+                          uint8_t size, uint16_t color, int16_t maxWidth)
+{
+  char buffer[28];
+  strncpy(buffer, text ? text : "", sizeof(buffer) - 1);
+  buffer[sizeof(buffer) - 1] = '\0';
+  if (size > 1 && int16_t(strlen(buffer)) * int16_t(6 * size) > maxWidth) {
+    size = 1;
+  }
+  const int16_t charW = 6 * size;
+  const size_t maxChars = max(size_t(1), size_t(maxWidth / max(int16_t(1), charW)));
+  if (strlen(buffer) > maxChars) buffer[maxChars] = '\0';
+  const int16_t textW = int16_t(strlen(buffer)) * charW;
+  g.setTextWrap(false);
+  g.setTextSize(size);
+  g.setTextColor(color);
+  g.setCursor(cx - textW / 2, y);
+  g.print(buffer);
+}
+
 void drawIntegratedStatus(Arduino_GFX &g, uint32_t now)
 {
-  g.fillRect(0, INTEGRATED_STATUS_Y, FACE_LCD_WIDTH, INTEGRATED_STATUS_H, rgb(2, 6, 12));
-  g.drawFastHLine(14, INTEGRATED_STATUS_Y + 1, FACE_LCD_WIDTH - 28, rgb(24, 42, 54));
-  g.drawFastHLine(14, INTEGRATED_MOUTH_Y - 2, FACE_LCD_WIDTH - 28, rgb(24, 42, 54));
+  g.fillRect(0, INTEGRATED_STATUS_Y, FACE_LCD_WIDTH, INTEGRATED_STATUS_H, BLACK);
 
   const int16_t noseX = FACE_LCD_WIDTH / 2;
-  const int16_t noseTop = INTEGRATED_STATUS_Y + 14;
-  const int16_t noseBottom = INTEGRATED_MOUTH_Y - 13;
-  const uint16_t nose = rgb(28, 64, 78);
-  const uint16_t noseHi = rgb(60, 128, 142);
-  g.drawLine(noseX, noseTop, noseX - 12, noseBottom - 8, nose);
-  g.drawLine(noseX, noseTop, noseX + 8, noseBottom - 3, noseHi);
-  g.drawFastHLine(noseX - 10, noseBottom, 22, rgb(16, 36, 46));
+  const int16_t noseY = INTEGRATED_STATUS_Y + INTEGRATED_STATUS_H / 2 - 6;
+  const int16_t noseRx = 73;
+  const int16_t noseRy = 45;
+  fillEllipse(g, noseX, noseY, noseRx, noseRy, rgb(5, 20, 30));
+  g.drawEllipse(noseX, noseY, noseRx, noseRy, rgb(34, 92, 112));
+  g.drawEllipse(noseX, noseY, noseRx - 5, noseRy - 5, rgb(12, 48, 64));
 
-  g.setTextSize(1);
-  g.setTextColor(rgb(182, 214, 226));
-  g.setCursor(12, INTEGRATED_STATUS_Y + 12);
-  g.print("mood ");
-  g.print(moodName(currentMood(now)));
-  g.setCursor(12, INTEGRATED_STATUS_Y + 30);
-  g.print("eyes ");
-  g.print(eyeStyleName(eyeRenderStyle));
-  g.setCursor(12, INTEGRATED_STATUS_Y + 48);
-  g.print("mouth ");
-  g.print(mouthShapeName(activeMouthShape(now)));
-  g.setCursor(152, INTEGRATED_STATUS_Y + 30);
-  g.print("T:");
-  g.print(touchSeen ? "ok" : "--");
-  g.setCursor(152, INTEGRATED_STATUS_Y + 48);
-  g.print("I:");
-  g.print(imuOk ? "ok" : "--");
+  const uint16_t mainText = rgb(204, 236, 244);
+  const int16_t textW = noseRx * 2 - 18;
+  printCenteredClipped(g, moodName(currentMood(now)), noseX, noseY - 27, 2, mainText, textW);
+  printCenteredClipped(g, mouthShapeName(activeMouthShape(now)), noseX, noseY - 8, 2, rgb(144, 214, 226), textW);
+  printCenteredClipped(g, idleBeatName(idleDirector.beat), noseX, noseY + 11, 2, rgb(180, 224, 214), textW);
 }
 
 void renderIntegratedFace(uint32_t now)
@@ -1966,6 +2068,7 @@ void initDisplay()
   setBacklight(255);
   displayOk = display->begin();
   if (displayOk) {
+    applyDisplayRotation();
     display->fillScreen(BLACK);
     display->setTextWrap(false);
     mouthFrameOk = mouthFrame->begin(GFX_SKIP_OUTPUT_BEGIN);
@@ -2145,6 +2248,29 @@ bool jsonBool(JsonVariantConst value, bool defaultValue)
   return defaultValue;
 }
 
+bool handleHttpDisplayFlip(JsonVariantConst value)
+{
+  bool next = displayFlipped;
+  if (value.is<const char *>()) {
+    const char *text = value.as<const char *>();
+    if (equalsIgnoreCase(text, "toggle")) next = !displayFlipped;
+    else if (equalsIgnoreCase(text, "on") || equalsIgnoreCase(text, "true") || equalsIgnoreCase(text, "1")) next = true;
+    else if (equalsIgnoreCase(text, "off") || equalsIgnoreCase(text, "false") || equalsIgnoreCase(text, "0")) next = false;
+    else {
+      sendError("flip expected on/off/toggle");
+      return false;
+    }
+  } else {
+    next = jsonBool(value, displayFlipped);
+  }
+
+  displayFlipped = next;
+  applyDisplayRotation();
+  lastMouthFrame = 0;
+  lastEyeFrame = 0;
+  return true;
+}
+
 bool releaseToken(const char *text)
 {
   return equalsIgnoreCase(text, "auto") || equalsIgnoreCase(text, "idle") ||
@@ -2164,6 +2290,8 @@ void addState(JsonDocument &doc, uint32_t now)
   doc["free_heap"] = ESP.getFreeHeap();
   doc["psram"] = psramFound();
   doc["display"] = displayOk;
+  doc["display_flipped"] = displayFlipped;
+  doc["display_rotation"] = displayRotationFor(displayFlipped);
   doc["eyes"] = eyesOk;
   doc["external_eyes"] = bool(FACE_EXTERNAL_EYES_ENABLED) && eyesOk;
   doc["integrated_viewports"] = bool(FACE_INTEGRATED_VIEWPORTS);
@@ -2196,6 +2324,12 @@ void addState(JsonDocument &doc, uint32_t now)
   mouth["talking"] = mouthState.talking;
   mouth["energy"] = mouthState.energy;
   mouth["talk_level"] = mouthState.talkLevel;
+  mouth["text_active"] = mouthState.textActive;
+  if (mouthState.textActive) {
+    mouth["text"] = mouthState.text;
+    mouth["text_mode"] = mouthState.textMarquee ? "marquee" : "center";
+    mouth["text_remaining_ms"] = mouthState.textUntil == 0 ? 0 : (deadlineReached(now, mouthState.textUntil) ? 0 : mouthState.textUntil - now);
+  }
 
   JsonObject wifi = doc["wifi"].to<JsonObject>();
   wifi["mode"] = wifiStation ? "station" : "ap";
@@ -2378,7 +2512,29 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
   JsonObjectConst mouth = value.as<JsonObjectConst>();
   if (jsonBool(mouth["release"], false) || jsonBool(mouth["auto"], false)) {
     mouthState.overrideShape = false;
+    mouthState.textActive = false;
+    mouthState.text[0] = '\0';
     mouthState.talking = false;
+  }
+  if (mouth["text"].is<const char *>()) {
+    const char *text = mouth["text"].as<const char *>();
+    if (text == nullptr || text[0] == '\0') {
+      mouthState.textActive = false;
+      mouthState.text[0] = '\0';
+      return true;
+    }
+    strncpy(mouthState.text, text, MOUTH_TEXT_MAX_CHARS);
+    mouthState.text[MOUTH_TEXT_MAX_CHARS] = '\0';
+    mouthState.textMarquee = mouth["mode"].is<const char *>() && equalsIgnoreCase(mouth["mode"].as<const char *>(), "marquee");
+    mouthState.textStarted = now;
+    mouthState.textActive = true;
+    mouthState.talking = false;
+    mouthState.overrideShape = false;
+    const uint32_t holdMs = jsonMilliseconds(
+        mouth["duration_ms"],
+        jsonMs(mouth["duration"], jsonMs(durationValue, API_DEFAULT_MOUTH_MS)));
+    mouthState.textUntil = holdMs == 0 ? 0 : now + holdMs;
+    return true;
   }
   if (mouth["style"].is<const char *>()) {
     MouthStyle style;
@@ -2489,6 +2645,12 @@ void handleHttpControl()
   }
   if (doc["style"].is<const char *>()) {
     if (!handleHttpStyleName(doc["style"].as<const char *>())) return;
+  }
+  if (!doc["flip"].isNull()) {
+    if (!handleHttpDisplayFlip(doc["flip"])) return;
+  }
+  if (!doc["display_flip"].isNull()) {
+    if (!handleHttpDisplayFlip(doc["display_flip"])) return;
   }
   if (!doc["mouth"].isNull()) {
     if (!handleHttpMouth(doc["mouth"], doc["duration"], now)) return;
