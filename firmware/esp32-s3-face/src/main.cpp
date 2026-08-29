@@ -42,6 +42,7 @@ WebServer server(80);
 bool displayOk = false;
 bool mouthFrameOk = false;
 bool eyesOk = false;
+bool deferMouthFrameFlush = false;
 bool touchSeen = false;
 bool imuOk = false;
 bool sdOk = false;
@@ -80,6 +81,11 @@ constexpr uint32_t MOUTH_TALK_ATTACK_MS = 90;
 constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
 constexpr uint32_t MOUTH_FRAME_MS = 80;
 constexpr uint32_t EYE_FRAME_MS = 50;
+constexpr int16_t INTEGRATED_EYE_BAND_H = 120;
+constexpr int16_t INTEGRATED_MOUTH_BAND_H = 120;
+constexpr int16_t INTEGRATED_MOUTH_Y = FACE_LCD_HEIGHT - INTEGRATED_MOUTH_BAND_H;
+constexpr int16_t INTEGRATED_STATUS_Y = INTEGRATED_EYE_BAND_H;
+constexpr int16_t INTEGRATED_STATUS_H = INTEGRATED_MOUTH_Y - INTEGRATED_STATUS_Y;
 
 uint16_t rgb(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -121,6 +127,13 @@ float smoothstep(float t)
 {
   t = clampf(t, 0.0f, 1.0f);
   return t * t * (3.0f - 2.0f * t);
+}
+
+void flushMouthFrame()
+{
+  if (mouthFrameOk && !deferMouthFrameFlush) {
+    mouthFrame->flush();
+  }
 }
 
 float easeOutCubic(float t)
@@ -1611,9 +1624,10 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
   if (!displayOk) return;
   Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
   const int16_t screenW = g.width();
-  const int16_t screenH = g.height();
+  const int16_t mouthY = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_Y : 0;
+  const int16_t screenH = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_BAND_H : g.height();
   const int16_t cx0 = screenW / 2;
-  const int16_t cy0 = screenH / 2;
+  const int16_t cy0 = mouthY + screenH / 2;
 
   if (mouthState.talkLevel > 0.01f) {
     const float pulse = clampf(0.58f + 0.32f * sinf(float(now) * 0.037f) +
@@ -1632,13 +1646,15 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
     g.fillRoundRect(sleepX, sleepY, sleepW, 16, 8, rgb(118, 28, 44));
     g.drawFastHLine(sleepX + 24, sleepY + 3, sleepW - 58, rgb(218, 92, 102));
     g.drawFastHLine(sleepX + 30, sleepY + 13, sleepW - 70, rgb(58, 8, 22));
-    if (mouthFrameOk) mouthFrame->flush();
+    flushMouthFrame();
     return;
   }
 
   const int16_t mouthW = int16_t(clampf(124.0f + pose.width * 210.0f, 120.0f, float(screenW - 26)));
-  const int16_t openH = int16_t(clampf(7.0f + pose.open * 88.0f, 5.0f, float(screenH - 92)));
-  const int16_t lipH = int16_t(clampf(26.0f + pose.open * 28.0f + pose.tension * 7.0f, 24.0f, 58.0f));
+  const int16_t openH = int16_t(clampf(7.0f + pose.open * 88.0f, 5.0f,
+                                       float(FACE_INTEGRATED_VIEWPORTS ? screenH - 54 : screenH - 92)));
+  const int16_t lipH = int16_t(clampf(26.0f + pose.open * 28.0f + pose.tension * 7.0f, 24.0f,
+                                      float(FACE_INTEGRATED_VIEWPORTS ? 42 : 58)));
   const int16_t driftX = mouthState.talkLevel > 0.01f
     ? int16_t(5.0f * sinf(float(now) * 0.0031f) + 2.0f * sinf(float(now) * 0.0071f + 1.4f))
     : 0;
@@ -1751,7 +1767,7 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
     g.drawLine(leftX + 18, leftCornerY - 3, leftX + 34, leftCornerY + 18, lipLo);
     g.drawLine(rightX - 18, rightCornerY - 3, rightX - 34, rightCornerY + 18, lipLo);
   }
-  if (mouthFrameOk) mouthFrame->flush();
+  flushMouthFrame();
 }
 
 void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now)
@@ -1759,11 +1775,13 @@ void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now)
   if (!displayOk) return;
   Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
   const int16_t screenW = g.width();
-  const int16_t screenH = g.height();
+  const int16_t mouthY = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_Y : 0;
+  const int16_t screenH = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_BAND_H : g.height();
   const int16_t panelX = 12;
-  const int16_t panelY = 34;
+  const int16_t panelPadY = FACE_INTEGRATED_VIEWPORTS ? 8 : 34;
+  const int16_t panelY = mouthY + panelPadY;
   const int16_t panelW = screenW - panelX * 2;
-  const int16_t panelH = screenH - panelY * 2;
+  const int16_t panelH = screenH - panelPadY * 2;
   const float talkMix = clampf(mouthState.talkLevel * 0.85f, 0.0f, 1.0f);
 
   g.fillScreen(BLACK);
@@ -1776,7 +1794,7 @@ void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now)
   const int16_t barW = max(int16_t(8), int16_t((panelW - 54 - gap * (barCount - 1)) / barCount));
   const int16_t barsW = barCount * barW + (barCount - 1) * gap;
   const int16_t barsX = screenW / 2 - barsW / 2;
-  const int16_t barsCy = screenH / 2;
+  const int16_t barsCy = mouthY + screenH / 2;
   for (uint8_t i = 0; i < barCount; ++i) {
     const int16_t x = barsX + int16_t(i) * (barW + gap);
     const float center = float(barCount - 1) * 0.5f;
@@ -1832,7 +1850,7 @@ void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now)
     g.drawFastHLine(panelX + 44, barsCy, panelW - 88, rgb(44, 220, 232));
     g.drawFastHLine(panelX + 66, barsCy + 6, panelW - 132, rgb(12, 58, 78));
   }
-  if (mouthFrameOk) mouthFrame->flush();
+  flushMouthFrame();
 }
 
 void renderMouth(uint32_t now)
@@ -1846,24 +1864,63 @@ void renderMouth(uint32_t now)
   }
 }
 
-void drawIntegratedEye(bool leftEye, int16_t x, int16_t y, uint32_t now)
+void drawIntegratedEye(Arduino_GFX &target, bool leftEye, int16_t x, int16_t y, uint32_t now)
 {
   if (!displayOk || !eyesOk) return;
   renderEyeFrame(leftEye, now);
-  display->draw16bitRGBBitmap(x, y, eyeFrame->getFramebuffer(), FACE_EYE_WIDTH, FACE_EYE_HEIGHT);
+  target.draw16bitRGBBitmap(x, y, eyeFrame->getFramebuffer(), FACE_EYE_WIDTH, FACE_EYE_HEIGHT);
+}
+
+void drawIntegratedStatus(Arduino_GFX &g, uint32_t now)
+{
+  g.fillRect(0, INTEGRATED_STATUS_Y, FACE_LCD_WIDTH, INTEGRATED_STATUS_H, rgb(2, 6, 12));
+  g.drawFastHLine(14, INTEGRATED_STATUS_Y + 1, FACE_LCD_WIDTH - 28, rgb(24, 42, 54));
+  g.drawFastHLine(14, INTEGRATED_MOUTH_Y - 2, FACE_LCD_WIDTH - 28, rgb(24, 42, 54));
+
+  const int16_t noseX = FACE_LCD_WIDTH / 2;
+  const int16_t noseTop = INTEGRATED_STATUS_Y + 14;
+  const int16_t noseBottom = INTEGRATED_MOUTH_Y - 13;
+  const uint16_t nose = rgb(28, 64, 78);
+  const uint16_t noseHi = rgb(60, 128, 142);
+  g.drawLine(noseX, noseTop, noseX - 12, noseBottom - 8, nose);
+  g.drawLine(noseX, noseTop, noseX + 8, noseBottom - 3, noseHi);
+  g.drawFastHLine(noseX - 10, noseBottom, 22, rgb(16, 36, 46));
+
+  g.setTextSize(1);
+  g.setTextColor(rgb(182, 214, 226));
+  g.setCursor(12, INTEGRATED_STATUS_Y + 12);
+  g.print("mood ");
+  g.print(moodName(currentMood(now)));
+  g.setCursor(12, INTEGRATED_STATUS_Y + 30);
+  g.print("eyes ");
+  g.print(eyeStyleName(eyeRenderStyle));
+  g.setCursor(12, INTEGRATED_STATUS_Y + 48);
+  g.print("mouth ");
+  g.print(mouthShapeName(activeMouthShape(now)));
+  g.setCursor(152, INTEGRATED_STATUS_Y + 30);
+  g.print("T:");
+  g.print(touchSeen ? "ok" : "--");
+  g.setCursor(152, INTEGRATED_STATUS_Y + 48);
+  g.print("I:");
+  g.print(imuOk ? "ok" : "--");
 }
 
 void renderIntegratedFace(uint32_t now)
 {
   if (!displayOk) return;
+  deferMouthFrameFlush = true;
   renderMouth(now);
+  deferMouthFrameFlush = false;
+  Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
   constexpr int16_t eyePadX = 6;
-  constexpr int16_t eyePadY = 8;
-  constexpr int16_t eyeBandH = FACE_EYE_HEIGHT + eyePadY * 2 + 4;
-  display->fillRect(0, 0, FACE_LCD_WIDTH, eyeBandH, BLACK);
-  drawIntegratedEye(true, eyePadX, eyePadY, now);
-  drawIntegratedEye(false, FACE_LCD_WIDTH - FACE_EYE_WIDTH - eyePadX, eyePadY, now);
-  display->drawFastHLine(14, eyeBandH - 2, FACE_LCD_WIDTH - 28, rgb(24, 42, 54));
+  constexpr int16_t eyePadY = 4;
+  g.fillRect(0, 0, FACE_LCD_WIDTH, INTEGRATED_EYE_BAND_H, BLACK);
+  drawIntegratedEye(g, true, eyePadX, eyePadY, now);
+  drawIntegratedEye(g, false, FACE_LCD_WIDTH - FACE_EYE_WIDTH - eyePadX, eyePadY, now);
+  drawIntegratedStatus(g, now);
+  if (mouthFrameOk) {
+    mouthFrame->flush();
+  }
 }
 
 void initEyes()

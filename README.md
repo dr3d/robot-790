@@ -37,6 +37,11 @@ Some names still say `eyes` or `Reachy` in older firmware/UI paths. That is
 intentional for now: preserve working hardware behavior first, rename only when
 the project settles.
 
+## Design Notes
+
+- [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
+  touch, camera, and possible tilt/rotate head direction.
+
 ## First Setup
 
 Create and install the project environment:
