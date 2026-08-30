@@ -161,7 +161,7 @@ function mediaButton(media, index) {
       ${preview}
       <span>
         <strong>${escapeHtml(media.title)}</strong><br>
-        <span class="media-kind">${escapeHtml(media.kind)} · ${bytesLabel(media.bytes)}</span>
+        <span class="media-kind">${escapeHtml(media.kind)} - ${bytesLabel(media.bytes)}</span>
       </span>
     </button>
   `;
@@ -192,7 +192,28 @@ function selectMedia(media) {
   } else {
     mediaFeature.innerHTML = `<p>${escapeHtml(media.title)}</p>`;
   }
-  mediaCaption.textContent = `${media.title} · ${media.kind} · ${bytesLabel(media.bytes)}`;
+  mediaCaption.textContent = `${media.title} - ${media.kind} - ${bytesLabel(media.bytes)}`;
+}
+
+async function selectLog(log, selectedButton) {
+  logList.querySelectorAll("[data-log]").forEach((button) => {
+    button.classList.toggle("selected", button === selectedButton);
+    if (button === selectedButton) {
+      button.setAttribute("aria-current", "true");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
+  logReader.textContent = "Loading...";
+  try {
+    const response = await fetch(log.source);
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+    logReader.textContent = await response.text();
+  } catch (error) {
+    logReader.textContent = `Could not load ${log.source}.`;
+  }
 }
 
 function showLogs(logs) {
@@ -204,22 +225,20 @@ function showLogs(logs) {
   logList.innerHTML = logs.map((log, index) => `
     <button class="log-item" type="button" data-log="${index}">
       <strong>${escapeHtml(log.title)}</strong><br>
-      <span class="meta">${escapeHtml(log.modified || "")} · ${bytesLabel(log.bytes)}</span>
+      <span class="meta">${escapeHtml(log.modified || "")} - ${bytesLabel(log.bytes)}</span>
     </button>
   `).join("");
 
   logList.querySelectorAll("[data-log]").forEach((button) => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", () => {
       const log = logs[Number(button.dataset.log)];
-      logReader.textContent = "Loading...";
-      try {
-        const response = await fetch(log.source);
-        logReader.textContent = await response.text();
-      } catch (error) {
-        logReader.textContent = `Could not load ${log.source}.`;
-      }
+      selectLog(log, button);
     });
   });
+  const firstButton = logList.querySelector("[data-log]");
+  if (firstButton) {
+    selectLog(logs[0], firstButton);
+  }
 }
 
 articleClose.addEventListener("click", () => {

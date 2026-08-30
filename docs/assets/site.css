@@ -299,6 +299,12 @@ code {
   display: block;
 }
 
+.log-item.selected,
+.log-item[aria-current="true"] {
+  border-color: rgba(99, 217, 153, 0.78);
+  background: rgba(99, 217, 153, 0.12);
+}
+
 .log-reader {
   min-height: 340px;
   max-height: 620px;
