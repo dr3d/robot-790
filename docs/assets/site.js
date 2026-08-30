@@ -10,6 +10,7 @@ const mediaCaption = document.querySelector("#media-caption");
 const mediaList = document.querySelector("#media-list");
 const logList = document.querySelector("#log-list");
 const logReader = document.querySelector("#log-reader");
+const pageHeader = document.querySelector(".page-header");
 const randomBanner = document.querySelector("#random-banner");
 
 const bannerLines = [
@@ -167,6 +168,17 @@ function mediaButton(media, index) {
   `;
 }
 
+function applyHeaderBanner(mediaItems) {
+  if (!pageHeader || !mediaItems.length) return;
+  const banner = mediaItems.find((media) => media.preview) ||
+    mediaItems.find((media) => media.kind === "image" && media.source);
+  const source = banner ? (banner.preview || banner.source || "") : "";
+  if (!source) return;
+  const safeSource = source.replace(/\\/g, "/").replace(/"/g, "%22");
+  pageHeader.style.setProperty("--header-image", `url("${safeSource}")`);
+  pageHeader.classList.add("has-banner");
+}
+
 function showMedia(mediaItems) {
   if (!mediaItems.length) {
     mediaList.innerHTML = '<p class="empty">No audio or video found yet.</p>';
@@ -249,6 +261,7 @@ articleClose.addEventListener("click", () => {
 fetch(catalogUrl)
   .then((response) => response.json())
   .then((catalog) => {
+    applyHeaderBanner(catalog.media || []);
     showArticles(catalog.articles || []);
     showMedia(catalog.media || []);
     showLogs(catalog.logs || []);

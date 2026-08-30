@@ -36,11 +36,42 @@ button {
 }
 
 .page-header {
+  position: relative;
+  overflow: hidden;
   display: flex;
   justify-content: space-between;
   gap: 32px;
   padding: 56px clamp(20px, 6vw, 88px) 34px;
   border-bottom: 1px solid var(--line);
+}
+
+.page-header::before {
+  position: absolute;
+  inset: 0;
+  background-image: var(--header-image);
+  background-position: center 42%;
+  background-size: cover;
+  content: "";
+  filter: saturate(0.72) contrast(1.05);
+  opacity: 0;
+  transform: scale(1.03);
+}
+
+.page-header::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(11, 13, 16, 0.92), rgba(11, 13, 16, 0.7) 48%, rgba(11, 13, 16, 0.86)),
+    linear-gradient(0deg, rgba(11, 13, 16, 0.84), rgba(11, 13, 16, 0.22) 54%, rgba(11, 13, 16, 0.72));
+  content: "";
+}
+
+.page-header.has-banner::before {
+  opacity: 0.34;
+}
+
+.page-header > * {
+  position: relative;
+  z-index: 1;
 }
 
 .page-header h1 {
