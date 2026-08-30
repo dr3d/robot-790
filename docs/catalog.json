@@ -1,15 +1,15 @@
 {
-    "generated":  "2026-08-30 03:33:54",
+    "generated":  "2026-08-30 04:09:16",
     "articles":  [
                      {
                          "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",
-                         "excerpt":  "Iâ€™ve been building a robot named Eric â€” Robot 790.",
+                         "excerpt":  "I’ve been building a robot named Eric — Robot 790.",
                          "source":  "articles/eric_pinocchio_x_article_draft.md",
                          "bytes":  15278
                      },
                      {
                          "title":  "I Built a Robot That Wakes Up New Every Time",
-                         "excerpt":  "The strangest part isnâ€™t what he knows. Itâ€™s how he becomes himself.",
+                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
                          "source":  "articles/eric_wakes_up_new_every_time.md",
                          "bytes":  9424
                      },
@@ -33,13 +33,13 @@
                      },
                      {
                          "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
-                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain â€” and see what survives. Almost everything survived. I have the logs.",
+                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
                          "source":  "articles/robot-790-article-3 (1).md",
                          "bytes":  11843
                      },
                      {
                          "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
-                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain â€” and see what survives. Almost everything survived. I have the logs.",
+                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
                          "source":  "articles/robot-790-article-3.md",
                          "bytes":  10720
                      }

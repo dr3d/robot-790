@@ -19,7 +19,7 @@ function Convert-ToSitePath {
 
 function Get-TitleFromMarkdown {
     param([string]$Path)
-    $line = Get-Content -Path $Path -TotalCount 80 | Where-Object { $_ -match '^#\s+(.+)$' } | Select-Object -First 1
+    $line = Get-Content -Path $Path -Encoding UTF8 -TotalCount 80 | Where-Object { $_ -match '^#\s+(.+)$' } | Select-Object -First 1
     if ($line) {
         return ($line -replace '^#\s+', '').Trim()
     }
@@ -28,7 +28,7 @@ function Get-TitleFromMarkdown {
 
 function Get-ExcerptFromMarkdown {
     param([string]$Path)
-    $lines = Get-Content -Path $Path -TotalCount 120
+    $lines = Get-Content -Path $Path -Encoding UTF8 -TotalCount 120
     foreach ($line in $lines) {
         $trimmed = $line.Trim()
         if (-not $trimmed) { continue }
