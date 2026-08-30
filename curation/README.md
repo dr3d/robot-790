@@ -29,8 +29,13 @@ a short MP3 sequence:
 ```
 
 The clip manifest lives in `curation/clip-manifests/`. Each row gives a clock
-timestamp, a rough spoken duration, a lead-in, a title, and tags. The script
-writes both the MP3 and a `.cuts.csv` file with resolved source offsets.
+timestamp, a rough spoken duration, a lead-in, a title, and tags. By default the
+script treats the duration as advisory and cuts until the first detected silence
+gap after the line starts. The script writes both the MP3 and a `.cuts.csv` file
+with resolved source offsets.
 
-If `DurationSeconds` is blank or zero, the script can estimate clip length from
-the next transcript timestamp.
+Duration modes:
+
+- `silence`: default; stop after the first real quiet gap.
+- `manifest`: use the duration column directly.
+- `transcript`: estimate clip length from the next transcript timestamp.

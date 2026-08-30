@@ -6,9 +6,13 @@ param(
   [string]$RecordingEnd = "2026-08-30T02:16:34",
   [double]$FadeSeconds = 1.0,
   [double]$GapSeconds = 0.65,
+  [ValidateSet("silence", "manifest", "transcript")]
+  [string]$DurationMode = "silence",
   [double]$AutoTailSeconds = 0.35,
-  [double]$MinAutoDurationSeconds = 4.0,
-  [double]$MaxAutoDurationSeconds = 24.0
+  [double]$MinAutoDurationSeconds = 6.0,
+  [double]$MaxAutoDurationSeconds = 45.0,
+  [double]$SilenceSeconds = 1.15,
+  [string]$SilenceThreshold = "-45dB"
 )
 
 $ErrorActionPreference = "Stop"
@@ -107,11 +111,61 @@ function Get-AutoDuration {
   return $duration
 }
 
+function Get-SilenceDuration {
+  param(
+    [string]$Path,
+    [double]$StartSeconds,
+    [double]$LeadSeconds,
+    [double]$TailSeconds,
+    [double]$MinSeconds,
+    [double]$MaxSeconds,
+    [double]$RequiredSilenceSeconds,
+    [string]$Threshold
+  )
+
+  $probeDuration = $MaxSeconds + $LeadSeconds
+  $startText = $StartSeconds.ToString("0.###", $InvariantCulture)
+  $probeDurationText = $probeDuration.ToString("0.###", $InvariantCulture)
+  $requiredSilenceText = $RequiredSilenceSeconds.ToString("0.###", $InvariantCulture)
+  $filter = "silencedetect=n=$($Threshold):d=$requiredSilenceText"
+  $previousErrorActionPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $output = & ffmpeg -hide_banner -nostats -loglevel info -ss $startText -t $probeDurationText -i $Path -vn -af $filter -f null - 2>&1
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+  if ($LASTEXITCODE -ne 0) {
+    throw "ffmpeg silence probe failed at $startText seconds"
+  }
+
+  $minEnd = $LeadSeconds + $MinSeconds
+  $silenceStarts = New-Object System.Collections.Generic.List[double]
+  foreach ($line in $output) {
+    $text = $line.ToString()
+    if ($text -match "silence_start:\s*([0-9]+(?:\.[0-9]+)?)") {
+      $silenceStart = 0.0
+      if ([double]::TryParse($Matches[1], [System.Globalization.NumberStyles]::Float, $InvariantCulture, [ref]$silenceStart)) {
+        $silenceStarts.Add($silenceStart)
+      }
+    }
+  }
+
+  $chosen = $silenceStarts | Where-Object { $_ -ge $minEnd } | Select-Object -First 1
+  if ($null -eq $chosen) {
+    return $MaxSeconds
+  }
+
+  $duration = [double]$chosen + $TailSeconds - $LeadSeconds
+  if ($duration -lt $MinSeconds) { $duration = $MinSeconds }
+  if ($duration -gt $MaxSeconds) { $duration = $MaxSeconds }
+  return $duration
+}
+
 $sourcePath = Resolve-Path -LiteralPath $Source
 $manifestPath = Resolve-Path -LiteralPath $Manifest
 $endTime = [datetime]::Parse($RecordingEnd)
 $sourceDuration = Get-MediaDurationSeconds $sourcePath.Path
-$sourceSampleRate = Get-AudioSampleRate $sourcePath.Path
 $sourceStart = $endTime.AddSeconds(-1 * $sourceDuration)
 $transcriptTimes = Get-TranscriptTimes $ConversationLog $endTime
 
@@ -149,11 +203,19 @@ try {
     $clipTime = Resolve-ClockTime $clip.Time $endTime
     $lead = [double]$clip.LeadSeconds
     $spokenDuration = 0.0
-    if (-not [double]::TryParse($clip.DurationSeconds, [ref]$spokenDuration) -or $spokenDuration -le 0) {
-      $spokenDuration = Get-AutoDuration $clipTime $transcriptTimes $AutoTailSeconds $MinAutoDurationSeconds $MaxAutoDurationSeconds
-    }
     $start = ($clipTime - $sourceStart).TotalSeconds - $lead
     if ($start -lt 0) { $start = 0 }
+
+    if ($DurationMode -eq "manifest") {
+      if (-not [double]::TryParse($clip.DurationSeconds, [ref]$spokenDuration) -or $spokenDuration -le 0) {
+        $spokenDuration = Get-AutoDuration $clipTime $transcriptTimes $AutoTailSeconds $MinAutoDurationSeconds $MaxAutoDurationSeconds
+      }
+    } elseif ($DurationMode -eq "transcript") {
+      $spokenDuration = Get-AutoDuration $clipTime $transcriptTimes $AutoTailSeconds $MinAutoDurationSeconds $MaxAutoDurationSeconds
+    } else {
+      $spokenDuration = Get-SilenceDuration $filledSource $start $lead $AutoTailSeconds $MinAutoDurationSeconds $MaxAutoDurationSeconds $SilenceSeconds $SilenceThreshold
+    }
+
     $duration = $spokenDuration + $lead
     $fade = [Math]::Min($FadeSeconds, [Math]::Max(0.05, $duration / 3))
     $fadeOutStart = [Math]::Max(0, $duration - $fade)
@@ -181,6 +243,7 @@ try {
       TotalDurationSeconds = [Math]::Round($duration, 3)
       SpokenDurationSeconds = [Math]::Round($spokenDuration, 3)
       LeadSeconds = [Math]::Round($lead, 3)
+      DurationMode = $DurationMode
       Tags = $clip.Tags
     })
 
