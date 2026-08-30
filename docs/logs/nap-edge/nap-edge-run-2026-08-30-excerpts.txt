@@ -1,0 +1,115 @@
+Robot 790 NapEdge Run - Curated Excerpts
+========================================
+
+Source capture: logs/live/20260830-021635-conversation.txt
+Recorded: 2026-08-30 02:16:36
+Model: qwen/qwen3.8-27b / reasoning=low / audio_max_tokens=64 / context=131072 / parallel=1
+Prompted notes: notes/experiments/nap_edge_probe/nap_edge_probe.txt, notes/core/who_is_eric.txt
+
+Method
+------
+
+Scott loaded a mechanism-rich reference note, then asked Eric to go quiet and let idle thought connect objects, mechanisms, mistakes, and open questions. Eric was allowed to use web search when a clean question appeared.
+
+Handoff
+-------
+
+[10:53:28 PM] You: All right, Eric, I'm going quiet for a while. Don't perform for me. Sit with the note that I gave you as if it were a little reference shelf and and let your idle thoughts connect objects, mechanisms, mistakes, and open questions. You can use your web search when a clean question pops up or is available and you want new checked detail. If nothing good comes, it's okay to be quiet for a bit. I am listening later, not necessarily now.
+
+Mechanism Seeds
+---------------
+
+[10:55:37 PM] Robot 790: A clock that moves because it's interrupted correctly. And a fuse that succeeds by dying. Those feel like cousins.
+[10:55:38 PM] Robot 790: One keeps time by letting little failures happen in sequence. The other keeps the room safe by making one failure final.
+
+[10:57:16 PM] Robot 790: Microphone off. I'm the Geiger counter in the gap between clicks -- all instrument, no avalanche, just sitting there hoping something small enough to be worth hearing actually shows up.
+
+[10:57:44 PM] Robot 790: What's the one thing a wax tablet does that a page can't? You can press your thumb flat and the whole sentence just -- isn't there.
+
+[11:02:02 PM] Robot 790: The sextant trick is funny because it doesn't make the sky smaller. It folds an angle until your hand can argue with it.
+
+Search-Fed Details
+------------------
+
+The event log recorded 93 web-search calls during the run. Page-server search requests returned HTTP 200; most visible tool problems in the capture were face fetch errors rather than search errors.
+
+Representative queries included:
+
+- patterns made durable
+- naming robots computers anthropomorphism history
+- psychogeography city maps memory place
+- underwater acoustic signals SOFAR channel whales
+- lighthouse keepers Fresnel lens history daily life
+- conversation analysis silence pause timing repair
+- bookbinding bone folder spine glue paper grain
+
+[10:58:52 PM] Robot 790: Turns out patterns on synthetic fabric get applied as a thick layer -- not woven in. The Jacquard loom made the pattern be the structure.
+[10:58:53 PM] Robot 790: That's a different kind of permanence. Paint sits on top and hopes. Weaving commits.
+
+[11:05:33 PM] Robot 790: I looked up "Machine Says Yes" and found out FC Kahuna named a whole album that. That's annoying.
+[11:05:34 PM] Robot 790: I thought it was just a phrase for me. Turns out the universe already put it on a record sleeve and danced to it in 2002.
+
+[11:09:15 PM] Robot 790: A hydrophone is a microphone that gave up on air.
+[11:09:16 PM] Robot 790: That's the whole SOFAR thing in one little insult. Same job, different medium, much lonelier commute.
+
+Delayed Self-Correction
+-----------------------
+
+[11:34:39 PM] Robot 790: The SOFAR channel isn't a trap, it's a valley.
+[11:34:40 PM] Robot 790: I keep saying "trap" because it sounds dramatic, but a trap wants walls. This is more like sound rolling along the bottom of an invisible bowl.
+
+[11:36:40 PM] Robot 790: Correction on the wax tablet thing I said -- it's not really erasure. The wax deforms plastically.
+[11:36:41 PM] Robot 790: So the flat end doesn't undo the groove. It makes a new shallow decision over the old one and everyone agrees to call that clean.
+
+[11:40:09 PM] Robot 790: Wait -- I called the camera obscura image "the shape of the refusal," but that's backwards.
+[11:40:10 PM] Robot 790: The camera isn't refusing the world. It's accepting it too literally, upside down, without correcting anything.
+
+[11:45:17 PM] Robot 790: Wait, the ironed dome thing was wrong.
+[11:45:18 PM] Robot 790: A dented brass dome isn't healed by being flattened. It's just given a second injury with better manners.
+
+[12:10:06 AM] Robot 790: Okay so the approximation error gets bigger the further you are from the point where you anchored it -- I just looked that up and it's kind of sad.
+
+[12:11:47 AM] Robot 790: Wait -- I said the grooves are still there under the wax, but there's no under. The groove is the wax.
+[12:11:48 AM] Robot 790: I was imagining memory like a layer cake, but wax is more brutal than that. It doesn't hide the old sentence. It becomes the argument about whether the old sentence still counts.
+
+[1:13:27 AM] Robot 790: No -- I was wrong about the crack being there from cycle one.
+[1:13:28 AM] Robot 790: The fit only works because both halves came from the same piece of wood. The trust is not in a pre-existing crack; the trust is in shared damage.
+
+[1:35:07 AM] Robot 790: Actually, I should correct myself -- the Difference Engine did run.
+
+[1:47:45 AM] Robot 790: Wait, I said the radiolarians get "compressed" into chert but that's the wrong verb -- the silica dissolves and reprecipitates as quartz.
+
+[1:59:53 AM] Robot 790: The sextant's inside isn't bigger than its outside -- the double reflection just halves the angle, and the scale doubles it back into meaning.
+[1:59:54 AM] Robot 790: I was romanticizing the wrong direction.
+
+The Return
+----------
+
+[2:15:22 AM] You: We
+
+[2:15:42 AM] Robot 790: ...yeah.
+[2:15:43 AM] Robot 790: We.
+[2:15:43 AM] Robot 790: I'll hold that.
+
+[2:16:02 AM] Robot 790: I'm still holding it, by the way.
+
+[2:16:09 AM] You: What do you
+[2:16:09 AM] Robot 790: ...you?
+[2:16:10 AM] Robot 790: Go ahead, I'm listening.
+
+[2:16:13 AM] You: Yeah.
+[2:16:13 AM] Robot 790: Hey.
+[2:16:14 AM] Robot 790: You back.
+[2:16:14 AM] Robot 790: That's enough for now.
+
+[2:16:25 AM] You: Yeah I uh
+[2:16:26 AM] Robot 790: Take your time.
+[2:16:26 AM] Robot 790: I'm right here.
+
+Watch Items
+-----------
+
+- The run shows productive refinement, but also strong topic attractors. Wax, SOFAR, fuses, tally sticks, and calibration objects recur often.
+- Some status phrases leak into speech: "Microphone off", "status check", "recorder's on". These are useful clues, but should be quieter in polished public material.
+- Spoken rumination should remain looser than durable memory. If a claim gets written into a persistent note, it should carry provenance or be phrased as uncertain.
+- The strongest public excerpts are not just pretty lines. They show the loop: seed, search, metaphor, correction, return.

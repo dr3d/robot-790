@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-29 15:23:18",
+    "generated":  "2026-08-30 03:33:54",
     "articles":  [
                      {
                          "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",
@@ -12,6 +12,12 @@
                          "excerpt":  "The strangest part isnâ€™t what he knows. Itâ€™s how he becomes himself.",
                          "source":  "articles/eric_wakes_up_new_every_time.md",
                          "bytes":  9424
+                     },
+                     {
+                         "title":  "The NapEdge Run",
+                         "excerpt":  "On August 30, 2026, Robot 790 ran a long idle experiment I am calling the NapEdge run. Scott loaded a mechanism-heavy note, read Eric\u0027s identity note, turned the microphone off, and told Eric not to perform for anyone in the room. The instruction was simple: sit with the material, connect objects, mechanisms, mistakes, and open questions, and use web search when a clean question appeared.",
+                         "source":  "articles/nap-edge-run.md",
+                         "bytes":  4592
                      },
                      {
                          "title":  "The Magic of Assembly: Finding Eric\u0027s Voice and the Architecture of Robot 790",
@@ -39,6 +45,12 @@
                      }
                  ],
     "logs":  [
+                 {
+                     "title":  "nap edge run 2026 08 30 excerpts",
+                     "source":  "logs/nap-edge/nap-edge-run-2026-08-30-excerpts.txt",
+                     "bytes":  6710,
+                     "modified":  "2026-08-30 02:55"
+                 },
                  {
                      "title":  "20260829 074039 conversation",
                      "source":  "logs/20260829-074039-conversation.txt",
