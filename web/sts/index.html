@@ -780,6 +780,7 @@
         <div class="log-header">
           <label>Conversation</label>
           <span class="log-actions">
+            <button id="popoutConversation" class="copy-link" type="button">Pop Out</button>
             <button id="copyConversation" class="copy-link" type="button">Copy</button>
             <button id="recordConversation" class="copy-link" type="button">Record</button>
           </span>
@@ -865,6 +866,7 @@
     const imageModel = document.querySelector("#imageModel");
     const imageCost = document.querySelector("#imageCost");
     const clearLogButton = document.querySelector("#clearLog");
+    const popoutConversationButton = document.querySelector("#popoutConversation");
     const copyConversationButton = document.querySelector("#copyConversation");
     const copyEventsButton = document.querySelector("#copyEvents");
     const recordConversationButton = document.querySelector("#recordConversation");
@@ -981,6 +983,7 @@
     let performanceAutoUntil = 0;
     let performancePrompt = "";
     let latestBrainStatus = null;
+    let conversationPopoutWindow = null;
 
     function updateLogPaneHeight() {
       if (!logGrid) return;
@@ -4150,11 +4153,163 @@
       });
     }
 
-    function renderConversation() {
+    function conversationDisplayText() {
       const lines = [...conversationLines];
       if (inputDraft) lines.push(inputDraft);
-      conversation.textContent = lines.join("\n") + (lines.length ? "\n" : "");
+      return lines.join("\n") + (lines.length ? "\n" : "");
+    }
+
+    function conversationPopoutHtml() {
+      return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robot 790 Conversation</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101114;
+      --panel: #191b20;
+      --line: #30343b;
+      --text: #f2f4f8;
+      --muted: #aeb6c2;
+      --accent: #60d394;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    main {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      padding: 14px;
+      gap: 10px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
+    h1 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    button {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 6px 10px;
+      font: inherit;
+      cursor: pointer;
+    }
+    pre {
+      margin: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 12px;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font: 15px/1.45 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Robot 790 Conversation</h1>
+        <div id="conversationPopoutStatus" class="status">Live mirror</div>
+      </div>
+      <button type="button" onclick="window.close()">Close</button>
+    </header>
+    <pre id="conversationPopoutLog"></pre>
+  </main>
+</body>
+</html>`;
+    }
+
+    function renderConversationPopout({ forceScroll = false } = {}) {
+      const popout = conversationPopoutWindow;
+      if (!popout || popout.closed) {
+        conversationPopoutWindow = null;
+        if (popoutConversationButton) popoutConversationButton.textContent = "Pop Out";
+        return;
+      }
+      const doc = popout.document;
+      const logPane = doc.querySelector("#conversationPopoutLog");
+      if (!logPane) return;
+      const nearBottom = forceScroll || (logPane.scrollHeight - logPane.scrollTop - logPane.clientHeight) < 80;
+      logPane.textContent = conversationDisplayText();
+      const statusLine = doc.querySelector("#conversationPopoutStatus");
+      if (statusLine) {
+        statusLine.textContent = `${conversationLines.length} lines / ${new Date().toLocaleTimeString()} / ${currentModelStamp()}`;
+      }
+      if (nearBottom) logPane.scrollTop = logPane.scrollHeight;
+    }
+
+    function openConversationPopout() {
+      if (conversationPopoutWindow && !conversationPopoutWindow.closed) {
+        renderConversationPopout({ forceScroll: true });
+        conversationPopoutWindow.focus();
+        return;
+      }
+
+      const features = "popup,width=760,height=900,resizable=yes,scrollbars=yes";
+      const popout = window.open("", "robot790ConversationPopout", features);
+      if (!popout) {
+        const originalText = popoutConversationButton.textContent;
+        popoutConversationButton.textContent = "Blocked";
+        setTimeout(() => {
+          popoutConversationButton.textContent = originalText;
+        }, 1400);
+        log(events, "conversation popout blocked");
+        return;
+      }
+
+      conversationPopoutWindow = popout;
+      popout.document.open();
+      popout.document.write(conversationPopoutHtml());
+      popout.document.close();
+      popout.addEventListener("beforeunload", () => {
+        if (conversationPopoutWindow === popout) {
+          conversationPopoutWindow = null;
+          popoutConversationButton.textContent = "Pop Out";
+        }
+      });
+      popoutConversationButton.textContent = "Popped";
+      renderConversationPopout({ forceScroll: true });
+      popout.focus();
+      log(events, "conversation popout opened");
+    }
+
+    function renderConversation() {
+      conversation.textContent = conversationDisplayText();
       conversation.scrollTop = conversation.scrollHeight;
+      renderConversationPopout();
     }
 
     function conversationLine(text) {
@@ -7045,6 +7200,7 @@
       clearInputDraft();
       events.textContent = "";
     });
+    popoutConversationButton.addEventListener("click", openConversationPopout);
     copyConversationButton.addEventListener("click", () => {
       copyLogPane(copyConversationButton, conversation, "conversation");
     });
