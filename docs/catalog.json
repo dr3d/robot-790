@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-30 04:09:16",
+    "generated":  "2026-08-30 04:29:07",
     "articles":  [
                      {
                          "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",
@@ -71,6 +71,14 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "20260830 021634 sts audio picture",
+                      "kind":  "video",
+                      "source":  "media/videos/20260830-021634-sts-audio-picture.mp4",
+                      "preview":  null,
+                      "bytes":  27514615,
+                      "modified":  "2026-08-30 04:26"
+                  },
                   {
                       "title":  "Gemini Generated Image 1powen1powen1pow",
                       "kind":  "image",

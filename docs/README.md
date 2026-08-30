@@ -6,6 +6,10 @@ palace, articles, curated transcripts, and publishable media.
 GitHub Pages can serve this folder directly by setting the repository Pages
 source to the current branch and `/docs`. The homepage is `index.html`.
 
+The page is static, but it loads `catalog.json` with browser `fetch()`. That
+works on GitHub Pages and from a local HTTP file server. It may not work when
+opened directly as a `file://` URL.
+
 ## Layout
 
 - `index.html`: static public page.
@@ -26,9 +30,23 @@ After adding articles, logs, images, audio, or video, rebuild the catalog:
 .\scripts\build_docs_catalog.ps1
 ```
 
+For local preview:
+
+```powershell
+python -m http.server 8088 -d docs
+```
+
+Then open:
+
+```text
+http://localhost:8088/
+```
+
 Large raw captures should stay out of git. Keep them in ignored local folders
 such as `docs/media/raw-video/`, `docs/media/rejected/`, or the root `logs/`
-tree until they are curated and compressed.
+tree until they are curated and compressed. Public media should be aggressively
+compressed before it lands in `docs/media/images/`, `docs/media/videos/`, or
+`docs/media/audio/`.
 
 The boundary is intentional: `docs/` is publishable, while `notes/` and `logs/`
 are local working memory unless something is deliberately copied or curated

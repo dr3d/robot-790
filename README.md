@@ -92,11 +92,34 @@ the project settles.
 
 - [Public Page](docs/index.md): GitHub Pages landing page and article shelf.
 - [Docs Folder](docs/README.md): how the static site is organized.
+- [Public Media](docs/media/README.md): compression and publishing rules for
+  images, audio, and video.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
   touch, camera, and possible tilt/rotate head direction.
 - [Future Directions](docs/future_directions.md): public-safe notes on the
   desk-show idea, singing, associative drift, library files, world substrates,
   vision, and media.
+
+`docs/` is a static GitHub Pages site. GitHub Pages will serve it directly, but
+it will not run build scripts. After adding articles, curated logs, images,
+audio, or video, rebuild and commit the generated catalog:
+
+```powershell
+.\scripts\build_docs_catalog.ps1
+```
+
+For local preview, serve the folder over HTTP instead of opening
+`docs/index.html` as a `file://` URL:
+
+```powershell
+python -m http.server 8088 -d docs
+```
+
+Then open `http://localhost:8088/`.
+
+Only compressed, public-ready media belongs in `docs/media/images/`,
+`docs/media/videos/`, or `docs/media/audio/`. Large originals belong in ignored
+parking folders such as `docs/media/raw-video/` until deliberately curated.
 
 ## First Setup
 
