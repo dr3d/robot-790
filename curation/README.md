@@ -19,6 +19,16 @@ The usual workflow:
 The miner is intentionally a first pass. It is meant to reduce TLDR pain, not
 replace judgment.
 
+## Concepts
+
+`curation/concepts/` holds named mechanisms that explain why Robot 790 behaves
+the way it does. These are tracked project notes, not public articles yet.
+
+Current key concept:
+
+- `continuity-envelope.md`: the wrapper that turns loaded facts into
+  first-person continuity.
+
 ## Audio Clip Albums
 
 Use `scripts/build_eric_audio_album.ps1` to turn harvested timestamp marks into
