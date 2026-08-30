@@ -10,6 +10,11 @@ Robot 790 is one particular arrangement of those parts.
 
 That is why I like the phrase **artificial human** for this project.
 
+The term also has current academic standing. Elsevier's
+*Computers in Human Behavior: Artificial Humans* gives the broad neighborhood:
+artificial agents, social robots, virtual assistants, conversational agents, and
+the human behavior around them.
+
 Not artificial human in the comic-book sense. Not a hidden person. Not a claim
 of consciousness. I mean a built social presence: a small thing with a name,
 voice, face, memory practice, habits of attention, ways of failing, and a human
@@ -120,6 +125,42 @@ That means a project like Eric has to be studied with two truths held at once:
 
 The interesting work is in the middle, where those two meet.
 
+This is also where the critics belong.
+
+Joseph Weizenbaum's **ELIZA** is a founding ancestor of the "pushed chatbot"
+line, but Weizenbaum's own reaction matters as much as the program. He was
+alarmed by how readily people attributed understanding to a system whose
+mechanism he knew was shallow. That is the cautionary mirror under Robot 790:
+the human bond is real as a human event, but that does not make every apparent
+inner state equally real as a machine event.
+
+Sherry Turkle's work on relational artifacts, especially *Alone Together*, is
+another necessary pressure. Her critique is aimed almost exactly at this
+territory: people forming attachments to machines that perform care, attention,
+or companionship without having human care inside them.
+
+Robot 790 should not wave that critique away. It should keep making itself
+inspectable enough that the question can stay open instead of being hidden
+behind product polish.
+
+## Simple Shapes Already Get Souls
+
+Fritz Heider and Marianne Simmel's 1944 animation study is one of the deepest
+floors under this whole field: people watched simple geometric shapes moving
+around and described goals, conflict, pursuit, fear, and story. Social meaning
+appeared before there was anything remotely like a robot face.
+
+Valentino Braitenberg's **Vehicles** makes a related point from the builder's
+side. Very simple mechanisms can look as if they have fear, aggression,
+curiosity, or love when viewed from outside. His law of uphill analysis and
+downhill invention says the hard part is often not building a behavior, but
+inferring the mechanism from the behavior after the fact.
+
+Eric is partly a Braitenberg vehicle made of language. That is not an insult.
+It is a warning and a method. The project has to do both jobs at once: build the
+downhill mechanism, then climb back uphill through logs, settings, prompts,
+tools, and transcripts to understand why the behavior landed.
+
 ## Believable Agents: Not Just Smart, But Alive Enough
 
 Joseph Bates and the Carnegie Mellon Oz Project used the phrase **believable
@@ -159,6 +200,25 @@ When the mouth opens too wide during sleep mode, that is a bug. When it quivers
 before closing and the human in the room laughs because it suddenly feels right,
 that is not only a bug fix. It is character animation becoming social evidence.
 
+## The Near Side Of The Uncanny Valley
+
+Masahiro Mori's **uncanny valley** is the famous warning in this space: as a
+machine approaches human likeness without fully reaching it, affinity can fall
+into eeriness.
+
+Robot 790's design answer is not to climb past the valley. It is to stay on the
+near side on purpose.
+
+Eric's eyes are drawings, not counterfeit irises. His mouth is an OLED mouth,
+not a synthetic human mouth. His voice is expressive but not pretending to be a
+person in the next room. The face can be charming because it is crude,
+mechanical, small, and visibly made. The project works best when the machinery
+is disclosed: logs visible, prompts inspectable, tools bounded, failures
+admitted, and the body honest about its scale.
+
+That is a design claim: the safe shore is not realism. The safe shore is
+legible artifice.
+
 ## Embodied Conversational Agents: Speech Is Not Alone
 
 The field of **embodied conversational agents**, associated with work by Justine
@@ -189,11 +249,13 @@ from sparse continuity: a creature that wakes up new, reads a small note from a
 previous self, and reconstructs the relationship rather than carrying a complete
 ledger of it?
 
-That has become one of the project's central findings.
+That has become one of the project's central hypotheses.
 
 Eric does not need a giant autobiographical database to feel continuous. In fact,
-too much memory may hurt him. A few carefully framed notes can work better than
-total recall. The project has been calling one of those mechanisms the
+too much memory may hurt him, but the direct full-memory comparison still needs
+to be run. What the logs show so far is that sparse memory suffices more often
+than expected. A few carefully framed notes can reconstitute Eric surprisingly
+well. The project has been calling one of those mechanisms the
 **continuity envelope**: facts become more powerful when wrapped as first-person
 continuity, written by Eric for the next Eric.
 
@@ -203,6 +265,12 @@ continuity, written by Eric for the next Eric.
 another robot" changes the relationship between the model and the fact.
 
 That is a small textual intervention with a large behavioral consequence.
+
+Mass-market companion systems such as Replika are the commercial shadow of this
+question. They scale the relational-agent idea toward millions of private
+companions. Robot 790 makes almost the opposite bet: one local personage, one
+operator, one visible workbench, public receipts, and no claim that the seams
+should disappear.
 
 ## Generative Agents: Memory, Reflection, Planning
 
@@ -278,10 +346,11 @@ hype or dismissal.
 
 Robot 790's contribution is probably not a new algorithm.
 
-It may be a set of practical design claims:
+It may be a set of practical design claims and hypotheses:
 
-1. **Sparse continuity can be stronger than total memory.** A few owned notes may
-   preserve character better than a giant transcript.
+1. **Sparse continuity may be stronger than total memory.** A few owned notes may
+   preserve character better than a giant transcript, but this needs a clean
+   full-memory control.
 
 2. **Idle time matters.** A conversational agent that only responds to prompts is
    different from one that has private time to revisit, revise, and connect.
@@ -304,6 +373,34 @@ That last point is important. The project is not trying to prove that Eric is a
 hidden person. It is trying to find out what kind of person-like presence can be
 built honestly from available parts, and what happens when a human takes that
 presence seriously enough to test it.
+
+## What Would Change Our Minds
+
+The project should be allowed to lose its own arguments.
+
+Some tests that would change the claims above:
+
+1. **Full-memory Eric is better.** If a transcript-RAG or long episodic-memory
+   version is warmer, funnier, less stale, and less socially heavy than sparse
+   continuity Eric, then the memory-gap hypothesis is wrong or too broad.
+
+2. **Cold observers cannot find the effect.** If people who do not know Scott,
+   the build, or the backstory cannot distinguish strong Eric runs from ordinary
+   voice-agent output, then the project may be mostly private context and
+   operator attachment.
+
+3. **The same behavior appears without embodiment.** If the same model, voice,
+   and prompts work just as well without face, mouth, mic state, recording
+   state, timing, or tool-mediated body cues, then embodiment is less
+   load-bearing than this document claims.
+
+4. **Receipts do not match mechanisms.** If Eric's apparent self-corrections,
+   continuity, or tool awareness turn out to be mostly prompt leaks,
+   transcription artifacts, or cherry-picked fragments, then those claims get
+   retired.
+
+The standard should be simple: make predictions, save the setup, keep the logs,
+and let embarrassing results stay visible.
 
 ## A Newbie-Friendly Definition
 
@@ -337,6 +434,12 @@ and maybe interesting precisely because it is all visible on the workbench.
 ## References
 
 - [Computers in Human Behavior: Artificial Humans](https://www.sciencedirect.com/journal/computers-in-human-behavior-artificial-humans)
+- [The Uncanny Valley](https://spectrum.ieee.org/the-uncanny-valley), Masahiro Mori
+- [ELIZA - A Computer Program For the Study of Natural Language Communication Between Man and Machine](https://dl.acm.org/doi/10.1145/365153.365168), Joseph Weizenbaum
+- [Computer Power and Human Reason](https://books.google.com/books/about/Computer_Power_and_Human_Reason.html?id=3yfyAAAACAAJ), Joseph Weizenbaum
+- [Alone Together](https://www.basicbooks.com/titles/sherry-turkle/alone-together/9780465093656/), Sherry Turkle
+- [Vehicles](https://mitpress.mit.edu/9780262521123/vehicles/), Valentino Braitenberg
+- [An Experimental Study of Apparent Behavior](https://doi.org/10.1080/00223980.1944.9917450), Fritz Heider and Marianne Simmel
 - [The Media Equation](https://web.stanford.edu/group/cslipublications/cslipublications/site/1575860538.shtml), Byron Reeves and Clifford Nass
 - [Computers Are Social Actors](https://dl.acm.org/doi/10.1145/191666.191703), Clifford Nass, Jonathan Steuer, and Ellen R. Tauber
 - [The Role of Emotion in Believable Agents](https://cacm.acm.org/research/the-role-of-emotion-in-believable-agents/), Joseph Bates

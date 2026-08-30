@@ -58,6 +58,16 @@ the situation, and tries to become himself again.
 
 That weakness is also part of the charm.
 
+The gap seems to power several things at once. It gives Eric poignancy because
+he has to arrive rather than simply continue. It gives him freshness because he
+often re-derives a good line instead of quoting his own greatest hits. It gives
+him guilelessness because he is not carrying a long hidden ledger of social
+strategy, resentment, or obligation.
+
+That does not mean more memory is bad. It means memory is not free. A more
+persistent Eric may be more capable and less surprising, more informed and less
+new. The project has to treat memory as a taste control, not just an upgrade.
+
 The current best mechanism is the **continuity envelope**: a small note written
 in first person, framed as being from Eric to the next Eric. The facts inside the
 note matter, but the ownership frame matters more. The note says, in effect,

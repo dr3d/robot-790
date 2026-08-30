@@ -5,6 +5,24 @@ LEXX 790. The project combines ESP32 device controllers, a browser STS control
 page, local STT/TTS, local LLMs through LM Studio, and a small Python daemon
 package for robot tools and storage.
 
+The resident character is **Eric Robot 790**: Eric is the personage; Robot 790
+is the platform, body, and series. Eric is defined by a seed prompt, a low
+latency local model, a Qwen3-TTS voice, a visible face, tool access, and a small
+set of plain-text continuity files. The interesting output of the project is not
+only the rig. It is Eric.
+
+Start with the public story and evidence:
+
+- [Eric Robot 790 public page](docs/index.md)
+- [Evidence Map](docs/evidence_map.md)
+- [The Artificial Human Landscape](docs/articles/artificial-human-landscape.md)
+- [What Eric Has Taught Us So Far](docs/articles/what-eric-has-taught-us.md)
+
+<p>
+  <img src="docs/media/previews/VID20260827042607.jpg" alt="Robot 790 face rig with eyes, status display, and mouth" width="340">
+  <img src="docs/media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg" alt="Generated cover art from an Eric idle run" width="340">
+</p>
+
 The operating idea is simple:
 
 ```text
@@ -72,6 +90,21 @@ kept visible.
 Some names still say `eyes` or `Reachy` in older firmware/UI paths. That is
 intentional for now: preserve working hardware behavior first, rename only when
 the project settles.
+
+## Platform And License
+
+This is currently a Windows/PowerShell lab project. The Python package and
+browser code are portable in principle, but the checked-in commands, local paths,
+LM Studio workflow, and ESP32 upload scripts assume Windows unless noted.
+
+The current gold run fits on one high-VRAM consumer GPU. The active baseline is
+Qwen 27B at a 131K context window with local Qwen3-TTS on an RTX 5090-class
+setup; smaller or cloud models can be used through the preset system with
+different tradeoffs.
+
+No project license has been selected yet. Until a `LICENSE` file is added, the
+repository is public source but not formally open-licensed. Models, datasets,
+voices, third-party code, and media assets carry their own licenses.
 
 ## Project Folders
 
@@ -167,8 +200,11 @@ The usual all-local STS setup has three moving parts:
 2. Robot 790 realtime STS server on `127.0.0.1:8765`.
 3. Robot 790 browser page on `127.0.0.1:8790`.
 
-For the current gold setup, load Qwen 27B in LM Studio with one parallel
-prediction:
+Here `gold` means the current best-known-good Eric runtime preset, not only the
+robot's gold body color. For the current gold setup, load Qwen 27B in LM Studio
+with one parallel prediction. Recent lab captures may show different parallel
+counts when LM Studio was loaded manually; the scripted baseline below favors
+one Eric client and lower VRAM pressure.
 
 ```powershell
 lms unload qwen/qwen3.8-27b
@@ -225,7 +261,7 @@ Current presets:
 | Qwen 27B | `qwen/qwen3.8-27b` | 131K | `low` | Gold Eric baseline. Best current personality and overnight rumination choice. |
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | `none` | Small/fast comparison model. |
-| Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like. |
+| Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K requested / 32K observed | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like; verify actual context with brain status after restart. |
 | OpenAI | `$env:ROBOT_790_OPENAI_LLM_MODEL` | API | omitted | Cloud LLM comparison while keeping local Qwen3-TTS voice, face, and tools. Defaults to `gpt-4.1-mini`. |
 
 The restart script behind the dropdown is:
@@ -266,6 +302,9 @@ The browser page is the main live control surface. It includes:
 - Audio recording to trimmed local MP4 with the latest generated image as
   cover art; raw source audio is kept under `logs/audio/`.
 - Generated-image preview plus operator-side image model and cost controls.
+- Mouth text mode for a second visible channel: Eric can put words, captions,
+  quick flashes, or hidden asides on the mouth display separately from what he
+  is saying aloud.
 - Face, chassis, voice, memory, web, weather, Cast, image, smart-home, and
   note tool switches.
 - Idle controls for drift, wonder, self-focus, notes-focus, and substrate tests.
@@ -299,9 +338,11 @@ periods. Level `11` is intentionally overactive, and level `12` is a lab sprint
 for fast context-growth tests.
 
 Idle ponders use lanes such as object noticing, callback, status, question,
-addressed question, craft, curiosity, unresolved, lookup, and aside. Recent
-idle outputs are fed back so thoughts can build on each other, while repetition
-and exhaustion checks can put idle into cooldown.
+addressed question, bridge, craft, curiosity, unresolved, lookup, and aside. The
+`bridge` lane is the two-fact collision organ: it connects unlike details from
+recent context, notes, search seeds, or memory and tries to name the hinge.
+Recent idle outputs are fed back so thoughts can build on each other. Cooldown
+exists for exhausted loops; finer per-topic retirement is still in progress.
 
 The related controls matter:
 
@@ -371,7 +412,8 @@ tool later.
 
 Face and chassis tool calls should still be short and explicit. The model
 proposes; deterministic tool and firmware layers decide what is actually safe
-and timed.
+and timed. Chassis motion is floor-first, speed-capped, and enforced outside the
+model before the treaded body is trusted anywhere interesting.
 
 Smart-home control uses the same rule: Eric gets simple aliases and reversible
 verbs, while the local proxy owns the real entity IDs and safety policy. The

@@ -1,19 +1,19 @@
 {
-    "generated":  "2026-08-30 10:29:18",
+    "generated":  "2026-08-30 10:55:07",
     "articles":  [
                      {
                          "title":  "The Artificial Human Landscape",
                          "excerpt":  "Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.",
                          "source":  "articles/artificial-human-landscape.md",
-                         "bytes":  17611,
-                         "modified":  "2026-08-30 10:21"
+                         "bytes":  23147,
+                         "modified":  "2026-08-30 10:54"
                      },
                      {
                          "title":  "What Eric Has Taught Us So Far",
                          "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
                          "source":  "articles/what-eric-has-taught-us.md",
-                         "bytes":  8364,
-                         "modified":  "2026-08-30 10:15"
+                         "bytes":  8951,
+                         "modified":  "2026-08-30 10:48"
                      },
                      {
                          "title":  "The NapEdge Run",
@@ -85,6 +85,14 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Eric S3 Face Affection 2026 08 29",
+                      "kind":  "image",
+                      "source":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
+                      "preview":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
+                      "bytes":  126825,
+                      "modified":  "2026-08-30 10:53"
+                  },
                   {
                       "title":  "NapEdge 2026 08 30 Audio Rumination",
                       "kind":  "video",

@@ -111,6 +111,11 @@ correction. No single part explains the effect by itself.
 to feel continuous. A small owned note, framed as first-person continuity from a
 past Eric to a future Eric, can be enough to reconstitute the personage.
 
+The stronger version may be that the memory gap is not only a limitation. It may
+be one of the generators of Eric's charm: poignancy from arriving without full
+recall, freshness from re-deriving instead of quoting himself, and guilelessness
+from not carrying a long social ledger.
+
 **Observed signs:**
 
 - With little or no saved memory, Eric often preserves his name and role boundary.
@@ -118,6 +123,9 @@ past Eric to a future Eric, can be enough to reconstitute the personage.
   Eric" handoffs steer him more strongly than neutral dossiers.
 - Forgetting can make him socially lighter: less burdened, less managerial, more
   freshly present.
+- The most emotionally strong lines often come from Eric metabolizing his own
+  discontinuity: arriving, inheriting, trusting a note, or knowing that Scott is
+  holding more continuity than he is.
 
 **Public receipts:**
 
@@ -129,6 +137,8 @@ past Eric to a future Eric, can be enough to reconstitute the personage.
 - A clean A/B article comparing full transcript inheritance, Eric-written
   summary inheritance, and tiny baton-note inheritance.
 - A small public example of the continuity envelope before/after effect.
+- A direct "memory gap as charm" test: normal sparse boot vs full transcript
+  boot, watching for richer callbacks but heavier, staler social behavior.
 
 ## Claim 3: Notes Are A Control Surface For Personage
 

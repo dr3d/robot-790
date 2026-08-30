@@ -13,6 +13,16 @@ future reading.
 - [Computers in Human Behavior: Artificial Humans](https://www.sciencedirect.com/journal/computers-in-human-behavior-artificial-humans) is a current journal home for work on artificial agents, social robots, virtual assistants, conversational agents, and human behavior around them. This is the broadest label for the project neighborhood.
 - [The Media Equation](https://web.stanford.edu/group/cslipublications/cslipublications/site/1575860538.shtml), by Byron Reeves and Clifford Nass, is a core skeptical reference for why people respond socially to computers and media even when they know they are machines.
 - [Computers Are Social Actors](https://dl.acm.org/doi/10.1145/191666.191703), by Clifford Nass, Jonathan Steuer, and Ellen R. Tauber, is an early HCI statement of the same pressure: social cues in software are enough to trigger social responses.
+- [An Experimental Study of Apparent Behavior](https://doi.org/10.1080/00223980.1944.9917450), by Fritz Heider and Marianne Simmel, is the older psychological floor: people attribute goals, motives, and story to simple moving shapes.
+- [ELIZA](https://dl.acm.org/doi/10.1145/365153.365168), by Joseph Weizenbaum, is the founding chatbot ancestor and a warning about how readily language can invite over-attribution.
+- [Computer Power and Human Reason](https://books.google.com/books/about/Computer_Power_and_Human_Reason.html?id=3yfyAAAACAAJ), by Joseph Weizenbaum, is the ethical counterweight to ELIZA's success: a critique of confusing computational performance with human judgment.
+- [Alone Together](https://www.basicbooks.com/titles/sherry-turkle/alone-together/9780465093656/), by Sherry Turkle, is an important critique of relational artifacts and machines that perform care or companionship.
+- [Replika](https://replika.com/) is the mass-market AI companion shadow of this work: a commercial relational-agent path that Robot 790 intentionally contrasts with by being local, singular, and publicly inspectable.
+
+## Uncanny Valley And Synthetic Behavior
+
+- [The Uncanny Valley](https://spectrum.ieee.org/the-uncanny-valley), Masahiro Mori's original essay in authorized English translation, is the standard warning about machines that approach human likeness without fully reaching it.
+- [Vehicles](https://mitpress.mit.edu/9780262521123/vehicles/), by Valentino Braitenberg, is a compact ancestor for simple mechanisms that invite rich behavioral interpretation. His "uphill analysis and downhill invention" framing fits Robot 790's build-and-audit method.
 
 ## Believable Agents And Synthetic Characters
 
