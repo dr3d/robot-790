@@ -2775,7 +2775,7 @@
 
     function currentModelStamp() {
       if (latestBrainStatus) return modelStampFromBrainStatus(latestBrainStatus);
-      return "llm=unknown";
+      return "model not scanned";
     }
 
     function logSnapshotHeader(source) {
@@ -4302,6 +4302,7 @@
       });
       popoutConversationButton.textContent = "Popped";
       renderConversationPopout({ forceScroll: true });
+      refreshBrainStatusQuietly();
       popout.focus();
       log(events, "conversation popout opened");
     }
@@ -5142,6 +5143,20 @@
         latestBrainStatus = result;
         log(events, `brain status page-api fallback: ${error.message}`);
         return result;
+      }
+    }
+
+    async function refreshBrainStatusQuietly() {
+      try {
+        const response = await fetch(new URL("/api/brain/status", window.location.href), { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") return null;
+        enrichBrainStatusWithBrowserContext(result);
+        latestBrainStatus = result;
+        renderConversationPopout();
+        return result;
+      } catch {
+        return null;
       }
     }
 
