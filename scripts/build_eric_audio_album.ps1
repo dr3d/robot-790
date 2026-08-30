@@ -12,6 +12,7 @@ param(
   [double]$MinAutoDurationSeconds = 6.0,
   [double]$MaxAutoDurationSeconds = 45.0,
   [double]$SilenceSeconds = 1.15,
+  [double]$SilencePadSeconds = 0.5,
   [string]$SilenceThreshold = "-45dB"
 )
 
@@ -120,6 +121,7 @@ function Get-SilenceDuration {
     [double]$MinSeconds,
     [double]$MaxSeconds,
     [double]$RequiredSilenceSeconds,
+    [double]$SilencePadSeconds,
     [string]$Threshold
   )
 
@@ -156,7 +158,7 @@ function Get-SilenceDuration {
     return $MaxSeconds
   }
 
-  $duration = [double]$chosen + $TailSeconds - $LeadSeconds
+  $duration = [double]$chosen + $SilencePadSeconds + $TailSeconds - $LeadSeconds
   if ($duration -lt $MinSeconds) { $duration = $MinSeconds }
   if ($duration -gt $MaxSeconds) { $duration = $MaxSeconds }
   return $duration
@@ -213,7 +215,7 @@ try {
     } elseif ($DurationMode -eq "transcript") {
       $spokenDuration = Get-AutoDuration $clipTime $transcriptTimes $AutoTailSeconds $MinAutoDurationSeconds $MaxAutoDurationSeconds
     } else {
-      $spokenDuration = Get-SilenceDuration $filledSource $start $lead $AutoTailSeconds $MinAutoDurationSeconds $MaxAutoDurationSeconds $SilenceSeconds $SilenceThreshold
+      $spokenDuration = Get-SilenceDuration $filledSource $start $lead $AutoTailSeconds $MinAutoDurationSeconds $MaxAutoDurationSeconds $SilenceSeconds $SilencePadSeconds $SilenceThreshold
     }
 
     $duration = $spokenDuration + $lead
