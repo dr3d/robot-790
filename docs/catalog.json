@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-30 04:29:07",
+    "generated":  "2026-08-30 04:35:36",
     "articles":  [
                      {
                          "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",
@@ -72,14 +72,6 @@
              ],
     "media":  [
                   {
-                      "title":  "20260830 021634 sts audio picture",
-                      "kind":  "video",
-                      "source":  "media/videos/20260830-021634-sts-audio-picture.mp4",
-                      "preview":  null,
-                      "bytes":  27514615,
-                      "modified":  "2026-08-30 04:26"
-                  },
-                  {
                       "title":  "Gemini Generated Image 1powen1powen1pow",
                       "kind":  "image",
                       "source":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
@@ -110,6 +102,14 @@
                       "preview":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
                       "bytes":  2934037,
                       "modified":  "2026-08-27 23:22"
+                  },
+                  {
+                      "title":  "NapEdge 2026 08 30 Audio Rumination",
+                      "kind":  "video",
+                      "source":  "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4",
+                      "preview":  "media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg",
+                      "bytes":  27514615,
+                      "modified":  "2026-08-30 04:26"
                   },
                   {
                       "title":  "VID20260824135110",
