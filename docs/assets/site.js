@@ -63,6 +63,7 @@ function renderMarkdown(markdown) {
   const html = [];
   let paragraph = [];
   let inQuote = false;
+  let skippedDocumentTitle = false;
 
   const flushParagraph = () => {
     if (paragraph.length) {
@@ -89,6 +90,10 @@ function renderMarkdown(markdown) {
       flushParagraph();
       closeQuote();
       const level = trimmed.match(/^#+/)[0].length;
+      if (level === 1 && !skippedDocumentTitle) {
+        skippedDocumentTitle = true;
+        continue;
+      }
       html.push(`<h${level}>${renderInlineMarkdown(trimmed.replace(/^#+\s+/, ""))}</h${level}>`);
       continue;
     }
