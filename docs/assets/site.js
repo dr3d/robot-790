@@ -1,4 +1,4 @@
-const catalogUrl = "catalog.json";
+const catalogUrl = `catalog.json?v=${Date.now()}`;
 
 const articleList = document.querySelector("#article-list");
 const articleReader = document.querySelector("#article-reader");
