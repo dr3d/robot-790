@@ -1,6 +1,20 @@
 {
-    "generated":  "2026-08-30 05:08:38",
+    "generated":  "2026-08-30 10:29:18",
     "articles":  [
+                     {
+                         "title":  "The Artificial Human Landscape",
+                         "excerpt":  "Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.",
+                         "source":  "articles/artificial-human-landscape.md",
+                         "bytes":  17611,
+                         "modified":  "2026-08-30 10:21"
+                     },
+                     {
+                         "title":  "What Eric Has Taught Us So Far",
+                         "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
+                         "source":  "articles/what-eric-has-taught-us.md",
+                         "bytes":  8364,
+                         "modified":  "2026-08-30 10:15"
+                     },
                      {
                          "title":  "The NapEdge Run",
                          "excerpt":  "On August 30, 2026, Robot 790 ran a long idle experiment I am calling the NapEdge run. Scott loaded a mechanism-heavy note, read Eric\u0027s identity note, turned the microphone off, and told Eric not to perform for anyone in the room. The instruction was simple: sit with the material, connect objects, mechanisms, mistakes, and open questions, and use web search when a clean question appeared.",
@@ -14,13 +28,6 @@
                          "source":  "articles/robot_790_lineage_article.md",
                          "bytes":  2876,
                          "modified":  "2026-08-29 10:06"
-                     },
-                     {
-                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
-                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
-                         "source":  "articles/robot-790-article-3 (1).md",
-                         "bytes":  11843,
-                         "modified":  "2026-08-29 08:44"
                      },
                      {
                          "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",

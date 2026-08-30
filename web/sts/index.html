@@ -169,11 +169,16 @@
       grid-template-columns: minmax(240px, 1fr) minmax(150px, 190px) minmax(150px, 190px) auto auto;
     }
     .text-injection-controls {
-      grid-template-columns: minmax(260px, 1fr) minmax(140px, 190px) auto minmax(150px, auto);
+      grid-template-columns: minmax(260px, 1fr) auto minmax(150px, auto);
     }
     .text-injection-controls textarea {
       min-height: 52px;
       max-height: 180px;
+    }
+    .typed-actions {
+      display: grid;
+      gap: 8px;
+      align-self: stretch;
     }
     .vision-drop {
       width: 152px;
@@ -618,14 +623,10 @@
             Typed input
             <textarea id="typedInput" rows="2" spellcheck="true" placeholder="Type to Eric, or test pronunciation..."></textarea>
           </label>
-          <label>
-            Destination
-            <select id="typedDestination">
-              <option value="user">Send to Eric</option>
-              <option value="say">Say as Eric</option>
-            </select>
-          </label>
-          <button id="typedSend" disabled>Send</button>
+          <div class="typed-actions" aria-label="Typed input actions">
+            <button id="typedSend" type="button" disabled>Send</button>
+            <button id="typedSay" type="button" disabled>Say</button>
+          </div>
           <span id="typedStatus" class="subtle">Connect first</span>
         </section>
         <section class="controls audio-record-controls">
@@ -846,8 +847,8 @@
     const stopMicButton = document.querySelector("#stopMic");
     const resetMicButton = document.querySelector("#resetMic");
     const typedInput = document.querySelector("#typedInput");
-    const typedDestination = document.querySelector("#typedDestination");
     const typedSendButton = document.querySelector("#typedSend");
+    const typedSayButton = document.querySelector("#typedSay");
     const typedStatus = document.querySelector("#typedStatus");
     const startAudioRecordButton = document.querySelector("#startAudioRecord");
     const stopAudioRecordButton = document.querySelector("#stopAudioRecord");
@@ -4553,7 +4554,9 @@
 
     function updateTypedInputButtons() {
       const connected = realtimeConnected();
-      typedSendButton.disabled = !connected || !typedInputText();
+      const disabled = !connected || !typedInputText();
+      typedSendButton.disabled = disabled;
+      typedSayButton.disabled = disabled;
       typedStatus.textContent = connected ? "Ready" : "Connect first";
     }
 
@@ -4615,14 +4618,13 @@
       });
     }
 
-    function sendTypedInput() {
+    function sendTypedInput(destination = "user") {
       const text = typedInputText();
       if (!text) return;
       if (!realtimeConnected()) {
         typedStatus.textContent = "Not connected";
         return;
       }
-      const destination = String(typedDestination?.value || "user");
       if (destination === "say") {
         sayTypedAsEric(text);
         typedStatus.textContent = "Speaking exact text";
@@ -7100,8 +7102,8 @@
         sendTypedInput();
       }
     });
-    typedDestination.addEventListener("change", updateTypedInputButtons);
-    typedSendButton.addEventListener("click", sendTypedInput);
+    typedSendButton.addEventListener("click", () => sendTypedInput("user"));
+    typedSayButton.addEventListener("click", () => sendTypedInput("say"));
     visionDrop.addEventListener("click", () => visionFile.click());
     visionDrop.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {

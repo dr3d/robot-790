@@ -175,8 +175,8 @@ function mediaButton(media, index) {
 
 function applyHeaderBanner(mediaItems) {
   if (!pageHeader || !mediaItems.length) return;
-  const banner = mediaItems.find((media) => media.preview) ||
-    mediaItems.find((media) => media.kind === "image" && media.source);
+  const banner = mediaItems.find((media) => media.kind === "image" && (media.preview || media.source)) ||
+    mediaItems.find((media) => media.preview);
   const source = banner ? (banner.preview || banner.source || "") : "";
   if (!source) return;
   const safeSource = source.replace(/\\/g, "/").replace(/"/g, "%22");

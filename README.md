@@ -94,11 +94,15 @@ the project settles.
 - [Docs Folder](docs/README.md): how the static site is organized.
 - [Public Media](docs/media/README.md): compression and publishing rules for
   images, audio, and video.
+- [Evidence Map](docs/evidence_map.md): working map of project claims,
+  receipts, and open tests.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
   touch, camera, and possible tilt/rotate head direction.
 - [Future Directions](docs/future_directions.md): public-safe notes on the
   desk-show idea, singing, associative drift, library files, world substrates,
   vision, and media.
+- [Reference Shelf](docs/references.md): research, projects, and practical
+  ancestors that Robot 790 builds beside or on top of.
 
 `docs/` is a static GitHub Pages site. GitHub Pages will serve it directly, but
 it will not run build scripts. After adding articles, curated logs, images,

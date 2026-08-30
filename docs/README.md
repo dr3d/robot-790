@@ -19,8 +19,10 @@ opened directly as a `file://` URL.
 - `articles/`: public Markdown articles and essays.
 - `logs/`: curated public transcript excerpts, not raw private logs.
 - `media/`: compressed public images, audio, and video.
+- `evidence_map.md`: working map of project claims, receipts, and open tests.
 - `future_directions.md`: public-safe roadmap and experiment notes.
 - `embodied_sensor_head.md`: notes for the ESP32-S3 sensor/head direction.
+- `references.md`: research and project lineage shelf.
 
 ## Updating
 
