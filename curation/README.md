@@ -18,3 +18,19 @@ The usual workflow:
 
 The miner is intentionally a first pass. It is meant to reduce TLDR pain, not
 replace judgment.
+
+## Audio Clip Albums
+
+Use `scripts/build_eric_audio_album.ps1` to turn harvested timestamp marks into
+a short MP3 sequence:
+
+```powershell
+.\scripts\build_eric_audio_album.ps1
+```
+
+The clip manifest lives in `curation/clip-manifests/`. Each row gives a clock
+timestamp, a rough spoken duration, a lead-in, a title, and tags. The script
+writes both the MP3 and a `.cuts.csv` file with resolved source offsets.
+
+If `DurationSeconds` is blank or zero, the script can estimate clip length from
+the next transcript timestamp.
