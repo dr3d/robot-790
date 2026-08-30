@@ -24,8 +24,16 @@ class FakeFace:
         self.calls.append(("beat", name))
         return {"status": "ok"}
 
-    def emotion(self, name: str, duration_s: float | None = None) -> dict[str, object]:
-        self.calls.append(("emotion", {"name": name, "duration": duration_s}))
+    def emotion(
+        self,
+        name: str,
+        duration_s: float | None = None,
+        color: str | None = None,
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {"name": name, "duration": duration_s}
+        if color:
+            payload["color"] = color
+        self.calls.append(("emotion", payload))
         return {"status": "ok"}
 
     def gaze(self, x: float, y: float, duration_s: float = 1.2, move_ms: int = 160) -> dict[str, object]:
@@ -150,6 +158,22 @@ def test_set_face_mood_tool_drives_face(monkeypatch) -> None:
     assert result["mood"] == "glitchy"
     assert face.closed is True
     assert face.calls == [("emotion", {"name": "glitchy", "duration": 4.0})]
+
+
+def test_set_face_mood_tool_can_set_status_color(monkeypatch) -> None:
+    face = FakeFace()
+
+    def build_daemon() -> tuple[BehaviorDaemon, FakeFace]:
+        return BehaviorDaemon(face), face
+
+    monkeypatch.setattr(realtime_tools, "_build_daemon", build_daemon)
+
+    result = realtime_tools._set_face_mood({"name": "affection", "duration": 3, "color": "pink"})
+
+    assert result["status"] == "ok"
+    assert result["color"] == "pink"
+    assert face.closed is True
+    assert face.calls == [("emotion", {"name": "affection", "duration": 3.0, "color": "pink"})]
 
 
 def test_set_eye_gaze_tool_drives_face(monkeypatch) -> None:

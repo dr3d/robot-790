@@ -17,6 +17,7 @@ class Affect:
     attention: float = 0.5
     certainty: float = 0.5
     mischief: float = 0.0
+    color: str | None = None
 
 
 @dataclass(frozen=True)
@@ -35,4 +36,3 @@ class RobotState:
     beat: str = "none"
     affect: Affect = Affect()
     gaze: Gaze = Gaze()
-

@@ -16,29 +16,35 @@ class BehaviorDaemon:
         if mode == RobotMode.IDLE:
             return self.face.release()
         if mode == RobotMode.LISTENING:
-            return self.face.control(
-                {"emotion": "curious", "mouth": {"shape": "neutral", "talking": False, "duration": 1.0}}
-            )
+            payload: dict[str, object] = {
+                "emotion": "curious",
+                "mouth": {"shape": "neutral", "talking": False, "duration": 1.0},
+            }
+            if current_affect.color:
+                payload["color"] = current_affect.color
+            return self.face.control(payload)
         if mode == RobotMode.THINKING:
-            return self.face.control(
-                {
-                    "expression": "focused",
-                    "duration": 2.5,
-                    "gaze": {"x": 0.0, "y": -0.25, "duration": 2.5, "move_ms": 260},
-                }
-            )
+            payload = {
+                "expression": "focused",
+                "duration": 2.5,
+                "gaze": {"x": 0.0, "y": -0.25, "duration": 2.5, "move_ms": 260},
+            }
+            if current_affect.color:
+                payload["color"] = current_affect.color
+            return self.face.control(payload)
         if mode == RobotMode.SPEAKING:
-            return self.face.control(
-                {
-                    "emotion": "happy",
-                    "mouth": {
-                        "shape": "open",
-                        "talking": True,
-                        "energy": _clamp(current_affect.energy, 0.0, 1.0),
-                        "duration": 2.4,
-                    },
-                }
-            )
+            payload = {
+                "emotion": "happy",
+                "mouth": {
+                    "shape": "open",
+                    "talking": True,
+                    "energy": _clamp(current_affect.energy, 0.0, 1.0),
+                    "duration": 2.4,
+                },
+            }
+            if current_affect.color:
+                payload["color"] = current_affect.color
+            return self.face.control(payload)
         if mode == RobotMode.SLEEPING:
             return self.face.sleep(0.0)
         return {"error": f"Unhandled mode: {mode.value}"}
@@ -51,4 +57,3 @@ class BehaviorDaemon:
 
 def _clamp(value: float, low: float, high: float) -> float:
     return min(max(value, low), high)
-

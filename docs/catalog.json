@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-30 10:55:07",
+    "generated":  "2026-08-30 11:17:02",
     "articles":  [
                      {
                          "title":  "The Artificial Human Landscape",
@@ -86,92 +86,136 @@
              ],
     "media":  [
                   {
-                      "title":  "Eric S3 Face Affection 2026 08 29",
-                      "kind":  "image",
-                      "source":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
-                      "preview":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
-                      "bytes":  126825,
-                      "modified":  "2026-08-30 10:53"
-                  },
-                  {
-                      "title":  "NapEdge 2026 08 30 Audio Rumination",
+                      "title":  "NapEdge Audio Rumination 2026-08-30",
                       "kind":  "video",
+                      "role":  "run-artifact",
                       "source":  "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4",
                       "preview":  "media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg",
+                      "banner_rank":  55,
                       "bytes":  27514615,
+                      "date":  "2026-08-30 00:00",
                       "modified":  "2026-08-30 04:26"
                   },
                   {
-                      "title":  "VID20260827042607",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260827042607.mp4",
-                      "preview":  "media/previews/VID20260827042607.jpg",
-                      "bytes":  8796127,
-                      "modified":  "2026-08-29 10:32"
-                  },
-                  {
-                      "title":  "VID20260827013001",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260827013001.mp4",
-                      "preview":  "media/previews/VID20260827013001.jpg",
-                      "bytes":  7319818,
-                      "modified":  "2026-08-29 10:32"
-                  },
-                  {
-                      "title":  "VID20260825211801",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260825211801.mp4",
-                      "preview":  "media/previews/VID20260825211801.jpg",
-                      "bytes":  3634269,
-                      "modified":  "2026-08-29 10:31"
-                  },
-                  {
-                      "title":  "VID20260825210600",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260825210600.mp4",
-                      "preview":  "media/previews/VID20260825210600.jpg",
-                      "bytes":  4240086,
-                      "modified":  "2026-08-29 10:31"
-                  },
-                  {
-                      "title":  "VID20260824135110",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260824135110.mp4",
-                      "preview":  "media/previews/VID20260824135110.jpg",
-                      "bytes":  2005329,
-                      "modified":  "2026-08-29 10:31"
-                  },
-                  {
-                      "title":  "Gemini Generated Image 1powen1powen1pow",
+                      "title":  "Eric S3 Face Affection 2026-08-29",
                       "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
+                      "preview":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
+                      "banner_rank":  100,
+                      "bytes":  126825,
+                      "date":  "2026-08-29 00:00",
+                      "modified":  "2026-08-30 10:53"
+                  },
+                  {
+                      "title":  "Eric Generated Image 2026-08-28 02:11",
+                      "kind":  "image",
+                      "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
                       "preview":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
+                      "banner_rank":  60,
                       "bytes":  2790239,
+                      "date":  "2026-08-28 02:11",
                       "modified":  "2026-08-28 02:11"
                   },
                   {
-                      "title":  "Gemini Generated Image qst2a9qst2a9qst2",
+                      "title":  "Eric Generated Image 2026-08-27 23:25",
                       "kind":  "image",
+                      "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_qst2a9qst2a9qst2.jpg",
                       "preview":  "media/images/Gemini_Generated_Image_qst2a9qst2a9qst2.jpg",
+                      "banner_rank":  60,
                       "bytes":  696018,
+                      "date":  "2026-08-27 23:25",
                       "modified":  "2026-08-27 23:25"
                   },
                   {
-                      "title":  "Gemini Generated Image rkrn6rkrn6rkrn6r",
+                      "title":  "Eric Generated Image 2026-08-27 23:22",
                       "kind":  "image",
+                      "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
                       "preview":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
+                      "banner_rank":  60,
                       "bytes":  2934037,
+                      "date":  "2026-08-27 23:22",
                       "modified":  "2026-08-27 23:22"
                   },
                   {
-                      "title":  "Gemini Generated Image dbr977dbr977dbr9",
+                      "title":  "Robot 790 Video 2026-08-27 04:26:07",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/VID20260827042607.mp4",
+                      "preview":  "media/previews/VID20260827042607.jpg",
+                      "banner_rank":  45,
+                      "bytes":  8796127,
+                      "date":  "2026-08-27 04:26",
+                      "modified":  "2026-08-29 10:32"
+                  },
+                  {
+                      "title":  "Eric Generated Image 2026-08-27 04:19",
                       "kind":  "image",
+                      "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
                       "preview":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
+                      "banner_rank":  60,
                       "bytes":  2696263,
+                      "date":  "2026-08-27 04:19",
                       "modified":  "2026-08-27 04:19"
+                  },
+                  {
+                      "title":  "Robot 790 Video 2026-08-27 01:30:01",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/VID20260827013001.mp4",
+                      "preview":  "media/previews/VID20260827013001.jpg",
+                      "banner_rank":  45,
+                      "bytes":  7319818,
+                      "date":  "2026-08-27 01:30",
+                      "modified":  "2026-08-29 10:32"
+                  },
+                  {
+                      "title":  "Robot 790 Video 2026-08-25 21:18:01",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/VID20260825211801.mp4",
+                      "preview":  "media/previews/VID20260825211801.jpg",
+                      "banner_rank":  45,
+                      "bytes":  3634269,
+                      "date":  "2026-08-25 21:18",
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
+                      "title":  "Robot 790 Video 2026-08-25 21:06:00",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/VID20260825210600.mp4",
+                      "preview":  "media/previews/VID20260825210600.jpg",
+                      "banner_rank":  45,
+                      "bytes":  4240086,
+                      "date":  "2026-08-25 21:06",
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
+                      "title":  "Robot 790 Mask Embodiment 2026-08-25",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/images/Robot-790-Mask-Embodiment-2026-08-25.jpg",
+                      "preview":  "media/images/Robot-790-Mask-Embodiment-2026-08-25.jpg",
+                      "banner_rank":  100,
+                      "bytes":  127605,
+                      "date":  "2026-08-25 00:00",
+                      "modified":  "2026-08-30 11:08"
+                  },
+                  {
+                      "title":  "Robot 790 Video 2026-08-24 13:51:10",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/VID20260824135110.mp4",
+                      "preview":  "media/previews/VID20260824135110.jpg",
+                      "banner_rank":  45,
+                      "bytes":  2005329,
+                      "date":  "2026-08-24 13:51",
+                      "modified":  "2026-08-29 10:31"
                   }
               ]
 }

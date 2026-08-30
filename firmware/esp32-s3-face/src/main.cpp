@@ -48,6 +48,9 @@ bool imuOk = false;
 bool sdOk = false;
 bool cameraOk = false;
 bool wifiStation = false;
+bool otaUpdating = false;
+bool statusTintOverride = false;
+uint16_t statusTintColor = 0;
 uint8_t cst816Id = 0;
 uint32_t bootMs = 0;
 uint32_t requests = 0;
@@ -89,8 +92,9 @@ constexpr int16_t INTEGRATED_MOUTH_BAND_H = 100;
 constexpr int16_t INTEGRATED_MOUTH_Y = FACE_LCD_HEIGHT - INTEGRATED_MOUTH_BAND_H;
 constexpr int16_t INTEGRATED_STATUS_Y = INTEGRATED_EYE_BAND_H;
 constexpr int16_t INTEGRATED_STATUS_H = INTEGRATED_MOUTH_Y - INTEGRATED_STATUS_Y;
-constexpr float INTEGRATED_HUMAN_MOUTH_SCALE = 0.70f;
-constexpr int16_t INTEGRATED_HUMAN_MOUTH_Y_OFFSET = -2;
+constexpr int16_t INTEGRATED_EYE_Y = 0;
+constexpr float INTEGRATED_HUMAN_MOUTH_SCALE = 0.66f;
+constexpr int16_t INTEGRATED_HUMAN_MOUTH_Y_OFFSET = 3;
 
 uint16_t rgb(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -693,6 +697,36 @@ bool parseMouthTextColor(const char *text, uint16_t &color)
   return true;
 }
 
+uint16_t statusColorForMood(Mood mood)
+{
+  if (statusTintOverride) return statusTintColor;
+  switch (mood) {
+    case Mood::Happy: return rgb(80, 232, 156);
+    case Mood::Delighted: return rgb(255, 210, 86);
+    case Mood::Affection: return rgb(255, 126, 190);
+    case Mood::Proud: return rgb(124, 190, 255);
+    case Mood::Bashful: return rgb(218, 132, 255);
+    case Mood::Mischief: return rgb(86, 238, 190);
+    case Mood::Wonder: return rgb(118, 166, 255);
+    case Mood::Curious: return rgb(86, 220, 232);
+    case Mood::Focused: return rgb(212, 238, 170);
+    case Mood::Confused: return rgb(180, 150, 255);
+    case Mood::Surprised: return rgb(255, 190, 112);
+    case Mood::Suspicious: return rgb(190, 232, 104);
+    case Mood::Afraid: return rgb(120, 170, 255);
+    case Mood::Angry: return rgb(255, 82, 82);
+    case Mood::Sleepy: return rgb(94, 130, 178);
+    case Mood::Sleep: return rgb(34, 58, 74);
+    case Mood::Goofy: return rgb(255, 162, 94);
+    case Mood::Robotic: return rgb(80, 220, 230);
+    case Mood::Glitchy: return rgb(255, 70, 210);
+    case Mood::Bored: return rgb(118, 142, 154);
+    case Mood::Calm:
+    default:
+      return rgb(84, 198, 210);
+  }
+}
+
 MouthPose mouthPoseFor(MouthShape shape)
 {
   switch (shape) {
@@ -1257,6 +1291,8 @@ void releaseApiOverrides(uint32_t now)
   apiState.moodUntil = 0;
   apiState.gazeOverride = false;
   apiState.gazeUntil = 0;
+  statusTintOverride = false;
+  statusTintColor = 0;
   moodState.from = Mood::Calm;
   moodState.to = Mood::Calm;
   moodState.started = now;
@@ -2039,17 +2075,20 @@ void drawIntegratedStatus(Arduino_GFX &g, uint32_t now)
 {
   g.fillRect(0, INTEGRATED_STATUS_Y, FACE_LCD_WIDTH, INTEGRATED_STATUS_H, BLACK);
 
+  const Mood mood = currentMood(now);
+  const uint16_t moodColor = statusColorForMood(mood);
   const int16_t noseX = FACE_LCD_WIDTH / 2;
-  const int16_t noseY = INTEGRATED_STATUS_Y + INTEGRATED_STATUS_H / 2 - 8;
-  const int16_t noseRx = 73;
-  const int16_t noseRy = 47;
+  const int16_t noseY = INTEGRATED_STATUS_Y + INTEGRATED_STATUS_H / 2 - 10;
+  const int16_t noseRx = 68;
+  const int16_t noseRy = 53;
   fillEllipse(g, noseX, noseY, noseRx, noseRy, rgb(5, 20, 30));
-  g.drawEllipse(noseX, noseY, noseRx, noseRy, rgb(34, 92, 112));
-  g.drawEllipse(noseX, noseY, noseRx - 5, noseRy - 5, rgb(12, 48, 64));
+  g.drawEllipse(noseX, noseY, noseRx + 3, noseRy + 2, mixColor(moodColor, rgb(6, 24, 34), 0.42f));
+  g.drawEllipse(noseX, noseY, noseRx, noseRy, moodColor);
+  g.drawEllipse(noseX, noseY, noseRx - 5, noseRy - 5, mixColor(moodColor, rgb(8, 42, 56), 0.64f));
 
   const uint16_t mainText = rgb(204, 236, 244);
   const int16_t textW = noseRx * 2 - 18;
-  printCenteredClipped(g, moodName(currentMood(now)), noseX, noseY - 27, 2, mainText, textW);
+  printCenteredClipped(g, moodName(mood), noseX, noseY - 27, 2, mainText, textW);
   printCenteredClipped(g, mouthShapeName(activeMouthShape(now)), noseX, noseY - 8, 2, rgb(144, 214, 226), textW);
   printCenteredClipped(g, idleBeatName(idleDirector.beat), noseX, noseY + 11, 2, rgb(180, 224, 214), textW);
 }
@@ -2062,10 +2101,9 @@ void renderIntegratedFace(uint32_t now)
   deferMouthFrameFlush = false;
   Arduino_GFX &g = mouthFrameOk ? static_cast<Arduino_GFX &>(*mouthFrame) : *display;
   constexpr int16_t eyePadX = 6;
-  constexpr int16_t eyePadY = 4;
   g.fillRect(0, 0, FACE_LCD_WIDTH, INTEGRATED_EYE_BAND_H, BLACK);
-  drawIntegratedEye(g, true, eyePadX, eyePadY, now);
-  drawIntegratedEye(g, false, FACE_LCD_WIDTH - FACE_EYE_WIDTH - eyePadX, eyePadY, now);
+  drawIntegratedEye(g, true, eyePadX, INTEGRATED_EYE_Y, now);
+  drawIntegratedEye(g, false, FACE_LCD_WIDTH - FACE_EYE_WIDTH - eyePadX, INTEGRATED_EYE_Y, now);
   drawIntegratedStatus(g, now);
   if (mouthFrameOk) {
     mouthFrame->flush();
@@ -2195,6 +2233,7 @@ void initCamera()
 void initWifi()
 {
   WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
   if (strlen(FACE_WIFI_SSID) > 0) {
     WiFi.setHostname(FACE_HOSTNAME);
     WiFi.begin(FACE_WIFI_SSID, FACE_WIFI_PASSWORD);
@@ -2220,6 +2259,25 @@ void initWifi()
   if (strlen(FACE_OTA_PASSWORD) > 0) {
     ArduinoOTA.setPassword(FACE_OTA_PASSWORD);
   }
+  ArduinoOTA.onStart([] {
+    otaUpdating = true;
+    lastMessage = "ota update";
+    if (displayOk) {
+      display->fillScreen(BLACK);
+      display->setTextColor(rgb(204, 236, 244));
+      display->setTextSize(2);
+      display->setCursor(22, display->height() / 2 - 12);
+      display->print("OTA update");
+    }
+  });
+  ArduinoOTA.onEnd([] {
+    lastMessage = "ota done";
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    otaUpdating = false;
+    lastMessage = "ota error";
+    Serial.printf("ota_error=%u\n", unsigned(error));
+  });
   ArduinoOTA.begin();
 
   Serial.printf("wifi_mode=%s ip=%s url=http://%s.local/\n",
@@ -2321,7 +2379,40 @@ bool handleHttpDisplayFlip(JsonVariantConst value)
 bool releaseToken(const char *text)
 {
   return equalsIgnoreCase(text, "auto") || equalsIgnoreCase(text, "idle") ||
-         equalsIgnoreCase(text, "random") || equalsIgnoreCase(text, "neutral");
+         equalsIgnoreCase(text, "random") || equalsIgnoreCase(text, "neutral") ||
+         equalsIgnoreCase(text, "clear");
+}
+
+bool handleHttpStatusTint(JsonVariantConst value)
+{
+  if (value.isNull()) return true;
+  if (value.is<bool>()) {
+    if (!value.as<bool>()) {
+      statusTintOverride = false;
+      statusTintColor = 0;
+    }
+    return true;
+  }
+  if (!value.is<const char *>()) {
+    sendError("status tint expected color name, #RRGGBB, auto, or clear");
+    return false;
+  }
+
+  const char *text = value.as<const char *>();
+  if (releaseToken(text)) {
+    statusTintOverride = false;
+    statusTintColor = 0;
+    return true;
+  }
+
+  uint16_t color;
+  if (!parseMouthTextColor(text, color)) {
+    sendError("unknown status tint color");
+    return false;
+  }
+  statusTintOverride = true;
+  statusTintColor = color;
+  return true;
 }
 
 void addState(JsonDocument &doc, uint32_t now)
@@ -2350,6 +2441,12 @@ void addState(JsonDocument &doc, uint32_t now)
   doc["style"] = eyeStyleName(eyeRenderStyle);
   doc["mood_override"] = apiState.moodOverride;
   doc["gaze_override"] = apiState.gazeOverride;
+  doc["status_tint_override"] = statusTintOverride;
+  if (statusTintOverride) {
+    char hex[8];
+    snprintf(hex, sizeof(hex), "#%02X%02X%02X", chanR(statusTintColor), chanG(statusTintColor), chanB(statusTintColor));
+    doc["status_tint"] = hex;
+  }
   doc["sleeping"] = currentMood(now) == Mood::Sleep;
   doc["director"] = idleBeatName(idleDirector.beat);
   doc["touch"] = touchSeen;
@@ -2716,6 +2813,18 @@ void handleHttpControl()
   if (!doc["display_flip"].isNull()) {
     if (!handleHttpDisplayFlip(doc["display_flip"])) return;
   }
+  if (!doc["color"].isNull()) {
+    if (!handleHttpStatusTint(doc["color"])) return;
+  }
+  if (!doc["tint"].isNull()) {
+    if (!handleHttpStatusTint(doc["tint"])) return;
+  }
+  if (!doc["status_color"].isNull()) {
+    if (!handleHttpStatusTint(doc["status_color"])) return;
+  }
+  if (!doc["nose_color"].isNull()) {
+    if (!handleHttpStatusTint(doc["nose_color"])) return;
+  }
   if (!doc["mouth"].isNull()) {
     if (!handleHttpMouth(doc["mouth"], doc["duration"], now)) return;
   }
@@ -2735,6 +2844,18 @@ void handleHttpMoodEndpoint(bool expressionMode)
   const char *name = doc["name"] | (expressionMode ? "auto" : "calm");
   const uint32_t defaultMs = expressionMode ? API_DEFAULT_EXPR_MS : API_DEFAULT_MOOD_MS;
   if (!handleHttpMoodName(name, jsonMilliseconds(doc["duration_ms"], jsonMs(doc["duration"], defaultMs)), expressionMode, now)) return;
+  if (!doc["color"].isNull()) {
+    if (!handleHttpStatusTint(doc["color"])) return;
+  }
+  if (!doc["tint"].isNull()) {
+    if (!handleHttpStatusTint(doc["tint"])) return;
+  }
+  if (!doc["status_color"].isNull()) {
+    if (!handleHttpStatusTint(doc["status_color"])) return;
+  }
+  if (!doc["nose_color"].isNull()) {
+    if (!handleHttpStatusTint(doc["nose_color"])) return;
+  }
   handleHttpState();
 }
 
@@ -2937,6 +3058,10 @@ void loop()
 {
   const uint32_t now = millis();
   ArduinoOTA.handle();
+  if (otaUpdating) {
+    delay(1);
+    return;
+  }
   server.handleClient();
   updateBehavior(now);
   static uint32_t lastDraw = 0;

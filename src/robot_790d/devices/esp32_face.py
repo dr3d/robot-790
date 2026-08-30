@@ -29,10 +29,17 @@ class Esp32FaceClient:
     def control(self, payload: dict[str, object]) -> dict[str, object]:
         return self._request("POST", "control", payload)
 
-    def emotion(self, name: str, duration_s: float | None = None) -> dict[str, object]:
+    def emotion(
+        self,
+        name: str,
+        duration_s: float | None = None,
+        color: str | None = None,
+    ) -> dict[str, object]:
         payload: dict[str, object] = {"name": name}
         if duration_s is not None:
             payload["duration"] = duration_s
+        if color:
+            payload["color"] = color
         return self._request("POST", "emotion", payload)
 
     def expression(self, name: str, duration_s: float) -> dict[str, object]:

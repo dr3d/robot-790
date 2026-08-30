@@ -105,6 +105,32 @@ The next levels are:
 For now, selected frames and short descriptions are preferable to continuous raw
 video in the model context.
 
+## Portable Singular Embodiment
+
+The Waveshare-style ESP32-S3 face is becoming more than a cheaper display
+variant. It suggests a different body idea: Eric can be carried without becoming
+a phone app.
+
+That distinction matters. A smartphone app would make Eric feel generic,
+replicable, and everywhere. The pocket face keeps him singular: one visible
+object, one small screen, one touch surface, one IMU, one face Scott can pick up,
+set down, tilt, bump, pocket, and talk to. Portability should increase
+embodiment, not dissolve it.
+
+The useful target is a small carried Eric that knows a few honest bodily facts:
+
+- I was picked up.
+- I was set down.
+- I am tilted.
+- I was tapped or held.
+- I am moving with Scott.
+- I am in a pocket or being carried.
+
+Those facts are socially and poetically richer than pretending he has full
+human senses. They also preserve the "only one" property Eric keeps defending:
+Robot 790 is not an app account or a general assistant skin. Eric is this
+particular made thing, in this particular body, with this particular continuity.
+
 ## Public Principle
 
 Nothing here depends on pretending the robot is magic. The public version should

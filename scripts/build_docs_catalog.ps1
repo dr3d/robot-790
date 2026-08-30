@@ -59,6 +59,90 @@ function Get-MediaKind {
     }
 }
 
+function Get-DateLabelFromStamp {
+    param([string]$Date, [string]$Time)
+    if ($Date.Length -ne 8 -or $Time.Length -ne 6) {
+        return ""
+    }
+    return "$($Date.Substring(0,4))-$($Date.Substring(4,2))-$($Date.Substring(6,2)) $($Time.Substring(0,2)):$($Time.Substring(2,2)):$($Time.Substring(4,2))"
+}
+
+function Get-FriendlyMediaTitle {
+    param([System.IO.FileInfo]$File)
+    $stem = [System.IO.Path]::GetFileNameWithoutExtension($File.Name)
+
+    if ($stem -match '^VID(\d{8})(\d{6})$') {
+        return "Robot 790 Video $(Get-DateLabelFromStamp $Matches[1] $Matches[2])"
+    }
+    if ($stem -match '^IMG(\d{8})(\d{6})$') {
+        return "Robot 790 Image $(Get-DateLabelFromStamp $Matches[1] $Matches[2])"
+    }
+    if ($stem -match '^Gemini[_ -]Generated[_ -]Image') {
+        return "Eric Generated Image $($File.LastWriteTime.ToString("yyyy-MM-dd HH:mm"))"
+    }
+    if ($stem -match '^NapEdge-(\d{4})-(\d{2})-(\d{2})-Audio-Rumination$') {
+        return "NapEdge Audio Rumination $($Matches[1])-$($Matches[2])-$($Matches[3])"
+    }
+    if ($stem -match '^(.*)-(\d{4})-(\d{2})-(\d{2})$') {
+        $label = $Matches[1] -replace '[_-]+', ' '
+        $label = $label -replace '\s+', ' '
+        return "$($label.Trim()) $($Matches[2])-$($Matches[3])-$($Matches[4])"
+    }
+
+    $title = $stem -replace '[_-]+', ' '
+    $title = $title -replace '\s+', ' '
+    return $title.Trim()
+}
+
+function Get-MediaDate {
+    param([System.IO.FileInfo]$File)
+    $stem = [System.IO.Path]::GetFileNameWithoutExtension($File.Name)
+    if ($stem -match '^(?:VID|IMG)(\d{8})(\d{6})$') {
+        return [datetime]::ParseExact("$($Matches[1])$($Matches[2])", "yyyyMMddHHmmss", $null)
+    }
+    if ($stem -match '(\d{4})-(\d{2})-(\d{2})(?:-(\d{2})(\d{2})(\d{2}))?') {
+        $time = if ($Matches[4]) { "$($Matches[4])$($Matches[5])$($Matches[6])" } else { "000000" }
+        return [datetime]::ParseExact("$($Matches[1])$($Matches[2])$($Matches[3])$time", "yyyyMMddHHmmss", $null)
+    }
+    return $File.LastWriteTime
+}
+
+function Get-MediaRole {
+    param([System.IO.FileInfo]$File, [string]$Source, [string]$Kind)
+    $haystack = "$Source $($File.Name)"
+    if ($haystack -match '(?i)(embodiment|s3.face|mini.face|mask|waveshare|robot.790|eric.s3)') {
+        return "embodiment"
+    }
+    if ($haystack -match '(?i)(generated.image|gemini|image.generation)') {
+        return "generated-image"
+    }
+    if ($haystack -match '(?i)(napedge|rumination|conversation|run)') {
+        return "run-artifact"
+    }
+    if ($Kind -eq "video") {
+        return "video"
+    }
+    if ($Kind -eq "audio") {
+        return "audio"
+    }
+    if ($Kind -eq "image") {
+        return "image"
+    }
+    return "file"
+}
+
+function Get-BannerRank {
+    param([string]$Role, [string]$Kind)
+    if ($Kind -eq "image" -and $Role -eq "embodiment") { return 100 }
+    if ($Kind -eq "image" -and $Role -eq "run-artifact") { return 80 }
+    if ($Kind -eq "image" -and $Role -eq "generated-image") { return 60 }
+    if ($Kind -eq "image") { return 70 }
+    if ($Kind -eq "video" -and $Role -eq "run-artifact") { return 55 }
+    if ($Kind -eq "video") { return 45 }
+    if ($Role -eq "generated-image") { return 35 }
+    return 10
+}
+
 $articles = @()
 $articleDir = Join-Path $root "articles"
 if (Test-Path $articleDir) {
@@ -106,19 +190,24 @@ if ($mediaSearchDirs.Count -gt 0) {
             $sitePath -notlike "media/raw-video/*" -and
             $sitePath -notlike "media/rejected/*"
         } |
-        Sort-Object LastWriteTime, Name -Descending |
+        Sort-Object @{ Expression = { Get-MediaDate $_ }; Descending = $true }, @{ Expression = { $_.Name }; Descending = $true } |
         ForEach-Object {
             $source = Convert-ToSitePath $_.FullName
             $previewName = ([System.IO.Path]::GetFileNameWithoutExtension($_.Name) + ".jpg")
             $previewPath = "media/previews/$previewName"
             $hasPreview = Test-Path (Join-Path $root $previewPath)
             $kind = Get-MediaKind $_.Extension
+            $role = Get-MediaRole $_ $source $kind
+            $mediaDate = Get-MediaDate $_
             [ordered]@{
-                title = [System.IO.Path]::GetFileNameWithoutExtension($_.Name).Replace("_", " ").Replace("-", " ")
+                title = Get-FriendlyMediaTitle $_
                 kind = $kind
+                role = $role
                 source = $source
                 preview = $(if ($kind -eq "image") { $source } elseif ($hasPreview) { $previewPath } else { $null })
+                banner_rank = Get-BannerRank $role $kind
                 bytes = $_.Length
+                date = $mediaDate.ToString("yyyy-MM-dd HH:mm")
                 modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
         }

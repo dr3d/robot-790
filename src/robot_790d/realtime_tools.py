@@ -55,6 +55,13 @@ TOOLS: list[dict[str, object]] = [
                     "maximum": 1,
                     "description": "Optional speaking or animation energy from 0.0 to 1.0.",
                 },
+                "color": {
+                    "type": "string",
+                    "description": (
+                        "Optional face/nose status glow color: cyan, white, red, green, blue, "
+                        "yellow, pink, orange, purple, #RRGGBB, or auto to return to mood color."
+                    ),
+                },
             },
             "required": ["mode"],
             "additionalProperties": False,
@@ -137,6 +144,13 @@ TOOLS: list[dict[str, object]] = [
                     "minimum": 0,
                     "maximum": 30,
                     "description": "Seconds to hold the mood. Use 0 for the firmware default.",
+                },
+                "color": {
+                    "type": "string",
+                    "description": (
+                        "Optional face/nose status glow color: cyan, white, red, green, blue, "
+                        "yellow, pink, orange, purple, #RRGGBB, or auto to return to mood color."
+                    ),
                 },
             },
             "required": ["name"],
@@ -651,9 +665,12 @@ def _set_robot_mode(arguments: dict[str, object]) -> dict[str, object]:
         return {"status": "error", "error": f"Unsupported mode '{raw_mode}'. Expected one of: {allowed}"}
 
     energy = _float_argument(arguments.get("energy"), default=0.55)
+    color = _normalize_face_color(arguments.get("color"))
     daemon, face = _build_daemon()
     try:
-        result = daemon.set_mode(mode, Affect(energy=energy))
+        result = daemon.set_mode(mode, Affect(energy=energy, color=color))
+        if color and mode == RobotMode.SLEEPING:
+            result = face.control({"sleep": True, "duration": 0, "color": color})
     finally:
         face.close()
 
@@ -681,13 +698,17 @@ def _set_face_mood(arguments: dict[str, object]) -> dict[str, object]:
 
     duration = _float_argument(arguments.get("duration"), default=0.0)
     duration = _clamp(duration, 0.0, 30.0)
+    color = _normalize_face_color(arguments.get("color"))
     _daemon, face = _build_daemon()
     try:
-        result = face.emotion(mood_name, duration_s=duration or None)
+        result = face.emotion(mood_name, duration_s=duration or None, color=color)
     finally:
         face.close()
 
-    return {"status": "ok", "tool": "set_face_mood", "mood": mood_name, "face": result}
+    payload: dict[str, object] = {"status": "ok", "tool": "set_face_mood", "mood": mood_name, "face": result}
+    if color:
+        payload["color"] = color
+    return payload
 
 
 def _set_eye_style(arguments: dict[str, object]) -> dict[str, object]:
@@ -1035,6 +1056,23 @@ def _float_argument(value: object, default: float) -> float:
         return float(str(value))
     except (TypeError, ValueError):
         return default
+
+
+def _normalize_face_color(value: object) -> str | None:
+    color = str(value or "").strip().lower()
+    if not color:
+        return None
+    if color in {"auto", "clear", "neutral"}:
+        return "auto"
+    if color.startswith("#") and len(color) == 7:
+        try:
+            int(color[1:], 16)
+        except ValueError:
+            return None
+        return color
+    if color in {"cyan", "white", "red", "green", "blue", "yellow", "pink", "orange", "purple"}:
+        return color
+    return None
 
 
 def _clamp(value: float, low: float, high: float) -> float:

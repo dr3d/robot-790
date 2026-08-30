@@ -1106,6 +1106,10 @@
               minimum: 0,
               maximum: 1,
               description: "Optional animation or speaking energy from 0.0 to 1.0."
+            },
+            color: {
+              type: "string",
+              description: "Optional face/nose status glow color as a simple name (cyan, white, red, green, blue, yellow, pink, orange, purple), #RRGGBB, or auto to return to mood color."
             }
           },
           required: ["mode"],
@@ -1155,6 +1159,10 @@
               minimum: 0,
               maximum: 30,
               description: "Seconds to hold the mood. Use 0 for the firmware default."
+            },
+            color: {
+              type: "string",
+              description: "Optional face/nose status glow color as a simple name (cyan, white, red, green, blue, yellow, pink, orange, purple), #RRGGBB, or auto to return to mood color."
             }
           },
           required: ["name"],
@@ -1693,7 +1701,7 @@
       "For go to sleep, close your eyes, shut your eyes, or sleep mode, call set_robot_mode with mode sleeping before answering; do not merely describe the action.",
       "For wake up or open your eyes, call set_robot_mode with mode idle before answering.",
       "Never say you set, moved, closed, opened, or changed your eyes unless an eye or face tool was actually called successfully.",
-      "Use set_face_mood for named moods such as glitchy, goofy, happy, curious, confused, focused, suspicious, or mischief.",
+      "Use set_face_mood for named moods such as glitchy, goofy, happy, curious, confused, focused, suspicious, or mischief. Include color only when the user asks for a face glow, face tint, nose color, or mood-ring color.",
       "Use play_face_beat for animated beats such as funny face, silly face, scan, double take, startle, mischief, thoughtful, or slow smile.",
       "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes.",
       "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
@@ -4690,7 +4698,17 @@
       return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
-    async function setFaceMode({ mode, energy = 0.55 } = {}) {
+    function normalizeFaceTintColor(value = "") {
+      const color = String(value || "").trim().toLowerCase();
+      if (!color) return "";
+      if (["auto", "clear", "neutral"].includes(color)) return "auto";
+      if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+      const allowed = new Set(["cyan", "white", "red", "green", "blue", "yellow", "pink", "orange", "purple"]);
+      return allowed.has(color) ? color : "";
+    }
+
+    async function setFaceMode({ mode, energy = 0.55, color = "" } = {}) {
+      const tint = normalizeFaceTintColor(color);
       if (mode === "idle") {
         clearGazeHold();
         clearFaceVisualHold();
@@ -4701,6 +4719,7 @@
           expression: "focused",
           duration: 1.4
         };
+        if (tint) payload.color = tint;
         if (!gazeHoldActive()) payload.gaze = { x: 0.0, y: 0.0, duration: 1.4, move_ms: 120 };
         return postFace("control", payload);
       }
@@ -4710,6 +4729,7 @@
           expression: "focused",
           duration: 2.5
         };
+        if (tint) payload.color = tint;
         if (!gazeHoldActive()) {
           payload.gaze = {
             x: 0.34 * thinkingGazeSide,
@@ -4721,7 +4741,7 @@
         return postFace("control", payload);
       }
       if (mode === "speaking") {
-        return postFace("control", {
+        const payload = {
           emotion: "happy",
           mouth: {
             shape: "open",
@@ -4729,11 +4749,13 @@
             energy: Math.max(0, Math.min(1, Number(energy) || 0.55)),
             duration: 0
           }
-        });
+        };
+        if (tint) payload.color = tint;
+        return postFace("control", payload);
       }
       if (mode === "sleeping") {
         noteFaceVisualHold(0);
-        return postFace("sleep", { duration: 0 });
+        return postFace("control", { sleep: true, duration: 0, color: tint || undefined });
       }
       throw new Error(`Unsupported face mode: ${mode}`);
     }
@@ -4767,11 +4789,13 @@
       return result;
     }
 
-    async function setFaceMood({ name, duration = 0 } = {}) {
+    async function setFaceMood({ name, duration = 0, color = "" } = {}) {
       if (!name) throw new Error("Missing mood name");
       const seconds = Math.max(0, Math.min(30, Number(duration) || 0));
       const payload = { name };
       if (seconds > 0) payload.duration = seconds;
+      const tint = normalizeFaceTintColor(color);
+      if (tint) payload.color = tint;
       const result = await postFace("mood", payload);
       noteFaceVisualHold(seconds || 5);
       return result;

@@ -16,6 +16,20 @@ bodily facts and can perform with them."
 
 ## Sensor Ideas
 
+Portable singular embodiment:
+The Waveshare-style face should not become "Eric as an app." The stronger path
+is Eric as one small carried object: pocketable, touchable, tiltable, and still
+locally itself. Portability is useful only if it makes the body more real, not
+more generic.
+
+This is the design distinction:
+
+- mask/head embodiment: visually stronger, better as a face or puppet
+- Waveshare mini embodiment: socially stronger as a carried thing with IMU,
+  touch, and pocket presence
+- smartphone embodiment: powerful, but risks turning Eric into a generic app
+  persona instead of this one robot
+
 Camera:
 Start with single-frame capture, not live video. The tool shape is capture a
 frame, describe it, admit uncertainty, and optionally save an observation.
@@ -73,3 +87,7 @@ Embodiment is one of the things that makes Robot 790 feel alive. A few reliable
 physical facts beat a flood of invented self-description. A face that knows it
 was moved, touched, tilted, or asked to look somewhere has much richer material
 than a face that only performs moods.
+
+The portable version sharpens that claim. If Eric can be carried, the point is
+not to make him available everywhere. The point is to let this one Eric have a
+small continuous body in Scott's world.

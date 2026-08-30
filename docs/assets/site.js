@@ -162,12 +162,15 @@ function mediaButton(media, index) {
   const preview = media.preview
     ? `<img class="media-thumb" src="${escapeHtml(media.preview)}" alt="">`
     : `<div class="media-thumb" aria-hidden="true"></div>`;
+  const role = media.role && !["image", "video", "audio", "file"].includes(media.role)
+    ? ` / ${media.role}`
+    : "";
   return `
     <button class="media-item" type="button" data-media="${index}">
       ${preview}
       <span>
         <strong>${escapeHtml(media.title)}</strong><br>
-        <span class="media-kind">${escapeHtml(media.kind)} - ${bytesLabel(media.bytes)}</span>
+        <span class="media-kind">${escapeHtml(media.kind)}${escapeHtml(role)} - ${bytesLabel(media.bytes)}</span>
       </span>
     </button>
   `;
@@ -175,8 +178,15 @@ function mediaButton(media, index) {
 
 function applyHeaderBanner(mediaItems) {
   if (!pageHeader || !mediaItems.length) return;
-  const banner = mediaItems.find((media) => media.kind === "image" && (media.preview || media.source)) ||
-    mediaItems.find((media) => media.preview);
+  const ranked = mediaItems
+    .filter((media) => media.preview || media.source)
+    .slice()
+    .sort((a, b) => {
+      const rankDelta = (Number(b.banner_rank) || 0) - (Number(a.banner_rank) || 0);
+      if (rankDelta) return rankDelta;
+      return Date.parse(b.date || b.modified || 0) - Date.parse(a.date || a.modified || 0);
+    });
+  const banner = ranked[0];
   const source = banner ? (banner.preview || banner.source || "") : "";
   if (!source) return;
   const safeSource = source.replace(/\\/g, "/").replace(/"/g, "%22");
@@ -209,7 +219,10 @@ function selectMedia(media) {
   } else {
     mediaFeature.innerHTML = `<p>${escapeHtml(media.title)}</p>`;
   }
-  mediaCaption.textContent = `${media.title} - ${media.kind} - ${bytesLabel(media.bytes)}`;
+  const role = media.role && !["image", "video", "audio", "file"].includes(media.role)
+    ? ` - ${media.role}`
+    : "";
+  mediaCaption.textContent = `${media.title} - ${media.kind}${role} - ${bytesLabel(media.bytes)}`;
 }
 
 async function selectLog(log, selectedButton) {
