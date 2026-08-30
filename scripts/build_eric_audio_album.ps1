@@ -129,6 +129,12 @@ try {
     throw "No clips found in $($manifestPath.Path)"
   }
 
+  $filledSource = Join-Path $tempRoot "gap-filled-source.flac"
+  & ffmpeg -hide_banner -loglevel error -y -i $sourcePath.Path -vn -af "aresample=async=1000:first_pts=0" -ac 2 -ar 44100 -c:a flac $filledSource
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to create gap-filled working audio from $($sourcePath.Path)"
+  }
+
   $gapPath = Join-Path $tempRoot "gap.wav"
   if ($GapSeconds -gt 0) {
     & ffmpeg -hide_banner -loglevel error -y -f lavfi -i "anullsrc=channel_layout=stereo:sample_rate=44100" -t $GapSeconds $gapPath
@@ -157,10 +163,8 @@ try {
     $durationText = $duration.ToString("0.###", $InvariantCulture)
     $fadeText = $fade.ToString("0.###", $InvariantCulture)
     $fadeOutStartText = $fadeOutStart.ToString("0.###", $InvariantCulture)
-    $startSample = [Math]::Max(0, [int64][Math]::Round($start * $sourceSampleRate))
-    $endSample = [Math]::Max($startSample + 1, [int64][Math]::Round(($start + $duration) * $sourceSampleRate))
-    $filter = "atrim=start_sample=$($startSample):end_sample=$($endSample),asetpts=PTS-STARTPTS,afade=t=in:st=0:d=$fadeText,afade=t=out:st=$($fadeOutStartText):d=$fadeText"
-    & ffmpeg -hide_banner -loglevel error -y -i $sourcePath.Path -vn -ac 2 -ar 44100 -af $filter $clipPath
+    $filter = "asetpts=PTS-STARTPTS,afade=t=in:st=0:d=$fadeText,afade=t=out:st=$($fadeOutStartText):d=$fadeText"
+    & ffmpeg -hide_banner -loglevel error -y -ss $startText -t $durationText -i $filledSource -vn -ac 2 -ar 44100 -af $filter $clipPath
     if ($LASTEXITCODE -ne 0) {
       throw "Failed to cut clip $($clip.Title) at $($clip.Time)"
     }
