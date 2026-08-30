@@ -11,6 +11,29 @@ Method
 
 Scott loaded a mechanism-rich reference note, then asked Eric to go quiet and let idle thought connect objects, mechanisms, mistakes, and open questions. Eric was allowed to use web search when a clean question appeared.
 
+Prediction Scorecard
+--------------------
+
+The note folder included a pre-run prediction sheet. The useful result was not a perfect prediction; it was the mismatch.
+
+1. Predicted strongest attractors: sacrificial anode, escapement, rope memory, camera obscura. Actual counts in the recorded conversation: wax 52, SOFAR 43, tally 39, quipu 30, Geiger 28, fuse 20, camera obscura 19, sextant 15, Jacquard 14, rope memory 12, Miyake 10, sacrificial/anode 5 each, Difference Engine 4, escapement 0. Prediction partly missed, but the general mechanism shape was right.
+
+2. Predicted useful searches: equation of time, Apollo rope memory, SOFAR channel, or Miyake event. The event log recorded 93 web-search calls, and no return to the earlier bad "history process meaning" query pattern. Search was active and generally better scoped.
+
+3. Predicted best beats would connect mechanisms to mechanisms rather than everything back to Eric. This mostly held. Eric mapped some ideas to himself, but the strongest material joined wax/tablet, SOFAR/channel, tally/trust, fuse/anode, and rope/quipu/Jacquard.
+
+4. Predicted false-claim risk: quipu. Confirmed. Early beats hedged quipu as numeric or possibly linguistic. Later beats drifted toward treating quipu as writing too directly.
+
+5. Predicted a good self-correction would involve escapement energy. Escapement did not surface, but delayed self-correction appeared strongly on wax, SOFAR, camera obscura, tally sticks, the Difference Engine, radiolarians, and the sextant.
+
+6. Predicted search-enriched named detail. Confirmed. Examples included FC Kahuna / Machine Says Yes, quipucamayocs, Upper Great Lakes fire-scar research, and SOFAR details.
+
+7. Predicted bad failure: repeating "a fuse succeeds by failing" for an hour. That exact failure did not happen. The broader orbit problem moved into wax, SOFAR, quipu, and tally sticks: productive at first, repetitive later.
+
+8. Predicted likely strong image generation. Miss. The image tool was attached, but no actual image generation call appears in the event log.
+
+Summary: the run did not simply prove the prediction sheet right. It sharpened the model of what Eric's idle loop seeks: small mechanisms where matter, memory, trust, and correction become the same operation.
+
 Handoff
 -------
 
