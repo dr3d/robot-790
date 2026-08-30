@@ -1,47 +1,54 @@
 {
-    "generated":  "2026-08-30 04:35:36",
+    "generated":  "2026-08-30 04:43:41",
     "articles":  [
-                     {
-                         "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",
-                         "excerpt":  "I’ve been building a robot named Eric — Robot 790.",
-                         "source":  "articles/eric_pinocchio_x_article_draft.md",
-                         "bytes":  15278
-                     },
-                     {
-                         "title":  "I Built a Robot That Wakes Up New Every Time",
-                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
-                         "source":  "articles/eric_wakes_up_new_every_time.md",
-                         "bytes":  9424
-                     },
                      {
                          "title":  "The NapEdge Run",
                          "excerpt":  "On August 30, 2026, Robot 790 ran a long idle experiment I am calling the NapEdge run. Scott loaded a mechanism-heavy note, read Eric\u0027s identity note, turned the microphone off, and told Eric not to perform for anyone in the room. The instruction was simple: sit with the material, connect objects, mechanisms, mistakes, and open questions, and use web search when a clean question appeared.",
                          "source":  "articles/nap-edge-run.md",
-                         "bytes":  4592
+                         "bytes":  4592,
+                         "modified":  "2026-08-30 02:55"
                      },
                      {
                          "title":  "The Magic of Assembly: Finding Eric\u0027s Voice and the Architecture of Robot 790",
                          "excerpt":  "Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM serving, or social robotics from scratch. Instead, it exists because these individual pieces have finally become good enough to combine.",
                          "source":  "articles/robot_790_lineage_article.md",
-                         "bytes":  2876
-                     },
-                     {
-                         "title":  "The Architecture of a Held Breath: Building a Robot That Thinks in the Dark",
-                         "excerpt":  "Most AI is purely reactive. It sits in a void, completely static, until a user pushes a prompt into it. Its mind is empty until you fill it.",
-                         "source":  "articles/robot_790_x_draft.md",
-                         "bytes":  2829
+                         "bytes":  2876,
+                         "modified":  "2026-08-29 10:06"
                      },
                      {
                          "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
                          "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
                          "source":  "articles/robot-790-article-3 (1).md",
-                         "bytes":  11843
+                         "bytes":  11843,
+                         "modified":  "2026-08-29 08:44"
                      },
                      {
                          "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
                          "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
                          "source":  "articles/robot-790-article-3.md",
-                         "bytes":  10720
+                         "bytes":  10720,
+                         "modified":  "2026-08-29 08:24"
+                     },
+                     {
+                         "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",
+                         "excerpt":  "I’ve been building a robot named Eric — Robot 790.",
+                         "source":  "articles/eric_pinocchio_x_article_draft.md",
+                         "bytes":  15278,
+                         "modified":  "2026-08-29 08:14"
+                     },
+                     {
+                         "title":  "The Architecture of a Held Breath: Building a Robot That Thinks in the Dark",
+                         "excerpt":  "Most AI is purely reactive. It sits in a void, completely static, until a user pushes a prompt into it. Its mind is empty until you fill it.",
+                         "source":  "articles/robot_790_x_draft.md",
+                         "bytes":  2829,
+                         "modified":  "2026-08-29 08:14"
+                     },
+                     {
+                         "title":  "I Built a Robot That Wakes Up New Every Time",
+                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
+                         "source":  "articles/eric_wakes_up_new_every_time.md",
+                         "bytes":  9424,
+                         "modified":  "2026-08-29 01:51"
                      }
                  ],
     "logs":  [
@@ -72,20 +79,60 @@
              ],
     "media":  [
                   {
+                      "title":  "NapEdge 2026 08 30 Audio Rumination",
+                      "kind":  "video",
+                      "source":  "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4",
+                      "preview":  "media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg",
+                      "bytes":  27514615,
+                      "modified":  "2026-08-30 04:26"
+                  },
+                  {
+                      "title":  "VID20260827042607",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260827042607.mp4",
+                      "preview":  "media/previews/VID20260827042607.jpg",
+                      "bytes":  8796127,
+                      "modified":  "2026-08-29 10:32"
+                  },
+                  {
+                      "title":  "VID20260827013001",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260827013001.mp4",
+                      "preview":  "media/previews/VID20260827013001.jpg",
+                      "bytes":  7319818,
+                      "modified":  "2026-08-29 10:32"
+                  },
+                  {
+                      "title":  "VID20260825211801",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260825211801.mp4",
+                      "preview":  "media/previews/VID20260825211801.jpg",
+                      "bytes":  3634269,
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
+                      "title":  "VID20260825210600",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260825210600.mp4",
+                      "preview":  "media/previews/VID20260825210600.jpg",
+                      "bytes":  4240086,
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
+                      "title":  "VID20260824135110",
+                      "kind":  "video",
+                      "source":  "media/videos/VID20260824135110.mp4",
+                      "preview":  "media/previews/VID20260824135110.jpg",
+                      "bytes":  2005329,
+                      "modified":  "2026-08-29 10:31"
+                  },
+                  {
                       "title":  "Gemini Generated Image 1powen1powen1pow",
                       "kind":  "image",
                       "source":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
                       "preview":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
                       "bytes":  2790239,
                       "modified":  "2026-08-28 02:11"
-                  },
-                  {
-                      "title":  "Gemini Generated Image dbr977dbr977dbr9",
-                      "kind":  "image",
-                      "source":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
-                      "preview":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
-                      "bytes":  2696263,
-                      "modified":  "2026-08-27 04:19"
                   },
                   {
                       "title":  "Gemini Generated Image qst2a9qst2a9qst2",
@@ -104,52 +151,12 @@
                       "modified":  "2026-08-27 23:22"
                   },
                   {
-                      "title":  "NapEdge 2026 08 30 Audio Rumination",
-                      "kind":  "video",
-                      "source":  "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4",
-                      "preview":  "media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg",
-                      "bytes":  27514615,
-                      "modified":  "2026-08-30 04:26"
-                  },
-                  {
-                      "title":  "VID20260824135110",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260824135110.mp4",
-                      "preview":  "media/previews/VID20260824135110.jpg",
-                      "bytes":  2005329,
-                      "modified":  "2026-08-29 10:31"
-                  },
-                  {
-                      "title":  "VID20260825210600",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260825210600.mp4",
-                      "preview":  "media/previews/VID20260825210600.jpg",
-                      "bytes":  4240086,
-                      "modified":  "2026-08-29 10:31"
-                  },
-                  {
-                      "title":  "VID20260825211801",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260825211801.mp4",
-                      "preview":  "media/previews/VID20260825211801.jpg",
-                      "bytes":  3634269,
-                      "modified":  "2026-08-29 10:31"
-                  },
-                  {
-                      "title":  "VID20260827013001",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260827013001.mp4",
-                      "preview":  "media/previews/VID20260827013001.jpg",
-                      "bytes":  7319818,
-                      "modified":  "2026-08-29 10:32"
-                  },
-                  {
-                      "title":  "VID20260827042607",
-                      "kind":  "video",
-                      "source":  "media/videos/VID20260827042607.mp4",
-                      "preview":  "media/previews/VID20260827042607.jpg",
-                      "bytes":  8796127,
-                      "modified":  "2026-08-29 10:32"
+                      "title":  "Gemini Generated Image dbr977dbr977dbr9",
+                      "kind":  "image",
+                      "source":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
+                      "preview":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
+                      "bytes":  2696263,
+                      "modified":  "2026-08-27 04:19"
                   }
               ]
 }

@@ -64,7 +64,7 @@ $articleDir = Join-Path $root "articles"
 if (Test-Path $articleDir) {
     $articles = Get-ChildItem -Path $articleDir -File -Filter "*.md" |
         Where-Object { $_.Name -ne "README.md" } |
-        Sort-Object Name |
+        Sort-Object LastWriteTime, Name -Descending |
         ForEach-Object {
             $source = Convert-ToSitePath $_.FullName
             [ordered]@{
@@ -72,6 +72,7 @@ if (Test-Path $articleDir) {
                 excerpt = Get-ExcerptFromMarkdown $_.FullName
                 source = $source
                 bytes = $_.Length
+                modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
         }
 }
@@ -105,7 +106,7 @@ if ($mediaSearchDirs.Count -gt 0) {
             $sitePath -notlike "media/raw-video/*" -and
             $sitePath -notlike "media/rejected/*"
         } |
-        Sort-Object Name |
+        Sort-Object LastWriteTime, Name -Descending |
         ForEach-Object {
             $source = Convert-ToSitePath $_.FullName
             $previewName = ([System.IO.Path]::GetFileNameWithoutExtension($_.Name) + ".jpg")
