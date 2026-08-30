@@ -83,6 +83,7 @@ constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
 constexpr uint32_t MOUTH_FRAME_MS = 80;
 constexpr uint32_t EYE_FRAME_MS = 50;
 constexpr size_t MOUTH_TEXT_MAX_CHARS = 96;
+constexpr uint32_t MOUTH_TEXT_FLASH_MS = 120;
 constexpr int16_t INTEGRATED_EYE_BAND_H = 120;
 constexpr int16_t INTEGRATED_MOUTH_BAND_H = 100;
 constexpr int16_t INTEGRATED_MOUTH_Y = FACE_LCD_HEIGHT - INTEGRATED_MOUTH_BAND_H;
@@ -94,6 +95,14 @@ constexpr int16_t INTEGRATED_HUMAN_MOUTH_Y_OFFSET = -2;
 uint16_t rgb(uint8_t r, uint8_t g, uint8_t b)
 {
   return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+}
+
+int8_t hexValue(char c)
+{
+  if (c >= '0' && c <= '9') return int8_t(c - '0');
+  if (c >= 'a' && c <= 'f') return int8_t(c - 'a' + 10);
+  if (c >= 'A' && c <= 'F') return int8_t(c - 'A' + 10);
+  return -1;
 }
 
 uint8_t displayRotationFor(bool flipped)
@@ -344,6 +353,7 @@ struct MouthState {
   bool overrideShape = false;
   bool textActive = false;
   bool textMarquee = false;
+  bool textFlash = false;
   bool talking = false;
   bool poseInitialized = false;
   uint32_t overrideUntil = 0;
@@ -353,6 +363,7 @@ struct MouthState {
   uint32_t talkUpdated = 0;
   float energy = 0.45f;
   float talkLevel = 0.0f;
+  uint16_t textColor = 0;
   char text[MOUTH_TEXT_MAX_CHARS + 1] = "";
   MouthPose poseFrom;
   MouthPose poseTo;
@@ -651,6 +662,34 @@ bool parseMouthShapeName(const char *text, MouthShape &shape)
   } else {
     return false;
   }
+  return true;
+}
+
+bool parseMouthTextColor(const char *text, uint16_t &color)
+{
+  if (text == nullptr || text[0] == '\0') return false;
+  if (text[0] == '#') {
+    int8_t hex[6];
+    for (uint8_t i = 0; i < 6; ++i) {
+      if (text[i + 1] == '\0') return false;
+      hex[i] = hexValue(text[i + 1]);
+      if (hex[i] < 0) return false;
+    }
+    color = rgb(uint8_t(hex[0] * 16 + hex[1]),
+                uint8_t(hex[2] * 16 + hex[3]),
+                uint8_t(hex[4] * 16 + hex[5]));
+    return text[7] == '\0';
+  }
+  if (equalsIgnoreCase(text, "cyan") || equalsIgnoreCase(text, "bluegreen")) color = rgb(44, 220, 232);
+  else if (equalsIgnoreCase(text, "white")) color = rgb(232, 250, 246);
+  else if (equalsIgnoreCase(text, "red")) color = rgb(255, 82, 82);
+  else if (equalsIgnoreCase(text, "green")) color = rgb(96, 211, 148);
+  else if (equalsIgnoreCase(text, "blue")) color = rgb(90, 170, 255);
+  else if (equalsIgnoreCase(text, "yellow")) color = rgb(255, 207, 90);
+  else if (equalsIgnoreCase(text, "pink")) color = rgb(255, 112, 190);
+  else if (equalsIgnoreCase(text, "orange")) color = rgb(255, 150, 72);
+  else if (equalsIgnoreCase(text, "purple")) color = rgb(180, 130, 255);
+  else return false;
   return true;
 }
 
@@ -1581,6 +1620,9 @@ void updateMouth(uint32_t now)
 {
   if (mouthState.textActive && mouthState.textUntil != 0 && deadlineReached(now, mouthState.textUntil)) {
     mouthState.textActive = false;
+    mouthState.textMarquee = false;
+    mouthState.textFlash = false;
+    mouthState.textColor = 0;
     mouthState.text[0] = '\0';
   }
   if (mouthState.overrideShape && mouthState.overrideUntil != 0 && deadlineReached(now, mouthState.overrideUntil)) {
@@ -1627,23 +1669,28 @@ void renderMouthText(uint32_t now)
   const int16_t charH = 8 * size;
   const int16_t textW = int16_t(len) * charW;
   const int16_t baselineY = mouthY + (screenH - charH) / 2;
+  const bool flashLit = !mouthState.textFlash ||
+                        (((now - mouthState.textStarted) / MOUTH_TEXT_FLASH_MS) % 2U) == 0;
+  const uint16_t textColor = mouthState.textColor == 0 ? rgb(232, 250, 246) : mouthState.textColor;
 
   g.fillScreen(BLACK);
   g.setTextWrap(false);
   g.setTextSize(size);
-  g.setTextColor(rgb(232, 250, 246));
+  g.setTextColor(flashLit ? textColor : rgb(38, 60, 64));
 
   if (mouthState.textMarquee && textW > maxTextW) {
     const int16_t travel = textW + screenW + padX * 2;
     const uint32_t elapsed = now - mouthState.textStarted;
     const int16_t x = screenW - int16_t((elapsed / 28U) % uint32_t(max(int16_t(1), travel)));
-    g.setCursor(x, baselineY);
-    g.print(text);
-    g.setCursor(x + travel, baselineY);
-    g.print(text);
+    if (flashLit || !mouthState.textFlash) {
+      g.setCursor(x, baselineY);
+      g.print(text);
+      g.setCursor(x + travel, baselineY);
+      g.print(text);
+    }
   } else if (textW <= maxTextW) {
     g.setCursor((screenW - textW) / 2, baselineY);
-    g.print(text);
+    if (flashLit || !mouthState.textFlash) g.print(text);
   } else {
     char clipped[MOUTH_TEXT_MAX_CHARS + 1];
     strncpy(clipped, text, sizeof(clipped) - 1);
@@ -1651,10 +1698,10 @@ void renderMouthText(uint32_t now)
     const size_t maxChars = size_t(maxTextW / max(int16_t(1), charW));
     if (strlen(clipped) > maxChars) clipped[maxChars] = '\0';
     g.setCursor(padX, baselineY);
-    g.print(clipped);
+    if (flashLit || !mouthState.textFlash) g.print(clipped);
   }
 
-  g.drawFastHLine(padX, mouthY + 8, screenW - padX * 2, rgb(54, 210, 230));
+  g.drawFastHLine(padX, mouthY + 8, screenW - padX * 2, mouthState.textFlash && flashLit ? textColor : rgb(54, 210, 230));
   g.drawFastHLine(padX, mouthY + screenH - 9, screenW - padX * 2, rgb(8, 72, 86));
   flushMouthFrame();
 }
@@ -2327,7 +2374,7 @@ void addState(JsonDocument &doc, uint32_t now)
   mouth["text_active"] = mouthState.textActive;
   if (mouthState.textActive) {
     mouth["text"] = mouthState.text;
-    mouth["text_mode"] = mouthState.textMarquee ? "marquee" : "center";
+    mouth["text_mode"] = mouthState.textFlash ? "flash" : (mouthState.textMarquee ? "marquee" : "center");
     mouth["text_remaining_ms"] = mouthState.textUntil == 0 ? 0 : (deadlineReached(now, mouthState.textUntil) ? 0 : mouthState.textUntil - now);
   }
 
@@ -2513,6 +2560,9 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
   if (jsonBool(mouth["release"], false) || jsonBool(mouth["auto"], false)) {
     mouthState.overrideShape = false;
     mouthState.textActive = false;
+    mouthState.textMarquee = false;
+    mouthState.textFlash = false;
+    mouthState.textColor = 0;
     mouthState.text[0] = '\0';
     mouthState.talking = false;
   }
@@ -2520,12 +2570,26 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
     const char *text = mouth["text"].as<const char *>();
     if (text == nullptr || text[0] == '\0') {
       mouthState.textActive = false;
+      mouthState.textMarquee = false;
+      mouthState.textFlash = false;
+      mouthState.textColor = 0;
       mouthState.text[0] = '\0';
       return true;
     }
     strncpy(mouthState.text, text, MOUTH_TEXT_MAX_CHARS);
     mouthState.text[MOUTH_TEXT_MAX_CHARS] = '\0';
-    mouthState.textMarquee = mouth["mode"].is<const char *>() && equalsIgnoreCase(mouth["mode"].as<const char *>(), "marquee");
+    const char *mode = mouth["mode"].is<const char *>() ? mouth["mode"].as<const char *>() : "";
+    mouthState.textMarquee = equalsIgnoreCase(mode, "marquee") || equalsIgnoreCase(mode, "scroll");
+    mouthState.textFlash = equalsIgnoreCase(mode, "flash") || equalsIgnoreCase(mode, "blink");
+    mouthState.textColor = 0;
+    if (mouth["color"].is<const char *>()) {
+      uint16_t color;
+      if (!parseMouthTextColor(mouth["color"].as<const char *>(), color)) {
+        sendError("unknown mouth text color");
+        return false;
+      }
+      mouthState.textColor = color;
+    }
     mouthState.textStarted = now;
     mouthState.textActive = true;
     mouthState.talking = false;

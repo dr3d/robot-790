@@ -26,7 +26,7 @@ def test_record_audio_snapshot_returns_picture_mp4(monkeypatch, tmp_path) -> Non
     image_path.parent.mkdir(parents=True)
     image_path.write_bytes(b"fake image")
 
-    def fake_convert(audio_path, output_path, selected_image_path, repo_root):
+    def fake_convert(audio_path, output_path, selected_image_path, repo_root, **_kwargs):
         assert audio_path.suffix == ".webm"
         assert selected_image_path == image_path
         assert repo_root == tmp_path
@@ -49,6 +49,69 @@ def test_record_audio_snapshot_returns_picture_mp4(monkeypatch, tmp_path) -> Non
     assert result["raw_latest"] == "logs/audio/latest-sts-audio-source.webm"
     assert result["image_filename"] == "last-image.png"
     assert (tmp_path / result["latest"]).read_bytes() == b"fake mp4"
+
+
+def test_record_audio_snapshot_prefers_inline_cover_image(monkeypatch, tmp_path) -> None:
+    selected_paths = []
+
+    def fake_convert(audio_path, output_path, selected_image_path, repo_root, **_kwargs):
+        selected_paths.append(selected_image_path)
+        output_path.write_bytes(b"fake mp4")
+        return {"status": "ok", "duration_s": 3.5}
+
+    monkeypatch.setattr(sts_page_server, "_make_picture_audio_mp4", fake_convert)
+
+    result = sts_page_server.record_audio_snapshot(
+        b"fake webm",
+        "audio/webm",
+        repo_root=tmp_path,
+        image_filename="older-generated-image.png",
+        cover_image=b"fake jpeg",
+        cover_image_mime="image/jpeg",
+        cover_image_name="front-of-recording.jpg",
+    )
+
+    assert selected_paths
+    selected = selected_paths[0]
+    assert selected.name.endswith("-sts-audio-cover.jpg")
+    assert selected.read_bytes() == b"fake jpeg"
+    assert (tmp_path / "logs" / "audio" / "latest-sts-audio-cover.jpg").read_bytes() == b"fake jpeg"
+    assert result["image_filename"] == selected.name
+    assert result["cover_source"] == "sensing_eye"
+
+
+def test_record_audio_snapshot_passes_caption_events(monkeypatch, tmp_path) -> None:
+    captured = {}
+
+    def fake_convert(audio_path, output_path, selected_image_path, repo_root, **kwargs):
+        captured.update(kwargs)
+        output_path.write_bytes(b"fake mp4")
+        return {"status": "ok", "duration_s": 4.0, "captioned": True}
+
+    monkeypatch.setattr(sts_page_server, "_make_picture_audio_mp4", fake_convert)
+
+    result = sts_page_server.record_audio_snapshot(
+        b"fake webm",
+        "audio/webm",
+        repo_root=tmp_path,
+        captions=[{"speaker": "Robot 790", "start_ms": 1200, "text": "hello tiny stage"}],
+    )
+
+    assert captured["captions"] == [{"speaker": "Robot 790", "start_ms": 1200, "text": "hello tiny stage"}]
+    assert result["captioned"] is True
+    assert result["caption_events"] == 1
+
+
+def test_recording_caption_cards_split_short_word_groups(monkeypatch) -> None:
+    monkeypatch.setenv("ROBOT_790_CAPTION_WORDS_PER_CARD", "2")
+
+    cards = sts_page_server._recording_caption_cards(
+        [{"speaker": "Robot 790", "start_ms": 1000, "text": "one two three four five"}],
+        duration_s=5.0,
+    )
+
+    assert [card[2] for card in cards] == ["one two", "three four", "five"]
+    assert cards[0][0] < cards[0][1] <= cards[1][0]
 
 
 def test_recording_audio_filter_can_trim_silence(monkeypatch) -> None:

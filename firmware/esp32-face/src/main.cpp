@@ -47,6 +47,7 @@ constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
 constexpr uint8_t MOUTH_TEXT_MAX = 96;
 constexpr uint32_t MOUTH_TEXT_FRAME_MS = 50;
 constexpr uint8_t MOUTH_TEXT_MARQUEE_MS_PER_PX = 12;
+constexpr uint32_t MOUTH_TEXT_FLASH_MS = 120;
 constexpr float API_NORMALIZED_GAZE_X_MM = 190.0f;
 constexpr float API_NORMALIZED_GAZE_Y_MM = 110.0f;
 constexpr float API_NORMALIZED_GAZE_Z_MM = 360.0f;
@@ -332,6 +333,13 @@ uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
   return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
+int8_t hexValue(char c) {
+  if (c >= '0' && c <= '9') return int8_t(c - '0');
+  if (c >= 'a' && c <= 'f') return int8_t(c - 'a' + 10);
+  if (c >= 'A' && c <= 'F') return int8_t(c - 'A' + 10);
+  return -1;
+}
+
 uint8_t chanR(uint16_t c) { return (c >> 8) & 0xF8; }
 uint8_t chanG(uint16_t c) { return (c >> 3) & 0xFC; }
 uint8_t chanB(uint16_t c) { return (c << 3) & 0xF8; }
@@ -607,6 +615,33 @@ bool parseMouthShapeName(const char *text, MouthShape &shape) {
   return true;
 }
 
+bool parseMouthTextColor(const char *text, uint16_t &color) {
+  if (text == nullptr || text[0] == '\0') return false;
+  if (text[0] == '#') {
+    int8_t hex[6];
+    for (uint8_t i = 0; i < 6; ++i) {
+      if (text[i + 1] == '\0') return false;
+      hex[i] = hexValue(text[i + 1]);
+      if (hex[i] < 0) return false;
+    }
+    color = rgb(uint8_t(hex[0] * 16 + hex[1]),
+                uint8_t(hex[2] * 16 + hex[3]),
+                uint8_t(hex[4] * 16 + hex[5]));
+    return text[7] == '\0';
+  }
+  if (equalsIgnoreCase(text, "cyan") || equalsIgnoreCase(text, "bluegreen")) color = rgb(44, 220, 232);
+  else if (equalsIgnoreCase(text, "white")) color = rgb(232, 250, 246);
+  else if (equalsIgnoreCase(text, "red")) color = rgb(255, 82, 82);
+  else if (equalsIgnoreCase(text, "green")) color = rgb(96, 211, 148);
+  else if (equalsIgnoreCase(text, "blue")) color = rgb(90, 170, 255);
+  else if (equalsIgnoreCase(text, "yellow")) color = rgb(255, 207, 90);
+  else if (equalsIgnoreCase(text, "pink")) color = rgb(255, 112, 190);
+  else if (equalsIgnoreCase(text, "orange")) color = rgb(255, 150, 72);
+  else if (equalsIgnoreCase(text, "purple")) color = rgb(180, 130, 255);
+  else return false;
+  return true;
+}
+
 struct MouthPose {
   MouthPose() = default;
   MouthPose(float openValue, float widthValue, float curveValue, float skewValue,
@@ -857,6 +892,7 @@ struct MouthState {
   bool talking = false;
   bool textMode = false;
   bool textMarquee = false;
+  bool textFlash = false;
   bool poseInitialized = false;
   uint32_t overrideUntil = 0;
   uint32_t textUntil = 0;
@@ -865,6 +901,7 @@ struct MouthState {
   uint32_t talkUpdated = 0;
   float energy = 0.45f;
   float talkLevel = 0.0f;
+  uint16_t textColor = 0;
   char text[MOUTH_TEXT_MAX] = {};
   MouthPose poseFrom;
   MouthPose poseTo;
@@ -2048,6 +2085,10 @@ void renderEye(bool leftEye, uint32_t now) {
 void updateMouth(uint32_t now) {
   if (mouthState.textMode && mouthState.textUntil != 0 && deadlineReached(now, mouthState.textUntil)) {
     mouthState.textMode = false;
+    mouthState.textMarquee = false;
+    mouthState.textFlash = false;
+    mouthState.textColor = 0;
+    mouthState.text[0] = '\0';
   }
   if (mouthState.overrideShape && mouthState.overrideUntil != 0 && deadlineReached(now, mouthState.overrideUntil)) {
     mouthState.overrideShape = false;
@@ -2066,6 +2107,12 @@ bool mouthTextActive(uint32_t now) {
   if (!mouthState.textMode) return false;
   if (mouthState.textUntil != 0 && deadlineReached(now, mouthState.textUntil)) {
     mouthState.textMode = false;
+    mouthState.textMarquee = false;
+    mouthState.textFlash = false;
+    mouthState.textColor = 0;
+    mouthState.textUntil = 0;
+    mouthState.textStarted = 0;
+    mouthState.text[0] = '\0';
     return false;
   }
   return mouthState.text[0] != '\0';
@@ -2074,12 +2121,14 @@ bool mouthTextActive(uint32_t now) {
 void clearMouthText() {
   mouthState.textMode = false;
   mouthState.textMarquee = false;
+  mouthState.textFlash = false;
+  mouthState.textColor = 0;
   mouthState.textUntil = 0;
   mouthState.textStarted = 0;
   mouthState.text[0] = '\0';
 }
 
-void setMouthText(const char *text, bool marquee, uint32_t holdMs, uint32_t now) {
+void setMouthText(const char *text, bool marquee, bool flash, uint16_t color, uint32_t holdMs, uint32_t now) {
   size_t out = 0;
   const char *source = text == nullptr ? "" : text;
   while (*source != '\0' && out < MOUTH_TEXT_MAX - 1) {
@@ -2090,6 +2139,8 @@ void setMouthText(const char *text, bool marquee, uint32_t holdMs, uint32_t now)
   mouthState.text[out] = '\0';
   mouthState.textMode = out > 0;
   mouthState.textMarquee = marquee;
+  mouthState.textFlash = flash;
+  mouthState.textColor = color;
   mouthState.textStarted = now;
   mouthState.textUntil = holdMs == 0 ? 0 : now + holdMs;
   mouthState.overrideShape = false;
@@ -2393,8 +2444,11 @@ void drawMouthTextPanel(Adafruit_GFX &g, int16_t w, int16_t h, uint32_t now) {
   const uint16_t bg = rgb(1, 5, 9);
   const uint16_t panel = rgb(7, 18, 25);
   const uint16_t line = rgb(30, 110, 128);
-  const uint16_t glow = rgb(44, 220, 232);
   const uint16_t dim = rgb(10, 58, 74);
+  const bool flashLit = !mouthState.textFlash ||
+                        (((now - mouthState.textStarted) / MOUTH_TEXT_FLASH_MS) % 2U) == 0;
+  const uint16_t glow = mouthState.textColor == 0 ? rgb(44, 220, 232) : mouthState.textColor;
+  const uint16_t textColor = flashLit ? glow : dim;
   const int16_t panelX = 8;
   const int16_t panelY = maxi16(10, h / 2 - 44);
   const int16_t panelW = w - 16;
@@ -2404,7 +2458,7 @@ void drawMouthTextPanel(Adafruit_GFX &g, int16_t w, int16_t h, uint32_t now) {
 
   g.fillScreen(bg);
   g.fillRoundRect(panelX, panelY, panelW, panelH, 16, panel);
-  g.drawRoundRect(panelX, panelY, panelW, panelH, 16, line);
+  g.drawRoundRect(panelX, panelY, panelW, panelH, 16, mouthState.textFlash && flashLit ? glow : line);
   g.drawFastHLine(panelX + 18, panelY + panelH - 12, panelW - 36, dim);
 
   const int16_t y = panelY + (panelH - textH) / 2;
@@ -2415,7 +2469,9 @@ void drawMouthTextPanel(Adafruit_GFX &g, int16_t w, int16_t h, uint32_t now) {
     const int16_t offset = int16_t((elapsed / MOUTH_TEXT_MARQUEE_MS_PER_PX) % uint32_t(maxi16(1, travel)));
     x = panelX + panelW + 18 - offset;
   }
-  drawClippedMouthText(g, text, x, y, size, glow, clipX, clipW);
+  if (flashLit || !mouthState.textFlash) {
+    drawClippedMouthText(g, text, x, y, size, textColor, clipX, clipW);
+  }
 }
 
 void renderMouth(uint32_t now) {
@@ -3620,6 +3676,7 @@ void addState(JsonDocument &doc, uint32_t now) {
   if (mouthState.textMode) {
     mouth["text"] = mouthState.text;
     mouth["text_marquee"] = mouthState.textMarquee;
+    mouth["text_effect"] = mouthState.textFlash ? "flash" : (mouthState.textMarquee ? "marquee" : "center");
   }
 #if REACHY_MOUTH_STATUS_DISPLAY
   mouth["display_role"] = "status";
@@ -3889,11 +3946,19 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
   if (mouth["text"].is<const char *>()) {
     const char *mode = mouth["mode"].is<const char *>() ? mouth["mode"].as<const char *>() : "";
     const bool marquee = equalsIgnoreCase(mode, "marquee") || equalsIgnoreCase(mode, "scroll");
+    const bool flash = equalsIgnoreCase(mode, "flash") || equalsIgnoreCase(mode, "blink");
+    uint16_t color = 0;
+    if (mouth["color"].is<const char *>()) {
+      if (!parseMouthTextColor(mouth["color"].as<const char *>(), color)) {
+        sendError("unknown mouth text color");
+        return false;
+      }
+    }
     const uint32_t holdMs = jsonMilliseconds(
       mouth["duration_ms"],
       jsonMs(mouth["duration"], jsonMs(durationValue, API_DEFAULT_MOUTH_MS))
     );
-    setMouthText(mouth["text"].as<const char *>(), marquee, holdMs, now);
+    setMouthText(mouth["text"].as<const char *>(), marquee, flash, color, holdMs, now);
     return true;
   }
   if (mouth["style"].is<const char *>()) {

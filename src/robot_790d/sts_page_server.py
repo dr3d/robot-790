@@ -7,6 +7,8 @@ import os
 import re
 import subprocess
 from datetime import datetime
+from email import policy
+from email.parser import BytesParser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -187,11 +189,18 @@ class StsPageHandler(SimpleHTTPRequestHandler):
 
     def _handle_audio_record(self) -> None:
         try:
-            content = self._read_binary_body(max_bytes=250 * 1024 * 1024)
+            content, mime_type, image_filename, cover_image, cover_image_mime, cover_image_name, captions = (
+                self._read_audio_record_body(max_bytes=250 * 1024 * 1024)
+            )
             result = record_audio_snapshot(
                 content,
-                self.headers.get("Content-Type") or "",
+                mime_type,
                 image_filename=self.headers.get("X-Robot-790-Image-Filename") or "",
+                form_image_filename=image_filename,
+                cover_image=cover_image,
+                cover_image_mime=cover_image_mime,
+                cover_image_name=cover_image_name,
+                captions=captions,
             )
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
@@ -358,6 +367,65 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             raise ValueError("Recording is too large.")
         return self.rfile.read(length)
 
+    def _read_audio_record_body(
+        self,
+        max_bytes: int,
+    ) -> tuple[bytes, str, str, bytes, str, str, list[dict[str, object]]]:
+        content_type = self.headers.get("Content-Type") or ""
+        if not content_type.lower().startswith("multipart/form-data"):
+            return (
+                self._read_binary_body(max_bytes),
+                content_type,
+                "",
+                b"",
+                "",
+                "",
+                [],
+            )
+
+        body = self._read_binary_body(max_bytes)
+        header = f"Content-Type: {content_type}\r\nMIME-Version: 1.0\r\n\r\n".encode("utf-8")
+        message = BytesParser(policy=policy.default).parsebytes(header + body)
+        if not message.is_multipart():
+            raise ValueError("Invalid recording form upload.")
+
+        audio = b""
+        audio_mime = ""
+        image_filename = ""
+        cover_image = b""
+        cover_image_mime = ""
+        cover_image_name = ""
+        captions: list[dict[str, object]] = []
+        for part in message.iter_parts():
+            if part.get_content_disposition() != "form-data":
+                continue
+            field_name = str(part.get_param("name", header="content-disposition") or "")
+            payload = part.get_payload(decode=True) or b""
+            if field_name == "audio":
+                audio = payload
+                audio_mime = part.get_content_type()
+            elif field_name == "cover_image":
+                cover_image = payload
+                cover_image_mime = part.get_content_type()
+                cover_image_name = str(part.get_filename() or "")
+            elif field_name == "image_filename":
+                image_filename = payload.decode(part.get_content_charset() or "utf-8", errors="replace").strip()
+            elif field_name == "captions":
+                caption_text = payload.decode(part.get_content_charset() or "utf-8", errors="replace").strip()
+                captions = _parse_recording_captions(caption_text)
+
+        if not audio:
+            raise ValueError("Nothing to record.")
+        return (
+            audio,
+            audio_mime or "audio/webm",
+            image_filename,
+            cover_image,
+            cover_image_mime,
+            cover_image_name,
+            captions,
+        )
+
     def _send_json(self, status_code: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status_code)
@@ -396,6 +464,14 @@ def _env_float(name: str, default: float) -> float:
 
 def _bounded_float_env(name: str, default: float, *, minimum: float, maximum: float) -> float:
     value = _env_float(name, default)
+    return max(minimum, min(maximum, value))
+
+
+def _bounded_int_env(name: str, default: int, *, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.getenv(name, ""))
+    except ValueError:
+        value = default
     return max(minimum, min(maximum, value))
 
 
@@ -450,6 +526,11 @@ def record_audio_snapshot(
     repo_root: Path | None = None,
     *,
     image_filename: str = "",
+    form_image_filename: str = "",
+    cover_image: bytes = b"",
+    cover_image_mime: str = "",
+    cover_image_name: str = "",
+    captions: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     if not content:
         raise ValueError("Nothing to record.")
@@ -466,12 +547,21 @@ def record_audio_snapshot(
     raw_path.write_bytes(content)
     raw_latest_path.write_bytes(content)
 
-    image_path = _selected_recording_image(root, image_filename)
+    image_path = _selected_recording_cover_image(
+        root,
+        audio_dir,
+        timestamp,
+        cover_image=cover_image,
+        cover_image_mime=cover_image_mime,
+        cover_image_name=cover_image_name,
+        image_filename=image_filename or form_image_filename,
+    )
     mp4_filename = f"{timestamp}-sts-audio-picture.mp4"
     mp4_latest_name = "latest-sts-audio-picture.mp4"
     mp4_path = audio_dir / mp4_filename
     mp4_latest_path = audio_dir / mp4_latest_name
-    conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root)
+    safe_captions = _normalize_recording_captions(captions or [])
+    conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
     if conversion.get("status") != "ok":
         return {
             "status": "error",
@@ -500,9 +590,46 @@ def record_audio_snapshot(
         "mime_type": mime_type or "application/octet-stream",
         "image_filename": image_path.name,
         "image_path": str(image_path),
+        "cover_source": "sensing_eye" if cover_image else "generated_or_placeholder",
         "duration_s": conversion.get("duration_s"),
         "trimmed_silence": conversion.get("trimmed_silence", False),
+        "captioned": bool(safe_captions) and bool(conversion.get("captioned", False)),
+        "caption_events": len(safe_captions),
     }
+
+
+def _parse_recording_captions(value: str) -> list[dict[str, object]]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return _normalize_recording_captions(parsed)
+
+
+def _normalize_recording_captions(captions: list[dict[str, object]]) -> list[dict[str, object]]:
+    normalized: list[dict[str, object]] = []
+    for item in captions[:800]:
+        if not isinstance(item, dict):
+            continue
+        text = re.sub(r"\s+", " ", str(item.get("text") or "")).strip()
+        if not text:
+            continue
+        try:
+            start_ms = int(float(item.get("start_ms") or 0))
+        except (TypeError, ValueError):
+            start_ms = 0
+        normalized.append(
+            {
+                "speaker": re.sub(r"\s+", " ", str(item.get("speaker") or "Robot 790")).strip()[:40],
+                "start_ms": max(0, start_ms),
+                "text": text[:500],
+            }
+        )
+    return sorted(normalized, key=lambda entry: int(entry["start_ms"]))
 
 
 def recorded_audio_path(filename: str, repo_root: Path | None = None) -> Path:
@@ -546,6 +673,63 @@ def _selected_recording_image(repo_root: Path, image_filename: str = "") -> Path
     return _write_recording_placeholder(repo_root)
 
 
+def _selected_recording_cover_image(
+    repo_root: Path,
+    audio_dir: Path,
+    timestamp: str,
+    *,
+    cover_image: bytes = b"",
+    cover_image_mime: str = "",
+    cover_image_name: str = "",
+    image_filename: str = "",
+) -> Path:
+    if cover_image:
+        cover_path = _write_recording_cover_image(
+            audio_dir,
+            timestamp,
+            cover_image,
+            mime_type=cover_image_mime,
+            original_name=cover_image_name,
+        )
+        if _is_ffmpeg_image(cover_path):
+            return cover_path
+    return _selected_recording_image(repo_root, image_filename)
+
+
+def _write_recording_cover_image(
+    audio_dir: Path,
+    timestamp: str,
+    content: bytes,
+    *,
+    mime_type: str = "",
+    original_name: str = "",
+) -> Path:
+    extension = _cover_image_extension(mime_type, original_name)
+    if not extension:
+        raise ValueError("Recording cover image must be png, jpg, jpeg, or webp.")
+    cover_filename = f"{timestamp}-sts-audio-cover{extension}"
+    latest_filename = f"latest-sts-audio-cover{extension}"
+    cover_path = audio_dir / cover_filename
+    latest_path = audio_dir / latest_filename
+    cover_path.write_bytes(content)
+    latest_path.write_bytes(content)
+    return cover_path
+
+
+def _cover_image_extension(mime_type: str = "", original_name: str = "") -> str:
+    value = mime_type.split(";", 1)[0].strip().lower()
+    if value in {"image/jpeg", "image/jpg"}:
+        return ".jpg"
+    if value == "image/png":
+        return ".png"
+    if value == "image/webp":
+        return ".webp"
+    suffix = Path(_safe_media_filename(original_name)).suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".webp"}:
+        return ".jpg" if suffix == ".jpeg" else suffix
+    return ""
+
+
 def _is_ffmpeg_image(path: Path) -> bool:
     return path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
 
@@ -575,8 +759,11 @@ def _make_picture_audio_mp4(
     output_path: Path,
     image_path: Path,
     repo_root: Path,
+    *,
+    captions: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     temp_audio = output_path.with_name(f"{output_path.stem}.tmp.m4a")
+    temp_captions = output_path.with_name(f"{output_path.stem}.captions.ass")
     trimmed = False
     try:
         audio_filter = _recording_audio_filter(trim_silence=True)
@@ -639,6 +826,12 @@ def _make_picture_audio_mp4(
             return {"status": "error", "error": f"{exc}; fallback failed: {fallback_exc}"}
 
     try:
+        captioned = _write_recording_caption_file(temp_captions, captions or [], duration)
+        vf = "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black"
+        if captioned:
+            vf = f"{vf},fps=24,ass=filename={_ffmpeg_filter_path(temp_captions, repo_root)}"
+        else:
+            vf = f"{vf},fps=1"
         _run_ffmpeg(
             [
                 "-y",
@@ -651,11 +844,11 @@ def _make_picture_audio_mp4(
                 "-t",
                 f"{duration:.3f}",
                 "-vf",
-                "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black,fps=1",
+                vf,
                 "-c:v",
                 "libx264",
                 "-preset",
-                "veryslow",
+                "ultrafast",
                 "-tune",
                 "stillimage",
                 "-profile:v",
@@ -675,12 +868,21 @@ def _make_picture_audio_mp4(
             ],
             repo_root,
         )
-        return {"status": "ok", "duration_s": round(duration, 3), "trimmed_silence": trimmed}
+        return {
+            "status": "ok",
+            "duration_s": round(duration, 3),
+            "trimmed_silence": trimmed,
+            "captioned": captioned,
+        }
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         return {"status": "error", "error": str(exc)}
     finally:
         try:
             temp_audio.unlink()
+        except FileNotFoundError:
+            pass
+        try:
+            temp_captions.unlink()
         except FileNotFoundError:
             pass
 
@@ -700,6 +902,106 @@ def _recording_audio_filter(*, trim_silence: bool) -> str:
         )
         filters.extend([edge_trim, "areverse", edge_trim, "areverse"])
     return ",".join(filters)
+
+
+def _write_recording_caption_file(path: Path, captions: list[dict[str, object]], duration_s: float) -> bool:
+    if not captions or not _audio_recording_captions_enabled():
+        return False
+    cards = _recording_caption_cards(captions, duration_s)
+    if not cards:
+        return False
+    lines = [
+        "[Script Info]",
+        "ScriptType: v4.00+",
+        "PlayResX: 512",
+        "PlayResY: 512",
+        "WrapStyle: 2",
+        "ScaledBorderAndShadow: yes",
+        "",
+        "[V4+ Styles]",
+        (
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, "
+            "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, "
+            "Shadow, Alignment, MarginL, MarginR, MarginV, Encoding"
+        ),
+        (
+            "Style: Default,Segoe UI,38,&H00FFFFFF,&H000000FF,&H00100F0D,&HAA000000,"
+            "-1,0,0,0,100,100,0,0,1,5,2,2,36,36,46,1"
+        ),
+        "",
+        "[Events]",
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+    ]
+    for start_s, end_s, text in cards:
+        if end_s <= start_s:
+            continue
+        lines.append(
+            f"Dialogue: 0,{_ass_time(start_s)},{_ass_time(end_s)},Default,,0,0,0,,{_ass_escape(text)}"
+        )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True
+
+
+def _recording_caption_cards(captions: list[dict[str, object]], duration_s: float) -> list[tuple[float, float, str]]:
+    words_per_card = _bounded_int_env("ROBOT_790_CAPTION_WORDS_PER_CARD", 3, minimum=1, maximum=8)
+    offset_ms = _bounded_int_env("ROBOT_790_CAPTION_OFFSET_MS", -150, minimum=-3000, maximum=3000)
+    min_card_s = _bounded_float_env("ROBOT_790_CAPTION_MIN_CARD_S", 0.35, minimum=0.1, maximum=2.0)
+    max_card_s = _bounded_float_env("ROBOT_790_CAPTION_MAX_CARD_S", 1.4, minimum=0.2, maximum=4.0)
+    cards: list[tuple[float, float, str]] = []
+    sorted_captions = _normalize_recording_captions(captions)
+    for index, caption in enumerate(sorted_captions):
+        text = str(caption.get("text") or "").strip()
+        words = re.findall(r"\S+", text)
+        if not words:
+            continue
+        start_s = max(0.0, (int(caption["start_ms"]) + offset_ms) / 1000)
+        next_start_s = duration_s
+        if index + 1 < len(sorted_captions):
+            next_start_s = max(start_s + 0.2, (int(sorted_captions[index + 1]["start_ms"]) + offset_ms) / 1000)
+        chunk_count = max(1, (len(words) + words_per_card - 1) // words_per_card)
+        estimated_s = max(min_card_s, min(max_card_s * chunk_count, len(words) * 0.22))
+        span_s = max(min_card_s, min(next_start_s - start_s, estimated_s, duration_s - start_s))
+        if span_s <= 0:
+            continue
+        chunks = [" ".join(words[i : i + words_per_card]) for i in range(0, len(words), words_per_card)]
+        card_s = max(min_card_s, min(max_card_s, span_s / max(1, len(chunks))))
+        cursor = start_s
+        for chunk in chunks:
+            end_s = min(duration_s, cursor + card_s)
+            if end_s <= cursor:
+                break
+            cards.append((cursor, end_s, chunk))
+            cursor = end_s
+            if cursor >= start_s + span_s:
+                break
+    return cards[:1200]
+
+
+def _ffmpeg_filter_path(path: Path, repo_root: Path) -> str:
+    try:
+        value = path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        value = path.resolve().as_posix().replace(":", r"\:")
+    return "'" + value.replace("\\", r"\\").replace("'", r"\'") + "'"
+
+
+def _ass_escape(value: str) -> str:
+    return str(value).replace("\\", r"\\").replace("{", r"\{").replace("}", r"\}").replace("\n", r"\N")
+
+
+def _ass_time(seconds: float) -> str:
+    total_centiseconds = max(0, int(round(seconds * 100)))
+    centiseconds = total_centiseconds % 100
+    total_seconds = total_centiseconds // 100
+    secs = total_seconds % 60
+    minutes = (total_seconds // 60) % 60
+    hours = total_seconds // 3600
+    return f"{hours}:{minutes:02d}:{secs:02d}.{centiseconds:02d}"
+
+
+def _audio_recording_captions_enabled() -> bool:
+    value = os.getenv("ROBOT_790_AUDIO_CAPTIONS", "false").strip().lower()
+    return value not in {"0", "false", "no", "off"}
 
 
 def _audio_recording_trim_enabled() -> bool:
