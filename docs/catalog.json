@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-31 16:07:45",
+    "generated":  "2026-08-31 16:35:30",
     "articles":  [
                      {
                          "title":  "What Eric Has Taught Us So Far",
@@ -93,6 +93,18 @@
              ],
     "media":  [
                   {
+                      "title":  "The Robot Who Builds Himself Every Morning",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/The-Robot-Who-Builds-Himself-Every-Morning.mp4",
+                      "preview":  "media/previews/The-Robot-Who-Builds-Himself-Every-Morning.jpg",
+                      "banner_rank":  45,
+                      "bytes":  22108375,
+                      "date":  "2026-08-31 16:34",
+                      "modified":  "2026-08-31 16:34",
+                      "description":  "A NotebookLM-style podcast/video companion for the wake-up article. This one is the front-door version of the project: Eric starts new, receives a map made of notes and conversation, and still finds a stable character inside the hardware, prompts, receipts, and repeated morning reconstruction."
+                  },
+                  {
                       "title":  "The Desk Fan Was Innocent 2026-08-31 14:06:01",
                       "kind":  "video",
                       "role":  "video",
@@ -115,6 +127,17 @@
                       "date":  "2026-08-31 12:20",
                       "modified":  "2026-08-31 12:20",
                       "description":  "The first public Brain2 run: Erica/Vivian gets a second private lane that thinks about the person in the room while the main voice keeps talking. The transcript shows the main brain noticing the symptoms - a mouth that backchannels before the voice catches up - while the event log shows Brain2 generating person-lane questions and private mouth asides underneath."
+                  },
+                  {
+                      "title":  "20260831 041255 openai scott and eric right now 930a0faa",
+                      "kind":  "image",
+                      "role":  "image",
+                      "source":  "media/images/20260831-041255-openai-scott-and-eric-right-now-930a0faa.png",
+                      "preview":  "media/images/20260831-041255-openai-scott-and-eric-right-now-930a0faa.png",
+                      "banner_rank":  70,
+                      "bytes":  1313766,
+                      "date":  "2026-08-31 04:12",
+                      "modified":  "2026-08-31 04:12"
                   },
                   {
                       "title":  "The Robot Whose Personality Is Pure Boundary",
@@ -164,50 +187,6 @@
                       "modified":  "2026-08-30 11:30"
                   },
                   {
-                      "title":  "Eric S3 Face Affection 2026-08-29",
-                      "kind":  "image",
-                      "role":  "embodiment",
-                      "source":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
-                      "preview":  "media/images/Eric-S3-Face-Affection-2026-08-29.jpg",
-                      "banner_rank":  100,
-                      "bytes":  126825,
-                      "date":  "2026-08-29 00:00",
-                      "modified":  "2026-08-30 10:53"
-                  },
-                  {
-                      "title":  "Generated Image 2026-08-28 02:11",
-                      "kind":  "image",
-                      "role":  "generated-image",
-                      "source":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
-                      "preview":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
-                      "banner_rank":  60,
-                      "bytes":  2790239,
-                      "date":  "2026-08-28 02:11",
-                      "modified":  "2026-08-28 02:11"
-                  },
-                  {
-                      "title":  "Generated Image 2026-08-27 23:25",
-                      "kind":  "image",
-                      "role":  "generated-image",
-                      "source":  "media/images/Gemini_Generated_Image_qst2a9qst2a9qst2.jpg",
-                      "preview":  "media/images/Gemini_Generated_Image_qst2a9qst2a9qst2.jpg",
-                      "banner_rank":  60,
-                      "bytes":  696018,
-                      "date":  "2026-08-27 23:25",
-                      "modified":  "2026-08-27 23:25"
-                  },
-                  {
-                      "title":  "Generated Image 2026-08-27 23:22",
-                      "kind":  "image",
-                      "role":  "generated-image",
-                      "source":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
-                      "preview":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
-                      "banner_rank":  60,
-                      "bytes":  2934037,
-                      "date":  "2026-08-27 23:22",
-                      "modified":  "2026-08-27 23:22"
-                  },
-                  {
                       "title":  "Robot 790 Video 2026-08-27 04:26:07",
                       "kind":  "video",
                       "role":  "video",
@@ -217,17 +196,6 @@
                       "bytes":  8796127,
                       "date":  "2026-08-27 04:26",
                       "modified":  "2026-08-29 10:32"
-                  },
-                  {
-                      "title":  "Generated Image 2026-08-27 04:19",
-                      "kind":  "image",
-                      "role":  "generated-image",
-                      "source":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
-                      "preview":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",
-                      "banner_rank":  60,
-                      "bytes":  2696263,
-                      "date":  "2026-08-27 04:19",
-                      "modified":  "2026-08-27 04:19"
                   },
                   {
                       "title":  "Robot 790 Video 2026-08-27 01:30:01",

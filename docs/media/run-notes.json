@@ -8,6 +8,9 @@
   "media/videos/The_Robot_Whose_Personality_Is_Pure_Boundary.mp4": {
     "description": "A NotebookLM-style podcast/video companion to the boundary article. The run is useful because it reframes Eric's personality as an architecture of constraints, receipts, embodiment, and repeated tests, rather than a secret block of character text hidden in a prompt."
   },
+  "media/videos/The-Robot-Who-Builds-Himself-Every-Morning.mp4": {
+    "description": "A NotebookLM-style podcast/video companion for the wake-up article. This one is the front-door version of the project: Eric starts new, receives a map made of notes and conversation, and still finds a stable character inside the hardware, prompts, receipts, and repeated morning reconstruction."
+  },
   "media/videos/20260830-202855-sts-audio-picture.mp4": {
     "description": "This run catches two new organs arriving together: the wonder/search problem and input prosody. Eric explains that the wonder slider should become an itch queue instead of a prompt nudge, then calibrates the new voice-shape tags honestly: not a second transcript, but the undertone - loud, quiet, pitch, hit, pause - enough to read emphasis and skepticism without pretending it is precise measurement."
   },
