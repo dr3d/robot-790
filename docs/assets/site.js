@@ -5,6 +5,7 @@ const articleReader = document.querySelector("#article-reader");
 const articleReaderTitle = document.querySelector("#article-reader-title");
 const articleReaderBody = document.querySelector("#article-reader-body");
 const articleClose = document.querySelector("#article-close");
+const featuredArticleLink = document.querySelector("#featured-article-link");
 const mediaFeature = document.querySelector("#media-feature");
 const mediaCaption = document.querySelector("#media-caption");
 const mediaList = document.querySelector("#media-list");
@@ -156,6 +157,22 @@ function showArticles(articles) {
       }
     });
   });
+
+  if (featuredArticleLink) {
+    featuredArticleLink.addEventListener("click", (event) => {
+      const featureSource = featuredArticleLink.dataset.featureSource;
+      const featureIndex = featureSource
+        ? articles.findIndex((article) => article.source === featureSource)
+        : -1;
+      const targetIndex = featureIndex >= 0 ? featureIndex : 0;
+      const firstArticleButton = articleList.querySelector(`[data-read-article="${targetIndex}"]`);
+      if (!firstArticleButton) {
+        return;
+      }
+      event.preventDefault();
+      firstArticleButton.click();
+    });
+  }
 }
 
 function mediaButton(media, index) {

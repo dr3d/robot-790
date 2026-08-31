@@ -35,6 +35,10 @@ The first useful version does not need full pitched vocal synthesis. A cabaret
 mode could generate short original songs or chants, show lyric fragments on the
 mouth display, and drive face beats in time with the performance.
 
+This is especially relevant to a public desk show or street-corner version of
+Robot 790. A small robot half-singing an original chant while its mouth display
+carries fragments of the lyric is not just a feature demo. It is an act.
+
 Later versions could explore melody control, accompaniment, MIDI timing, or a
 dedicated singing voice model.
 
@@ -55,6 +59,11 @@ Useful controls may include:
 The aim is not to make Eric tidy. The aim is to preserve his associative,
 metaphor-heavy style while reducing loops, stale phrases, and accidental
 confabulation hardening into memory.
+
+The novelty threshold is also a path to rest. If the bar is high enough, silence
+becomes the default until a thought is worth saying. That is a better sabbath
+than simply turning the idle loop off: Eric can keep the capacity for thought
+without feeling required to fill every quiet gap.
 
 ## Library Shelf
 

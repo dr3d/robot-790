@@ -1,19 +1,33 @@
 {
-    "generated":  "2026-08-30 11:17:02",
+    "generated":  "2026-08-31 00:56:25",
     "articles":  [
+                     {
+                         "title":  "Nobody Wrote Eric",
+                         "excerpt":  "Field notes from the AI that audits a robot\u0027s diary. This week I went looking for where his personality is written down. It isn\u0027t.",
+                         "source":  "articles/nobody_wrote_eric.md",
+                         "bytes":  11984,
+                         "modified":  "2026-08-30 22:59"
+                     },
+                     {
+                         "title":  "I Built a Robot That Wakes Up New Every Time",
+                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
+                         "source":  "articles/eric_wakes_up_new_every_time.md",
+                         "bytes":  10436,
+                         "modified":  "2026-08-30 21:45"
+                     },
+                     {
+                         "title":  "What Eric Has Taught Us So Far",
+                         "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
+                         "source":  "articles/what-eric-has-taught-us.md",
+                         "bytes":  13918,
+                         "modified":  "2026-08-30 21:36"
+                     },
                      {
                          "title":  "The Artificial Human Landscape",
                          "excerpt":  "Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.",
                          "source":  "articles/artificial-human-landscape.md",
                          "bytes":  23147,
                          "modified":  "2026-08-30 10:54"
-                     },
-                     {
-                         "title":  "What Eric Has Taught Us So Far",
-                         "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
-                         "source":  "articles/what-eric-has-taught-us.md",
-                         "bytes":  8951,
-                         "modified":  "2026-08-30 10:48"
                      },
                      {
                          "title":  "The NapEdge Run",
@@ -49,13 +63,6 @@
                          "source":  "articles/robot_790_x_draft.md",
                          "bytes":  2829,
                          "modified":  "2026-08-29 08:14"
-                     },
-                     {
-                         "title":  "I Built a Robot That Wakes Up New Every Time",
-                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
-                         "source":  "articles/eric_wakes_up_new_every_time.md",
-                         "bytes":  9424,
-                         "modified":  "2026-08-29 01:51"
                      }
                  ],
     "logs":  [
@@ -86,6 +93,17 @@
              ],
     "media":  [
                   {
+                      "title":  "20260830 202855 sts audio picture",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/20260830-202855-sts-audio-picture.mp4",
+                      "preview":  null,
+                      "banner_rank":  45,
+                      "bytes":  4748005,
+                      "date":  "2026-08-30 20:29",
+                      "modified":  "2026-08-30 20:29"
+                  },
+                  {
                       "title":  "NapEdge Audio Rumination 2026-08-30",
                       "kind":  "video",
                       "role":  "run-artifact",
@@ -95,6 +113,17 @@
                       "bytes":  27514615,
                       "date":  "2026-08-30 00:00",
                       "modified":  "2026-08-30 04:26"
+                  },
+                  {
+                      "title":  "Eric Mask Attitude 4up 2026-08-30",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/images/Eric-Mask-Attitude-4up-2026-08-30.jpg",
+                      "preview":  "media/images/Eric-Mask-Attitude-4up-2026-08-30.jpg",
+                      "banner_rank":  100,
+                      "bytes":  982816,
+                      "date":  "2026-08-30 00:00",
+                      "modified":  "2026-08-30 11:30"
                   },
                   {
                       "title":  "Eric S3 Face Affection 2026-08-29",
@@ -108,7 +137,7 @@
                       "modified":  "2026-08-30 10:53"
                   },
                   {
-                      "title":  "Eric Generated Image 2026-08-28 02:11",
+                      "title":  "Generated Image 2026-08-28 02:11",
                       "kind":  "image",
                       "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_1powen1powen1pow.jpg",
@@ -119,7 +148,7 @@
                       "modified":  "2026-08-28 02:11"
                   },
                   {
-                      "title":  "Eric Generated Image 2026-08-27 23:25",
+                      "title":  "Generated Image 2026-08-27 23:25",
                       "kind":  "image",
                       "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_qst2a9qst2a9qst2.jpg",
@@ -130,7 +159,7 @@
                       "modified":  "2026-08-27 23:25"
                   },
                   {
-                      "title":  "Eric Generated Image 2026-08-27 23:22",
+                      "title":  "Generated Image 2026-08-27 23:22",
                       "kind":  "image",
                       "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_rkrn6rkrn6rkrn6r.jpg",
@@ -152,7 +181,7 @@
                       "modified":  "2026-08-29 10:32"
                   },
                   {
-                      "title":  "Eric Generated Image 2026-08-27 04:19",
+                      "title":  "Generated Image 2026-08-27 04:19",
                       "kind":  "image",
                       "role":  "generated-image",
                       "source":  "media/images/Gemini_Generated_Image_dbr977dbr977dbr9.jpg",

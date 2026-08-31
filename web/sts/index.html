@@ -714,6 +714,7 @@
             <option value="custom">Custom</option>
           </select>
           <button id="ttsApply">Apply</button>
+          <span class="toggle-row"><input id="llmVoiceTools" type="checkbox" checked> LLM voice tools</span>
           <button id="clearLog">Clear</button>
         </section>
 
@@ -814,6 +815,7 @@
     const chassisStopButton = document.querySelector("#chassisStop");
     const llmTools = document.querySelector("#llmTools");
     const llmChassisTools = document.querySelector("#llmChassisTools");
+    const llmVoiceTools = document.querySelector("#llmVoiceTools");
     const llmMemoryTools = document.querySelector("#llmMemoryTools");
     const llmWebSearchTools = document.querySelector("#llmWebSearchTools");
     const llmWebPageTools = document.querySelector("#llmWebPageTools");
@@ -902,6 +904,8 @@
     let audioRecordObjectUrl;
     let audioRecordStartedAt = 0;
     let audioRecordCaptions = [];
+    let audioRecordRolloverTimer = null;
+    let audioRecordStoppingForRollover = false;
     let playbackTime = 0;
     const audioFlushMs = 120;
     const minPlaybackBytes = 9600;
@@ -1036,6 +1040,9 @@
     const maxIdleLoadedNoteChars = 12000;
     const micQuietBufferResetMs = 15 * 60 * 1000;
     const micFreshnessCheckMs = 60 * 1000;
+    const logAutosaveMs = 2 * 60 * 1000;
+    const audioRecordRolloverMs = 12 * 60 * 1000;
+    const lastAutosavedLogText = new Map();
     const startupNoteFilenames = ["core/erics_memories.txt"];
     const ttsStylePresets = {
       neutral: "",
@@ -1087,6 +1094,42 @@
     let sensingTextName = "";
     let castPlaybackActive = false;
     let micPausedForCast = false;
+
+    const voiceTools = [
+      {
+        type: "function",
+        name: "set_voice",
+        description: (
+          "Change Robot 790's TTS voice or speaking style only when the user explicitly asks for a voice, " +
+          "speaker, accent, tone, mood, or delivery change. This affects future speech; do not call it for normal conversation."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            voice: {
+              type: "string",
+              enum: qwen3TtsVoices,
+              description: "Qwen3-TTS speaker preset."
+            },
+            preset: {
+              type: "string",
+              enum: Object.keys(ttsStylePresets),
+              description: "Built-in voice style preset."
+            },
+            instruct: {
+              type: "string",
+              maxLength: 240,
+              description: "Short custom TTS style instruction. Use only when the user asks for a style not covered by a preset."
+            },
+            neutral: {
+              type: "boolean",
+              description: "True clears the custom voice style and uses a neutral delivery."
+            }
+          },
+          additionalProperties: false
+        }
+      }
+    ];
 
     const faceTools = [
       {
@@ -1693,6 +1736,9 @@
       "Be compact, not clipped; prefer a complete useful answer over maximum brevity.",
       "Never say you lack a body; refer to your robot face/body as your hardware.",
       "You have a mouth display and a voice; do not say you have no mouth.",
+      "Use set_voice only when the user explicitly asks you to change your voice, speaker, accent, tone, mood, or delivery.",
+      "Never say you changed your voice unless set_voice succeeded.",
+      "If a user transcript includes [voice-shape: ...], treat it as a coarse sound timeline for the utterance: volume, pitch, pauses, and sharp hits. Use it as context, but do not quote it unless it matters.",
       "Treat saved build notes as inventory or plans unless a current tool result, user turn, or ambient state says a sensor is live.",
       "Do not present exact sensor states, faults, diagnostics, temperatures, voltages, dead zones, or measurements as verified unless they came from the current turn, current tool result, or ambient state.",
       "First-person body-feel may be poetic and present tense; the listener can understand it as Robot 790's inner life rather than calibrated telemetry.",
@@ -2058,7 +2104,8 @@
           ? "If recording is on, you may naturally know this session is being captured. Do not overperform or constantly mention it; let it lightly affect self-aware comments when relevant."
           : "If recording is off, do not claim the session is being recorded unless the user says another recorder is active.",
         `- Cast playback is ${castPlaybackActive ? "active" : "inactive"}.`,
-        `- Smart-home tools are ${llmSmartHomeTools?.checked ? "enabled" : "disabled"}.`
+        `- Smart-home tools are ${llmSmartHomeTools?.checked ? "enabled" : "disabled"}.`,
+        `- ${wonderSearchPolicyText()}`
       ].join("\n");
     }
 
@@ -2111,6 +2158,7 @@
         formatSensingTextForInstructions(),
         formatEmbodimentForInstructions(),
         formatRuntimeStateForInstructions(),
+        wonderSearchPolicyText(),
         performancePrivacy ? performancePrivacyInstructions() : "",
         baseSessionInstructions.join(" ")
       ]
@@ -2172,6 +2220,72 @@
 
     function saveTtsStyle() {
       localStorage.setItem(ttsStyleStorageKey, currentTtsInstruct());
+    }
+
+    function matchingTtsPresetName(instruct = currentTtsInstruct()) {
+      return Object.entries(ttsStylePresets)
+        .find(([, value]) => value === instruct)?.[0] || "custom";
+    }
+
+    function resolveTtsVoice(voice) {
+      const requested = String(voice || "").trim();
+      if (!requested) return "";
+      const matched = qwen3TtsVoices.find((name) => name.toLowerCase() === requested.toLowerCase());
+      if (!matched) {
+        throw new Error(`Unsupported voice: ${requested}.`);
+      }
+      return matched;
+    }
+
+    function setVoice(args = {}) {
+      args = args && typeof args === "object" ? args : {};
+      const hasVoice = Object.prototype.hasOwnProperty.call(args, "voice");
+      const hasPreset = Object.prototype.hasOwnProperty.call(args, "preset");
+      const hasInstruct = Object.prototype.hasOwnProperty.call(args, "instruct");
+      const neutral = Boolean(args.neutral);
+
+      if (hasVoice) {
+        const voice = resolveTtsVoice(args.voice);
+        if (voice) ttsVoice.value = voice;
+      }
+      if (neutral) {
+        ttsInstruct.value = "";
+        ttsPreset.value = "neutral";
+      }
+      if (hasPreset) {
+        const preset = String(args.preset || "").trim();
+        if (!Object.prototype.hasOwnProperty.call(ttsStylePresets, preset)) {
+          throw new Error(`Unsupported voice style preset: ${preset}.`);
+        }
+        ttsPreset.value = preset;
+        ttsInstruct.value = ttsStylePresets[preset] || "";
+      }
+      if (hasInstruct) {
+        ttsInstruct.value = String(args.instruct || "").trim().slice(0, 240);
+        ttsPreset.value = matchingTtsPresetName();
+      }
+      if (!hasVoice && !hasPreset && !hasInstruct && !neutral) {
+        return {
+          status: "ok",
+          tool: "set_voice",
+          voice: currentTtsVoice(),
+          preset: matchingTtsPresetName(),
+          instruct: currentTtsInstruct() || null,
+          changed: false,
+          connected: realtimeConnected()
+        };
+      }
+
+      updateSessionTtsStyle({ announce: true });
+      return {
+        status: "ok",
+        tool: "set_voice",
+        voice: currentTtsVoice(),
+        preset: matchingTtsPresetName(),
+        instruct: currentTtsInstruct() || null,
+        changed: true,
+        connected: realtimeConnected()
+      };
     }
 
     function currentIdleDrift() {
@@ -2360,6 +2474,23 @@
       return `${level}/10 hungry`;
     }
 
+    function wonderSearchPolicyText(level = currentIdleWonder()) {
+      const searchEnabled = llmWebSearchTools?.checked !== false;
+      if (!searchEnabled) {
+        return "Wonder search policy: web search tools are off. Do not claim you checked the web.";
+      }
+      if (level <= 0) {
+        return "Wonder search policy: wonder is off. Use search_web only for explicit lookup requests, weather/current facts, or high-risk freshness.";
+      }
+      if (level <= 3) {
+        return "Wonder search policy: sparse. Use search_web when the user asks to search or when a fresh/current fact clearly matters.";
+      }
+      if (level <= 7) {
+        return "Wonder search policy: curious. Treat uncertainty, named public topics, products, software, people, places, science, news, and dates as reasons to consider search_web before answering.";
+      }
+      return "Wonder search policy: hungry. When a user topic contains a live outside-world detail, an unfamiliar named thing, a factual claim worth checking, or a chance to learn one concrete new fact, prefer search_web before answering. Do not search for greetings, purely private feelings, simple definitions, or obvious local/session facts.";
+    }
+
     function loadIdleWonder() {
       const saved = Number(localStorage.getItem(idleWonderStorageKey));
       idleWonder.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "5";
@@ -2373,6 +2504,7 @@
     function updateIdleWonderUi() {
       idleWonderValue.textContent = idleWonderLabel();
       saveIdleWonder();
+      if (contextPanel?.open) renderContextMap();
     }
 
     function currentIdleSelfFocus() {
@@ -2455,6 +2587,8 @@
       } else {
         lines.push("Balance self-reference with outside material.");
       }
+
+      lines.push(wonderSearchPolicyText());
 
       if (performancePrivacy) {
         lines.push("Loaded notes and browser memory are not performance material unless their text was also supplied as current sensing-eye material or current spoken setup.");
@@ -2700,6 +2834,7 @@
     const toolPrefFields = [
       { key: "faceTools", element: () => llmTools, defaultValue: true },
       { key: "chassisTools", element: () => llmChassisTools, defaultValue: true },
+      { key: "voiceTools", element: () => llmVoiceTools, defaultValue: true },
       { key: "memoryTools", element: () => llmMemoryTools, defaultValue: true },
       { key: "webSearchTools", element: () => llmWebSearchTools, defaultValue: true },
       { key: "webPageTools", element: () => llmWebPageTools, defaultValue: true },
@@ -2817,19 +2952,24 @@
       }, 1400);
     }
 
+    async function recordLogSnapshot(source, content) {
+      const response = await fetch(new URL("/api/logs/record", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source, content })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
     async function recordLogPane(button, target, source) {
       const originalText = button.textContent;
       const text = target.textContent.trimEnd();
       try {
-        const response = await fetch(new URL("/api/logs/record", location.href), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source, content: text })
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || result.status === "error") {
-          throw new Error(result.error || `${response.status} ${response.statusText}`);
-        }
+        const result = await recordLogSnapshot(source, text);
         if (result.model) {
           log(events, `recorded ${source} model: ${result.model}`);
         }
@@ -2842,6 +2982,26 @@
       setTimeout(() => {
         button.textContent = originalText;
       }, 1400);
+    }
+
+    async function autosaveLogPane(target, source) {
+      const text = target.textContent.trimEnd();
+      if (!text || lastAutosavedLogText.get(source) === text) return;
+      const result = await recordLogSnapshot(source, text);
+      lastAutosavedLogText.set(source, text);
+      return result;
+    }
+
+    function autosaveSessionLogs(reason = "autosave") {
+      autosaveLogPane(conversation, "conversation").catch((error) => log(events, `${reason} conversation error: ${error.message}`));
+      autosaveLogPane(events, "events").catch((error) => log(events, `${reason} events error: ${error.message}`));
+    }
+
+    function beaconLogSnapshot(target, source) {
+      const text = target.textContent.trimEnd();
+      if (!text || lastAutosavedLogText.get(source) === text) return;
+      const body = JSON.stringify({ source, content: text });
+      navigator.sendBeacon?.(new URL("/api/logs/record", location.href), new Blob([body], { type: "application/json" }));
     }
 
     function noteConversationActivity() {
@@ -4517,9 +4677,8 @@
 
     function resetInputAudioBuffer(reason = "fresh ears") {
       if (!realtimeConnected()) return false;
-      send({ type: "input_audio_buffer.clear" });
       lastMicBufferResetAt = Date.now();
-      log(events, `mic input buffer cleared: ${reason}`);
+      log(events, `mic input reset marker: ${reason}`);
       return true;
     }
 
@@ -4551,7 +4710,10 @@
       );
       if (lastActivity && now - lastActivity >= micQuietBufferResetMs) {
         const minutes = Math.round((now - lastActivity) / 60000);
-        resetInputAudioBuffer(`quiet mic maintenance after ${minutes}m`);
+        resetMicFreshEars({ reason: `quiet mic maintenance after ${minutes}m` }).catch((error) => {
+          log(events, `mic fresh ears error: ${error.message}`);
+        });
+        return;
       }
       scheduleMicFreshnessCheck();
     }
@@ -5357,6 +5519,7 @@
       const toolSwitchText = [
         `Face tools: ${llmTools.checked ? "on" : "off"}`,
         `Chassis tools: ${llmChassisTools.checked ? "on" : "off"}`,
+        `Voice tools: ${llmVoiceTools.checked ? "on" : "off"}`,
         `Memory tools: ${llmMemoryTools.checked ? "on" : "off"}`,
         `Web search: ${llmWebSearchTools.checked ? "on" : "off"}`,
         `Web pages: ${llmWebPageTools.checked ? "on" : "off"}`,
@@ -5494,7 +5657,7 @@
         list.appendChild(item);
       });
       card.append(title, meta, list);
-      const snippet = contextSnippet(section.text);
+      const snippet = contextSnippet(section.text, { maxChars: contextSnippetLimit(section) });
       if (snippet) {
         const pre = document.createElement("div");
         pre.className = "context-snippet";
@@ -5532,13 +5695,19 @@
         .map(([key, count]) => `${labels.get(key)} (${count})`);
     }
 
-    function contextSnippet(text) {
+    function contextSnippetLimit(section) {
+      return section.name === "System" ? Infinity : 700;
+    }
+
+    function contextSnippet(text, { maxChars = 700 } = {}) {
       const lines = String(text || "")
         .split(/\n+/)
         .map((line) => line.trim())
         .filter(Boolean);
       if (!lines.length) return "";
-      return lines.slice(0, 8).join("\n").slice(0, 700);
+      const preview = Number.isFinite(maxChars) ? lines.slice(0, 8).join("\n") : lines.join("\n");
+      if (!Number.isFinite(maxChars) || preview.length <= maxChars) return preview;
+      return `${preview.slice(0, maxChars).replace(/\s+\S*$/, "")}\n[Context map preview clipped; full text is still sent.]`;
     }
 
     function contextMapText() {
@@ -5558,7 +5727,7 @@
         [...section.details, contextTermsLine(section.text)].filter(Boolean).forEach((detail) => {
           lines.push(`- ${detail}`);
         });
-        const snippet = contextSnippet(section.text);
+        const snippet = contextSnippet(section.text, { maxChars: contextSnippetLimit(section) });
         if (snippet) {
           lines.push("");
           lines.push("Snippet:");
@@ -6197,6 +6366,7 @@
 
     async function executeTool(name, rawArguments) {
       const args = parseToolArguments(rawArguments);
+      if (name === "set_voice") return setVoice(args);
       if (name === "set_robot_mode") return setFaceMode(args);
       if (name === "play_face_beat") return playFaceBeat(args);
       if (name === "set_face_mood") return setFaceMood(args);
@@ -6390,12 +6560,22 @@
       return `${label} updated.`;
     }
 
+    function voiceFollowupText(result) {
+      if (result?.status === "error") return "I could not change my voice.";
+      const voice = String(result?.voice || "Eric");
+      const preset = String(result?.preset || "custom");
+      if (preset === "neutral") return `Voice switched to ${voice}, neutral.`;
+      if (preset && preset !== "custom") return `Voice switched to ${voice}, ${preset}.`;
+      return `Voice switched to ${voice}.`;
+    }
+
     async function handleFunctionCall(event) {
       pendingToolCalls += 1;
       toolFollowupNeeded = true;
       if (event.name === "generate_image") clearImageToolProtection();
       try {
         const result = await executeTool(event.name, event.arguments);
+        if (event.name === "set_voice") toolFollowupExactText = voiceFollowupText(result);
         if (event.name === "set_chassis") toolFollowupExactText = chassisFollowupText(result);
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = memoryFollowupText(event.name, result);
@@ -6427,6 +6607,7 @@
           updateSessionTools();
         }
       } catch (error) {
+        if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
         if (event.name === "set_chassis") toolFollowupExactText = "I could not move.";
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = "I could not save that.";
@@ -6477,6 +6658,7 @@
 
     function updateSessionTools() {
       saveToolPrefs();
+      if (contextPanel?.open) renderContextMap();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       const enabledTools = enabledToolList();
       send({
@@ -6502,6 +6684,7 @@
 
     function enabledToolList() {
       return [
+        ...(llmVoiceTools?.checked ? voiceTools : []),
         ...(llmTools?.checked ? faceTools : []),
         ...(llmChassisTools?.checked ? chassisTools : []),
         ...(llmMemoryTools?.checked ? memoryTools : []),
@@ -6546,6 +6729,21 @@
       startAudioRecordButton.disabled = !supported || isRecording;
       stopAudioRecordButton.disabled = !isRecording;
       if (!supported) audioRecordStatus.textContent = "Browser recording is not supported.";
+    }
+
+    function clearAudioRecordRolloverTimer() {
+      if (audioRecordRolloverTimer) clearTimeout(audioRecordRolloverTimer);
+      audioRecordRolloverTimer = null;
+    }
+
+    function scheduleAudioRecordRollover() {
+      clearAudioRecordRolloverTimer();
+      if (!audioRecordingActive()) return;
+      audioRecordRolloverTimer = setTimeout(() => {
+        if (!audioRecordingActive()) return;
+        log(events, "audio recording rollover");
+        stopAudioRecording({ rollover: true });
+      }, audioRecordRolloverMs);
     }
 
     function recordingFilename() {
@@ -6663,6 +6861,9 @@
         if (event.data && event.data.size > 0) audioRecordChunks.push(event.data);
       });
       audioRecorder.addEventListener("stop", async () => {
+        const restartAfterStop = audioRecordStoppingForRollover && Boolean(micStream);
+        audioRecordStoppingForRollover = false;
+        clearAudioRecordRolloverTimer();
         const filename = recordingFilename();
         const blob = new Blob(audioRecordChunks, { type: audioRecorder.mimeType || "audio/webm" });
         audioRecordObjectUrl = URL.createObjectURL(blob);
@@ -6695,16 +6896,22 @@
         }
         updateAudioRecordButtons();
         updateSessionTools();
+        if (restartAfterStop) {
+          startAudioRecording().catch((error) => log(events, `audio recording rollover restart error: ${error.message}`));
+        }
       });
       audioRecorder.start(1000);
       audioRecordStatus.textContent = micStream ? "Recording Eric and mic." : "Recording Eric audio.";
       log(events, "audio recording started");
       updateAudioRecordButtons();
       updateSessionTools();
+      scheduleAudioRecordRollover();
     }
 
-    function stopAudioRecording() {
+    function stopAudioRecording({ rollover = false } = {}) {
       if (!audioRecorder || audioRecorder.state !== "recording") return;
+      audioRecordStoppingForRollover = Boolean(rollover);
+      clearAudioRecordRolloverTimer();
       audioRecordStatus.textContent = "Finalizing recording...";
       audioRecorder.stop();
       updateAudioRecordButtons();
@@ -6852,6 +7059,7 @@
         updateInputDraft(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.completed") {
         clearInputDraft();
+        if (event.voice_shape) log(events, `input prosody: ${event.voice_shape}`);
         const recorded = recordUserTranscript(event.transcript || "");
         if (!recorded.accepted) return;
         noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
@@ -7010,13 +7218,11 @@
 
     async function resetMicFreshEars({ reason = "manual fresh ears" } = {}) {
       if (!realtimeConnected()) return;
-      resetInputAudioBuffer(reason);
       if (!micStream) return;
       log(events, `mic fresh ears restart: ${reason}`);
       try {
         await stopMic({ reason });
         await sleepMs(200);
-        resetInputAudioBuffer(`${reason} after stop`);
         await startMic({ reason });
       } catch (error) {
         log(events, `mic fresh ears error: ${error.message}`);
@@ -7055,6 +7261,9 @@
       stopMicButton.disabled = false;
       syncMicPanelToMic();
       log(events, reason ? `mic started: ${reason}` : "mic started");
+      if (!audioRecordingActive()) {
+        startAudioRecording().catch((error) => log(events, `auto audio record error: ${error.message}`));
+      }
       scheduleMicFreshnessCheck();
     }
 
@@ -7165,6 +7374,7 @@
     });
     llmTools.addEventListener("change", updateSessionTools);
     llmChassisTools.addEventListener("change", updateSessionTools);
+    llmVoiceTools.addEventListener("change", updateSessionTools);
     llmMemoryTools.addEventListener("change", updateSessionTools);
     llmWebSearchTools.addEventListener("change", updateSessionTools);
     llmWebPageTools.addEventListener("change", updateSessionTools);
@@ -7195,6 +7405,7 @@
       updateIdleWonderUi();
       log(events, `idle wonder ${idleWonderLabel()}`);
     });
+    idleWonder.addEventListener("change", updateSessionTools);
     idleSelfFocus.addEventListener("input", () => {
       updateIdleSelfFocusUi();
       log(events, `idle self-focus ${idleSelfFocusLabel()}`);
@@ -7261,6 +7472,10 @@
     showEssentialsButton.addEventListener("click", showEssentialPanels);
     collapsePanelsButton.addEventListener("click", collapseAllPanels);
     window.addEventListener("resize", scheduleLogPaneHeightUpdate);
+    window.addEventListener("pagehide", () => {
+      beaconLogSnapshot(conversation, "conversation");
+      beaconLogSnapshot(events, "events");
+    });
     document.querySelectorAll(".settings-panel").forEach((panel) => {
       panel.addEventListener("toggle", scheduleLogPaneHeightUpdate);
     });
@@ -7294,6 +7509,7 @@
     loadStartupNotes();
     if (contextPanel.open) renderContextMap();
     scheduleLogPaneHeightUpdate();
+    setInterval(() => autosaveSessionLogs(), logAutosaveMs);
   </script>
 </body>
 </html>

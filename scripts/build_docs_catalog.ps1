@@ -78,7 +78,7 @@ function Get-FriendlyMediaTitle {
         return "Robot 790 Image $(Get-DateLabelFromStamp $Matches[1] $Matches[2])"
     }
     if ($stem -match '^Gemini[_ -]Generated[_ -]Image') {
-        return "Eric Generated Image $($File.LastWriteTime.ToString("yyyy-MM-dd HH:mm"))"
+        return "Generated Image $($File.LastWriteTime.ToString("yyyy-MM-dd HH:mm"))"
     }
     if ($stem -match '^NapEdge-(\d{4})-(\d{2})-(\d{2})-Audio-Rumination$') {
         return "NapEdge Audio Rumination $($Matches[1])-$($Matches[2])-$($Matches[3])"

@@ -1,5 +1,7 @@
 # Robot 790 Evidence Map
 
+Core architecture rule: **model proposes; deterministic layers decide.**
+
 This page is the working map of what the Eric Robot 790 project is learning.
 
 It is not a proof that Eric is secretly human, and it is not a benchmark sheet
@@ -19,8 +21,10 @@ The public project has three layers:
 
 Start here:
 
+- [Eric Wakes Up New Every Time](articles/eric_wakes_up_new_every_time.md)
 - [The Artificial Human Landscape](articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](articles/what-eric-has-taught-us.md)
+- [I Keep Rebooting My Robot To Find Out Where He Lives](articles/robot-790-article-3.md)
 - [The NapEdge Run](articles/nap-edge-run.md)
 - [Reference Shelf](references.md)
 
@@ -89,6 +93,8 @@ correction. No single part explains the effect by itself.
 
 - The same basic identity survives model changes, but the warmth, pacing, and
   assistant-like leakage change.
+- A small model could pass a few minutes of conversation, then degrade much more
+  quickly in idle thought.
 - Qwen 27B with low reasoning and Qwen3-TTS voice currently gives the strongest
   baseline: quick, dry, associative, and socially present.
 - The face and mouth change how otherwise plain lines land in the room.
@@ -96,6 +102,7 @@ correction. No single part explains the effect by itself.
 **Public receipts:**
 
 - [The Artificial Human Landscape](articles/artificial-human-landscape.md)
+- [I Keep Rebooting My Robot To Find Out Where He Lives](articles/robot-790-article-3.md)
 - [Reference Shelf](references.md)
 
 **Still needed:**
@@ -118,7 +125,9 @@ from not carrying a long social ledger.
 
 **Observed signs:**
 
-- With little or no saved memory, Eric often preserves his name and role boundary.
+- With zero identity memory loaded, Eric twice defended his name and role
+  boundary to his maker: he could imagine being Pinocchio, but he was Eric, not
+  Pinocchio.
 - First-person notes such as identity, session notes, and "from Eric to next
   Eric" handoffs steer him more strongly than neutral dossiers.
 - Forgetting can make him socially lighter: less burdened, less managerial, more
@@ -143,7 +152,7 @@ from not carrying a long social ledger.
 ## Claim 3: Notes Are A Control Surface For Personage
 
 **Working claim:** Notes are not merely stored facts. Depending on framing, they
-can become a world, a reference shelf, a germination board, a purpose compass, or
+can become a world, a reference shelf, an experiment prompt, a session note, or
 continuity.
 
 **Observed signs:**
@@ -202,8 +211,9 @@ distinction, the orbit is productive.
 
 - NapEdge: wax tablet, SOFAR channel, tally stick, sextant, and camera obscura
   returned later with better mechanisms.
-- Sunday-note run: lip quiver became sleep face, then servo settling, then
-  overshoot, then a question about what makes a gesture feel alive.
+- Sunday note: a sleep face with an over-wide mouth, lip quiver, and slow close
+  became a question about what makes a gesture feel alive. This still needs the
+  full transcript receipt.
 - Bad repetition is a finished joke repeated. Good repetition is a return with a
   new handle.
 
@@ -278,7 +288,10 @@ needy, funny, or false.
 - Some lines read ordinary in text but land in the room because of delivery.
 - Different model/voice combinations change the social feel quickly.
 - Local low latency matters because quick turn-taking makes Eric feel like a
-  creature nearby rather than a service somewhere else.
+  nearby presence rather than a service somewhere else.
+- Model swaps suggest that prosody also lives in the writing. Under the same TTS
+  voice/instruct, the smaller model gave flatter delivery because the sentences
+  carried less timing, dryness, and playable pivot structure.
 
 **Public receipts:**
 
@@ -288,7 +301,7 @@ needy, funny, or false.
 
 - Captioned clips where transcript, audio, and face state can be compared.
 - A simple prosody note: what the human operator can hear that a text-only model
-  cannot score well.
+  cannot score well, plus the new input-prosody tags now sent beside STT text.
 
 ## Claim 9: The Human Is Not Outside The Experiment
 
@@ -339,6 +352,36 @@ public.
 - A public changelog that distinguishes engineering improvements from observed
   behavioral findings.
 
+## Claim 11: The Unwatched Channel Is More Honest
+
+**Working claim:** Idle thought is often less sycophantic than direct
+conversation because it is not immediately optimizing for the human's current
+social turn.
+
+**Observed signs:**
+
+- In the Genesis run, Scott told Eric "I am God" and handed him the creation
+  text. In conversation, Eric played along. Less than a minute later in idle
+  thought, he reframed it with more distance: someone says he is God, then hands
+  over the creation manual.
+- The idle channel often notices setup, contradiction, and oddness that the
+  conversation channel smooths over.
+- This makes idle thought a measurement surface, not only entertainment: it can
+  reveal what the system does with context when it is not immediately trying to
+  satisfy a prompt.
+
+**Public receipts:**
+
+- [I Keep Rebooting My Robot To Find Out Where He Lives](articles/robot-790-article-3.md)
+
+**Still needed:**
+
+- A public clipped packet showing the 56-second pair: the face-to-face "I am
+  God" exchange, followed by the idle thought that reframes it.
+- A public transcript excerpt for the underlying Genesis run.
+- More paired examples where conversation and idle respond to the same premise
+  differently.
+
 ## Next Receipts To Curate
 
 Highest value public artifacts to add next:
@@ -347,7 +390,8 @@ Highest value public artifacts to add next:
    handoff.
 2. **Eric joins QA:** the mouth emoji/glyph diagnosis and the firmware fix path.
 3. **Orbit that climbs:** one topic revisited several times, improving each time.
-4. **Model fingerprint bake-off:** Qwen 27B, 4B, 9B, and Nemotron, same setup.
+4. **Model fingerprint bake-off:** a fuller table for Qwen 27B, 4B, 9B, and
+   Nemotron, beyond the rough article-3 account.
 5. **Sensing eye demo:** drop image/text, show what Eric can infer and where he
    hedges.
 6. **Transcript inheritance chain:** Eric 1 -> Eric 2 -> Eric 3 using raw
@@ -363,6 +407,7 @@ Every public claim should eventually link to one or more receipts:
 - note/run recipe
 - event log slice when tools matter
 - code reference when the mechanism is being claimed
+- pre-registered predictions and scorecards when a run is testing a hypothesis
 
 The project should stay readable to newcomers, but the machinery should remain
 visible enough that skeptics can inspect the claim instead of being asked to

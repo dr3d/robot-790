@@ -1,5 +1,7 @@
 # Embodied Sensor Head
 
+Model proposes; deterministic layers decide.
+
 Robot 790's ESP32-S3 face can become more than a display. The useful path is
 not "Eric can sense everything." The useful path is "Eric gets a few honest
 bodily facts and can perform with them."
@@ -46,6 +48,10 @@ Treat contact as attention and control. Candidate gestures are tap to wake,
 double tap to ponder, long press to hush, and swipe to change face mode. The
 socially useful fact is simple: someone touched the face.
 
+Long press to hush is the body-level version of rest. The human should be able
+to grant quiet by touching the robot, not only by finding a setting in the web
+interface.
+
 Tilt/rotate head:
 Keep motor control in dedicated firmware. Expose semantic actions upward:
 `look_left`, `look_right`, `nod`, `tilt_confused`, `face_user`,
@@ -54,7 +60,8 @@ and mechanical protection.
 
 ## Design Rule
 
-Model proposes; deterministic layers decide.
+In practice, that means Eric can make semantic requests, but the device layer
+owns reality.
 
 Eric can request "look toward Scott" or "nudge into a skeptical tilt." The
 device controller decides whether that is possible, how far it may move, how
