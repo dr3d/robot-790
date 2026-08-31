@@ -199,10 +199,16 @@ function mediaTimestamp(media) {
   return Math.max(modified, dated);
 }
 
+function bannerImageSource(media) {
+  if (media.preview) return media.preview;
+  if (media.kind === "image") return media.source || "";
+  return "";
+}
+
 function applyHeaderBanner(mediaItems) {
   if (!pageHeader || !mediaItems.length) return;
   const ranked = mediaItems
-    .filter((media) => media.kind === "image" && (media.preview || media.source))
+    .filter((media) => bannerImageSource(media))
     .slice()
     .sort((a, b) => {
       const timeDelta = mediaTimestamp(b) - mediaTimestamp(a);
@@ -210,9 +216,11 @@ function applyHeaderBanner(mediaItems) {
       return (Number(b.banner_rank) || 0) - (Number(a.banner_rank) || 0);
     });
   const banner = ranked[0];
-  const source = banner ? (banner.preview || banner.source || "") : "";
+  const source = banner ? bannerImageSource(banner) : "";
   if (!source) return;
-  const safeSource = source.replace(/\\/g, "/").replace(/"/g, "%22");
+  const version = encodeURIComponent(String(banner.modified || banner.date || ""));
+  const versionedSource = version ? `${source}${source.includes("?") ? "&" : "?"}v=${version}` : source;
+  const safeSource = versionedSource.replace(/\\/g, "/").replace(/"/g, "%22");
   pageHeader.style.setProperty("--header-image", `url("${safeSource}")`);
   pageHeader.classList.add("has-banner");
 }
