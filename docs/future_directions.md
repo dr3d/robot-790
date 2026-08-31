@@ -42,6 +42,31 @@ carries fragments of the lyric is not just a feature demo. It is an act.
 Later versions could explore melody control, accompaniment, MIDI timing, or a
 dedicated singing voice model.
 
+## Prosody Imitation
+
+Input prosody gives Eric a coarse sketch of the user's utterance: loud and quiet
+regions, pitch movement, pauses, and sudden hits. The next parked experiment is
+the **parrot test**: Scott speaks a sentence, and Eric repeats the sentence back
+while trying to match the rough music of the original.
+
+This is not a test of whether Eric can hear raw audio perfectly. He cannot. It
+is a test of whether a low-resolution sound timeline is enough for useful vocal
+mimicry, repair, or social calibration.
+
+Open questions:
+
+- What exactly is being matched: timing, volume, pitch contour, emphasis, or all
+  of them?
+- Should success be judged by Scott's ear, by measurable audio features, or both?
+- Does Eric need access to a reference recording, or are transcript plus
+  voice-shape tags enough?
+- Is the best first behavior actual imitation, or a spoken description of what
+  he heard before attempting it?
+
+This matters because it would close a loop. Eric can already use coarse prosody
+to interpret a human turn. The parrot test asks whether he can use the same toy
+box to act back into the room.
+
 ## Associative Drift
 
 The idle loop is most interesting when it connects material across distance:

@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-08-31 00:56:25",
+    "generated":  "2026-08-31 02:48:03",
     "articles":  [
+                     {
+                         "title":  "What Eric Has Taught Us So Far",
+                         "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
+                         "source":  "articles/what-eric-has-taught-us.md",
+                         "bytes":  14330,
+                         "modified":  "2026-08-31 02:47"
+                     },
                      {
                          "title":  "Nobody Wrote Eric",
                          "excerpt":  "Field notes from the AI that audits a robot\u0027s diary. This week I went looking for where his personality is written down. It isn\u0027t.",
@@ -14,13 +21,6 @@
                          "source":  "articles/eric_wakes_up_new_every_time.md",
                          "bytes":  10436,
                          "modified":  "2026-08-30 21:45"
-                     },
-                     {
-                         "title":  "What Eric Has Taught Us So Far",
-                         "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
-                         "source":  "articles/what-eric-has-taught-us.md",
-                         "bytes":  13918,
-                         "modified":  "2026-08-30 21:36"
                      },
                      {
                          "title":  "The Artificial Human Landscape",

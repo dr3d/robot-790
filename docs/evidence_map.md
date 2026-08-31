@@ -302,6 +302,9 @@ needy, funny, or false.
 - Captioned clips where transcript, audio, and face state can be compared.
 - A simple prosody note: what the human operator can hear that a text-only model
   cannot score well, plus the new input-prosody tags now sent beside STT text.
+- A parked prosody imitation "parrot test": Scott speaks with an intentional
+  timing, volume, or pitch shape; Eric repeats or describes it; the run compares
+  human judgment against simple audio measurements.
 
 ## Claim 9: The Human Is Not Outside The Experiment
 
@@ -394,7 +397,9 @@ Highest value public artifacts to add next:
    Nemotron, beyond the rough article-3 account.
 5. **Sensing eye demo:** drop image/text, show what Eric can infer and where he
    hedges.
-6. **Transcript inheritance chain:** Eric 1 -> Eric 2 -> Eric 3 using raw
+6. **Prosody parrot test:** a short, controlled mimicry run where the transcript
+   is identical but the music of the utterance is deliberately changed.
+7. **Transcript inheritance chain:** Eric 1 -> Eric 2 -> Eric 3 using raw
    transcript, summary, or baton note.
 
 ## How To Keep This Honest

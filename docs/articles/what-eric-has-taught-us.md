@@ -181,6 +181,13 @@ That may be the general Robot 790 pattern:
 > Eric gets a toy box of coarse concepts. The machinery underneath holds his
 > hand and makes the toys real enough to play with.
 
+The parked parrot test is the next clean version of this idea. If Scott says the
+same sentence with a deliberate shift in loudness, speed, or pitch, can Eric use
+the coarse voice-shape tags to repeat the words with the same rough contour, or
+at least describe the contour honestly before trying? That would test whether
+input prosody is only a vibe channel, or whether it can become a usable handle
+for action.
+
 This also reframes the wonder dial. Telling Eric to be curious is only a prompt.
 A stronger design is an itch queue and a scheduler: small questions that can be
 drained by real lookup beats. Mulling can remain gentle and associative. An itch
