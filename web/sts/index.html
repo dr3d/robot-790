@@ -2952,6 +2952,7 @@
     }
 
     function showGeneratedImage(result) {
+      const previousCover = audioRecordingActive() ? audioRecordingPreviousVisualCover() : null;
       const url = new URL(String(result?.url || ""), location.href).href;
       generatedImageUrl = url;
       generatedImageName = String(result?.filename || result?.title || "generated image");
@@ -2961,7 +2962,7 @@
       const model = [result?.provider, result?.model].filter(Boolean).join(" / ");
       generatedImageHint.textContent = model ? `${generatedImageName} - ${model}` : generatedImageName;
       updateGeneratedImageButtons();
-      rolloverAudioRecordingForVisualChange("generated image changed");
+      rolloverAudioRecordingForVisualChange("generated image changed", { cover: previousCover });
     }
 
     function clearGeneratedImage() {
@@ -6666,6 +6667,7 @@
       if (!naturalWidth || !naturalHeight) {
         throw new Error("Camera frame is not ready yet.");
       }
+      const previousCover = audioRecordingActive() ? audioRecordingPreviousVisualCover() : null;
       const scale = Math.min(1, visionMaxEdgePx / Math.max(naturalWidth, naturalHeight));
       const width = Math.max(1, Math.round(naturalWidth * scale));
       const height = Math.max(1, Math.round(naturalHeight * scale));
@@ -6689,7 +6691,7 @@
       updateSessionTools();
       log(events, `vision image loaded: ${visionHint.textContent}`);
       stageVisionImage();
-      rolloverAudioRecordingForVisualChange("sensing-eye image changed");
+      rolloverAudioRecordingForVisualChange("sensing-eye image changed", { cover: previousCover });
     }
 
     async function startVisionCamera() {
@@ -7281,10 +7283,32 @@
       }, audioRecordRolloverMs);
     }
 
-    function rolloverAudioRecordingForVisualChange(reason) {
+    function rolloverAudioRecordingForVisualChange(reason, { cover = null } = {}) {
       if (!audioRecordingActive() || audioRecordStoppingForRollover) return;
       log(events, `audio recording visual rollover: ${reason}`);
-      stopAudioRecording({ rollover: true });
+      if (!cover) {
+        stopAudioRecording({ rollover: true });
+        return;
+      }
+      audioRecordStoppingForRollover = true;
+      clearAudioRecordRolloverTimer();
+      audioRecordStatus.textContent = "Finalizing recording...";
+      updateAudioRecordButtons();
+      updateSessionTools();
+      Promise.resolve(cover)
+        .then((selectedCover) => {
+          if (selectedCover) audioRecordChunkCover = selectedCover;
+        })
+        .catch((error) => {
+          log(events, `audio recording rollover cover error: ${error.message}`);
+        })
+        .finally(() => {
+          if (audioRecorder && audioRecorder.state === "recording") {
+            audioRecorder.stop();
+          }
+          updateAudioRecordButtons();
+          updateSessionTools();
+        });
     }
 
     function recordingFilename() {
@@ -7315,6 +7339,32 @@
     async function blobFromDataUrl(dataUrl) {
       const response = await fetch(dataUrl);
       return response.blob();
+    }
+
+    function audioRecordingPlaceholderCoverDataUrl() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1024;
+      canvas.height = 576;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#101114";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#d7e2ee";
+      ctx.font = "42px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("No previous sensing-eye image", canvas.width / 2, canvas.height / 2);
+      return canvas.toDataURL("image/jpeg", 0.86);
+    }
+
+    async function audioRecordingPreviousVisualCover() {
+      if (visionImageUrl || generatedImageName) {
+        return audioRecordingCover();
+      }
+      return {
+        blob: await blobFromDataUrl(audioRecordingPlaceholderCoverDataUrl()),
+        filename: "previous-sensing-eye-placeholder.jpg",
+        source: "previous visual placeholder"
+      };
     }
 
     async function audioRecordingCover() {
