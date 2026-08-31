@@ -1,6 +1,68 @@
 from robot_790d import sts_page_server
 
 
+def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
+    calls = []
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '{"mouth_text":"He keeps circling the same hinge.",'
+                                '"question":"Is the worry about Eric or the apparatus?",'
+                                '"should_surface":true,"reason":"recent repeat"}'
+                            )
+                        }
+                    }
+                ]
+            }
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def post(self, url, headers=None, json=None):
+            calls.append((url, headers, json))
+            return FakeResponse()
+
+    monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
+    result = sts_page_server.mull_second_brain(
+        {
+            "conversation": "Scott: I keep seeing it differently on replay.\nRobot 790: The cold pass has teeth.",
+            "person_focus": 8,
+            "voice_shape": "loud-mid, trailing",
+        }
+    )
+
+    assert result["status"] == "ok"
+    assert result["mouth_text"] == "He keeps circling the same hinge."
+    assert result["question"] == "Is the worry about Eric or the apparatus?"
+    assert result["should_surface"] is True
+    assert result["person_focus"] == 8
+    assert calls[0][0] == "http://127.0.0.1:1234/v1/chat/completions"
+
+
+def test_mull_second_brain_requires_recent_conversation() -> None:
+    try:
+        sts_page_server.mull_second_brain({"conversation": "too short"})
+    except ValueError as exc:
+        assert "recent conversation" in str(exc)
+    else:
+        raise AssertionError("Expected short Brain 2 context to fail")
+
+
 def test_record_log_snapshot_writes_timestamped_and_latest_files(tmp_path) -> None:
     result = sts_page_server.record_log_snapshot("conversation", "Robot 790: hello", repo_root=tmp_path)
 

@@ -787,6 +787,12 @@
           <button id="idlePonderNow" disabled>Ponder</button>
           <span class="toggle-row"><input id="performanceMode" type="checkbox"> Performance mode</span>
           <span class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</span>
+          <span class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Brain 2 mouth</span>
+          <label>
+            Person lane <span id="brain2PersonFocusValue">5/10</span>
+            <input id="brain2PersonFocus" type="range" min="0" max="10" step="1" value="5">
+          </label>
+          <button id="brain2MullNow" type="button">Mull</button>
         </section>
 
         <section class="controls memory-controls">
@@ -892,6 +898,10 @@
     const idlePonderNowButton = document.querySelector("#idlePonderNow");
     const performanceMode = document.querySelector("#performanceMode");
     const idleSubstrateTest = document.querySelector("#idleSubstrateTest");
+    const brain2MouthBrain = document.querySelector("#brain2MouthBrain");
+    const brain2PersonFocus = document.querySelector("#brain2PersonFocus");
+    const brain2PersonFocusValue = document.querySelector("#brain2PersonFocusValue");
+    const brain2MullNowButton = document.querySelector("#brain2MullNow");
     const interruptSensitivity = document.querySelector("#interruptSensitivity");
     const interruptSensitivityValue = document.querySelector("#interruptSensitivityValue");
     const startMicButton = document.querySelector("#startMic");
@@ -1021,6 +1031,9 @@
     let reengageInFlight = false;
     let reengageAttempts = 0;
     let lastReengageAt = 0;
+    let brain2Timer = null;
+    let brain2InFlight = false;
+    let lastBrain2MullAt = 0;
     let idleTimer;
     let idleInFlight = false;
     let lastConversationActivityAt = Date.now();
@@ -1050,6 +1063,7 @@
     let lastIdleUnresolvedAt = 0;
     let performanceAutoUntil = 0;
     let performancePrompt = "";
+    let lastInputVoiceShape = "";
     let latestBrainStatus = null;
     let conversationPopoutWindow = null;
 
@@ -1084,6 +1098,8 @@
     const idleWonderStorageKey = "robot790.idleWonder.v1";
     const idleSelfFocusStorageKey = "robot790.idleSelfFocus.v1";
     const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
+    const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
+    const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
     const performanceModeStorageKey = "robot790.performanceMode.v1";
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
     const modelPresetStorageKey = "robot790.modelPreset.v1";
@@ -1140,6 +1156,7 @@
     const idleUnresolvedGapMs = 8 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
     const idleMouthAsideGapMs = 45 * 1000;
+    const brain2MinGapMs = 22 * 1000;
     const performanceAutoMs = 8 * 60 * 1000;
     const idleCuriositySeedRetireMs = 45 * 60 * 1000;
     const idleCuriositySeedLimit = 10;
@@ -2395,6 +2412,77 @@
       return Boolean(idleSubstrateTest?.checked);
     }
 
+    function brain2MouthBrainEnabled() {
+      return Boolean(brain2MouthBrain?.checked);
+    }
+
+    function currentBrain2PersonFocus() {
+      return Math.max(0, Math.min(10, Number(brain2PersonFocus?.value) || 0));
+    }
+
+    function brain2PersonFocusLabel(level = currentBrain2PersonFocus()) {
+      if (level <= 0) return "Off";
+      if (level <= 3) return `${level}/10 glancing`;
+      if (level <= 7) return `${level}/10 curious`;
+      return `${level}/10 studying`;
+    }
+
+    function loadBrain2Controls() {
+      if (brain2MouthBrain) brain2MouthBrain.checked = localStorage.getItem(brain2MouthBrainStorageKey) === "true";
+      const saved = Number(localStorage.getItem(brain2PersonFocusStorageKey));
+      if (brain2PersonFocus) {
+        brain2PersonFocus.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "5";
+      }
+      updateBrain2Controls();
+    }
+
+    function saveBrain2Controls() {
+      localStorage.setItem(brain2MouthBrainStorageKey, String(brain2MouthBrainEnabled()));
+      localStorage.setItem(brain2PersonFocusStorageKey, String(currentBrain2PersonFocus()));
+    }
+
+    function updateBrain2Controls() {
+      if (brain2PersonFocusValue) brain2PersonFocusValue.textContent = brain2PersonFocusLabel();
+      if (brain2MullNowButton) brain2MullNowButton.disabled = brain2InFlight || !conversationLines.length;
+      saveBrain2Controls();
+      scheduleBrain2Mull();
+      if (contextPanel?.open) renderContextMap();
+    }
+
+    function clearBrain2Timer() {
+      if (brain2Timer) clearTimeout(brain2Timer);
+      brain2Timer = null;
+    }
+
+    function brain2BlockedReason({ manual = false } = {}) {
+      if (brain2InFlight) return "already in flight";
+      if (!manual && !brain2MouthBrainEnabled()) return "brain 2 off";
+      if (currentBrain2PersonFocus() <= 0) return "person lane off";
+      if (!conversationLines.length) return "no conversation";
+      if (userSpeechActive) return "user speaking";
+      if (userTurnPending()) return "user turn pending";
+      if (outputAudioActive()) return "voice speaking";
+      if (!manual && Date.now() - lastBrain2MullAt < brain2MinGapMs) return "cooldown";
+      return "";
+    }
+
+    function brain2DelayMs() {
+      const focus = currentBrain2PersonFocus();
+      if (focus <= 0) return Infinity;
+      return Math.max(18000, 76000 - focus * 5200);
+    }
+
+    function scheduleBrain2Mull() {
+      clearBrain2Timer();
+      if (!brain2MouthBrainEnabled()) return;
+      const delay = brain2DelayMs();
+      if (!Number.isFinite(delay)) return;
+      const fireAt = Math.max(lastConversationActivityAt + delay, lastBrain2MullAt + brain2MinGapMs, userTurnPendingUntil);
+      brain2Timer = setTimeout(() => {
+        triggerBrain2Mull().catch((error) => log(events, `brain2 mull error: ${error.message}`));
+      }, Math.max(1000, fireAt - Date.now()));
+    }
+
     function manualPerformanceModeEnabled() {
       return Boolean(performanceMode?.checked);
     }
@@ -3111,6 +3199,7 @@
     function noteConversationActivity() {
       lastConversationActivityAt = Date.now();
       scheduleIdlePonder();
+      scheduleBrain2Mull();
       scheduleConversationReengage();
     }
 
@@ -3815,6 +3904,73 @@
       return [privacy, substrate, idleAttentionContext({ suppressRobotBody, performancePrivacy }), loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", idleUnresolvedContext(), avoid, idleRetiredTopicsContext(), idleTemplateContext()]
         .filter(Boolean)
         .join("\n\n");
+    }
+
+    function brain2ConversationContext() {
+      return conversationLines
+        .slice(-18)
+        .join("\n")
+        .slice(-2600);
+    }
+
+    function brain2RecentIdleContext() {
+      return recentIdleOutputs.slice(-5).join("\n").slice(-900);
+    }
+
+    async function requestBrain2Mull({ manual = false } = {}) {
+      const response = await fetch(new URL("/api/brain2/mull", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: manual ? "question" : "person",
+          person_focus: currentBrain2PersonFocus(),
+          conversation: brain2ConversationContext(),
+          recent_idle: brain2RecentIdleContext(),
+          voice_shape: lastInputVoiceShape
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
+    async function triggerBrain2Mull({ manual = false } = {}) {
+      const blocked = brain2BlockedReason({ manual });
+      if (blocked) {
+        if (manual) log(events, `brain2 mull skipped: ${blocked}`);
+        scheduleBrain2Mull();
+        return;
+      }
+      brain2InFlight = true;
+      updateBrain2Controls();
+      try {
+        const result = await requestBrain2Mull({ manual });
+        lastBrain2MullAt = Date.now();
+        const mouthText = String(result.mouth_text || "").trim();
+        const question = String(result.question || "").trim();
+        const shouldSurface = result.should_surface !== false;
+        if (mouthText && shouldSurface) {
+          try {
+            await setMouthText({
+              text: mouthText,
+              mode: mouthText.length > 32 ? "marquee" : "center",
+              color: "cyan",
+              duration: 7
+            });
+          } catch (error) {
+            log(events, `brain2 mouth display error: ${error.message}`);
+          }
+          log(events, `brain2 mouth: ${mouthText}`);
+        } else if (mouthText) {
+          log(events, `brain2 held: ${mouthText}`);
+        }
+        if (question) log(events, `brain2 question candidate: ${question}`);
+      } finally {
+        brain2InFlight = false;
+        updateBrain2Controls();
+      }
     }
 
     function chooseIdleExpansionQuery(context) {
@@ -4584,6 +4740,7 @@
       conversation.textContent = conversationDisplayText();
       conversation.scrollTop = conversation.scrollHeight;
       renderConversationPopout();
+      updateBrain2Controls();
     }
 
     function conversationLine(text) {
@@ -5603,6 +5760,9 @@
         `Notes: ${idleNotesFocusLabel()}`,
         `Performance mode: ${performanceModeLabel()}`,
         `Substrate test: ${idleSubstrateTestEnabled() ? "on" : "off"}`,
+        `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
+        `Brain 2 person lane: ${brain2PersonFocusLabel()}`,
+        `Brain 2 in flight: ${brain2InFlight ? "yes" : "no"}`,
         recentIdleOutputs.length ? `Recent idle outputs:\n${recentIdleOutputs.slice(-8).join("\n")}` : "",
         idleUnresolvedContext(),
         idleCuriositySeeds.length
@@ -7356,7 +7516,10 @@
         updateInputDraft(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.completed") {
         clearInputDraft();
-        if (event.voice_shape) log(events, `input prosody: ${event.voice_shape}`);
+        if (event.voice_shape) {
+          lastInputVoiceShape = String(event.voice_shape || "").slice(-1000);
+          log(events, `input prosody: ${event.voice_shape}`);
+        }
         const recorded = recordUserTranscript(event.transcript || "");
         if (!recorded.accepted) return;
         noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
@@ -7439,6 +7602,7 @@
       ws.addEventListener("close", () => {
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
+        clearBrain2Timer();
         if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
         imageToolProtectionTimer = null;
         imageToolProtectionUntil = 0;
@@ -7723,6 +7887,17 @@
       updateIdleNotesFocusUi();
       log(events, `idle notes ${idleNotesFocusLabel()}`);
     });
+    brain2MouthBrain.addEventListener("change", () => {
+      updateBrain2Controls();
+      log(events, `brain2 mouth ${brain2MouthBrainEnabled() ? "on" : "off"}`);
+    });
+    brain2PersonFocus.addEventListener("input", () => {
+      updateBrain2Controls();
+      log(events, `brain2 person lane ${brain2PersonFocusLabel()}`);
+    });
+    brain2MullNowButton.addEventListener("click", () => {
+      triggerBrain2Mull({ manual: true }).catch((error) => log(events, `brain2 mull error: ${error.message}`));
+    });
     performanceMode.addEventListener("change", updatePerformanceModeUi);
     idleSubstrateTest.addEventListener("change", () => {
       if (idleSubstrateTestEnabled()) {
@@ -7760,6 +7935,7 @@
       conversationLines = [];
       clearInputDraft();
       events.textContent = "";
+      updateBrain2Controls();
     });
     popoutConversationButton.addEventListener("click", openConversationPopout);
     copyConversationButton.addEventListener("click", () => {
@@ -7806,6 +7982,7 @@
     loadIdleWonder();
     loadIdleSelfFocus();
     loadIdleNotesFocus();
+    loadBrain2Controls();
     loadPerformanceMode();
     loadEricMemoriesPref();
     loadImageSettings();

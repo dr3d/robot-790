@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlsplit
 
+import httpx
+
 from robot_790d.brain_status import get_brain_status
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
@@ -68,6 +70,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/audio/finalize":
             self._handle_audio_finalize()
+            return
+        if parsed.path == "/api/brain2/mull":
+            self._handle_brain2_mull()
             return
         if parsed.path == "/api/images/generate":
             self._handle_image_generate()
@@ -284,6 +289,16 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             payload = self._read_json_body()
             result = _dispatch_cast(payload)
         except (ModuleNotFoundError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        status_code = 200 if result.get("status") == "ok" else 400
+        self._send_json(status_code, result)
+
+    def _handle_brain2_mull(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = mull_second_brain(payload)
+        except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         status_code = 200 if result.get("status") == "ok" else 400
@@ -534,6 +549,144 @@ def _safe_log_source(source: str) -> str:
     if value not in {"conversation", "events", "session"}:
         value = "session"
     return value
+
+
+def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
+    conversation = re.sub(r"\s+", " ", str(payload.get("conversation") or "")).strip()
+    if len(conversation) < 12:
+        raise ValueError("Brain 2 needs recent conversation to mull.")
+    recent_idle = str(payload.get("recent_idle") or "").strip()
+    voice_shape = str(payload.get("voice_shape") or "").strip()
+    mode = str(payload.get("mode") or "person").strip().lower()
+    if mode not in {"person", "thread", "question"}:
+        mode = "person"
+    try:
+        person_focus = int(float(payload.get("person_focus") or 5))
+    except (TypeError, ValueError):
+        person_focus = 5
+    person_focus = max(0, min(10, person_focus))
+
+    base_url = (
+        os.getenv("ROBOT_790_BRAIN2_BASE_URL")
+        or os.getenv("ROBOT_790_OPENAI_LLM_BASE_URL")
+        or "http://127.0.0.1:1234/v1"
+    ).strip().rstrip("/")
+    model = (
+        os.getenv("ROBOT_790_BRAIN2_MODEL")
+        or os.getenv("ROBOT_790_OPENAI_LLM_MODEL")
+        or "qwen/qwen3.8-27b"
+    ).strip()
+    api_key = os.getenv("ROBOT_790_BRAIN2_API_KEY") or os.getenv("ROBOT_790_OPENAI_LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "none"
+    headers = {"Content-Type": "application/json"}
+    if api_key and api_key.lower() not in {"none", "null", "false"}:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    system = (
+        "You are Brain 2 for Robot 790, spoken name Eric. You do not speak aloud. "
+        "You are a private recent-conversation ruminator that may write one tiny mouth-display aside. "
+        "Mull the human in the room as an interesting person, not as a patient or customer. "
+        "Stay curious, dry, compact, and non-caretaking. Do not diagnose mood, do not flatter, do not google the user, "
+        "and do not claim certainty about private thoughts. Prefer one concrete observed conversational pattern. "
+        "Return only JSON with keys mouth_text, question, should_surface, reason. mouth_text must be 96 characters or less."
+    )
+    user = "\n\n".join(
+        part
+        for part in [
+            f"Mode: {mode}. Person-focus: {person_focus}/10.",
+            "Recent conversation:",
+            conversation[-2600:],
+            f"Recent input prosody tags: {voice_shape[-500:]}" if voice_shape else "",
+            f"Recent idle outputs:\n{recent_idle[-900:]}" if recent_idle else "",
+            (
+                "Task: produce one mouth-display thought fragment. If a useful question is forming, include it as question. "
+                "Use should_surface true only when it is worth showing on the mouth during a pause."
+            ),
+        ]
+        if part
+    )
+    request = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0.55,
+        "max_tokens": 260,
+        "stream": False,
+    }
+    if "api.openai.com" not in base_url.lower():
+        request["reasoning_effort"] = "none"
+        request["chat_template_kwargs"] = {"enable_thinking": False}
+
+    try:
+        with httpx.Client(timeout=45) as client:
+            response = client.post(f"{base_url}/chat/completions", headers=headers, json=request)
+            response.raise_for_status()
+            data = response.json()
+    except Exception as exc:
+        return {"status": "error", "tool": "mull_second_brain", "error": f"Brain 2 request failed: {exc}"}
+
+    raw_text = _chat_completion_text(data)
+    parsed = _parse_second_brain_json(raw_text)
+    mouth_text = _clean_second_brain_text(parsed.get("mouth_text") or parsed.get("text") or raw_text, 96)
+    question = _clean_second_brain_text(parsed.get("question") or "", 140)
+    reason = _clean_second_brain_text(parsed.get("reason") or "", 220)
+    if not mouth_text:
+        return {"status": "error", "tool": "mull_second_brain", "error": "Brain 2 returned no mouth text."}
+    return {
+        "status": "ok",
+        "tool": "mull_second_brain",
+        "model": model,
+        "mode": mode,
+        "person_focus": person_focus,
+        "mouth_text": mouth_text,
+        "question": question,
+        "should_surface": bool(parsed.get("should_surface", True)),
+        "reason": reason,
+        "raw_text": raw_text[:1000],
+    }
+
+
+def _chat_completion_text(data: dict[str, Any]) -> str:
+    choices = data.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return ""
+    first = choices[0]
+    if not isinstance(first, dict):
+        return ""
+    message = first.get("message")
+    if isinstance(message, dict):
+        content = message.get("content")
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            return " ".join(str(part.get("text") or "") for part in content if isinstance(part, dict)).strip()
+    text = first.get("text")
+    return str(text or "").strip()
+
+
+def _parse_second_brain_json(text: str) -> dict[str, Any]:
+    value = str(text or "").strip()
+    if not value:
+        return {}
+    if value.startswith("```"):
+        value = re.sub(r"^```(?:json)?\s*", "", value, flags=re.IGNORECASE).strip()
+        value = re.sub(r"\s*```$", "", value).strip()
+    match = re.search(r"\{[\s\S]*\}", value)
+    if match:
+        value = match.group(0)
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _clean_second_brain_text(text: object, limit: int) -> str:
+    value = re.sub(r"\s+", " ", str(text or "")).strip()
+    value = value.strip("`\"' ")
+    value = re.sub(r"^(mouth_text|question|reason)\s*:\s*", "", value, flags=re.IGNORECASE)
+    return value[:limit].rstrip()
 
 
 def record_audio_snapshot(
