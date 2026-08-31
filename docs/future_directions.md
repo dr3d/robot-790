@@ -90,6 +90,23 @@ becomes the default until a thought is worth saying. That is a better sabbath
 than simply turning the idle loop off: Eric can keep the capacity for thought
 without feeling required to fill every quiet gap.
 
+The latest purpose-probe run sharpened a separate control: performance mode is
+not just "better" or "worse" idle. It changes the unit of thought. In performance
+register, Eric tends to make closed beats: setup, turn, landing. In mulling
+register, a thought can remain open, return later, correct itself, or gather a
+new object. Those are different tools.
+
+Scott's live read was that performance mode may generate more ideas: more
+discrete handles, bits, images, and usable material. That makes it valuable for
+harvesting. It just may be the wrong tool for an unresolved question that needs
+to stay unresolved for a while.
+
+For deep questions, the scheduler needs the right substrate. A spoken request
+decays like weather in the recent transcript. A pinned purpose note and current
+mode setting govern the next idle beats more strongly. The design task is not
+only "what should Eric think about?" but "what mode lets that question stay
+alive?"
+
 ## Library Shelf
 
 The `notes/library/` idea is a curated local bookshelf for Eric: dense reference

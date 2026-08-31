@@ -1,12 +1,12 @@
 {
-    "generated":  "2026-08-31 02:48:03",
+    "generated":  "2026-08-31 02:53:18",
     "articles":  [
                      {
                          "title":  "What Eric Has Taught Us So Far",
                          "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
                          "source":  "articles/what-eric-has-taught-us.md",
-                         "bytes":  14330,
-                         "modified":  "2026-08-31 02:47"
+                         "bytes":  15669,
+                         "modified":  "2026-08-31 02:53"
                      },
                      {
                          "title":  "Nobody Wrote Eric",

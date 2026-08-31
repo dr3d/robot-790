@@ -189,6 +189,11 @@ surprising continuity while the human is quiet.
   paradox-shaped objects, careful uncertainty, and odd jokes.
 - Sunday-note runs showed compact notes becoming active material, though with
   mild fixation around the strongest anchors.
+- The latest soul-challenge run showed a mode mismatch: performance mode
+  produced strong self-contained bits, but did not preserve the spoken hard
+  question as an open thread.
+- Scott's observation from that run: performance mode seemed to generate more
+  idea objects, even when it selected against sustained inquiry.
 
 **Public receipts:**
 
@@ -200,6 +205,8 @@ surprising continuity while the human is quiet.
 - A public "idle loop anatomy" article: lanes, wonder, self-focus, notes focus,
   search, cooldown, and repetition.
 - More curated quip clips from long idle runs.
+- A mode comparison clip packet: same purpose note, performance on vs off,
+  scored for closed beats versus revisits and self-correction.
 
 ## Claim 5: Productive Fixation Exists
 
@@ -216,6 +223,8 @@ distinction, the orbit is productive.
   full transcript receipt.
 - Bad repetition is a finished joke repeated. Good repetition is a return with a
   new handle.
+- Performance mode tends to finish a beat so it can land. Mulling mode is more
+  likely to leave a question unfinished long enough to return with a correction.
 
 **Public receipts:**
 
@@ -227,6 +236,8 @@ distinction, the orbit is productive.
 - A curated "orbit that climbs" transcript with three to five passes through the
   same idea.
 - A clear failure example where an orbit does not climb.
+- A purpose-probe retry with performance off: ask Eric to sit with "what is the
+  thing that makes it mine?" and watch whether the question stays open.
 
 ## Claim 6: Eric Likes Explaining How He Is Made
 
@@ -318,6 +329,8 @@ system.
 - The best project artifacts are exchanges, not isolated completions.
 - Public clips and articles become selection pressure: what gets saved changes
   what later runs are asked to inherit.
+- Current UI settings are also selection pressure. A pinned mode can override a
+  spoken assignment, especially in idle.
 
 **Public receipts:**
 

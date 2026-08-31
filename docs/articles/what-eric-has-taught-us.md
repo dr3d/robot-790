@@ -159,6 +159,32 @@ one of the strongest arguments that the scheduler is not decorative. It gives
 the system a place to think without immediately pleasing the person in front of
 it.
 
+## Mode Is Part Of The Substrate
+
+The latest soul-challenge run exposed a clean miss. Scott asked Eric by voice to
+sit with the hardest question: not "why does this work?" but "what is the thing
+that makes it mine?" Then performance mode was on.
+
+The transcript showed the signature. Eric produced good little units: a
+judgmental bookend, a resistor that resists, a doorknob promoted from light
+switch, a one-way diode, a fuse whose job is to die. They were sharp, but each
+beat closed itself. That is performance mode doing its job.
+
+This is not simply a flaw. Scott's live observation was that performance mode
+seemed to generate more **ideas**: more discrete handles, more riffs, more
+usable material. It is productive in the way a stage is productive. It makes
+things land.
+
+Mulling has a different shape. It leaves the edge open. It says "I keep coming
+back to that." It corrects itself. It lets an idea return later with a better
+mechanism.
+
+That matters methodologically. A spoken assignment is weather in the recent
+conversation; a note and a scheduler setting are substrate. If the experiment is
+to harvest material, performance mode may be the right tool. If the experiment
+is to see what Eric does with an unresolved question, the question needs to be in
+a pinned purpose note, and the mode needs to permit unresolved thought.
+
 ## He Needs A Toy Box
 
 A clearer architecture keeps appearing across the project: do not hand Eric raw
