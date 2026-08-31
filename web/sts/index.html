@@ -3496,7 +3496,8 @@
 
     async function recordLogPane(button, target, source) {
       const originalText = button.textContent;
-      const text = target.textContent.trimEnd();
+      const rawText = target.textContent.trimEnd();
+      const text = rawText || (source === "brain2_mulling" ? "[empty]" : "");
       try {
         const result = await recordLogSnapshot(source, text);
         if (result.model) {
