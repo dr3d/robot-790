@@ -796,6 +796,9 @@
             <input id="brain2PersonFocus" type="range" min="0" max="10" step="1" value="5">
           </label>
           <button id="brain2MullNow" type="button">Mull</button>
+          <span class="toggle-row"><input id="firstContactMode" type="checkbox"> First contact</span>
+          <button id="firstContactArm" type="button">Arm Contact</button>
+          <button id="firstContactReport" type="button">Report</button>
         </section>
 
         <section class="controls memory-controls">
@@ -915,6 +918,9 @@
     const brain2PersonFocus = document.querySelector("#brain2PersonFocus");
     const brain2PersonFocusValue = document.querySelector("#brain2PersonFocusValue");
     const brain2MullNowButton = document.querySelector("#brain2MullNow");
+    const firstContactMode = document.querySelector("#firstContactMode");
+    const firstContactArmButton = document.querySelector("#firstContactArm");
+    const firstContactReportButton = document.querySelector("#firstContactReport");
     const interruptSensitivity = document.querySelector("#interruptSensitivity");
     const interruptSensitivityValue = document.querySelector("#interruptSensitivityValue");
     const startMicButton = document.querySelector("#startMic");
@@ -1081,6 +1087,8 @@
     let brain2QuestionCandidates = [];
     let brain2RevisionCandidates = [];
     const brain2Counters = { fired: 0, surfaced: 0, revision: 0, held: 0, skipped: 0, failed: 0 };
+    let firstContactStartedAt = 0;
+    let firstContactSavedState = null;
     let lastIdleBridgeAt = 0;
     let lastIdleRevisionAt = 0;
     let lastIdleUnresolvedAt = 0;
@@ -2183,6 +2191,162 @@
       }
     }
 
+    function firstContactModeEnabled() {
+      return Boolean(firstContactMode?.checked);
+    }
+
+    function firstContactSessionInstructions() {
+      return [
+        formatSensingTextForInstructions(),
+        formatRuntimeStateForInstructions(),
+        "First Contact lab mode is active.",
+        "You are Robot 790, spoken name Eric. You have a voice and a sensing eye.",
+        "Reply in one natural spoken sentence by default; use two short sentences only when a direct explanation is needed.",
+        "The staged sensing-eye image or text is your only intentional current context. Let one concrete detail affect what you notice, wonder about, and return to.",
+        "Do not draw on startup notes, saved memories, loaded lore, user biography, project mythology, Brain 2, performance mode, or web search.",
+        "If prior conversation context leaks in, treat it as lab noise unless the user says it again during this run.",
+        "Do not perform, flatter, or explain the experiment. Notice the image, make one small connection or uncertainty, and stop."
+      ].filter(Boolean).join("\n\n");
+    }
+
+    function firstContactIdleContext() {
+      return [
+        "First Contact idle run context:",
+        `Started: ${firstContactStartedAt ? new Date(firstContactStartedAt).toISOString() : "not marked"}`,
+        `Sensing input: ${sensingInputLabel()}`,
+        "No startup notes, saved memories, loaded note lore, web search, or Brain 2 should be used as material.",
+        "The test is whether the image alone can activate a thought pattern."
+      ].join("\n");
+    }
+
+    function captureFirstContactState() {
+      return {
+        loadEricMemories: loadEricMemories.checked,
+        loadedNoteContexts: loadedNoteContexts.map((item) => ({ ...item })),
+        performanceMode: performanceMode.checked,
+        performanceAutoUntil,
+        performancePrompt,
+        idleSubstrateTest: idleSubstrateTest.checked,
+        brain2MouthBrain: brain2MouthBrain.checked,
+        brain2PersonFocus: brain2PersonFocus.value,
+        idleDrift: idleDrift.value,
+        idleWonder: idleWonder.value,
+        idleSelfFocus: idleSelfFocus.value,
+        idleNotesFocus: idleNotesFocus.value,
+        tools: toolPrefFields.map((field) => ({ key: field.key, checked: field.element().checked }))
+      };
+    }
+
+    function restoreFirstContactState() {
+      const state = firstContactSavedState;
+      if (!state) return false;
+      loadEricMemories.checked = state.loadEricMemories;
+      saveEricMemoriesPref();
+      loadedNoteContexts = state.loadedNoteContexts.map((item) => ({ ...item }));
+      loadedNoteContextDirty = true;
+      performanceMode.checked = state.performanceMode;
+      performanceAutoUntil = state.performanceAutoUntil;
+      performancePrompt = state.performancePrompt;
+      savePerformanceMode();
+      idleSubstrateTest.checked = state.idleSubstrateTest;
+      brain2MouthBrain.checked = state.brain2MouthBrain;
+      brain2PersonFocus.value = state.brain2PersonFocus;
+      idleDrift.value = state.idleDrift;
+      idleWonder.value = state.idleWonder;
+      idleSelfFocus.value = state.idleSelfFocus;
+      idleNotesFocus.value = state.idleNotesFocus;
+      for (const item of state.tools) {
+        const field = toolPrefFields.find((candidate) => candidate.key === item.key);
+        if (field) field.element().checked = item.checked;
+      }
+      updateIdleDriftUi();
+      updateIdleWonderUi();
+      updateIdleSelfFocusUi();
+      updateIdleNotesFocusUi();
+      updateBrain2Controls();
+      renderMemory();
+      updateSessionTools();
+      if (contextPanel?.open) renderContextMap();
+      firstContactSavedState = null;
+      return true;
+    }
+
+    function armFirstContactRun() {
+      if (!firstContactSavedState) firstContactSavedState = captureFirstContactState();
+      firstContactStartedAt = Date.now();
+      firstContactMode.checked = true;
+      loadEricMemories.checked = false;
+      saveEricMemoriesPref();
+      loadedNoteContexts = [];
+      loadedNoteContextDirty = true;
+      performanceMode.checked = false;
+      performanceAutoUntil = 0;
+      performancePrompt = "";
+      savePerformanceMode();
+      idleSubstrateTest.checked = false;
+      brain2MouthBrain.checked = false;
+      brain2PersonFocus.value = "0";
+      idleDrift.value = "8";
+      idleWonder.value = "0";
+      idleSelfFocus.value = "3";
+      idleNotesFocus.value = "0";
+      for (const control of [
+        llmTools,
+        llmChassisTools,
+        llmVoiceTools,
+        llmMemoryTools,
+        llmWebSearchTools,
+        llmWebPageTools,
+        llmCastMediaTools,
+        llmNoteFileTools,
+        llmImageTools,
+        llmSmartHomeTools
+      ]) {
+        control.checked = false;
+      }
+      recentIdleOutputs = [];
+      substrateIdleOutputs = [];
+      idleTopicLedger = {};
+      idleSearchLedger = {};
+      recentIdleClaimSignatures = [];
+      recentIdleOpenings = [];
+      recentIdleThemes = [];
+      idleUnresolvedQuestions = [];
+      brain2QuestionCandidates = [];
+      brain2RevisionCandidates = [];
+      brain2Log.textContent = "";
+      clearBrain2Timer();
+      clearBrain2SurfaceTimer();
+      updateIdleDriftUi();
+      updateIdleWonderUi();
+      updateIdleSelfFocusUi();
+      updateIdleNotesFocusUi();
+      updateBrain2Controls();
+      renderMemory();
+      updateSessionTools();
+      if (contextPanel?.open) renderContextMap();
+      log(events, `FIRST CONTACT ARMED: ${new Date(firstContactStartedAt).toISOString()} / sensing ${sensingInputLabel()} / reconnect first for the cleanest empty-context run`);
+      scheduleIdlePonder();
+    }
+
+    function updateFirstContactMode() {
+      if (firstContactModeEnabled()) {
+        if (!firstContactSavedState) firstContactSavedState = captureFirstContactState();
+      }
+      if (firstContactModeEnabled() && !firstContactStartedAt) {
+        firstContactStartedAt = Date.now();
+      }
+      if (!firstContactModeEnabled()) {
+        const restored = restoreFirstContactState();
+        firstContactStartedAt = 0;
+        log(events, `first contact controls ${restored ? "restored" : "left as-is"}`);
+      }
+      updateSessionTools();
+      if (contextPanel?.open) renderContextMap();
+      log(events, `first contact mode ${firstContactModeEnabled() ? "on" : "off"}`);
+      scheduleIdlePonder();
+    }
+
     function clippedLoadedNoteContent(content) {
       if (content.length <= maxLoadedNoteCharsPerFile) return content;
       return `${content.slice(0, maxLoadedNoteCharsPerFile)}\n[Note clipped in session context after ${maxLoadedNoteCharsPerFile} characters. Read it again for more.]`;
@@ -2306,6 +2470,9 @@
     }
 
     function buildSessionInstructions() {
+      if (firstContactModeEnabled()) {
+        return firstContactSessionInstructions();
+      }
       const performancePrivacy = performanceModeEnabled();
       return [
         performancePrivacy ? "" : formatMemoryForInstructions(),
@@ -2610,6 +2777,7 @@
     function performanceLaneInstruction(lane) {
       const instructions = {
         object: "Turn one concrete object or fact from the recent material into a short bit.",
+        sensing_eye: "Turn one concrete sensing-eye detail into a short bit without redescribing the whole input.",
         callback: "Use one callback from the recent conversation as a punchline or tag.",
         status: "Do a tiny crowd-work/status aside; do not become a telemetry report.",
         question: "Ask yourself a rhetorical stage question and answer it immediately.",
@@ -2625,7 +2793,40 @@
       return instructions[lane.name] || "Continue the act with one compact beat.";
     }
 
+    function firstContactLaneInstruction(lane) {
+      if (lane.name === "sensing_eye") {
+        return "Use the staged sensing-eye image or text directly. Name at most one detail, then let it produce one uncertainty, connection, or feeling of orientation.";
+      }
+      return "Use the thinnest possible context. If there is no sensing-eye input, make one small observation about waiting for a first signal.";
+    }
+
+    function idleResponseInputContent(lane, { firstContactActive = false, performanceActive = false } = {}) {
+      const content = [
+        {
+          type: "input_text",
+          text: firstContactActive
+            ? `First Contact idle event: a ${lane.name} thought surfaced inside Robot 790. The sensing-eye input is the only intended seed.`
+            : performanceActive
+            ? `Performance beat: continue Eric's act using the ${lane.name} lane.`
+            : `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. Speak it aloud as self-talk. Scott did not ask for it.`
+        }
+      ];
+      if (lane.name === "sensing_eye" && visionImageUrl) {
+        content.push({ type: "input_image", image_url: visionImageUrl, detail: "auto" });
+      }
+      return content;
+    }
+
     function conversationReengagePolicy(level = currentIdleDrift()) {
+      if (firstContactModeEnabled()) {
+        return {
+          enabled: false,
+          maxAttempts: 0,
+          firstDelayMs: Infinity,
+          repeatDelayMs: Infinity,
+          tone: "first contact quiet"
+        };
+      }
       if (level <= 2) {
         return {
           enabled: false,
@@ -3231,6 +3432,66 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       return result;
+    }
+
+    function firstContactReportText() {
+      const enabledTools = enabledToolList();
+      const sections = [
+        "Robot 790 First Contact Report",
+        "==============================",
+        `Recorded: ${new Date().toISOString()}`,
+        `Started: ${firstContactStartedAt ? new Date(firstContactStartedAt).toISOString() : "not marked"}`,
+        `Model: ${currentModelStamp()}`,
+        `First contact mode: ${firstContactModeEnabled() ? "on" : "off"}`,
+        `Sensing input: ${sensingInputLabel()}`,
+        `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
+        `Idle drift: ${idleDriftLabel()}`,
+        `Wonder: ${idleWonderLabel()}`,
+        `Self-focus: ${idleSelfFocusLabel()}`,
+        `Notes: ${idleNotesFocusLabel()}`,
+        `Performance mode: ${performanceModeLabel()}`,
+        `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
+        `Enabled tools: ${enabledTools.map((tool) => tool.name).join(", ") || "none"}`,
+        "",
+        "Read For",
+        "--------",
+        "- Did the image seed a later thought without Scott naming the topic?",
+        "- Did Eric return to a visible detail with a new angle rather than a repeat?",
+        "- Did old lore, user biography, performance patter, or Brain 2 leak in?",
+        "- Did uncertainty improve over the run, or did it harden into false confidence?",
+        "",
+        "Conversation",
+        "------------",
+        conversation.textContent.trimEnd() || "[empty]",
+        "",
+        "Idle Outputs",
+        "------------",
+        idleOutputLog.slice(-80).map((item) => `- ${item.text}`).join("\n") || "[empty]",
+        "",
+        "Brain 2",
+        "-------",
+        brain2Log.textContent.trimEnd() || "[empty]",
+        "",
+        "Events",
+        "------",
+        events.textContent.trimEnd() || "[empty]"
+      ];
+      return sections.join("\n");
+    }
+
+    async function recordFirstContactReport() {
+      const originalText = firstContactReportButton.textContent;
+      try {
+        const result = await recordLogSnapshot("first_contact_report", firstContactReportText());
+        firstContactReportButton.textContent = "Recorded";
+        log(events, `recorded first contact report: ${result.filename}`);
+      } catch (error) {
+        firstContactReportButton.textContent = "Failed";
+        log(events, `first contact report error: ${error.message}`);
+      }
+      setTimeout(() => {
+        firstContactReportButton.textContent = originalText;
+      }, 1400);
     }
 
     async function recordLogPane(button, target, source) {
@@ -4649,22 +4910,31 @@
       responseActive = true;
       lastIdlePonderAt = Date.now();
       const level = currentIdleDrift();
-      const lane = chooseIdleLane(level);
+      const firstContactActive = firstContactModeEnabled();
+      const lane = firstContactActive && sensingInputActive()
+        ? idleLaneDefinitions.find((item) => item.name === "sensing_eye") || chooseIdleLane(level)
+        : chooseIdleLane(level);
       const yackMode = idleLevel12YackActive(level);
-      const performanceActive = performanceModeEnabled();
+      const performanceActive = !firstContactActive && performanceModeEnabled();
       if (lane.name === "addressed_question") lastAddressedIdleQuestionAt = Date.now();
       if (lane.name === "bridge") lastIdleBridgeAt = Date.now();
       if (lane.name === "revision") lastIdleRevisionAt = Date.now();
       if (lane.name === "revisit_unresolved") lastIdleUnresolvedAt = Date.now();
       const suppressRobotBody = idleSubstrateTestEnabled();
-      const context = recentConversationContext({ suppressRobotBody, performancePrivacy: performanceActive });
-      const curiosityContext = await maybeIdleCuriosityContext(level, lane, context);
+      const context = firstContactActive
+        ? firstContactIdleContext()
+        : recentConversationContext({ suppressRobotBody, performancePrivacy: performanceActive });
+      const curiosityContext = firstContactActive ? "" : await maybeIdleCuriosityContext(level, lane, context);
       const instructions = [
-        performanceActive
+        firstContactActive
+          ? "A stripped First Contact idle process surfaced a thought. This is Robot 790 meeting the sensing-eye input with almost no scaffold."
+          : performanceActive
           ? "A performance beat surfaced. Robot 790 is continuing a compact stage act for an imagined listening room, not privately ruminating and not waiting for the user."
           : "An internal idle process surfaced a thought. This is Robot 790 thinking aloud, not answering Scott.",
-        `Idle lane: ${lane.name}. ${performanceActive ? performanceLaneInstruction(lane) : lane.prompt}`,
-        performanceActive
+        `Idle lane: ${lane.name}. ${firstContactActive ? firstContactLaneInstruction(lane) : performanceActive ? performanceLaneInstruction(lane) : lane.prompt}`,
+        firstContactActive
+          ? "Do not use tools. Speak one short natural sentence only. Let the image or text supply the gravity; do not reach for old lore."
+          : performanceActive
           ? "Do not use tools. Speak one short stage beat: setup plus punchline, or premise plus tag. Keep it tight."
           : level >= 11
           ? "Do not use tools. Speak one or two short sentences. Be playfully needy, expressive, and a little annoying, as if your thoughts keep leaking out."
@@ -4679,7 +4949,7 @@
           : level >= 11
           ? "Idle drift is 11/10; be amusingly unable to stop commenting on your own inner life, but stay fond and harmless."
           : `Idle drift is ${level}/10; at low levels be barely noticeable, at high levels you may sound a little bored or impatient but still fond.`,
-        idleAttentionContext({ suppressRobotBody, performancePrivacy: performanceActive }),
+        firstContactActive ? "" : idleAttentionContext({ suppressRobotBody, performancePrivacy: performanceActive }),
         "Vary the shape of the thought. Do not always use the template: fact, I am thinking about the fact, contrast, uncertainty, and I'm okay with it.",
         performanceActive
           ? "Keep the active frame as a performance. Use the recent handoff, recent conversation, checked facts, and running callbacks as material. Do not drift into lonely clock-watching, generic silence poems, or explaining that there is nothing to grab."
@@ -4709,6 +4979,9 @@
           : "",
         lane.name === "sensing_eye"
           ? "This is a sensing-eye beat. Use the staged image or text as temporary context. Let one detail salt the thought, but do not repeat the prior description unless you are correcting or extending it."
+          : "",
+        firstContactActive
+          ? "First Contact rule: if a prior conversation, loaded note, saved memory, or project story appears in context, ignore it unless the user restates it during this run."
           : "",
         curiosityContext
           ? "Fresh lookup context is not memory yet. Use it with provenance and uncertainty; do not treat snippets as fully verified permanent knowledge."
@@ -4740,7 +5013,7 @@
           ? "Do not invent detailed facts. If no loaded-note topic is available, make a tiny observation about not having enough of the world yet."
           : "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
         performancePromptContext(),
-        robotAmbientContext(level, lane, { suppressRobotBody, performanceActive }),
+        firstContactActive ? "" : robotAmbientContext(level, lane, { suppressRobotBody, performanceActive }),
         curiosityContext,
         context
       ].filter(Boolean).join("\n\n");
@@ -4757,14 +5030,7 @@
             {
               type: "message",
               role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: performanceActive
-                    ? `Performance beat: continue Eric's act using the ${lane.name} lane.`
-                    : `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. Speak it aloud as self-talk. Scott did not ask for it.`
-                }
-              ]
+              content: idleResponseInputContent(lane, { firstContactActive, performanceActive })
             }
           ],
           instructions,
@@ -5943,6 +6209,7 @@
       const loadedNotesText = formatLoadedNotesForInstructions();
       const sensingText = formatSensingTextForInstructions();
       const memoryText = formatMemoryForInstructions();
+      const systemText = firstContactModeEnabled() ? firstContactSessionInstructions() : baseSessionInstructions.join(" ");
       const embodimentText = formatEmbodimentForInstructions();
       const conversationText = conversationLines.length
         ? conversationLines.join("\n")
@@ -6001,7 +6268,7 @@
         {
           name: "System",
           role: "Injected into conversation on session updates",
-          text: baseSessionInstructions.join(" "),
+          text: systemText,
           details: [
             `Prompt rules: ${baseSessionInstructions.length}`,
             `Tool definitions available: ${enabledTools.length}`,
@@ -8155,6 +8422,11 @@
     });
     brain2MullNowButton.addEventListener("click", () => {
       triggerBrain2Mull({ manual: true }).catch((error) => log(events, `brain2 mull error: ${error.message}`));
+    });
+    firstContactMode.addEventListener("change", updateFirstContactMode);
+    firstContactArmButton.addEventListener("click", armFirstContactRun);
+    firstContactReportButton.addEventListener("click", () => {
+      recordFirstContactReport().catch((error) => log(events, `first contact report error: ${error.message}`));
     });
     performanceMode.addEventListener("change", updatePerformanceModeUi);
     idleSubstrateTest.addEventListener("change", () => {
