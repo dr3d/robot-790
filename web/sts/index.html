@@ -160,7 +160,7 @@
       grid-template-columns: minmax(260px, 1fr) auto auto;
     }
     .mic-vision-controls {
-      grid-template-columns: 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto;
+      grid-template-columns: 152px auto 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto auto;
     }
     .audio-record-controls {
       grid-template-columns: minmax(220px, 1fr) auto auto auto;
@@ -238,6 +238,40 @@
       display: -webkit-box;
       -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
+    }
+    .camera-card {
+      width: 152px;
+      height: 152px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      align-items: end;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 13px;
+    }
+    .camera-card.live {
+      border-color: rgba(96, 211, 148, 0.75);
+      background: #17231d;
+    }
+    .camera-preview {
+      display: none;
+      width: 100%;
+      height: 88px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #0c0d10;
+    }
+    .camera-card.live .camera-preview {
+      display: block;
+    }
+    .camera-actions {
+      display: grid;
+      gap: 8px;
     }
     .generated-image-card {
       min-height: 96px;
@@ -545,6 +579,9 @@
         height: auto;
         min-height: 152px;
       }
+      .camera-card {
+        width: 100%;
+      }
       .log-grid {
         flex: none;
       }
@@ -606,6 +643,18 @@
             <input id="visionFile" type="file" accept="image/*,.txt,.md,text/plain,text/markdown" hidden>
           </label>
           <button id="visionClear" disabled>Clear Input</button>
+          <div id="visionCameraCard" class="camera-card">
+            <video id="visionCameraPreview" class="camera-preview" muted playsinline></video>
+            <span class="vision-copy">
+              <span class="vision-title">Live Camera</span>
+              <span id="visionCameraHint" class="vision-hint">Camera off</span>
+            </span>
+          </div>
+          <div class="camera-actions">
+            <button id="visionCameraStart" type="button">Cam On</button>
+            <button id="visionCameraFrame" type="button" disabled>Use Frame</button>
+            <button id="visionCameraStop" type="button" disabled>Cam Off</button>
+          </div>
           <div class="meters">
             <span>Mic</span>
             <div class="bar"><span id="level"></span></div>
@@ -861,6 +910,12 @@
     const visionPreview = document.querySelector("#visionPreview");
     const visionHint = document.querySelector("#visionHint");
     const visionClearButton = document.querySelector("#visionClear");
+    const visionCameraCard = document.querySelector("#visionCameraCard");
+    const visionCameraPreview = document.querySelector("#visionCameraPreview");
+    const visionCameraHint = document.querySelector("#visionCameraHint");
+    const visionCameraStartButton = document.querySelector("#visionCameraStart");
+    const visionCameraFrameButton = document.querySelector("#visionCameraFrame");
+    const visionCameraStopButton = document.querySelector("#visionCameraStop");
     const generatedImageCard = document.querySelector("#generatedImageCard");
     const generatedImagePreview = document.querySelector("#generatedImagePreview");
     const generatedImageHint = document.querySelector("#generatedImageHint");
@@ -895,6 +950,7 @@
     let audioContext;
     let micContext;
     let micStream;
+    let visionCameraStream;
     let micSource;
     let micProcessor;
     let recordingDestination;
@@ -1652,6 +1708,29 @@
       }
     ];
 
+    const sensingEyeTools = [
+      {
+        type: "function",
+        name: "capture_sensing_eye",
+        description: (
+          "Capture one current frame from Robot 790's live sensing-eye camera and stage it as visual context. " +
+          "Use when the user asks what you see, asks you to look through the live camera, or when current visual context is needed. " +
+          "Only available while the live camera is on."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            reason: {
+              type: "string",
+              maxLength: 120,
+              description: "Short reason for taking the frame."
+            }
+          },
+          additionalProperties: false
+        }
+      }
+    ];
+
     const castMediaTools = [
       {
         type: "function",
@@ -1774,6 +1853,8 @@
       "Use generate_image when the user explicitly asks you to make, draw, render, visualize, or show an imagined image.",
       "For generate_image, write a concrete visual prompt for one still image; do not use it for ordinary idle thoughts unless the user invited image generation.",
       "Never say you generated or showed an image unless generate_image succeeded.",
+      "If the sensing-eye live camera is on and you need current visual context, call capture_sensing_eye before describing the current view.",
+      "Never claim you captured, saw, or inspected the current live camera frame unless capture_sensing_eye succeeded or a sensing-eye image is already staged.",
       "Use cast_media when the user asks you to show, watch, cast, play, or put a YouTube video or direct image URL on the TV.",
       "The default Cast target is Living Room TV; if it is not found, report discovered devices briefly.",
       "For broad video requests, call cast_media with action play_youtube and a concise search query instead of only searching the web.",
@@ -2099,6 +2180,7 @@
       return [
         "Current Robot 790 browser/runtime state:",
         `- Microphone is ${micStream ? "on" : "off"}.`,
+        `- Sensing-eye live camera is ${visionCameraActive() ? "on" : "off"}.`,
         `- Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
         audioRecordingActive()
           ? "If recording is on, you may naturally know this session is being captured. Do not overperform or constantly mention it; let it lightly affect self-aware comments when relevant."
@@ -2706,6 +2788,20 @@
 
     function updateVisionButtons() {
       visionClearButton.disabled = !visionImageUrl && !sensingTextContent;
+    }
+
+    function visionCameraActive() {
+      return Boolean(visionCameraStream);
+    }
+
+    function updateVisionCameraButtons() {
+      const active = visionCameraActive();
+      visionCameraStartButton.disabled = active;
+      visionCameraFrameButton.disabled = !active;
+      visionCameraStopButton.disabled = !active;
+      visionCameraCard.classList.toggle("live", active);
+      if (!active) visionCameraHint.textContent = "Camera off";
+      if (contextPanel?.open) renderContextMap();
     }
 
     function updateGeneratedImageButtons() {
@@ -5461,6 +5557,7 @@
     function sensingInputLabel() {
       if (sensingTextContent) return `${sensingTextName || "text"} (${sensingTextContent.length} chars text)`;
       if (visionImageUrl) return `${visionImageName || "image"} (${visionImageStaged ? "staged image" : "image loaded"})`;
+      if (visionCameraActive()) return "live camera on, no frame staged";
       return "none";
     }
 
@@ -5509,6 +5606,7 @@
       const telemetryText = [
         `Realtime connected: ${realtimeConnected() ? "yes" : "no"}`,
         `Mic: ${micStream ? "on" : "off"}`,
+        `Sensing-eye live camera: ${visionCameraActive() ? "on" : "off"}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
         `Sensing input: ${sensingInputLabel()}`,
@@ -5582,7 +5680,8 @@
             `Current input: ${sensingInputLabel()}`,
             `Text chars: ${sensingTextContent.length}`,
             `Text cap: ${maxSensingTextChars} chars`,
-            `Image staged into realtime context: ${visionImageStaged ? "yes" : "no"}`
+            `Image staged into realtime context: ${visionImageStaged ? "yes" : "no"}`,
+            `Live camera: ${visionCameraActive() ? "on" : "off"}`
           ]
         },
         {
@@ -5622,6 +5721,7 @@
           details: [
             `Connection: ${realtimeConnected() ? "connected" : "disconnected"}`,
             `Mic: ${micStream ? "on" : "off"}`,
+            `Sensing-eye live camera: ${visionCameraActive() ? "on" : "off"}`,
             `Sensing input: ${sensingInputLabel()}`
           ]
         }
@@ -6208,20 +6308,29 @@
       }
       const sourceUrl = await fileToDataUrl(file);
       const image = await loadImage(sourceUrl);
-      const scale = Math.min(1, visionMaxEdgePx / Math.max(image.naturalWidth, image.naturalHeight));
-      const width = Math.max(1, Math.round(image.naturalWidth * scale));
-      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      setVisionImageFromDrawable(image, file.name || "image");
+    }
+
+    function setVisionImageFromDrawable(drawable, name) {
+      const naturalWidth = drawable.videoWidth || drawable.naturalWidth || drawable.width;
+      const naturalHeight = drawable.videoHeight || drawable.naturalHeight || drawable.height;
+      if (!naturalWidth || !naturalHeight) {
+        throw new Error("Camera frame is not ready yet.");
+      }
+      const scale = Math.min(1, visionMaxEdgePx / Math.max(naturalWidth, naturalHeight));
+      const width = Math.max(1, Math.round(naturalWidth * scale));
+      const height = Math.max(1, Math.round(naturalHeight * scale));
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
       ctx.fillStyle = "#101114";
       ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(image, 0, 0, width, height);
+      ctx.drawImage(drawable, 0, 0, width, height);
       sensingTextContent = "";
       sensingTextName = "";
       visionImageUrl = canvas.toDataURL("image/jpeg", visionJpegQuality);
-      visionImageName = file.name || "image";
+      visionImageName = name || "image";
       visionImageStaged = false;
       visionPreview.src = visionImageUrl;
       visionPreview.classList.add("ready");
@@ -6231,6 +6340,68 @@
       updateSessionTools();
       log(events, `vision image loaded: ${visionHint.textContent}`);
       stageVisionImage();
+    }
+
+    async function startVisionCamera() {
+      if (visionCameraStream) return;
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera capture is not available in this browser.");
+      }
+      visionCameraHint.textContent = "Starting...";
+      visionCameraStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: { ideal: "environment" }
+        },
+        audio: false
+      });
+      visionCameraStream.getVideoTracks().forEach((track) => {
+        track.addEventListener("ended", () => {
+          if (visionCameraStream) stopVisionCamera({ quiet: true });
+        }, { once: true });
+      });
+      visionCameraPreview.srcObject = visionCameraStream;
+      await visionCameraPreview.play().catch(() => {});
+      visionCameraHint.textContent = "Live";
+      updateVisionCameraButtons();
+      updateSessionTools();
+      log(events, "sensing-eye live camera on");
+    }
+
+    function stopVisionCamera({ quiet = false } = {}) {
+      if (visionCameraStream) {
+        visionCameraStream.getTracks().forEach((track) => track.stop());
+      }
+      visionCameraStream = null;
+      visionCameraPreview.pause();
+      visionCameraPreview.removeAttribute("src");
+      visionCameraPreview.srcObject = null;
+      updateVisionCameraButtons();
+      updateSessionTools();
+      if (!quiet) log(events, "sensing-eye live camera off");
+    }
+
+    function captureSensingEyeFrame({ reason = "" } = {}) {
+      if (!visionCameraStream) {
+        return { status: "error", error: "Sensing-eye live camera is off." };
+      }
+      try {
+        const label = `live-camera-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}.jpg`;
+        setVisionImageFromDrawable(visionCameraPreview, label);
+        visionCameraHint.textContent = "Frame staged";
+        log(events, `sensing-eye camera frame captured${reason ? `: ${reason}` : ""}`);
+        return {
+          status: "ok",
+          tool: "capture_sensing_eye",
+          filename: visionImageName,
+          staged: visionImageStaged,
+          camera: "live",
+          reason: String(reason || "")
+        };
+      } catch (error) {
+        return { status: "error", error: error.message, tool: "capture_sensing_eye" };
+      }
     }
 
     async function prepareSensingText(file) {
@@ -6382,6 +6553,7 @@
       if (name === "get_brain_status") return getBrainStatus(args);
       if (name === "show_web_page") return showWebPage(args);
       if (name === "generate_image") return generateImage(args);
+      if (name === "capture_sensing_eye") return captureSensingEyeFrame(args);
       if (name === "cast_media") return castMedia(args);
       if (name === "set_smart_home_device") return setSmartHomeDevice(args);
       if (name === "write_text_file") return writeTextFile(args);
@@ -6530,6 +6702,14 @@
       return "I made the image.";
     }
 
+    function sensingEyeFollowupInstructions(result) {
+      if (result?.status === "error") return exactSpeechInstruction("I could not capture the camera frame.");
+      return (
+        "Use the newly staged sensing-eye camera frame to answer the user's visual request in one compact spoken sentence. " +
+        "Separate what is plainly visible from guesses, and say when you are uncertain."
+      );
+    }
+
     function castMediaFollowupText(result) {
       if (result?.status === "error") return "I could not cast that.";
       const action = String(result?.action || "").toLowerCase();
@@ -6591,6 +6771,7 @@
         if (event.name === "get_brain_status") toolFollowupInstructions = brainStatusFollowupInstructions(result);
         if (event.name === "show_web_page") toolFollowupExactText = webPageFollowupText(result);
         if (event.name === "generate_image") toolFollowupExactText = imageFollowupText(result);
+        if (event.name === "capture_sensing_eye") toolFollowupInstructions = sensingEyeFollowupInstructions(result);
         if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
         if (event.name === "set_smart_home_device") toolFollowupExactText = smartHomeFollowupText(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
@@ -6620,6 +6801,7 @@
         if (event.name === "get_brain_status") toolFollowupExactText = "I could not check my status.";
         if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
         if (event.name === "generate_image") toolFollowupExactText = "I could not make that image.";
+        if (event.name === "capture_sensing_eye") toolFollowupExactText = "I could not capture the camera frame.";
         if (event.name === "cast_media") toolFollowupExactText = "I could not cast that.";
         if (event.name === "set_smart_home_device") toolFollowupExactText = "I could not control that.";
         log(events, `tool ${event.name} error: ${error.message}`);
@@ -6691,6 +6873,7 @@
         ...(llmWebSearchTools?.checked ? searchTools : []),
         ...(llmWebPageTools?.checked ? webPageTools : []),
         ...(llmImageTools?.checked ? imageTools : []),
+        ...(visionCameraActive() ? sensingEyeTools : []),
         ...(llmCastMediaTools?.checked ? castMediaTools : []),
         ...(llmSmartHomeTools?.checked ? smartHomeTools : []),
         ...(llmNoteFileTools?.checked ? noteFileTools : [])
@@ -7362,6 +7545,18 @@
       prepareSensingInput(file).catch((error) => log(events, `sensing input error: ${error.message}`));
     });
     visionClearButton.addEventListener("click", clearVisionImage);
+    visionCameraStartButton.addEventListener("click", () => {
+      startVisionCamera().catch((error) => {
+        updateVisionCameraButtons();
+        visionCameraHint.textContent = "Camera failed";
+        log(events, `sensing-eye camera error: ${error.message}`);
+      });
+    });
+    visionCameraFrameButton.addEventListener("click", () => {
+      const result = captureSensingEyeFrame({ reason: "manual shutter" });
+      if (result.status === "error") log(events, `sensing-eye camera frame error: ${result.error}`);
+    });
+    visionCameraStopButton.addEventListener("click", () => stopVisionCamera());
     generatedImageOpenButton.addEventListener("click", openGeneratedImage);
     generatedImageClearButton.addEventListener("click", clearGeneratedImage);
     imageModel.addEventListener("change", () => {
@@ -7475,6 +7670,7 @@
     window.addEventListener("pagehide", () => {
       beaconLogSnapshot(conversation, "conversation");
       beaconLogSnapshot(events, "events");
+      stopVisionCamera({ quiet: true });
     });
     document.querySelectorAll(".settings-panel").forEach((panel) => {
       panel.addEventListener("toggle", scheduleLogPaneHeightUpdate);
@@ -7504,6 +7700,7 @@
     renderMemory();
     updateTypedInputButtons();
     updateVisionButtons();
+    updateVisionCameraButtons();
     updateGeneratedImageButtons();
     updateAudioRecordButtons();
     loadStartupNotes();
