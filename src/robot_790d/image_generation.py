@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import html
 import json
 import os
@@ -294,8 +293,7 @@ def _write_metadata(filename: str, metadata: dict[str, Any], *, repo_root: Path 
 def _generated_filename(*, prompt: str, title: str, provider: str, ext: str) -> str:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     slug = _slug(title or prompt) or "vision"
-    digest = hashlib.sha256(f"{provider}\n{prompt}\n{stamp}".encode("utf-8")).hexdigest()[:8]
-    return f"{stamp}-{provider}-{slug[:48]}-{digest}.{ext.lower()}"
+    return f"{stamp}-{provider}-{slug[:48]}.{ext.lower()}"
 
 
 def _provider_name(provider: str | None) -> str:

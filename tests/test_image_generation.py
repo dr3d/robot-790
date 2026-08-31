@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 import types
 
@@ -22,6 +23,7 @@ def test_mock_image_generation_writes_svg_and_metadata(tmp_path, monkeypatch) ->
     assert result["tool"] == "generate_image"
     assert result["provider"] == "mock"
     assert str(result["url"]).startswith("/generated-images/")
+    assert re.fullmatch(r"\d{8}-\d{6}-mock-clockwork-lighthouse\.svg", str(result["filename"]))
 
     path = tmp_path / "logs" / "generated-images" / str(result["filename"])
     assert path.exists()
