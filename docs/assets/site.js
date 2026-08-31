@@ -193,15 +193,21 @@ function mediaButton(media, index) {
   `;
 }
 
+function mediaTimestamp(media) {
+  const modified = Date.parse(media.modified || 0) || 0;
+  const dated = Date.parse(media.date || 0) || 0;
+  return Math.max(modified, dated);
+}
+
 function applyHeaderBanner(mediaItems) {
   if (!pageHeader || !mediaItems.length) return;
   const ranked = mediaItems
-    .filter((media) => media.preview || media.source)
+    .filter((media) => media.kind === "image" && (media.preview || media.source))
     .slice()
     .sort((a, b) => {
-      const rankDelta = (Number(b.banner_rank) || 0) - (Number(a.banner_rank) || 0);
-      if (rankDelta) return rankDelta;
-      return Date.parse(b.date || b.modified || 0) - Date.parse(a.date || a.modified || 0);
+      const timeDelta = mediaTimestamp(b) - mediaTimestamp(a);
+      if (timeDelta) return timeDelta;
+      return (Number(b.banner_rank) || 0) - (Number(a.banner_rank) || 0);
     });
   const banner = ranked[0];
   const source = banner ? (banner.preview || banner.source || "") : "";
