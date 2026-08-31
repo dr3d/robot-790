@@ -83,6 +83,13 @@ def test_record_log_snapshot_rejects_empty_content(tmp_path) -> None:
         raise AssertionError("Expected empty log recording to fail")
 
 
+def test_record_log_snapshot_accepts_brain2_mulling_source(tmp_path) -> None:
+    result = sts_page_server.record_log_snapshot("brain2_mulling", "brain2 mouth: hello", repo_root=tmp_path)
+
+    assert result["source"] == "brain2_mulling"
+    assert (tmp_path / result["latest"]).name == "latest-brain2_mulling.txt"
+
+
 def test_record_audio_snapshot_returns_picture_mp4(monkeypatch, tmp_path) -> None:
     image_path = tmp_path / "logs" / "generated-images" / "last-image.png"
     image_path.parent.mkdir(parents=True)

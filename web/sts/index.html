@@ -368,6 +368,9 @@
       gap: 16px;
     }
     .log-grid {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(260px, 0.8fr);
+    }
+    .log-grid {
       flex: 0 0 auto;
       height: var(--log-pane-live-height);
       min-height: var(--log-pane-height);
@@ -854,6 +857,16 @@
         </div>
         <div id="events" class="log"></div>
       </div>
+      <div>
+        <div class="log-header">
+          <label>Brain 2 <span id="brain2Status" class="subtle"></span></label>
+          <span class="log-actions">
+            <button id="copyBrain2" class="copy-link" type="button">Copy</button>
+            <button id="recordBrain2" class="copy-link" type="button">Record</button>
+          </span>
+        </div>
+        <div id="brain2Log" class="log"></div>
+      </div>
     </section>
   </main>
 
@@ -911,6 +924,10 @@
     const typedSendButton = document.querySelector("#typedSend");
     const typedSayButton = document.querySelector("#typedSay");
     const typedStatus = document.querySelector("#typedStatus");
+    const brain2Log = document.querySelector("#brain2Log");
+    const brain2Status = document.querySelector("#brain2Status");
+    const copyBrain2Button = document.querySelector("#copyBrain2");
+    const recordBrain2Button = document.querySelector("#recordBrain2");
     const startAudioRecordButton = document.querySelector("#startAudioRecord");
     const stopAudioRecordButton = document.querySelector("#stopAudioRecord");
     const downloadAudioRecordLink = document.querySelector("#downloadAudioRecord");
@@ -1032,8 +1049,10 @@
     let reengageAttempts = 0;
     let lastReengageAt = 0;
     let brain2Timer = null;
+    let brain2SurfaceTimer = null;
     let brain2InFlight = false;
     let lastBrain2MullAt = 0;
+    let brain2DeferredSurface = null;
     let idleTimer;
     let idleInFlight = false;
     let lastConversationActivityAt = Date.now();
@@ -1058,6 +1077,9 @@
     let recentIdleOpenings = [];
     let recentIdleThemes = [];
     let idleUnresolvedQuestions = [];
+    let recentAssistantOutputs = [];
+    let brain2QuestionCandidates = [];
+    const brain2Counters = { fired: 0, surfaced: 0, held: 0, skipped: 0, failed: 0 };
     let lastIdleBridgeAt = 0;
     let lastIdleRevisionAt = 0;
     let lastIdleUnresolvedAt = 0;
@@ -1156,7 +1178,8 @@
     const idleUnresolvedGapMs = 8 * 60 * 1000;
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
     const idleMouthAsideGapMs = 45 * 1000;
-    const brain2MinGapMs = 22 * 1000;
+    const brain2MinGapMs = 14 * 1000;
+    const brain2DeferredSurfaceMaxAgeMs = 90 * 1000;
     const performanceAutoMs = 8 * 60 * 1000;
     const idleCuriositySeedRetireMs = 45 * 60 * 1000;
     const idleCuriositySeedLimit = 10;
@@ -2029,6 +2052,8 @@
     }
 
     function noteAssistantText(text) {
+      const value = String(text || "").trim();
+      if (value) recentAssistantOutputs = [...recentAssistantOutputs, value].slice(-16);
       if (assistantArmedMemorySave(text)) {
         memorySaveArmedUntil = Date.now() + 45000;
       }
@@ -2445,6 +2470,7 @@
       if (brain2PersonFocusValue) brain2PersonFocusValue.textContent = brain2PersonFocusLabel();
       if (brain2MullNowButton) brain2MullNowButton.disabled = brain2InFlight || !conversationLines.length;
       saveBrain2Controls();
+      updateBrain2Status();
       scheduleBrain2Mull();
       if (contextPanel?.open) renderContextMap();
     }
@@ -2454,14 +2480,17 @@
       brain2Timer = null;
     }
 
+    function clearBrain2SurfaceTimer() {
+      if (brain2SurfaceTimer) clearTimeout(brain2SurfaceTimer);
+      brain2SurfaceTimer = null;
+    }
+
     function brain2BlockedReason({ manual = false } = {}) {
       if (brain2InFlight) return "already in flight";
       if (!manual && !brain2MouthBrainEnabled()) return "brain 2 off";
       if (currentBrain2PersonFocus() <= 0) return "person lane off";
       if (!conversationLines.length) return "no conversation";
       if (userSpeechActive) return "user speaking";
-      if (userTurnPending()) return "user turn pending";
-      if (outputAudioActive()) return "voice speaking";
       if (!manual && Date.now() - lastBrain2MullAt < brain2MinGapMs) return "cooldown";
       return "";
     }
@@ -2469,7 +2498,7 @@
     function brain2DelayMs() {
       const focus = currentBrain2PersonFocus();
       if (focus <= 0) return Infinity;
-      return Math.max(18000, 76000 - focus * 5200);
+      return Math.max(10000, 52000 - focus * 4200);
     }
 
     function scheduleBrain2Mull() {
@@ -3075,6 +3104,27 @@
       const stamp = new Date().toLocaleTimeString();
       target.textContent += `[${stamp}] ${text}\n`;
       target.scrollTop = target.scrollHeight;
+    }
+
+    function updateBrain2Status() {
+      if (!brain2Status) return;
+      const state = brain2InFlight ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off";
+      brain2Status.textContent = `${state} / ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`;
+    }
+
+    function logBrain2(kind, text = "") {
+      const detail = String(text || "").trim();
+      const line = detail ? `${kind}: ${detail}` : kind;
+      if (brain2Log) log(brain2Log, line);
+      log(events, `brain2 ${line}`);
+      updateBrain2Status();
+    }
+
+    function bumpBrain2Counter(name) {
+      if (Object.prototype.hasOwnProperty.call(brain2Counters, name)) {
+        brain2Counters[name] += 1;
+      }
+      updateBrain2Status();
     }
 
     async function writeClipboardText(text) {
@@ -3917,6 +3967,89 @@
       return recentIdleOutputs.slice(-5).join("\n").slice(-900);
     }
 
+    function normalizeBrain2EchoSignature(text) {
+      return String(text || "")
+        .toLowerCase()
+        .replace(/robot 790|eric|scott/g, " ")
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((word) => word.length > 2)
+        .join(" ");
+    }
+
+    function brain2EchoesRecentVoice(text) {
+      const signature = normalizeBrain2EchoSignature(text);
+      if (signature.length < 12) return false;
+      const recent = [...recentAssistantOutputs.slice(-8), ...recentIdleOutputs.slice(-6)]
+        .map(normalizeBrain2EchoSignature)
+        .filter((value) => value.length >= 12);
+      return recent.some((value) => value.includes(signature) || signature.includes(value));
+    }
+
+    function brain2MouthCanSurface() {
+      return !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
+    }
+
+    function brain2UserPresentButBusy() {
+      return Boolean(
+        userSpeechActive
+        || userTurnPending()
+        || responseActive
+        || outputAudioActive()
+        || (micStream && lastUserTurnActivityAt && Date.now() - lastUserTurnActivityAt < 90000)
+      );
+    }
+
+    async function surfaceBrain2MouthText(mouthText) {
+      try {
+        await setMouthText({
+          text: mouthText,
+          mode: mouthText.length > 32 ? "marquee" : "center",
+          color: "cyan",
+          duration: 7
+        });
+      } catch (error) {
+        logBrain2("mouth display error", error.message);
+      }
+      bumpBrain2Counter("surfaced");
+      logBrain2("mouth", mouthText);
+    }
+
+    function deferBrain2Surface(mouthText, reason) {
+      brain2DeferredSurface = {
+        mouthText,
+        reason,
+        createdAt: Date.now()
+      };
+      bumpBrain2Counter("held");
+      logBrain2("held", `${reason}: ${mouthText}`);
+      scheduleBrain2Surface();
+    }
+
+    function scheduleBrain2Surface() {
+      clearBrain2SurfaceTimer();
+      if (!brain2DeferredSurface) return;
+      brain2SurfaceTimer = setTimeout(() => {
+        maybeSurfaceDeferredBrain2().catch((error) => logBrain2("surface error", error.message));
+      }, 1200);
+    }
+
+    async function maybeSurfaceDeferredBrain2() {
+      if (!brain2DeferredSurface) return;
+      if (Date.now() - brain2DeferredSurface.createdAt > brain2DeferredSurfaceMaxAgeMs) {
+        logBrain2("held expired", brain2DeferredSurface.mouthText);
+        brain2DeferredSurface = null;
+        return;
+      }
+      if (!brain2MouthCanSurface()) {
+        scheduleBrain2Surface();
+        return;
+      }
+      const { mouthText } = brain2DeferredSurface;
+      brain2DeferredSurface = null;
+      await surfaceBrain2MouthText(mouthText);
+    }
+
     async function requestBrain2Mull({ manual = false } = {}) {
       const response = await fetch(new URL("/api/brain2/mull", location.href), {
         method: "POST",
@@ -3939,34 +4072,45 @@
     async function triggerBrain2Mull({ manual = false } = {}) {
       const blocked = brain2BlockedReason({ manual });
       if (blocked) {
-        if (manual) log(events, `brain2 mull skipped: ${blocked}`);
+        bumpBrain2Counter("skipped");
+        logBrain2("mull skipped", blocked);
         scheduleBrain2Mull();
         return;
       }
       brain2InFlight = true;
       updateBrain2Controls();
       try {
+        bumpBrain2Counter("fired");
+        logBrain2("fired", manual ? "manual" : "auto");
         const result = await requestBrain2Mull({ manual });
         lastBrain2MullAt = Date.now();
         const mouthText = String(result.mouth_text || "").trim();
         const question = String(result.question || "").trim();
         const shouldSurface = result.should_surface !== false;
-        if (mouthText && shouldSurface) {
-          try {
-            await setMouthText({
-              text: mouthText,
-              mode: mouthText.length > 32 ? "marquee" : "center",
-              color: "cyan",
-              duration: 7
-            });
-          } catch (error) {
-            log(events, `brain2 mouth display error: ${error.message}`);
-          }
-          log(events, `brain2 mouth: ${mouthText}`);
+        if (mouthText && brain2EchoesRecentVoice(mouthText)) {
+          bumpBrain2Counter("held");
+          logBrain2("held echo", mouthText);
+        } else if (mouthText && shouldSurface && brain2MouthCanSurface()) {
+          await surfaceBrain2MouthText(mouthText);
+        } else if (mouthText && shouldSurface) {
+          deferBrain2Surface(mouthText, "waiting for pause");
         } else if (mouthText) {
-          log(events, `brain2 held: ${mouthText}`);
+          bumpBrain2Counter("held");
+          logBrain2("held", mouthText);
         }
-        if (question) log(events, `brain2 question candidate: ${question}`);
+        if (question) {
+          if (brain2UserPresentButBusy()) {
+            bumpBrain2Counter("held");
+            logBrain2("question held", question);
+          } else {
+            brain2QuestionCandidates = [...brain2QuestionCandidates, { text: question, at: Date.now() }].slice(-12);
+            logBrain2("question candidate", question);
+          }
+        }
+      } catch (error) {
+        bumpBrain2Counter("failed");
+        logBrain2("failed", error.message);
+        throw error;
       } finally {
         brain2InFlight = false;
         updateBrain2Controls();
@@ -5763,6 +5907,9 @@
         `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
         `Brain 2 person lane: ${brain2PersonFocusLabel()}`,
         `Brain 2 in flight: ${brain2InFlight ? "yes" : "no"}`,
+        brain2QuestionCandidates.length
+          ? `Brain 2 question candidates:\n${brain2QuestionCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
+          : "",
         recentIdleOutputs.length ? `Recent idle outputs:\n${recentIdleOutputs.slice(-8).join("\n")}` : "",
         idleUnresolvedContext(),
         idleCuriositySeeds.length
@@ -7603,6 +7750,7 @@
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
         clearBrain2Timer();
+        clearBrain2SurfaceTimer();
         if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
         imageToolProtectionTimer = null;
         imageToolProtectionUntil = 0;
@@ -7935,6 +8083,8 @@
       conversationLines = [];
       clearInputDraft();
       events.textContent = "";
+      brain2Log.textContent = "";
+      brain2QuestionCandidates = [];
       updateBrain2Controls();
     });
     popoutConversationButton.addEventListener("click", openConversationPopout);
@@ -7950,6 +8100,12 @@
     recordEventsButton.addEventListener("click", () => {
       recordLogPane(recordEventsButton, events, "events");
     });
+    copyBrain2Button.addEventListener("click", () => {
+      copyLogPane(copyBrain2Button, brain2Log, "brain2_mulling");
+    });
+    recordBrain2Button.addEventListener("click", () => {
+      recordLogPane(recordBrain2Button, brain2Log, "brain2_mulling");
+    });
     contextMapRefreshButton.addEventListener("click", renderContextMap);
     contextMapCopyButton.addEventListener("click", () => {
       copyContextMap();
@@ -7960,6 +8116,7 @@
     window.addEventListener("pagehide", () => {
       beaconLogSnapshot(conversation, "conversation");
       beaconLogSnapshot(events, "events");
+      beaconLogSnapshot(brain2Log, "brain2_mulling");
       stopVisionCamera({ quiet: true });
     });
     document.querySelectorAll(".settings-panel").forEach((panel) => {
