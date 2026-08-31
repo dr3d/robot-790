@@ -546,7 +546,14 @@ def record_log_snapshot(source: str, content: str, repo_root: Path | None = None
 
 def _safe_log_source(source: str) -> str:
     value = str(source or "session").strip().lower()
-    if value not in {"conversation", "events", "session", "brain2_mulling"}:
+    if value not in {
+        "conversation",
+        "events",
+        "session",
+        "brain2_mulling",
+        "first_contact_report",
+        "first_contact_direct_probe",
+    }:
         value = "session"
     return value
 
