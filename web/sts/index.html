@@ -7517,7 +7517,8 @@
                   downloadAudioRecordLink.download = recordingName;
                   downloadAudioRecordLink.hidden = false;
                 }
-                log(events, `audio recording spliced: ${finalResult.latest || finalResult.filename || recordingName} (${finalResult.chunk_count || audioRecordSessionChunks.length} chunks)`);
+                const crossfadeLabel = finalResult.crossfaded ? `, ${finalResult.crossfade_s || "?"}s crossfade` : "";
+                log(events, `audio recording spliced: ${finalResult.latest || finalResult.filename || recordingName} (${finalResult.chunk_count || audioRecordSessionChunks.length} chunks${crossfadeLabel})`);
               }
             } catch (error) {
               log(events, `audio recording splice error: ${error.message}`);

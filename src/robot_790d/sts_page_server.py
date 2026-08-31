@@ -861,6 +861,8 @@ def finalize_audio_recording_session(
         "caption_events": caption_events,
         "chunk_count": len(chunk_paths),
         "video_spliced": video_spliced,
+        "crossfaded": bool(conversion.get("crossfaded", False)),
+        "crossfade_s": conversion.get("crossfade_s"),
     }
 
 
@@ -968,6 +970,15 @@ def _concat_audio_sources(audio_paths: list[Path], output_path: Path, repo_root:
 
 
 def _concat_picture_audio_mp4s(video_paths: list[Path], output_path: Path, repo_root: Path) -> dict[str, object]:
+    crossfade_s = _audio_recording_chunk_crossfade_s()
+    if len(video_paths) > 1 and crossfade_s >= 0.05:
+        crossfaded = _concat_picture_audio_mp4s_with_crossfade(video_paths, output_path, repo_root, crossfade_s)
+        if crossfaded.get("status") == "ok":
+            return crossfaded
+    return _concat_picture_audio_mp4s_plain(video_paths, output_path, repo_root)
+
+
+def _concat_picture_audio_mp4s_plain(video_paths: list[Path], output_path: Path, repo_root: Path) -> dict[str, object]:
     concat_list = output_path.with_name(f"{output_path.stem}.video-concat.txt")
     try:
         concat_list.write_text(
@@ -1018,6 +1029,7 @@ def _concat_picture_audio_mp4s(video_paths: list[Path], output_path: Path, repo_
             "duration_s": round(_probe_duration(output_path, repo_root), 3),
             "trimmed_silence": False,
             "captioned": False,
+            "crossfaded": False,
         }
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         return {"status": "error", "error": str(exc)}
@@ -1026,6 +1038,94 @@ def _concat_picture_audio_mp4s(video_paths: list[Path], output_path: Path, repo_
             concat_list.unlink()
         except FileNotFoundError:
             pass
+
+
+def _concat_picture_audio_mp4s_with_crossfade(
+    video_paths: list[Path],
+    output_path: Path,
+    repo_root: Path,
+    crossfade_s: float,
+) -> dict[str, object]:
+    try:
+        durations = [_probe_duration(path, repo_root) for path in video_paths]
+        fade_s = min(crossfade_s, *(max(0.05, duration / 4) for duration in durations))
+        if fade_s < 0.05:
+            return {"status": "error", "error": "Chunk crossfade duration too short."}
+        fade_text = f"{fade_s:.3f}"
+        args = ["-y"]
+        for path in video_paths:
+            args.extend(["-i", str(path)])
+
+        filters: list[str] = []
+        for index in range(len(video_paths)):
+            filters.append(
+                f"[{index}:v]fps=24,scale=512:512:force_original_aspect_ratio=decrease,"
+                f"pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p,setpts=PTS-STARTPTS[v{index}]"
+            )
+            filters.append(
+                f"[{index}:a]aresample=async=1:first_pts=0,"
+                f"aformat=sample_rates=24000:channel_layouts=mono,asetpts=PTS-STARTPTS[a{index}]"
+            )
+
+        video_label = "v0"
+        audio_label = "a0"
+        elapsed = durations[0]
+        for index in range(1, len(video_paths)):
+            offset = max(0.0, elapsed - fade_s)
+            next_video = f"vx{index}"
+            next_audio = f"ax{index}"
+            filters.append(
+                f"[{video_label}][v{index}]xfade=transition=fade:duration={fade_text}:offset={offset:.3f}[{next_video}]"
+            )
+            filters.append(f"[{audio_label}][a{index}]acrossfade=d={fade_text}:c1=tri:c2=tri[{next_audio}]")
+            video_label = next_video
+            audio_label = next_audio
+            elapsed = elapsed + durations[index] - fade_s
+
+        args.extend(
+            [
+                "-filter_complex",
+                ";".join(filters),
+                "-map",
+                f"[{video_label}]",
+                "-map",
+                f"[{audio_label}]",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-profile:v",
+                "baseline",
+                "-level",
+                "3.0",
+                "-pix_fmt",
+                "yuv420p",
+                "-crf",
+                "34",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "48k",
+                "-ac",
+                "1",
+                "-ar",
+                "24000",
+                "-movflags",
+                "+faststart",
+                str(output_path),
+            ]
+        )
+        _run_ffmpeg(args, repo_root)
+        return {
+            "status": "ok",
+            "duration_s": round(_probe_duration(output_path, repo_root), 3),
+            "trimmed_silence": False,
+            "captioned": False,
+            "crossfaded": True,
+            "crossfade_s": round(fade_s, 3),
+        }
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
 
 
 def _parse_recording_captions(value: str) -> list[dict[str, object]]:
@@ -1322,7 +1422,7 @@ def _recording_audio_filter(*, trim_silence: bool) -> str:
     if trim_silence and _audio_recording_trim_enabled():
         threshold = _env_text("ROBOT_790_AUDIO_TRIM_THRESHOLD") or "-45dB"
         silence_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_SILENCE_S", 0.8, minimum=0.1, maximum=5.0)
-        keep_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_KEEP_S", 0.15, minimum=0.0, maximum=2.0)
+        keep_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_KEEP_S", 0.65, minimum=0.0, maximum=2.0)
         edge_trim = (
             "silenceremove="
             "start_periods=1:"
@@ -1332,6 +1432,10 @@ def _recording_audio_filter(*, trim_silence: bool) -> str:
         )
         filters.extend([edge_trim, "areverse", edge_trim, "areverse"])
     return ",".join(filters)
+
+
+def _audio_recording_chunk_crossfade_s() -> float:
+    return _bounded_float_env("ROBOT_790_AUDIO_CHUNK_CROSSFADE_S", 0.35, minimum=0.0, maximum=2.0)
 
 
 def _write_recording_caption_file(path: Path, captions: list[dict[str, object]], duration_s: float) -> bool:

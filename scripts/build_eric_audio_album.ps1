@@ -8,7 +8,7 @@ param(
   [double]$GapSeconds = 0.65,
   [ValidateSet("silence", "manifest", "transcript")]
   [string]$DurationMode = "silence",
-  [double]$AutoTailSeconds = 0.35,
+  [double]$AutoTailSeconds = 0.85,
   [double]$MinAutoDurationSeconds = 6.0,
   [double]$MaxAutoDurationSeconds = 45.0,
   [double]$SilenceSeconds = 1.15,

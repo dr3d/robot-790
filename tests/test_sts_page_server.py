@@ -324,6 +324,42 @@ def test_finalize_audio_recording_session_sequences_chunk_videos(monkeypatch, tm
     assert (tmp_path / result["raw_latest"]).read_bytes() == b"raw together"
 
 
+def test_concat_picture_audio_mp4s_crossfades_chunks(monkeypatch, tmp_path) -> None:
+    first = tmp_path / "first-picture.mp4"
+    second = tmp_path / "second-picture.mp4"
+    output = tmp_path / "joined.mp4"
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+    calls = []
+
+    monkeypatch.setenv("ROBOT_790_AUDIO_CHUNK_CROSSFADE_S", "0.4")
+
+    def fake_probe(path, _repo_root):
+        durations = {
+            first: 4.0,
+            second: 4.0,
+            output: 7.6,
+        }
+        return durations[path]
+
+    def fake_run_ffmpeg(args, repo_root):
+        assert repo_root == tmp_path
+        calls.append(args)
+        output.write_bytes(b"joined")
+
+    monkeypatch.setattr(sts_page_server, "_probe_duration", fake_probe)
+    monkeypatch.setattr(sts_page_server, "_run_ffmpeg", fake_run_ffmpeg)
+
+    result = sts_page_server._concat_picture_audio_mp4s([first, second], output, tmp_path)
+
+    assert result["status"] == "ok"
+    assert result["crossfaded"] is True
+    assert result["crossfade_s"] == 0.4
+    command = " ".join(calls[0])
+    assert "xfade=transition=fade:duration=0.400:offset=3.600" in command
+    assert "acrossfade=d=0.400" in command
+
+
 def test_finalize_audio_recording_session_requires_two_chunks(tmp_path) -> None:
     audio_dir = tmp_path / "logs" / "audio"
     audio_dir.mkdir(parents=True)
@@ -376,6 +412,15 @@ def test_recording_audio_filter_can_trim_silence(monkeypatch) -> None:
     assert "start_duration=1.250" in value
     assert "start_silence=0.200" in value
     assert ",areverse,silenceremove=" in value
+
+
+def test_recording_audio_filter_keeps_more_tail_by_default(monkeypatch) -> None:
+    monkeypatch.setenv("ROBOT_790_AUDIO_TRIM_SILENCE", "true")
+    monkeypatch.delenv("ROBOT_790_AUDIO_TRIM_KEEP_S", raising=False)
+
+    value = sts_page_server._recording_audio_filter(trim_silence=True)
+
+    assert "start_silence=0.650" in value
 
 
 def test_recorded_audio_path_stays_inside_audio_dir(tmp_path) -> None:
