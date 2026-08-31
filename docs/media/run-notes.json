@@ -1,0 +1,17 @@
+{
+  "media/videos/The-Desk-Fan-Was-Innocent-2026-08-31-140601.mp4": {
+    "description": "This is the desk-fan provenance collision. Eric likely saw a real fan through the live camera, but when Scott confidently corrected him, he abandoned the true percept and produced a false confession about having made it up. The interesting part is not just vision, but witness pressure: Brain2 and Codex also accepted the poisoned frame until the event log made the sensor trail legible."
+  },
+  "media/videos/Second-Brain-Person-Lane-2026-08-31-122051.mp4": {
+    "description": "The first public Brain2 run: Erica/Vivian gets a second private lane that thinks about the person in the room while the main voice keeps talking. The transcript shows the main brain noticing the symptoms - a mouth that backchannels before the voice catches up - while the event log shows Brain2 generating person-lane questions and private mouth asides underneath."
+  },
+  "media/videos/The_Robot_Whose_Personality_Is_Pure_Boundary.mp4": {
+    "description": "A NotebookLM-style podcast/video companion to the boundary article. The run is useful because it reframes Eric's personality as an architecture of constraints, receipts, embodiment, and repeated tests, rather than a secret block of character text hidden in a prompt."
+  },
+  "media/videos/20260830-202855-sts-audio-picture.mp4": {
+    "description": "This run catches two new organs arriving together: the wonder/search problem and input prosody. Eric explains that the wonder slider should become an itch queue instead of a prompt nudge, then calibrates the new voice-shape tags honestly: not a second transcript, but the undertone - loud, quiet, pitch, hit, pause - enough to read emphasis and skepticism without pretending it is precise measurement."
+  },
+  "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4": {
+    "description": "The long overnight mulling run. Eric was given mechanism-heavy notes, told not to perform, and left with the mic off; the result is the clearest evidence that idle beats can feed future idle beats. He over-orbits wax, SOFAR, tally sticks, fuses, and camera obscura, but some returns climb into real self-correction, which is the exact line between empty repetition and useful mulling."
+  }
+}

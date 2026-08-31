@@ -6,6 +6,11 @@ $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path $DocsDir
 $catalogPath = Join-Path $root "catalog.json"
+$mediaNotesPath = Join-Path $root "media/run-notes.json"
+$mediaNotes = $null
+if (Test-Path $mediaNotesPath) {
+    $mediaNotes = Get-Content -Path $mediaNotesPath -Encoding UTF8 -Raw | ConvertFrom-Json
+}
 
 function Convert-ToSitePath {
     param([string]$Path)
@@ -148,6 +153,28 @@ function Get-BannerRank {
     return 10
 }
 
+function Get-MediaDescription {
+    param([string]$Source, [System.IO.FileInfo]$File)
+    if ($null -eq $mediaNotes) {
+        return ""
+    }
+    $candidates = @($Source, $File.Name)
+    foreach ($candidate in $candidates) {
+        $entry = $mediaNotes.PSObject.Properties[$candidate]
+        if (-not $entry) {
+            continue
+        }
+        if ($entry.Value -is [string]) {
+            return $entry.Value.Trim()
+        }
+        $description = $entry.Value.PSObject.Properties["description"]
+        if ($description -and $description.Value) {
+            return ([string]$description.Value).Trim()
+        }
+    }
+    return ""
+}
+
 $articles = @()
 $articleDir = Join-Path $root "articles"
 if (Test-Path $articleDir) {
@@ -204,7 +231,8 @@ if ($mediaSearchDirs.Count -gt 0) {
             $kind = Get-MediaKind $_.Extension
             $role = Get-MediaRole $_ $source $kind
             $mediaDate = Get-MediaDate $_
-            [ordered]@{
+            $description = Get-MediaDescription $source $_
+            $item = [ordered]@{
                 title = Get-FriendlyMediaTitle $_
                 kind = $kind
                 role = $role
@@ -215,6 +243,10 @@ if ($mediaSearchDirs.Count -gt 0) {
                 date = $mediaDate.ToString("yyyy-MM-dd HH:mm")
                 modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
+            if ($description) {
+                $item.description = $description
+            }
+            $item
         }
 }
 

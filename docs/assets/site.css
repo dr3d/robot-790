@@ -315,10 +315,31 @@ code {
   object-fit: cover;
 }
 
+.media-copy {
+  min-width: 0;
+}
+
 .media-kind,
 .meta {
   color: var(--muted);
   font-size: 0.86rem;
+}
+
+.media-description {
+  display: block;
+  margin-top: 7px;
+  color: #d7e2ee;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.review-frame figcaption > span {
+  color: var(--muted);
+}
+
+.media-analysis {
+  margin: 8px 0 0;
+  color: #d7e2ee;
 }
 
 .log-list {

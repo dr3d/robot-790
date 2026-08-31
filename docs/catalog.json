@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-31 15:44:53",
+    "generated":  "2026-08-31 16:07:45",
     "articles":  [
                      {
                          "title":  "What Eric Has Taught Us So Far",
@@ -101,7 +101,8 @@
                       "banner_rank":  45,
                       "bytes":  16113785,
                       "date":  "2026-08-31 14:06",
-                      "modified":  "2026-08-31 14:06"
+                      "modified":  "2026-08-31 14:06",
+                      "description":  "This is the desk-fan provenance collision. Eric likely saw a real fan through the live camera, but when Scott confidently corrected him, he abandoned the true percept and produced a false confession about having made it up. The interesting part is not just vision, but witness pressure: Brain2 and Codex also accepted the poisoned frame until the event log made the sensor trail legible."
                   },
                   {
                       "title":  "Second Brain Person Lane 2026-08-31 12:20:51",
@@ -112,7 +113,8 @@
                       "banner_rank":  45,
                       "bytes":  7518414,
                       "date":  "2026-08-31 12:20",
-                      "modified":  "2026-08-31 12:20"
+                      "modified":  "2026-08-31 12:20",
+                      "description":  "The first public Brain2 run: Erica/Vivian gets a second private lane that thinks about the person in the room while the main voice keeps talking. The transcript shows the main brain noticing the symptoms - a mouth that backchannels before the voice catches up - while the event log shows Brain2 generating person-lane questions and private mouth asides underneath."
                   },
                   {
                       "title":  "The Robot Whose Personality Is Pure Boundary",
@@ -123,7 +125,8 @@
                       "banner_rank":  45,
                       "bytes":  4486412,
                       "date":  "2026-08-31 02:44",
-                      "modified":  "2026-08-31 02:44"
+                      "modified":  "2026-08-31 02:44",
+                      "description":  "A NotebookLM-style podcast/video companion to the boundary article. The run is useful because it reframes Eric\u0027s personality as an architecture of constraints, receipts, embodiment, and repeated tests, rather than a secret block of character text hidden in a prompt."
                   },
                   {
                       "title":  "20260830 202855 sts audio picture",
@@ -134,7 +137,8 @@
                       "banner_rank":  45,
                       "bytes":  4748005,
                       "date":  "2026-08-30 20:29",
-                      "modified":  "2026-08-30 20:29"
+                      "modified":  "2026-08-30 20:29",
+                      "description":  "This run catches two new organs arriving together: the wonder/search problem and input prosody. Eric explains that the wonder slider should become an itch queue instead of a prompt nudge, then calibrates the new voice-shape tags honestly: not a second transcript, but the undertone - loud, quiet, pitch, hit, pause - enough to read emphasis and skepticism without pretending it is precise measurement."
                   },
                   {
                       "title":  "NapEdge Audio Rumination 2026-08-30",
@@ -145,7 +149,8 @@
                       "banner_rank":  55,
                       "bytes":  27514615,
                       "date":  "2026-08-30 00:00",
-                      "modified":  "2026-08-30 04:26"
+                      "modified":  "2026-08-30 04:26",
+                      "description":  "The long overnight mulling run. Eric was given mechanism-heavy notes, told not to perform, and left with the mic off; the result is the clearest evidence that idle beats can feed future idle beats. He over-orbits wax, SOFAR, tally sticks, fuses, and camera obscura, but some returns climb into real self-correction, which is the exact line between empty repetition and useful mulling."
                   },
                   {
                       "title":  "Eric Mask Attitude 4up 2026-08-30",

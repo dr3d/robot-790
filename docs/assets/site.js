@@ -182,12 +182,16 @@ function mediaButton(media, index) {
   const role = media.role && !["image", "video", "audio", "file"].includes(media.role)
     ? ` / ${media.role}`
     : "";
+  const description = media.description
+    ? `<span class="media-description">${escapeHtml(media.description)}</span>`
+    : "";
   return `
     <button class="media-item" type="button" data-media="${index}">
       ${preview}
-      <span>
+      <span class="media-copy">
         <strong>${escapeHtml(media.title)}</strong><br>
         <span class="media-kind">${escapeHtml(media.kind)}${escapeHtml(role)} - ${bytesLabel(media.bytes)}</span>
+        ${description}
       </span>
     </button>
   `;
@@ -253,7 +257,11 @@ function selectMedia(media) {
   const role = media.role && !["image", "video", "audio", "file"].includes(media.role)
     ? ` - ${media.role}`
     : "";
-  mediaCaption.textContent = `${media.title} - ${media.kind}${role} - ${bytesLabel(media.bytes)}`;
+  const meta = `${media.title} - ${media.kind}${role} - ${bytesLabel(media.bytes)}`;
+  const description = media.description
+    ? `<p class="media-analysis">${escapeHtml(media.description)}</p>`
+    : "";
+  mediaCaption.innerHTML = `<span>${escapeHtml(meta)}</span>${description}`;
 }
 
 async function selectLog(log, selectedButton) {
