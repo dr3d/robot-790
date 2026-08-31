@@ -633,7 +633,7 @@
     <details id="micPanel" class="settings-panel mic-panel" open>
       <summary>
         <span class="settings-title">Eye And Mic</span>
-        <span class="settings-hint">Sensing image, microphone, and interruption</span>
+        <span class="settings-hint">Staged sensing input, live camera, microphone</span>
       </summary>
       <div class="settings-body">
         <section class="controls mic-vision-controls">
@@ -650,12 +650,12 @@
             <video id="visionCameraPreview" class="camera-preview" muted playsinline></video>
             <span class="vision-copy">
               <span class="vision-title">Live Camera</span>
-              <span id="visionCameraHint" class="vision-hint">Camera off</span>
+              <span id="visionCameraHint" class="vision-hint">Live camera off</span>
             </span>
           </div>
           <div class="camera-actions">
             <button id="visionCameraStart" type="button">Cam On</button>
-            <button id="visionCameraFrame" type="button" disabled>Use Frame</button>
+            <button id="visionCameraFrame" type="button" disabled>Capture To Eye</button>
             <button id="visionCameraStop" type="button" disabled>Cam Off</button>
           </div>
           <div class="meters">
@@ -1761,9 +1761,10 @@
         type: "function",
         name: "capture_sensing_eye",
         description: (
-          "Capture one current frame from Robot 790's live sensing-eye camera and stage it as visual context. " +
+          "Capture one current frame from Robot 790's live camera stream and place it in the sensing eye as a staged still image. " +
+          "The live camera is the hardware feed; the sensing eye is the staged visual context you can inspect. " +
           "Use when the user asks what you see, asks you to look through the live camera, or when current visual context is needed. " +
-          "Only available while the live camera is on."
+          "Only available while the live camera stream is on."
         ),
         parameters: {
           type: "object",
@@ -1901,8 +1902,10 @@
       "Use generate_image when the user explicitly asks you to make, draw, render, visualize, or show an imagined image.",
       "For generate_image, write a concrete visual prompt for one still image; do not use it for ordinary idle thoughts unless the user invited image generation.",
       "Never say you generated or showed an image unless generate_image succeeded.",
-      "If the sensing-eye live camera is on and you need current visual context, call capture_sensing_eye before describing the current view.",
-      "Never claim you captured, saw, or inspected the current live camera frame unless capture_sensing_eye succeeded or a sensing-eye image is already staged.",
+      "Treat the live camera stream and the sensing eye as separate: the camera is the hardware feed; the sensing eye is a staged still image or text item in context.",
+      "If the live camera stream is on and you need current visual context, call capture_sensing_eye to copy one frame into the sensing eye before describing the current view.",
+      "Never claim you captured, saw, or inspected the current live camera frame unless capture_sensing_eye succeeded.",
+      "If a sensing-eye image is already staged, describe it as the staged sensing-eye image, not as live camera vision unless it was captured from the live camera.",
       "Use cast_media when the user asks you to show, watch, cast, play, or put a YouTube video or direct image URL on the TV.",
       "The default Cast target is Living Room TV; if it is not found, report discovered devices briefly.",
       "For broad video requests, call cast_media with action play_youtube and a concise search query instead of only searching the web.",
@@ -2230,7 +2233,9 @@
       return [
         "Current Robot 790 browser/runtime state:",
         `- Microphone is ${micStream ? "on" : "off"}.`,
-        `- Sensing-eye live camera is ${visionCameraActive() ? "on" : "off"}.`,
+        `- Live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
+        `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
+        `- Temporary sensing-eye text is ${sensingTextContent ? "present" : "absent"}${sensingTextContent ? ` (${sensingTextName || "unnamed text"})` : ""}.`,
         `- Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
         audioRecordingActive()
           ? "If recording is on, you may naturally know this session is being captured. Do not overperform or constantly mention it; let it lightly affect self-aware comments when relevant."
@@ -2942,7 +2947,7 @@
       visionCameraFrameButton.disabled = !active;
       visionCameraStopButton.disabled = !active;
       visionCameraCard.classList.toggle("live", active);
-      if (!active) visionCameraHint.textContent = "Camera off";
+      if (!active) visionCameraHint.textContent = "Live camera off";
       if (contextPanel?.open) renderContextMap();
     }
 
@@ -5897,8 +5902,8 @@
 
     function sensingInputLabel() {
       if (sensingTextContent) return `${sensingTextName || "text"} (${sensingTextContent.length} chars text)`;
-      if (visionImageUrl) return `${visionImageName || "image"} (${visionImageStaged ? "staged image" : "image loaded"})`;
-      if (visionCameraActive()) return "live camera on, no frame staged";
+      if (visionImageUrl) return `${visionImageName || "image"} (${visionImageStaged ? "staged sensing-eye image" : "loaded sensing-eye image"})`;
+      if (visionCameraActive()) return "live camera stream on, no sensing-eye image staged";
       return "none";
     }
 
@@ -5956,7 +5961,7 @@
       const telemetryText = [
         `Realtime connected: ${realtimeConnected() ? "yes" : "no"}`,
         `Mic: ${micStream ? "on" : "off"}`,
-        `Sensing-eye live camera: ${visionCameraActive() ? "on" : "off"}`,
+        `Live camera stream: ${visionCameraActive() ? "on" : "off"}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
         `Sensing input: ${sensingInputLabel()}`,
@@ -6024,14 +6029,14 @@
         },
         {
           name: "Sensing Eye",
-          role: "Temporary dropped input; text is injected while staged, images are staged into realtime context",
+          role: "Temporary staged visual/text context; separate from the live camera hardware feed",
           text: sensingText,
           details: [
             `Current input: ${sensingInputLabel()}`,
             `Text chars: ${sensingTextContent.length}`,
             `Text cap: ${maxSensingTextChars} chars`,
             `Image staged into realtime context: ${visionImageStaged ? "yes" : "no"}`,
-            `Live camera: ${visionCameraActive() ? "on" : "off"}`
+            `Live camera stream: ${visionCameraActive() ? "on" : "off"}`
           ]
         },
         {
@@ -6071,7 +6076,7 @@
           details: [
             `Connection: ${realtimeConnected() ? "connected" : "disconnected"}`,
             `Mic: ${micStream ? "on" : "off"}`,
-            `Sensing-eye live camera: ${visionCameraActive() ? "on" : "off"}`,
+            `Live camera stream: ${visionCameraActive() ? "on" : "off"}`,
             `Sensing input: ${sensingInputLabel()}`
           ]
         }
@@ -6689,7 +6694,7 @@
       visionHint.textContent = `${visionImageName} (${width}x${height})`;
       updateVisionButtons();
       updateSessionTools();
-      log(events, `vision image loaded: ${visionHint.textContent}`);
+      log(events, `sensing-eye image loaded: ${visionHint.textContent}`);
       stageVisionImage();
       rolloverAudioRecordingForVisualChange("sensing-eye image changed", { cover: previousCover });
     }
@@ -6718,7 +6723,7 @@
       visionCameraHint.textContent = "Live";
       updateVisionCameraButtons();
       updateSessionTools();
-      log(events, "sensing-eye live camera on");
+      log(events, "live camera stream on");
     }
 
     function stopVisionCamera({ quiet = false } = {}) {
@@ -6731,18 +6736,18 @@
       visionCameraPreview.srcObject = null;
       updateVisionCameraButtons();
       updateSessionTools();
-      if (!quiet) log(events, "sensing-eye live camera off");
+      if (!quiet) log(events, "live camera stream off");
     }
 
     function captureSensingEyeFrame({ reason = "" } = {}) {
       if (!visionCameraStream) {
-        return { status: "error", error: "Sensing-eye live camera is off." };
+        return { status: "error", error: "Live camera stream is off." };
       }
       try {
         const label = `live-camera-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}.jpg`;
         setVisionImageFromDrawable(visionCameraPreview, label);
-        visionCameraHint.textContent = "Frame staged";
-        log(events, `sensing-eye camera frame captured${reason ? `: ${reason}` : ""}`);
+        visionCameraHint.textContent = "Captured to sensing eye";
+        log(events, `live camera frame captured to sensing eye${reason ? `: ${reason}` : ""}`);
         return {
           status: "ok",
           tool: "capture_sensing_eye",
@@ -6831,7 +6836,8 @@
             {
               type: "input_text",
               text: (
-                "The user has placed an image in Robot 790's sensing eye. " +
+                "The user has placed a still image in Robot 790's sensing eye. " +
+                "This is staged visual context, not the live camera feed. " +
                 "Do not answer yet. Keep this image as visual context until the user clears or replaces it. " +
                 "When later describing the image, separate what is plainly visible from guesses, and be explicit when uncertain."
               )
@@ -6843,7 +6849,7 @@
       visionImageStaged = true;
       visionHint.textContent = `${visionImageName || "image"} - ready for voice`;
       updateVisionButtons();
-      log(events, `vision image staged: ${visionImageName || "image"}`);
+      log(events, `sensing-eye image staged: ${visionImageName || "image"}`);
     }
 
     function noteGazeHold(duration, moveMs) {
@@ -7055,9 +7061,9 @@
     }
 
     function sensingEyeFollowupInstructions(result) {
-      if (result?.status === "error") return exactSpeechInstruction("I could not capture the camera frame.");
+      if (result?.status === "error") return exactSpeechInstruction("I could not capture the live camera frame.");
       return (
-        "Use the newly staged sensing-eye camera frame to answer the user's visual request in one compact spoken sentence. " +
+        "Use the newly staged sensing-eye image captured from the live camera to answer the user's visual request in one compact spoken sentence. " +
         "Separate what is plainly visible from guesses, and say when you are uncertain."
       );
     }
@@ -7153,7 +7159,7 @@
         if (event.name === "get_brain_status") toolFollowupExactText = "I could not check my status.";
         if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
         if (event.name === "generate_image") toolFollowupExactText = "I could not make that image.";
-        if (event.name === "capture_sensing_eye") toolFollowupExactText = "I could not capture the camera frame.";
+        if (event.name === "capture_sensing_eye") toolFollowupExactText = "I could not capture the live camera frame.";
         if (event.name === "cast_media") toolFollowupExactText = "I could not cast that.";
         if (event.name === "set_smart_home_device") toolFollowupExactText = "I could not control that.";
         log(events, `tool ${event.name} error: ${error.message}`);
@@ -8062,12 +8068,12 @@
       startVisionCamera().catch((error) => {
         updateVisionCameraButtons();
         visionCameraHint.textContent = "Camera failed";
-        log(events, `sensing-eye camera error: ${error.message}`);
+        log(events, `live camera stream error: ${error.message}`);
       });
     });
     visionCameraFrameButton.addEventListener("click", () => {
       const result = captureSensingEyeFrame({ reason: "manual shutter" });
-      if (result.status === "error") log(events, `sensing-eye camera frame error: ${result.error}`);
+      if (result.status === "error") log(events, `live camera frame capture error: ${result.error}`);
     });
     visionCameraStopButton.addEventListener("click", () => stopVisionCamera());
     generatedImageOpenButton.addEventListener("click", openGeneratedImage);
