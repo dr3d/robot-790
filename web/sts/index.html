@@ -960,6 +960,12 @@
     let audioRecordObjectUrl;
     let audioRecordStartedAt = 0;
     let audioRecordCaptions = [];
+    let audioRecordSessionId = "";
+    let audioRecordSessionStartedAt = 0;
+    let audioRecordSessionChunks = [];
+    let audioRecordSessionCaptions = [];
+    let audioRecordSessionCoverFilename = "";
+    let audioRecordChunkIndex = 0;
     let audioRecordRolloverTimer = null;
     let audioRecordStoppingForRollover = false;
     let playbackTime = 0;
@@ -6974,13 +6980,39 @@
       };
     }
 
-    async function uploadAudioRecording(blob, filename) {
+    function newAudioRecordSessionId() {
+      return `sts-${new Date().toISOString().replace(/[:.]/g, "-").replace("T", "-").replace("Z", "")}`;
+    }
+
+    function ensureAudioRecordSession() {
+      if (audioRecordSessionId) return;
+      audioRecordSessionId = newAudioRecordSessionId();
+      audioRecordSessionStartedAt = Date.now();
+      audioRecordSessionChunks = [];
+      audioRecordSessionCaptions = [];
+      audioRecordSessionCoverFilename = "";
+      audioRecordChunkIndex = 0;
+    }
+
+    function resetAudioRecordSession() {
+      audioRecordSessionId = "";
+      audioRecordSessionStartedAt = 0;
+      audioRecordSessionChunks = [];
+      audioRecordSessionCaptions = [];
+      audioRecordSessionCoverFilename = "";
+      audioRecordChunkIndex = 0;
+    }
+
+    async function uploadAudioRecording(blob, filename, { captions = audioRecordCaptions, chunkIndex = 0, rollover = false } = {}) {
       const cover = await audioRecordingCover();
       const headers = { "X-Robot-790-Filename": filename };
       const body = new FormData();
       body.append("audio", blob, filename);
-      if (audioRecordCaptions.length) {
-        body.append("captions", JSON.stringify(audioRecordCaptions));
+      body.append("session_id", audioRecordSessionId);
+      body.append("chunk_index", String(chunkIndex));
+      body.append("rollover", rollover ? "true" : "false");
+      if (captions.length) {
+        body.append("captions", JSON.stringify(captions));
       }
       if (cover.blob) {
         body.append("cover_image", cover.blob, cover.filename);
@@ -7001,6 +7033,25 @@
       return result;
     }
 
+    async function finalizeAudioRecordingSession() {
+      if (audioRecordSessionChunks.length < 2) return null;
+      const response = await fetch(new URL("/api/audio/finalize", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: audioRecordSessionId,
+          chunks: audioRecordSessionChunks,
+          captions: audioRecordSessionCaptions,
+          image_filename: audioRecordSessionCoverFilename
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
     function noteAudioCaption(text) {
       if (!audioRecordingActive() || !audioRecordStartedAt) return;
       const value = String(text || "").trim();
@@ -7011,6 +7062,14 @@
         text: value
       });
       audioRecordCaptions = audioRecordCaptions.slice(-800);
+      if (audioRecordSessionStartedAt) {
+        audioRecordSessionCaptions.push({
+          speaker: "Robot 790",
+          start_ms: Math.max(0, Math.round(Date.now() - audioRecordSessionStartedAt)),
+          text: value
+        });
+        audioRecordSessionCaptions = audioRecordSessionCaptions.slice(-1600);
+      }
     }
 
     function filenameFromPath(path) {
@@ -7030,6 +7089,7 @@
       }
       downloadAudioRecordLink.hidden = true;
       downloadAudioRecordLink.removeAttribute("href");
+      ensureAudioRecordSession();
       audioRecordChunks = [];
       audioRecordCaptions = [];
       audioRecordStartedAt = Date.now();
@@ -7047,6 +7107,8 @@
         const restartAfterStop = audioRecordStoppingForRollover && Boolean(micStream);
         audioRecordStoppingForRollover = false;
         clearAudioRecordRolloverTimer();
+        const chunkIndex = audioRecordChunkIndex;
+        const chunkCaptions = [...audioRecordCaptions];
         const filename = recordingFilename();
         const blob = new Blob(audioRecordChunks, { type: audioRecorder.mimeType || "audio/webm" });
         audioRecordObjectUrl = URL.createObjectURL(blob);
@@ -7059,15 +7121,47 @@
         audioRecordChunks = [];
         audioRecordStartedAt = 0;
         try {
-          const result = await uploadAudioRecording(blob, filename);
+          const result = await uploadAudioRecording(blob, filename, {
+            captions: chunkCaptions,
+            chunkIndex,
+            rollover: restartAfterStop
+          });
+          if (result.raw_filename) {
+            audioRecordSessionChunks.push({
+              index: chunkIndex,
+              raw_filename: result.raw_filename,
+              filename: result.filename || "",
+              duration_s: result.duration_s || 0
+            });
+          }
+          if (result.image_filename) audioRecordSessionCoverFilename = result.image_filename;
           const recordingUrl = result.latest_url || result.url || "";
-          const recordingName = filenameFromPath(result.latest || result.filename) || "latest-sts-audio-picture.mp4";
+          let recordingName = filenameFromPath(result.latest || result.filename) || "latest-sts-audio-picture.mp4";
           if (recordingUrl) {
             URL.revokeObjectURL(audioRecordObjectUrl);
             audioRecordObjectUrl = null;
             downloadAudioRecordLink.href = new URL(String(recordingUrl), location.href).href;
             downloadAudioRecordLink.download = recordingName;
             downloadAudioRecordLink.hidden = false;
+          }
+          if (!restartAfterStop) {
+            try {
+              const finalResult = await finalizeAudioRecordingSession();
+              if (finalResult) {
+                const finalUrl = finalResult.latest_url || finalResult.url || "";
+                recordingName = filenameFromPath(finalResult.latest || finalResult.filename) || recordingName;
+                if (finalUrl) {
+                  if (audioRecordObjectUrl) URL.revokeObjectURL(audioRecordObjectUrl);
+                  audioRecordObjectUrl = null;
+                  downloadAudioRecordLink.href = new URL(String(finalUrl), location.href).href;
+                  downloadAudioRecordLink.download = recordingName;
+                  downloadAudioRecordLink.hidden = false;
+                }
+                log(events, `audio recording spliced: ${finalResult.latest || finalResult.filename || recordingName} (${finalResult.chunk_count || audioRecordSessionChunks.length} chunks)`);
+              }
+            } catch (error) {
+              log(events, `audio recording splice error: ${error.message}`);
+            }
           }
           audioRecordStatus.textContent = `Saved ${recordingName}`;
           const coverLabel = result.cover_source ? ` (${result.cover_source} cover)` : "";
@@ -7080,7 +7174,10 @@
         updateAudioRecordButtons();
         updateSessionTools();
         if (restartAfterStop) {
+          audioRecordChunkIndex += 1;
           startAudioRecording().catch((error) => log(events, `audio recording rollover restart error: ${error.message}`));
+        } else {
+          resetAudioRecordSession();
         }
       });
       audioRecorder.start(1000);

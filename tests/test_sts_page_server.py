@@ -102,6 +102,78 @@ def test_record_audio_snapshot_passes_caption_events(monkeypatch, tmp_path) -> N
     assert result["caption_events"] == 1
 
 
+def test_finalize_audio_recording_session_splices_chunks(monkeypatch, tmp_path) -> None:
+    audio_dir = tmp_path / "logs" / "audio"
+    audio_dir.mkdir(parents=True)
+    first = audio_dir / "first-source.webm"
+    second = audio_dir / "second-source.webm"
+    cover = audio_dir / "latest-sts-audio-cover.jpg"
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+    cover.write_bytes(b"cover")
+
+    def fake_concat(paths, output_path, repo_root):
+        assert paths == [first, second]
+        assert repo_root == tmp_path
+        output_path.write_bytes(b"firstsecond")
+        return {"status": "ok"}
+
+    def fake_convert(audio_path, output_path, selected_image_path, repo_root, **kwargs):
+        assert audio_path.name.endswith("-sts-audio-session-source.webm")
+        assert selected_image_path == cover
+        assert kwargs["captions"] == [{"speaker": "Robot 790", "start_ms": 1200, "text": "stitched line"}]
+        output_path.write_bytes(b"fake session mp4")
+        return {"status": "ok", "duration_s": 9.25, "captioned": True}
+
+    monkeypatch.setattr(sts_page_server, "_concat_audio_sources", fake_concat)
+    monkeypatch.setattr(sts_page_server, "_make_picture_audio_mp4", fake_convert)
+
+    result = sts_page_server.finalize_audio_recording_session(
+        [
+            {"raw_filename": "logs/audio/first-source.webm"},
+            {"raw_filename": "logs/audio/second-source.webm"},
+        ],
+        repo_root=tmp_path,
+        image_filename="latest-sts-audio-cover.jpg",
+        captions=[{"speaker": "Robot 790", "start_ms": 1200, "text": "stitched line"}],
+    )
+
+    assert result["status"] == "ok"
+    assert result["filename"].endswith("-sts-audio-session-picture.mp4")
+    assert result["latest"] == "logs/audio/latest-sts-audio-picture.mp4"
+    assert result["raw_latest"] == "logs/audio/latest-sts-audio-source.webm"
+    assert result["chunk_count"] == 2
+    assert result["captioned"] is True
+    assert (tmp_path / result["latest"]).read_bytes() == b"fake session mp4"
+    assert (tmp_path / result["raw_latest"]).read_bytes() == b"firstsecond"
+
+
+def test_finalize_audio_recording_session_requires_two_chunks(tmp_path) -> None:
+    audio_dir = tmp_path / "logs" / "audio"
+    audio_dir.mkdir(parents=True)
+    only = audio_dir / "only-source.webm"
+    only.write_bytes(b"only")
+
+    try:
+        sts_page_server.finalize_audio_recording_session(
+            [{"raw_filename": "logs/audio/only-source.webm"}],
+            repo_root=tmp_path,
+        )
+    except ValueError as exc:
+        assert "At least two audio chunks" in str(exc)
+    else:
+        raise AssertionError("Expected finalizing a single chunk to fail")
+
+
+def test_finalize_audio_recording_session_rejects_non_list_chunks(tmp_path) -> None:
+    try:
+        sts_page_server.finalize_audio_recording_session("logs/audio/one.webm", repo_root=tmp_path)
+    except ValueError as exc:
+        assert "Audio chunks must be a list" in str(exc)
+    else:
+        raise AssertionError("Expected non-list chunks to fail")
+
+
 def test_recording_caption_cards_split_short_word_groups(monkeypatch) -> None:
     monkeypatch.setenv("ROBOT_790_CAPTION_WORDS_PER_CARD", "2")
 

@@ -66,6 +66,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/audio/record":
             self._handle_audio_record()
             return
+        if parsed.path == "/api/audio/finalize":
+            self._handle_audio_finalize()
+            return
         if parsed.path == "/api/images/generate":
             self._handle_image_generate()
             return
@@ -206,6 +209,19 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         self._send_json(200, result)
+
+    def _handle_audio_finalize(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = finalize_audio_recording_session(
+                payload.get("chunks") or [],
+                image_filename=str(payload.get("image_filename") or ""),
+                captions=_normalize_recording_captions(payload.get("captions") or []),
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200 if result.get("status") == "ok" else 400, result)
 
     def _handle_image_generate(self) -> None:
         try:
@@ -598,6 +614,139 @@ def record_audio_snapshot(
     }
 
 
+def finalize_audio_recording_session(
+    chunks: list[object],
+    repo_root: Path | None = None,
+    *,
+    image_filename: str = "",
+    captions: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
+    root = repo_root or Path(__file__).resolve().parents[2]
+    audio_dir = root / "logs" / "audio"
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    if not isinstance(chunks, list):
+        raise ValueError("Audio chunks must be a list.")
+    chunk_paths = _recording_chunk_paths(chunks, root)
+    if len(chunk_paths) < 2:
+        raise ValueError("At least two audio chunks are required to finalize a spliced recording.")
+
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    raw_filename = f"{timestamp}-sts-audio-session-source.webm"
+    raw_latest_name = "latest-sts-audio-source.webm"
+    raw_path = audio_dir / raw_filename
+    raw_latest_path = audio_dir / raw_latest_name
+    concat = _concat_audio_sources(chunk_paths, raw_path, root)
+    if concat.get("status") != "ok":
+        return {
+            "status": "error",
+            "tool": "finalize_audio_recording_session",
+            "error": str(concat.get("error") or "Could not splice audio chunks."),
+            "chunk_count": len(chunk_paths),
+        }
+    raw_latest_path.write_bytes(raw_path.read_bytes())
+
+    image_path = _selected_recording_final_image(root, audio_dir, image_filename)
+    mp4_filename = f"{timestamp}-sts-audio-session-picture.mp4"
+    mp4_latest_name = "latest-sts-audio-picture.mp4"
+    mp4_path = audio_dir / mp4_filename
+    mp4_latest_path = audio_dir / mp4_latest_name
+    safe_captions = _normalize_recording_captions(captions or [])
+    conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
+    if conversion.get("status") != "ok":
+        return {
+            "status": "error",
+            "tool": "finalize_audio_recording_session",
+            "error": str(conversion.get("error") or "Could not convert spliced recording to MP4."),
+            "raw_filename": f"logs/audio/{raw_filename}",
+            "raw_latest": f"logs/audio/{raw_latest_name}",
+            "raw_path": str(raw_path),
+            "chunk_count": len(chunk_paths),
+        }
+    mp4_latest_path.write_bytes(mp4_path.read_bytes())
+    return {
+        "status": "ok",
+        "tool": "finalize_audio_recording_session",
+        "filename": f"logs/audio/{mp4_filename}",
+        "latest": f"logs/audio/{mp4_latest_name}",
+        "url": f"{AUDIO_RECORDING_URL_PREFIX}{mp4_filename}",
+        "latest_url": f"{AUDIO_RECORDING_URL_PREFIX}{mp4_latest_name}",
+        "path": str(mp4_path),
+        "raw_filename": f"logs/audio/{raw_filename}",
+        "raw_latest": f"logs/audio/{raw_latest_name}",
+        "raw_path": str(raw_path),
+        "bytes": mp4_path.stat().st_size,
+        "raw_bytes": raw_path.stat().st_size,
+        "mime_type": "video/webm",
+        "image_filename": image_path.name,
+        "image_path": str(image_path),
+        "duration_s": conversion.get("duration_s"),
+        "trimmed_silence": conversion.get("trimmed_silence", False),
+        "captioned": bool(safe_captions) and bool(conversion.get("captioned", False)),
+        "caption_events": len(safe_captions),
+        "chunk_count": len(chunk_paths),
+    }
+
+
+def _recording_chunk_paths(chunks: list[object], repo_root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for chunk in chunks[:200]:
+        filename = ""
+        if isinstance(chunk, dict):
+            filename = str(chunk.get("raw_filename") or chunk.get("filename") or "")
+        else:
+            filename = str(chunk or "")
+        if not filename:
+            continue
+        path = recorded_audio_path(filename, repo_root)
+        if not path.is_file():
+            raise ValueError(f"Audio chunk not found: {filename}")
+        if path.suffix.lower() not in {".webm", ".m4a", ".wav", ".ogg"}:
+            raise ValueError(f"Unsupported audio chunk type: {path.name}")
+        paths.append(path)
+    return paths
+
+
+def _selected_recording_final_image(repo_root: Path, audio_dir: Path, image_filename: str = "") -> Path:
+    safe_name = _safe_media_filename(image_filename)
+    if safe_name:
+        audio_image = audio_dir / safe_name
+        if audio_image.is_file() and _is_ffmpeg_image(audio_image):
+            return audio_image
+    return _selected_recording_image(repo_root, image_filename)
+
+
+def _concat_audio_sources(audio_paths: list[Path], output_path: Path, repo_root: Path) -> dict[str, object]:
+    concat_list = output_path.with_name(f"{output_path.stem}.concat.txt")
+    try:
+        concat_list.write_text(
+            "".join(f"file '{_ffmpeg_concat_path(path)}'\n" for path in audio_paths),
+            encoding="utf-8",
+        )
+        _run_ffmpeg(
+            [
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-c",
+                "copy",
+                str(output_path),
+            ],
+            repo_root,
+        )
+        return {"status": "ok"}
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
+    finally:
+        try:
+            concat_list.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def _parse_recording_captions(value: str) -> list[dict[str, object]]:
     if not value:
         return []
@@ -983,6 +1132,10 @@ def _ffmpeg_filter_path(path: Path, repo_root: Path) -> str:
     except ValueError:
         value = path.resolve().as_posix().replace(":", r"\:")
     return "'" + value.replace("\\", r"\\").replace("'", r"\'") + "'"
+
+
+def _ffmpeg_concat_path(path: Path) -> str:
+    return path.resolve().as_posix().replace("'", r"'\''")
 
 
 def _ass_escape(value: str) -> str:
