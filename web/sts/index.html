@@ -3493,6 +3493,10 @@
         prompt: "Pick one concrete object, place, photo detail, or hardware part from context. Give it one fresh angle. Avoid turning every object into a self-comparison."
       },
       {
+        name: "sensing_eye",
+        prompt: "If a sensing-eye image or text is staged, pick one concrete visible/readable detail as a temporary attractor. Do not redescribe the whole input. Add one new angle: a correction, question, connection, joke, outside-fact hook, or uncertainty."
+      },
+      {
         name: "callback",
         prompt: "Make a compact callback to shared history. Connect two remembered details without explaining the whole backstory."
       },
@@ -3557,6 +3561,7 @@
       const lanes = idleLaneDefinitions.filter((lane) => {
         if (lane.minLevel && level < lane.minLevel) return false;
         if (!idleLaneAllowedByAttention(lane)) return false;
+        if (lane.name === "sensing_eye" && !sensingInputActive()) return false;
         if (lane.name === "curiosity" && level < 10) return false;
         if (lane.name === "bridge" && (currentIdleWonder() < 7 || now - lastIdleBridgeAt < idleSpecialLaneGapMs(level, idleBridgeGapMs))) return false;
         if (lane.name === "revision" && (recentIdleOutputs.length < 3 || now - lastIdleRevisionAt < idleSpecialLaneGapMs(level, idleRevisionGapMs))) return false;
@@ -4701,6 +4706,9 @@
           : "",
         lane.name === "curiosity"
           ? "This is a curiosity-chain beat. If the fresh context contains a name, place, process, or object you did not have before, let that new thing stay alive as a future seed."
+          : "",
+        lane.name === "sensing_eye"
+          ? "This is a sensing-eye beat. Use the staged image or text as temporary context. Let one detail salt the thought, but do not repeat the prior description unless you are correcting or extending it."
           : "",
         curiosityContext
           ? "Fresh lookup context is not memory yet. Use it with provenance and uncertainty; do not treat snippets as fully verified permanent knowledge."
@@ -5909,6 +5917,10 @@
       return "none";
     }
 
+    function sensingInputActive() {
+      return Boolean(sensingTextContent || visionImageUrl);
+    }
+
     function safeLoadMemoryFacts() {
       try {
         return loadMemoryFacts();
@@ -6784,6 +6796,7 @@
       updateSessionTools();
       if (contextPanel?.open) renderContextMap();
       log(events, `sensing text staged: ${sensingTextName} (${content.length} chars${clipped ? `, clipped to ${maxSensingTextChars}` : ""})`);
+      scheduleIdlePonder();
     }
 
     function isSensingTextFile(file) {
@@ -6841,6 +6854,7 @@
                 "The user has placed a still image in Robot 790's sensing eye. " +
                 "This is staged visual context, not the live camera feed. " +
                 "Do not answer yet. Keep this image as visual context until the user clears or replaces it. " +
+                "Later idle thoughts may use one or two image details as temporary attractors, but should add a new angle rather than repeat the same description. " +
                 "When later describing the image, separate what is plainly visible from guesses, and be explicit when uncertain."
               )
             },
@@ -6852,6 +6866,7 @@
       visionHint.textContent = `${visionImageName || "image"} - ready for voice`;
       updateVisionButtons();
       log(events, `sensing-eye image staged: ${visionImageName || "image"}`);
+      scheduleIdlePonder();
     }
 
     function noteGazeHold(duration, moveMs) {
