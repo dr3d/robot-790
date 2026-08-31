@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-31 02:56:20",
+    "generated":  "2026-08-31 02:58:22",
     "articles":  [
                      {
                          "title":  "What Eric Has Taught Us So Far",
@@ -92,6 +92,17 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "The Robot Whose Personality Is Pure Boundary",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/The_Robot_Whose_Personality_Is_Pure_Boundary.mp4",
+                      "preview":  "media/previews/The_Robot_Whose_Personality_Is_Pure_Boundary.jpg",
+                      "banner_rank":  45,
+                      "bytes":  4486412,
+                      "date":  "2026-08-31 02:44",
+                      "modified":  "2026-08-31 02:44"
+                  },
                   {
                       "title":  "20260830 202855 sts audio picture",
                       "kind":  "video",
