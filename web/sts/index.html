@@ -960,6 +960,7 @@
     let audioRecordObjectUrl;
     let audioRecordStartedAt = 0;
     let audioRecordCaptions = [];
+    let audioRecordChunkCover = null;
     let audioRecordSessionId = "";
     let audioRecordSessionStartedAt = 0;
     let audioRecordSessionChunks = [];
@@ -2825,6 +2826,7 @@
       const model = [result?.provider, result?.model].filter(Boolean).join(" / ");
       generatedImageHint.textContent = model ? `${generatedImageName} - ${model}` : generatedImageName;
       updateGeneratedImageButtons();
+      rolloverAudioRecordingForVisualChange("generated image changed");
     }
 
     function clearGeneratedImage() {
@@ -6346,6 +6348,7 @@
       updateSessionTools();
       log(events, `vision image loaded: ${visionHint.textContent}`);
       stageVisionImage();
+      rolloverAudioRecordingForVisualChange("sensing-eye image changed");
     }
 
     async function startVisionCamera() {
@@ -6935,6 +6938,12 @@
       }, audioRecordRolloverMs);
     }
 
+    function rolloverAudioRecordingForVisualChange(reason) {
+      if (!audioRecordingActive() || audioRecordStoppingForRollover) return;
+      log(events, `audio recording visual rollover: ${reason}`);
+      stopAudioRecording({ rollover: true });
+    }
+
     function recordingFilename() {
       const stamp = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").replace("Z", "");
       return `robot-790-sts-audio-${stamp}.webm`;
@@ -7001,10 +7010,11 @@
       audioRecordSessionCaptions = [];
       audioRecordSessionCoverFilename = "";
       audioRecordChunkIndex = 0;
+      audioRecordChunkCover = null;
     }
 
-    async function uploadAudioRecording(blob, filename, { captions = audioRecordCaptions, chunkIndex = 0, rollover = false } = {}) {
-      const cover = await audioRecordingCover();
+    async function uploadAudioRecording(blob, filename, { captions = audioRecordCaptions, chunkIndex = 0, rollover = false, cover = null } = {}) {
+      const selectedCover = cover || await audioRecordingCover();
       const headers = { "X-Robot-790-Filename": filename };
       const body = new FormData();
       body.append("audio", blob, filename);
@@ -7014,11 +7024,11 @@
       if (captions.length) {
         body.append("captions", JSON.stringify(captions));
       }
-      if (cover.blob) {
-        body.append("cover_image", cover.blob, cover.filename);
+      if (selectedCover.blob) {
+        body.append("cover_image", selectedCover.blob, selectedCover.filename);
         if (generatedImageName) body.append("image_filename", generatedImageName);
       } else {
-        body.append("image_filename", cover.filename);
+        body.append("image_filename", selectedCover.filename);
       }
       const response = await fetch(new URL("/api/audio/record", location.href), {
         method: "POST",
@@ -7029,7 +7039,7 @@
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
-      if (cover.source) result.cover_source = cover.source;
+      if (selectedCover.source) result.cover_source = selectedCover.source;
       return result;
     }
 
@@ -7090,6 +7100,7 @@
       downloadAudioRecordLink.hidden = true;
       downloadAudioRecordLink.removeAttribute("href");
       ensureAudioRecordSession();
+      audioRecordChunkCover = await audioRecordingCover();
       audioRecordChunks = [];
       audioRecordCaptions = [];
       audioRecordStartedAt = Date.now();
@@ -7109,6 +7120,7 @@
         clearAudioRecordRolloverTimer();
         const chunkIndex = audioRecordChunkIndex;
         const chunkCaptions = [...audioRecordCaptions];
+        const chunkCover = audioRecordChunkCover;
         const filename = recordingFilename();
         const blob = new Blob(audioRecordChunks, { type: audioRecorder.mimeType || "audio/webm" });
         audioRecordObjectUrl = URL.createObjectURL(blob);
@@ -7120,18 +7132,23 @@
         audioRecorder = null;
         audioRecordChunks = [];
         audioRecordStartedAt = 0;
+        audioRecordChunkCover = null;
         try {
           const result = await uploadAudioRecording(blob, filename, {
             captions: chunkCaptions,
             chunkIndex,
-            rollover: restartAfterStop
+            rollover: restartAfterStop,
+            cover: chunkCover
           });
           if (result.raw_filename) {
             audioRecordSessionChunks.push({
               index: chunkIndex,
               raw_filename: result.raw_filename,
               filename: result.filename || "",
-              duration_s: result.duration_s || 0
+              duration_s: result.duration_s || 0,
+              image_filename: result.image_filename || "",
+              captioned: Boolean(result.captioned),
+              caption_events: result.caption_events || 0
             });
           }
           if (result.image_filename) audioRecordSessionCoverFilename = result.image_filename;

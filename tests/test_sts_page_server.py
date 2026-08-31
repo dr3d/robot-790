@@ -143,9 +143,67 @@ def test_finalize_audio_recording_session_splices_chunks(monkeypatch, tmp_path) 
     assert result["latest"] == "logs/audio/latest-sts-audio-picture.mp4"
     assert result["raw_latest"] == "logs/audio/latest-sts-audio-source.webm"
     assert result["chunk_count"] == 2
+    assert result["video_spliced"] is False
     assert result["captioned"] is True
     assert (tmp_path / result["latest"]).read_bytes() == b"fake session mp4"
     assert (tmp_path / result["raw_latest"]).read_bytes() == b"firstsecond"
+
+
+def test_finalize_audio_recording_session_sequences_chunk_videos(monkeypatch, tmp_path) -> None:
+    audio_dir = tmp_path / "logs" / "audio"
+    audio_dir.mkdir(parents=True)
+    first_raw = audio_dir / "first-source.webm"
+    second_raw = audio_dir / "second-source.webm"
+    first_mp4 = audio_dir / "first-picture.mp4"
+    second_mp4 = audio_dir / "second-picture.mp4"
+    for path in [first_raw, second_raw, first_mp4, second_mp4]:
+        path.write_bytes(path.name.encode("utf-8"))
+
+    def fake_concat_audio(paths, output_path, _repo_root):
+        assert paths == [first_raw, second_raw]
+        output_path.write_bytes(b"raw together")
+        return {"status": "ok"}
+
+    def fake_concat_video(paths, output_path, _repo_root):
+        assert paths == [first_mp4, second_mp4]
+        output_path.write_bytes(b"video together")
+        return {"status": "ok", "duration_s": 7.5}
+
+    def fail_convert(*_args, **_kwargs):
+        raise AssertionError("Chunk video concat should avoid one-cover fallback conversion.")
+
+    monkeypatch.setattr(sts_page_server, "_concat_audio_sources", fake_concat_audio)
+    monkeypatch.setattr(sts_page_server, "_concat_picture_audio_mp4s", fake_concat_video)
+    monkeypatch.setattr(sts_page_server, "_make_picture_audio_mp4", fail_convert)
+
+    result = sts_page_server.finalize_audio_recording_session(
+        [
+            {
+                "raw_filename": "logs/audio/first-source.webm",
+                "filename": "logs/audio/first-picture.mp4",
+                "image_filename": "first-cover.jpg",
+                "captioned": True,
+                "caption_events": 2,
+            },
+            {
+                "raw_filename": "logs/audio/second-source.webm",
+                "filename": "logs/audio/second-picture.mp4",
+                "image_filename": "second-cover.jpg",
+                "captioned": False,
+                "caption_events": 0,
+            },
+        ],
+        repo_root=tmp_path,
+    )
+
+    assert result["status"] == "ok"
+    assert result["video_spliced"] is True
+    assert result["duration_s"] == 7.5
+    assert result["image_filename"] == "second-cover.jpg"
+    assert result["captioned"] is True
+    assert result["caption_events"] == 2
+    assert (tmp_path / result["latest"]).read_bytes() == b"video together"
+    assert (tmp_path / result["raw_latest"]).read_bytes() == b"raw together"
 
 
 def test_finalize_audio_recording_session_requires_two_chunks(tmp_path) -> None:

@@ -645,13 +645,25 @@ def finalize_audio_recording_session(
         }
     raw_latest_path.write_bytes(raw_path.read_bytes())
 
-    image_path = _selected_recording_final_image(root, audio_dir, image_filename)
     mp4_filename = f"{timestamp}-sts-audio-session-picture.mp4"
     mp4_latest_name = "latest-sts-audio-picture.mp4"
     mp4_path = audio_dir / mp4_filename
     mp4_latest_path = audio_dir / mp4_latest_name
     safe_captions = _normalize_recording_captions(captions or [])
-    conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
+    picture_chunk_paths = _recording_chunk_picture_paths(chunks, root)
+    conversion: dict[str, object]
+    image_path: Path | None = None
+    video_spliced = False
+    if len(picture_chunk_paths) == len(chunk_paths):
+        conversion = _concat_picture_audio_mp4s(picture_chunk_paths, mp4_path, root)
+        if conversion.get("status") == "ok":
+            video_spliced = True
+        else:
+            image_path = _selected_recording_final_image(root, audio_dir, image_filename)
+            conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
+    else:
+        image_path = _selected_recording_final_image(root, audio_dir, image_filename)
+        conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
     if conversion.get("status") != "ok":
         return {
             "status": "error",
@@ -663,6 +675,8 @@ def finalize_audio_recording_session(
             "chunk_count": len(chunk_paths),
         }
     mp4_latest_path.write_bytes(mp4_path.read_bytes())
+    caption_events = _recording_chunk_caption_count(chunks) if video_spliced else len(safe_captions)
+    captioned = _recording_chunks_captioned(chunks) if video_spliced else bool(safe_captions) and bool(conversion.get("captioned", False))
     return {
         "status": "ok",
         "tool": "finalize_audio_recording_session",
@@ -677,13 +691,14 @@ def finalize_audio_recording_session(
         "bytes": mp4_path.stat().st_size,
         "raw_bytes": raw_path.stat().st_size,
         "mime_type": "video/webm",
-        "image_filename": image_path.name,
-        "image_path": str(image_path),
+        "image_filename": image_path.name if image_path else _recording_last_image_filename(chunks),
+        "image_path": str(image_path) if image_path else "",
         "duration_s": conversion.get("duration_s"),
         "trimmed_silence": conversion.get("trimmed_silence", False),
-        "captioned": bool(safe_captions) and bool(conversion.get("captioned", False)),
-        "caption_events": len(safe_captions),
+        "captioned": captioned,
+        "caption_events": caption_events,
         "chunk_count": len(chunk_paths),
+        "video_spliced": video_spliced,
     }
 
 
@@ -704,6 +719,49 @@ def _recording_chunk_paths(chunks: list[object], repo_root: Path) -> list[Path]:
             raise ValueError(f"Unsupported audio chunk type: {path.name}")
         paths.append(path)
     return paths
+
+
+def _recording_chunk_picture_paths(chunks: list[object], repo_root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for chunk in chunks[:200]:
+        if not isinstance(chunk, dict):
+            return []
+        filename = str(chunk.get("filename") or "")
+        if not filename:
+            return []
+        try:
+            path = recorded_audio_path(filename, repo_root)
+        except ValueError:
+            return []
+        if not path.is_file() or path.suffix.lower() != ".mp4":
+            return []
+        paths.append(path)
+    return paths
+
+
+def _recording_chunk_caption_count(chunks: list[object]) -> int:
+    total = 0
+    for chunk in chunks[:200]:
+        if not isinstance(chunk, dict):
+            continue
+        try:
+            total += max(0, int(float(chunk.get("caption_events") or 0)))
+        except (TypeError, ValueError):
+            pass
+    return total
+
+
+def _recording_chunks_captioned(chunks: list[object]) -> bool:
+    return any(isinstance(chunk, dict) and bool(chunk.get("captioned")) for chunk in chunks[:200])
+
+
+def _recording_last_image_filename(chunks: list[object]) -> str:
+    for chunk in reversed(chunks[:200]):
+        if isinstance(chunk, dict):
+            value = _safe_media_filename(str(chunk.get("image_filename") or ""))
+            if value:
+                return value
+    return ""
 
 
 def _selected_recording_final_image(repo_root: Path, audio_dir: Path, image_filename: str = "") -> Path:
@@ -738,6 +796,67 @@ def _concat_audio_sources(audio_paths: list[Path], output_path: Path, repo_root:
             repo_root,
         )
         return {"status": "ok"}
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
+    finally:
+        try:
+            concat_list.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _concat_picture_audio_mp4s(video_paths: list[Path], output_path: Path, repo_root: Path) -> dict[str, object]:
+    concat_list = output_path.with_name(f"{output_path.stem}.video-concat.txt")
+    try:
+        concat_list.write_text(
+            "".join(f"file '{_ffmpeg_concat_path(path)}'\n" for path in video_paths),
+            encoding="utf-8",
+        )
+        _run_ffmpeg(
+            [
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-vf",
+                "fps=24,format=yuv420p",
+                "-af",
+                "aresample=async=1:first_pts=0",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-profile:v",
+                "baseline",
+                "-level",
+                "3.0",
+                "-pix_fmt",
+                "yuv420p",
+                "-crf",
+                "34",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "48k",
+                "-ac",
+                "1",
+                "-ar",
+                "24000",
+                "-movflags",
+                "+faststart",
+                str(output_path),
+            ],
+            repo_root,
+        )
+        return {
+            "status": "ok",
+            "duration_s": round(_probe_duration(output_path, repo_root), 3),
+            "trimmed_silence": False,
+            "captioned": False,
+        }
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         return {"status": "error", "error": str(exc)}
     finally:
