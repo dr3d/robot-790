@@ -16,6 +16,7 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
                             "content": (
                                 '{"mouth_text":"He keeps circling the same hinge.",'
                                 '"question":"Is the worry about Eric or the apparatus?",'
+                                '"revision_candidate":"I said it was apparatus worry; thinking about it more, it is replay worry.",'
                                 '"should_surface":true,"reason":"recent repeat"}'
                             )
                         }
@@ -49,6 +50,7 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
     assert result["status"] == "ok"
     assert result["mouth_text"] == "He keeps circling the same hinge."
     assert result["question"] == "Is the worry about Eric or the apparatus?"
+    assert result["revision_candidate"] == "I said it was apparatus worry; thinking about it more, it is replay worry."
     assert result["should_surface"] is True
     assert result["person_focus"] == 8
     assert calls[0][0] == "http://127.0.0.1:1234/v1/chat/completions"
@@ -61,6 +63,53 @@ def test_mull_second_brain_requires_recent_conversation() -> None:
         assert "recent conversation" in str(exc)
     else:
         raise AssertionError("Expected short Brain 2 context to fail")
+
+
+def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                '{"mouth_text":"","question":"",'
+                                '"revision_candidate":"I said it was a joke; thinking about it more, it was a dodge.",'
+                                '"should_surface":false,"reason":"changed claim"}'
+                            )
+                        }
+                    }
+                ]
+            }
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def post(self, url, headers=None, json=None):
+            return FakeResponse()
+
+    monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
+    result = sts_page_server.mull_second_brain(
+        {
+            "conversation": "Scott: I think performance mode changed the answer.\nRobot 790: The spotlight made me tidy.",
+            "person_focus": 8,
+        }
+    )
+
+    assert result["status"] == "ok"
+    assert result["mouth_text"] == ""
+    assert result["revision_candidate"] == "I said it was a joke; thinking about it more, it was a dodge."
+    assert result["should_surface"] is False
 
 
 def test_record_log_snapshot_writes_timestamped_and_latest_files(tmp_path) -> None:

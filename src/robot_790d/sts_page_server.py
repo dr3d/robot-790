@@ -587,7 +587,10 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "Mull the human in the room as an interesting person, not as a patient or customer. "
         "Stay curious, dry, compact, and non-caretaking. Do not diagnose mood, do not flatter, do not google the user, "
         "and do not claim certainty about private thoughts. Prefer one concrete observed conversational pattern. "
-        "Return only JSON with keys mouth_text, question, should_surface, reason. mouth_text must be 96 characters or less."
+        "Return only JSON with keys mouth_text, question, revision_candidate, should_surface, reason. "
+        "mouth_text must be 96 characters or less. revision_candidate is empty unless you want Brain 1 to later "
+        "publicly take back, correct, or complicate an earlier claim; write it as a compact note such as "
+        "'I said X; thinking about it more, Y.'"
     )
     user = "\n\n".join(
         part
@@ -599,6 +602,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             f"Recent idle outputs:\n{recent_idle[-900:]}" if recent_idle else "",
             (
                 "Task: produce one mouth-display thought fragment. If a useful question is forming, include it as question. "
+                "If an earlier claim needs revision, include it as revision_candidate for the speaking brain to consider later. "
                 "Use should_surface true only when it is worth showing on the mouth during a pause."
             ),
         ]
@@ -611,7 +615,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             {"role": "user", "content": user},
         ],
         "temperature": 0.55,
-        "max_tokens": 260,
+        "max_tokens": 320,
         "stream": False,
     }
     if "api.openai.com" not in base_url.lower():
@@ -628,11 +632,15 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
 
     raw_text = _chat_completion_text(data)
     parsed = _parse_second_brain_json(raw_text)
-    mouth_text = _clean_second_brain_text(parsed.get("mouth_text") or parsed.get("text") or raw_text, 96)
+    if parsed:
+        mouth_text = _clean_second_brain_text(parsed.get("mouth_text") if "mouth_text" in parsed else parsed.get("text"), 96)
+    else:
+        mouth_text = _clean_second_brain_text(raw_text, 96)
     question = _clean_second_brain_text(parsed.get("question") or "", 140)
+    revision_candidate = _clean_second_brain_text(parsed.get("revision_candidate") or "", 240)
     reason = _clean_second_brain_text(parsed.get("reason") or "", 220)
-    if not mouth_text:
-        return {"status": "error", "tool": "mull_second_brain", "error": "Brain 2 returned no mouth text."}
+    if not mouth_text and not question and not revision_candidate:
+        return {"status": "error", "tool": "mull_second_brain", "error": "Brain 2 returned no usable output."}
     return {
         "status": "ok",
         "tool": "mull_second_brain",
@@ -641,6 +649,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "person_focus": person_focus,
         "mouth_text": mouth_text,
         "question": question,
+        "revision_candidate": revision_candidate,
         "should_surface": bool(parsed.get("should_surface", True)),
         "reason": reason,
         "raw_text": raw_text[:1000],
@@ -685,7 +694,7 @@ def _parse_second_brain_json(text: str) -> dict[str, Any]:
 def _clean_second_brain_text(text: object, limit: int) -> str:
     value = re.sub(r"\s+", " ", str(text or "")).strip()
     value = value.strip("`\"' ")
-    value = re.sub(r"^(mouth_text|question|reason)\s*:\s*", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"^(mouth_text|question|revision_candidate|reason)\s*:\s*", "", value, flags=re.IGNORECASE)
     return value[:limit].rstrip()
 
 

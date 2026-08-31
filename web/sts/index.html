@@ -1079,7 +1079,8 @@
     let idleUnresolvedQuestions = [];
     let recentAssistantOutputs = [];
     let brain2QuestionCandidates = [];
-    const brain2Counters = { fired: 0, surfaced: 0, held: 0, skipped: 0, failed: 0 };
+    let brain2RevisionCandidates = [];
+    const brain2Counters = { fired: 0, surfaced: 0, revision: 0, held: 0, skipped: 0, failed: 0 };
     let lastIdleBridgeAt = 0;
     let lastIdleRevisionAt = 0;
     let lastIdleUnresolvedAt = 0;
@@ -2281,6 +2282,22 @@
       ].join(" ");
     }
 
+    function formatBrain2ForInstructions() {
+      const revisionLines = brain2RevisionCandidates.slice(-4).map((item) => `- ${item.text}`);
+      const questionLines = brain2QuestionCandidates.slice(-4).map((item) => `- ${item.text}`);
+      if (!revisionLines.length && !questionLines.length) return "";
+      return [
+        "Private Brain 2 notes:",
+        "Brain 2 is a slow advisory lane. It cannot speak, interrupt, use tools, or overrule you.",
+        revisionLines.length
+          ? `Revision candidates from Brain 2:\n${revisionLines.join("\n")}\nWhen the floor is free and you agree, you may voice one compact public correction in your own words. Do not mention Brain 2. Ignore weak candidates.`
+          : "",
+        questionLines.length
+          ? `Question candidates from Brain 2:\n${questionLines.join("\n")}\nUse one only if it is timely and curious, not needy or caretaking.`
+          : ""
+      ].filter(Boolean).join("\n");
+    }
+
     function buildSessionInstructions() {
       const performancePrivacy = performanceModeEnabled();
       return [
@@ -2290,6 +2307,7 @@
         formatEmbodimentForInstructions(),
         formatRuntimeStateForInstructions(),
         wonderSearchPolicyText(),
+        performancePrivacy ? "" : formatBrain2ForInstructions(),
         performancePrivacy ? performancePrivacyInstructions() : "",
         baseSessionInstructions.join(" ")
       ]
@@ -3109,7 +3127,7 @@
     function updateBrain2Status() {
       if (!brain2Status) return;
       const state = brain2InFlight ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off";
-      brain2Status.textContent = `${state} / ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`;
+      brain2Status.textContent = `${state} / ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2Counters.revision} revisions / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`;
     }
 
     function logBrain2(kind, text = "") {
@@ -3986,6 +4004,11 @@
       return recent.some((value) => value.includes(signature) || signature.includes(value));
     }
 
+    function brain2LooksLikeRevision(...parts) {
+      const text = parts.map((part) => String(part || "")).join(" ").toLowerCase();
+      return /\b(correction|actually|wait|wrong about|thinking about it more|more precisely|take (?:that|it) back|i said|not quite|isn't .* it's|is not .* it is)\b/.test(text);
+    }
+
     function brain2MouthCanSurface() {
       return !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
     }
@@ -4086,8 +4109,9 @@
         lastBrain2MullAt = Date.now();
         const mouthText = String(result.mouth_text || "").trim();
         const question = String(result.question || "").trim();
+        const revisionCandidate = String(result.revision_candidate || "").trim();
         const shouldSurface = result.should_surface !== false;
-        if (mouthText && brain2EchoesRecentVoice(mouthText)) {
+        if (mouthText && brain2EchoesRecentVoice(mouthText) && !brain2LooksLikeRevision(mouthText, revisionCandidate)) {
           bumpBrain2Counter("held");
           logBrain2("held echo", mouthText);
         } else if (mouthText && shouldSurface && brain2MouthCanSurface()) {
@@ -4105,7 +4129,14 @@
           } else {
             brain2QuestionCandidates = [...brain2QuestionCandidates, { text: question, at: Date.now() }].slice(-12);
             logBrain2("question candidate", question);
+            updateSessionTools({ quiet: true });
           }
+        }
+        if (revisionCandidate) {
+          brain2RevisionCandidates = [...brain2RevisionCandidates, { text: revisionCandidate, at: Date.now() }].slice(-12);
+          bumpBrain2Counter("revision");
+          logBrain2("revision candidate", revisionCandidate);
+          updateSessionTools({ quiet: true });
         }
       } catch (error) {
         bumpBrain2Counter("failed");
@@ -5910,6 +5941,9 @@
         brain2QuestionCandidates.length
           ? `Brain 2 question candidates:\n${brain2QuestionCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
           : "",
+        brain2RevisionCandidates.length
+          ? `Brain 2 revision candidates:\n${brain2RevisionCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
+          : "",
         recentIdleOutputs.length ? `Recent idle outputs:\n${recentIdleOutputs.slice(-8).join("\n")}` : "",
         idleUnresolvedContext(),
         idleCuriositySeeds.length
@@ -7154,7 +7188,7 @@
       });
     }
 
-    function updateSessionTools() {
+    function updateSessionTools({ quiet = false } = {}) {
       saveToolPrefs();
       if (contextPanel?.open) renderContextMap();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -7172,12 +7206,14 @@
           }
         }
       });
-      log(
-        events,
-        enabledTools.length
-          ? `LLM tools attached: ${enabledTools.map((tool) => tool.name).join(", ")}`
-          : "LLM tools disabled; STS lifecycle controls face"
-      );
+      if (!quiet) {
+        log(
+          events,
+          enabledTools.length
+            ? `LLM tools attached: ${enabledTools.map((tool) => tool.name).join(", ")}`
+            : "LLM tools disabled; STS lifecycle controls face"
+        );
+      }
     }
 
     function enabledToolList() {
@@ -8085,7 +8121,9 @@
       events.textContent = "";
       brain2Log.textContent = "";
       brain2QuestionCandidates = [];
+      brain2RevisionCandidates = [];
       updateBrain2Controls();
+      updateSessionTools({ quiet: true });
     });
     popoutConversationButton.addEventListener("click", openConversationPopout);
     copyConversationButton.addEventListener("click", () => {
