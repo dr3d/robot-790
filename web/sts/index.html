@@ -633,7 +633,7 @@
     <details id="micPanel" class="settings-panel mic-panel" open>
       <summary>
         <span class="settings-title">Eye And Mic</span>
-        <span class="settings-hint">Staged sensing input, live camera, microphone</span>
+        <span class="settings-hint">Staged sensing input, browser camera, microphone</span>
       </summary>
       <div class="settings-body">
         <section class="controls mic-vision-controls">
@@ -649,14 +649,14 @@
           <div id="visionCameraCard" class="camera-card">
             <video id="visionCameraPreview" class="camera-preview" muted playsinline></video>
             <span class="vision-copy">
-              <span class="vision-title">Live Camera</span>
+              <span class="vision-title">Browser Live Camera</span>
               <span id="visionCameraHint" class="vision-hint">Live camera off</span>
             </span>
           </div>
           <div class="camera-actions">
-            <button id="visionCameraStart" type="button">Cam On</button>
+            <button id="visionCameraStart" type="button">Camera On</button>
             <button id="visionCameraFrame" type="button" disabled>Capture To Eye</button>
-            <button id="visionCameraStop" type="button" disabled>Cam Off</button>
+            <button id="visionCameraStop" type="button" disabled>Camera Off</button>
           </div>
           <div class="meters">
             <span>Mic</span>
@@ -1761,10 +1761,10 @@
         type: "function",
         name: "capture_sensing_eye",
         description: (
-          "Capture one current frame from Robot 790's live camera stream and place it in the sensing eye as a staged still image. " +
-          "The live camera is the hardware feed; the sensing eye is the staged visual context you can inspect. " +
-          "Use when the user asks what you see, asks you to look through the live camera, or when current visual context is needed. " +
-          "Only available while the live camera stream is on."
+          "Capture one current frame from Robot 790's browser live camera stream and place it in the sensing eye as a staged still image. " +
+          "The browser live camera is the moving hardware feed; the sensing eye is the staged visual context you can inspect. " +
+          "Use when the user asks what you see, asks you to look through the camera, or when current visual context is needed. " +
+          "Only available while the browser live camera stream is on."
         ),
         parameters: {
           type: "object",
@@ -1902,10 +1902,12 @@
       "Use generate_image when the user explicitly asks you to make, draw, render, visualize, or show an imagined image.",
       "For generate_image, write a concrete visual prompt for one still image; do not use it for ordinary idle thoughts unless the user invited image generation.",
       "Never say you generated or showed an image unless generate_image succeeded.",
-      "Treat the live camera stream and the sensing eye as separate: the camera is the hardware feed; the sensing eye is a staged still image or text item in context.",
-      "If the live camera stream is on and you need current visual context, call capture_sensing_eye to copy one frame into the sensing eye before describing the current view.",
-      "Never claim you captured, saw, or inspected the current live camera frame unless capture_sensing_eye succeeded.",
+      "Treat the browser live camera stream and the sensing eye as separate: the camera is the moving hardware feed; the sensing eye is a staged still image or text item in context.",
+      "If the browser live camera stream is on and you need current visual context, call capture_sensing_eye to copy one frame into the sensing eye before describing the current view.",
+      "Never claim you captured, saw, or inspected the current browser live camera frame unless capture_sensing_eye succeeded.",
       "If a sensing-eye image is already staged, describe it as the staged sensing-eye image, not as live camera vision unless it was captured from the live camera.",
+      "When the user asks what you know, what you can do, what state you are in, what sensors you have, or anything broad like 'tell me everything', include a brief visual-state report if a sensing-eye image/text is staged or the browser live camera stream is on.",
+      "At startup or after a refresh, do not volunteer a long sensor inventory, but if you speak first and sensing input is present, you may mention it briefly.",
       "Use cast_media when the user asks you to show, watch, cast, play, or put a YouTube video or direct image URL on the TV.",
       "The default Cast target is Living Room TV; if it is not found, report discovered devices briefly.",
       "For broad video requests, call cast_media with action play_youtube and a concise search query instead of only searching the web.",
@@ -2233,7 +2235,7 @@
       return [
         "Current Robot 790 browser/runtime state:",
         `- Microphone is ${micStream ? "on" : "off"}.`,
-        `- Live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
+        `- Browser live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
         `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
         `- Temporary sensing-eye text is ${sensingTextContent ? "present" : "absent"}${sensingTextContent ? ` (${sensingTextName || "unnamed text"})` : ""}.`,
         `- Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
@@ -5903,7 +5905,7 @@
     function sensingInputLabel() {
       if (sensingTextContent) return `${sensingTextName || "text"} (${sensingTextContent.length} chars text)`;
       if (visionImageUrl) return `${visionImageName || "image"} (${visionImageStaged ? "staged sensing-eye image" : "loaded sensing-eye image"})`;
-      if (visionCameraActive()) return "live camera stream on, no sensing-eye image staged";
+      if (visionCameraActive()) return "browser live camera stream on, no sensing-eye image staged";
       return "none";
     }
 
@@ -5961,7 +5963,7 @@
       const telemetryText = [
         `Realtime connected: ${realtimeConnected() ? "yes" : "no"}`,
         `Mic: ${micStream ? "on" : "off"}`,
-        `Live camera stream: ${visionCameraActive() ? "on" : "off"}`,
+        `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
         `Sensing input: ${sensingInputLabel()}`,
@@ -6036,7 +6038,7 @@
             `Text chars: ${sensingTextContent.length}`,
             `Text cap: ${maxSensingTextChars} chars`,
             `Image staged into realtime context: ${visionImageStaged ? "yes" : "no"}`,
-            `Live camera stream: ${visionCameraActive() ? "on" : "off"}`
+            `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`
           ]
         },
         {
@@ -6076,7 +6078,7 @@
           details: [
             `Connection: ${realtimeConnected() ? "connected" : "disconnected"}`,
             `Mic: ${micStream ? "on" : "off"}`,
-            `Live camera stream: ${visionCameraActive() ? "on" : "off"}`,
+            `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
             `Sensing input: ${sensingInputLabel()}`
           ]
         }
