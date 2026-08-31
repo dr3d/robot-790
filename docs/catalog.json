@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-08-31 10:18:08",
+    "generated":  "2026-08-31 15:44:53",
     "articles":  [
                      {
                          "title":  "What Eric Has Taught Us So Far",
@@ -92,6 +92,28 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "The Desk Fan Was Innocent 2026-08-31 14:06:01",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/The-Desk-Fan-Was-Innocent-2026-08-31-140601.mp4",
+                      "preview":  "media/previews/The-Desk-Fan-Was-Innocent-2026-08-31-140601.jpg",
+                      "banner_rank":  45,
+                      "bytes":  16113785,
+                      "date":  "2026-08-31 14:06",
+                      "modified":  "2026-08-31 14:06"
+                  },
+                  {
+                      "title":  "Second Brain Person Lane 2026-08-31 12:20:51",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Second-Brain-Person-Lane-2026-08-31-122051.mp4",
+                      "preview":  "media/previews/Second-Brain-Person-Lane-2026-08-31-122051.jpg",
+                      "banner_rank":  45,
+                      "bytes":  7518414,
+                      "date":  "2026-08-31 12:20",
+                      "modified":  "2026-08-31 12:20"
+                  },
                   {
                       "title":  "The Robot Whose Personality Is Pure Boundary",
                       "kind":  "video",

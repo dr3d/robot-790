@@ -83,6 +83,11 @@ function Get-FriendlyMediaTitle {
     if ($stem -match '^NapEdge-(\d{4})-(\d{2})-(\d{2})-Audio-Rumination$') {
         return "NapEdge Audio Rumination $($Matches[1])-$($Matches[2])-$($Matches[3])"
     }
+    if ($stem -match '^(.*)-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})$') {
+        $label = $Matches[1] -replace '[_-]+', ' '
+        $label = $label -replace '\s+', ' '
+        return "$($label.Trim()) $($Matches[2])-$($Matches[3])-$($Matches[4]) $($Matches[5]):$($Matches[6]):$($Matches[7])"
+    }
     if ($stem -match '^(.*)-(\d{4})-(\d{2})-(\d{2})$') {
         $label = $Matches[1] -replace '[_-]+', ' '
         $label = $label -replace '\s+', ' '
