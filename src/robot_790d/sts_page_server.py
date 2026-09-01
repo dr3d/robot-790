@@ -328,11 +328,43 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         except (json.JSONDecodeError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
-        preset = str(payload.get("preset") or "qwen27").strip()
-        allowed_presets = {"qwen27", "qwen9", "qwen4", "nemotron30", "openai"}
+        preset = str(payload.get("preset") or "qwen27-mtp-vlow").strip()
+        allowed_presets = {"qwen27-mtp-vlow", "qwen27", "qwen9", "qwen4", "nemotron30", "openai", "custom"}
         if preset not in allowed_presets:
             self._send_json(400, {"status": "error", "error": f"Unsupported model preset: {preset}."})
             return
+        model = str(payload.get("model") or "").strip()
+        reasoning = str(payload.get("reasoning") or "none").strip()
+        if reasoning not in {"", "low", "medium", "xhigh", "none"}:
+            self._send_json(400, {"status": "error", "error": f"Unsupported reasoning mode: {reasoning}."})
+            return
+        tts_dtype = str(payload.get("tts_dtype") or "bfloat16").strip()
+        if tts_dtype not in {"bfloat16", "float16"}:
+            self._send_json(400, {"status": "error", "error": f"Unsupported TTS precision: {tts_dtype}."})
+            return
+        try:
+            context_length = int(payload.get("context_length") or 131072)
+        except (TypeError, ValueError):
+            self._send_json(400, {"status": "error", "error": "Context length must be a number."})
+            return
+        context_length = max(4096, min(262144, context_length))
+        try:
+            parallel = int(payload.get("parallel") or 0)
+        except (TypeError, ValueError):
+            self._send_json(400, {"status": "error", "error": "Parallel must be a number."})
+            return
+        if parallel:
+            parallel = max(1, min(8, parallel))
+        if preset == "custom":
+            if not model:
+                self._send_json(400, {"status": "error", "error": "Custom LM Studio preset needs a model key."})
+                return
+            if any(character in model for character in "\r\n"):
+                self._send_json(400, {"status": "error", "error": "Custom model key cannot contain newlines."})
+                return
+            if len(model) > 240:
+                self._send_json(400, {"status": "error", "error": "Custom model key is too long."})
+                return
 
         logs_dir = repo_root / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -351,6 +383,16 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                         str(script_path),
                         "-Preset",
                         preset,
+                        "-Model",
+                        model,
+                        "-Reasoning",
+                        reasoning,
+                        "-ContextLength",
+                        str(context_length),
+                        "-Parallel",
+                        str(parallel),
+                        "-TtsDtype",
+                        tts_dtype,
                     ],
                     cwd=repo_root,
                     stdout=stdout,

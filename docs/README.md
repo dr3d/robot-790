@@ -1,6 +1,6 @@
 # Robot 790 Public Docs
 
-Model proposes; deterministic layers decide.
+Model proposes; deterministic layers decide. Four diets, one mouth.
 
 This folder is the GitHub Pages site for Robot 790: Eric's public memory
 palace, articles, curated transcripts, and publishable media.

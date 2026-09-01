@@ -12,6 +12,8 @@ param(
     [int] $AudioMaxTokens = 64,
     [int] $TextMaxTokens = 0,
     [string] $TtsModel = "C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice",
+    [ValidateSet("bfloat16", "float16")]
+    [string] $TtsDtype = "bfloat16",
     [string] $Speaker = "Eric",
     [string] $TtsInstruct = "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
     [string] $PromptPath = "",
@@ -48,7 +50,7 @@ $qwenArgs = @(
     "--qwen3_tts_model_name", $TtsModel,
     "--qwen3_tts_backend", "torch",
     "--qwen3_tts_device", "cuda",
-    "--qwen3_tts_dtype", "bfloat16",
+    "--qwen3_tts_dtype", $TtsDtype,
     "--qwen3_tts_attn_implementation", "eager",
     "--qwen3_tts_speaker", $Speaker,
     "--qwen3_tts_instruct", $TtsInstruct,
@@ -93,6 +95,7 @@ if ($TextMaxTokens -gt 0) {
     Write-Host "LLM text max tokens: unlimited"
 }
 Write-Host "TTS model: $TtsModel"
+Write-Host "TTS precision: $TtsDtype"
 Write-Host "TTS instruct: $TtsInstruct"
 Write-Host "Prompt: $PromptPath"
 & $Launcher -HostAddress $HostAddress -Port $Port -NumPipelines $NumPipelines -StreamBatchSentences $StreamBatchSentences -ExtraArgs $qwenArgs

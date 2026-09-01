@@ -1,7 +1,14 @@
 param(
     [int] $DelaySeconds = 1,
-    [ValidateSet("qwen27", "qwen9", "qwen4", "nemotron30", "openai")]
-    [string] $Preset = "qwen27"
+    [ValidateSet("qwen27-mtp-vlow", "qwen27", "qwen9", "qwen4", "nemotron30", "openai", "custom")]
+    [string] $Preset = "qwen27-mtp-vlow",
+    [string] $Model = "",
+    [ValidateSet("", "low", "medium", "xhigh", "none")]
+    [string] $Reasoning = "none",
+    [int] $ContextLength = 131072,
+    [int] $Parallel = 0,
+    [ValidateSet("bfloat16", "float16")]
+    [string] $TtsDtype = "bfloat16"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +33,15 @@ if (-not (Test-Path $StartScript)) {
 }
 
 $presets = @{
+    "qwen27-mtp-vlow" = @{
+        Label = "Qwen 27B MTP Fast"
+        Provider = "lmstudio"
+        Model = "qwen3.8-27b-nvfp4-mtp"
+        Reasoning = "none"
+        AudioMaxTokens = 64
+        ContextLength = 131072
+        Parallel = 4
+    }
     qwen27 = @{
         Label = "Qwen 27B"
         Provider = "lmstudio"
@@ -33,6 +49,7 @@ $presets = @{
         Reasoning = "low"
         AudioMaxTokens = 64
         ContextLength = 131072
+        Parallel = 1
     }
     qwen9 = @{
         Label = "Qwen 9B"
@@ -41,6 +58,7 @@ $presets = @{
         Reasoning = "low"
         AudioMaxTokens = 64
         ContextLength = 131072
+        Parallel = 1
     }
     qwen4 = @{
         Label = "Qwen 4B"
@@ -49,6 +67,7 @@ $presets = @{
         Reasoning = "none"
         AudioMaxTokens = 64
         ContextLength = 131072
+        Parallel = 1
     }
     nemotron30 = @{
         Label = "Nemotron 30B A3B"
@@ -57,6 +76,7 @@ $presets = @{
         Reasoning = "none"
         AudioMaxTokens = 192
         ContextLength = 65536
+        Parallel = 1
     }
     openai = @{
         Label = "OpenAI"
@@ -67,10 +87,34 @@ $presets = @{
         Reasoning = ""
         AudioMaxTokens = 64
         ContextLength = 0
+        Parallel = 0
     }
 }
 
 $selected = $presets[$Preset]
+if ($Preset -eq "custom") {
+    $Model = $Model.Trim()
+    if (-not $Model) {
+        throw "Custom preset needs -Model with an LM Studio model key."
+    }
+    if ($Model -match '[\r\n]') {
+        throw "Custom model key cannot contain newlines."
+    }
+    if ($Model.Length -gt 240) {
+        throw "Custom model key is too long."
+    }
+    $ContextLength = [Math]::Max(4096, [Math]::Min(262144, $ContextLength))
+    $Parallel = if ($Parallel -gt 0) { [Math]::Max(1, [Math]::Min(8, $Parallel)) } else { 4 }
+    $selected = @{
+        Label = "Custom LM Studio"
+        Provider = "lmstudio"
+        Model = $Model
+        Reasoning = $Reasoning
+        AudioMaxTokens = 64
+        ContextLength = $ContextLength
+        Parallel = $Parallel
+    }
+}
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
@@ -81,14 +125,9 @@ if ($DelaySeconds -gt 0) {
 
 if ($selected.Provider -eq "lmstudio") {
     try {
-        $loadedModels = & lms ps |
-            Where-Object { $_ -and $_ -notmatch '^\s*IDENTIFIER\s+' } |
-            ForEach-Object { ($_ -split '\s+')[0] } |
-            Where-Object { $_ }
-        foreach ($loaded in $loadedModels) {
-            & lms unload $loaded | Out-Null
-        }
-        & lms load $selected.Model --parallel 1 --context-length $selected.ContextLength --gpu max --identifier $selected.Model -y | Out-Null
+        $parallelPredictions = if ($selected.Parallel) { [int] $selected.Parallel } else { 1 }
+        & lms unload --all | Out-Null
+        & lms load $selected.Model --parallel $parallelPredictions --context-length $selected.ContextLength --gpu max --identifier $selected.Model -y | Out-Null
     } catch {
         throw "Could not switch LM Studio to $($selected.Model): $($_.Exception.Message)"
     }
@@ -97,13 +136,7 @@ if ($selected.Provider -eq "lmstudio") {
         throw "OpenAI preset needs OPENAI_API_KEY or ROBOT_790_OPENAI_LLM_API_KEY in .env."
     }
     try {
-        $loadedModels = & lms ps |
-            Where-Object { $_ -and $_ -notmatch '^\s*IDENTIFIER\s+' } |
-            ForEach-Object { ($_ -split '\s+')[0] } |
-            Where-Object { $_ }
-        foreach ($loaded in $loadedModels) {
-            & lms unload $loaded | Out-Null
-        }
+        & lms unload --all | Out-Null
     } catch {
         Write-Warning "Could not unload LM Studio models before OpenAI preset: $($_.Exception.Message)"
     }
@@ -126,7 +159,9 @@ $startArgs = @(
     "-StreamBatchSentences",
     "1",
     "-AudioMaxTokens",
-    [string] $selected.AudioMaxTokens
+    [string] $selected.AudioMaxTokens,
+    "-TtsDtype",
+    $TtsDtype
 )
 
 if ($selected.Reasoning) {

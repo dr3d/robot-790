@@ -40,11 +40,18 @@
       flex-direction: column;
     }
     header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
       margin-bottom: 20px;
+      padding: 8px 0;
+      background: rgba(16, 17, 20, 0.96);
+      border-bottom: 1px solid rgba(48, 52, 59, 0.78);
+      backdrop-filter: blur(10px);
     }
     .header-actions {
       display: inline-flex;
@@ -147,11 +154,16 @@
     .server-controls {
       grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px) auto auto auto;
     }
+    .custom-model-controls {
+      grid-template-columns: minmax(260px, 1fr) minmax(120px, 160px) minmax(110px, 150px) minmax(110px, 150px) minmax(0, 1fr);
+      border-top: 0;
+      padding-top: 0;
+    }
     .url-controls .toggle-row {
       justify-self: start;
     }
     .voice-controls {
-      grid-template-columns: minmax(120px, 160px) minmax(260px, 420px) minmax(140px, 180px) auto auto;
+      grid-template-columns: minmax(110px, 140px) minmax(110px, 150px) minmax(260px, 1fr) minmax(140px, 180px) auto auto auto;
     }
     .idle-controls {
       grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
@@ -386,10 +398,12 @@
     }
     .log-header {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 10px;
       min-width: 0;
+      flex-wrap: wrap;
+      padding-bottom: 6px;
     }
     .copy-link {
       min-height: 0;
@@ -415,11 +429,35 @@
     .panel-link:hover {
       text-decoration: underline;
     }
+    .header-actions .record-action {
+      padding: 1px 6px;
+      border: 1px solid rgba(96, 211, 148, 0.55);
+      border-radius: 5px;
+    }
     .log-actions {
       display: inline-flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 10px;
+      flex: 1 1 16rem;
+      min-width: 0;
+      max-width: 100%;
+      flex-wrap: wrap;
+    }
+    .log-actions select {
+      min-width: 8.5rem;
+      max-width: 100%;
+      flex: 0 1 10.5rem;
+    }
+    .log-actions .copy-link {
       flex: 0 0 auto;
+      white-space: nowrap;
+    }
+    .log-actions .record-action {
+      order: -1;
+      padding: 1px 6px;
+      border: 1px solid rgba(96, 211, 148, 0.55);
+      border-radius: 5px;
     }
     .log {
       height: 100%;
@@ -588,6 +626,13 @@
       .log-grid {
         flex: none;
       }
+      .log-header {
+        display: grid;
+        align-items: stretch;
+      }
+      .log-actions {
+        justify-content: flex-start;
+      }
     }
   </style>
 </head>
@@ -596,6 +641,7 @@
     <header>
       <h1>Robot 790 STS</h1>
       <div class="header-actions">
+        <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
         <button id="showEssentials" class="panel-link" type="button">Essentials</button>
         <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
         <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
@@ -616,16 +662,43 @@
           <label>
             Brain
             <select id="modelPreset">
+              <option value="qwen27-mtp-vlow">Qwen 27B MTP Fast</option>
               <option value="qwen27">Qwen 27B</option>
               <option value="qwen9">Qwen 9B</option>
               <option value="qwen4">Qwen 4B</option>
               <option value="nemotron30">Nemotron 30B</option>
               <option value="openai">OpenAI</option>
+              <option value="custom">Custom LM Studio</option>
             </select>
           </label>
           <button id="connect" class="primary">Connect</button>
           <button id="disconnect" class="danger" disabled>Disconnect</button>
           <button id="restartServer" class="warn">Restart</button>
+        </section>
+        <section id="customModelControls" class="controls custom-model-controls" hidden>
+          <label>
+            LM Studio model key
+            <input id="customModelKey" value="qwen3.8-27b-nvfp4-mtp" spellcheck="false">
+          </label>
+          <label>
+            Thinking
+            <select id="customModelReasoning">
+              <option value="none">Off</option>
+              <option value="low">Low</option>
+              <option value="">Omit</option>
+              <option value="medium">Medium</option>
+              <option value="xhigh">XHigh</option>
+            </select>
+          </label>
+          <label>
+            Context
+            <input id="customModelContext" type="number" min="4096" max="262144" step="4096" value="131072">
+          </label>
+          <label>
+            Parallel
+            <input id="customModelParallel" type="number" min="1" max="8" step="1" value="4">
+          </label>
+          <span class="subtle">Use the identifier shown by LM Studio after load, or from <code>lms ls</code>.</span>
         </section>
       </div>
     </details>
@@ -752,6 +825,13 @@
             <select id="ttsVoice" aria-label="Qwen3-TTS voice"></select>
           </label>
           <label>
+            Precision
+            <select id="ttsPrecision" aria-label="Qwen3-TTS precision">
+              <option value="bfloat16">bfloat16</option>
+              <option value="float16">float16</option>
+            </select>
+          </label>
+          <label>
             Voice style
             <input id="ttsInstruct" class="compact-text" spellcheck="false">
           </label>
@@ -843,19 +923,39 @@
         <div class="log-header">
           <label>Conversation</label>
           <span class="log-actions">
+            <select id="transcriptProsodyMode" aria-label="Transcript prosody mode">
+              <option value="off">Prosody off</option>
+              <option value="compact">v: compact</option>
+              <option value="full">Prosody full</option>
+            </select>
+            <button id="recordConversation" class="copy-link record-action" type="button">Record</button>
+            <button id="prosodyKey" class="copy-link" type="button">Key</button>
             <button id="popoutConversation" class="copy-link" type="button">Pop Out</button>
             <button id="copyConversation" class="copy-link" type="button">Copy</button>
-            <button id="recordConversation" class="copy-link" type="button">Record</button>
           </span>
         </div>
+        <div id="prosodyKeyPanel" class="subtle" hidden>v key: q quiet, m medium, l loud, p pause; > shift; + combined cues.</div>
         <div id="conversation" class="log"></div>
       </div>
       <div>
         <div class="log-header">
           <label>Events</label>
           <span class="log-actions">
+            <select id="eventLogFilter" aria-label="Event log filter">
+              <option value="all">All events</option>
+              <option value="no_face">No face</option>
+              <option value="lab">Lab</option>
+              <option value="voice">Voice</option>
+              <option value="prosody">Prosody</option>
+              <option value="brain2">Brain2</option>
+              <option value="sensing">Sensing</option>
+              <option value="search_tools">Search/tools</option>
+              <option value="recording">Recording</option>
+              <option value="system">System</option>
+              <option value="errors">Errors</option>
+            </select>
+            <button id="recordEvents" class="copy-link record-action" type="button">Record</button>
             <button id="copyEvents" class="copy-link" type="button">Copy</button>
-            <button id="recordEvents" class="copy-link" type="button">Record</button>
           </span>
         </div>
         <div id="events" class="log"></div>
@@ -864,8 +964,8 @@
         <div class="log-header">
           <label>Brain 2 <span id="brain2Status" class="subtle"></span></label>
           <span class="log-actions">
+            <button id="recordBrain2" class="copy-link record-action" type="button">Record</button>
             <button id="copyBrain2" class="copy-link" type="button">Copy</button>
-            <button id="recordBrain2" class="copy-link" type="button">Record</button>
           </span>
         </div>
         <div id="brain2Log" class="log"></div>
@@ -881,6 +981,11 @@
     const disconnectButton = document.querySelector("#disconnect");
     const restartServerButton = document.querySelector("#restartServer");
     const modelPreset = document.querySelector("#modelPreset");
+    const customModelControls = document.querySelector("#customModelControls");
+    const customModelKey = document.querySelector("#customModelKey");
+    const customModelReasoning = document.querySelector("#customModelReasoning");
+    const customModelContext = document.querySelector("#customModelContext");
+    const customModelParallel = document.querySelector("#customModelParallel");
     const faceIdleButton = document.querySelector("#faceIdle");
     const faceBeatButton = document.querySelector("#faceBeat");
     const chassisStopButton = document.querySelector("#chassisStop");
@@ -900,6 +1005,7 @@
     const memoryRefreshButton = document.querySelector("#memoryRefresh");
     const memoryForgetAllButton = document.querySelector("#memoryForgetAll");
     const ttsVoice = document.querySelector("#ttsVoice");
+    const ttsPrecision = document.querySelector("#ttsPrecision");
     const ttsInstruct = document.querySelector("#ttsInstruct");
     const ttsPreset = document.querySelector("#ttsPreset");
     const ttsApplyButton = document.querySelector("#ttsApply");
@@ -962,11 +1068,16 @@
     const copyEventsButton = document.querySelector("#copyEvents");
     const recordConversationButton = document.querySelector("#recordConversation");
     const recordEventsButton = document.querySelector("#recordEvents");
+    const transcriptProsodyMode = document.querySelector("#transcriptProsodyMode");
+    const prosodyKeyButton = document.querySelector("#prosodyKey");
+    const prosodyKeyPanel = document.querySelector("#prosodyKeyPanel");
+    const eventLogFilter = document.querySelector("#eventLogFilter");
     const contextPanel = document.querySelector("#contextPanel");
     const contextMap = document.querySelector("#contextMap");
     const contextMapRefreshButton = document.querySelector("#contextMapRefresh");
     const contextMapCopyButton = document.querySelector("#contextMapCopy");
     const contextMapStatus = document.querySelector("#contextMapStatus");
+    const quickRecordConversationButton = document.querySelector("#quickRecordConversation");
     const showEssentialsButton = document.querySelector("#showEssentials");
     const collapsePanelsButton = document.querySelector("#collapsePanels");
     const serverPanel = document.querySelector("#serverPanel");
@@ -1014,6 +1125,8 @@
     let imageToolProtectionTimer;
     let imageToolProtectionEnabled = false;
     let conversationLines = [];
+    let conversationProsodyByIndex = {};
+    let eventLogLines = [];
     let inputDraft = "";
     let lastUserText = "";
     let recentUserTexts = [];
@@ -1124,6 +1237,7 @@
     const toolPrefsStorageKey = "robot790.toolPrefs.v2";
     const toolPrefItemPrefix = "robot790.toolPref.";
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
+    const ttsPrecisionStorageKey = "robot790.ttsPrecision.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
     const idleDriftStorageKey = "robot790.idleDrift.v1";
     const idleWonderStorageKey = "robot790.idleWonder.v1";
@@ -1131,9 +1245,15 @@
     const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
     const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
     const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
+    const transcriptProsodyModeStorageKey = "robot790.transcriptProsodyMode.v1";
+    const eventLogFilterStorageKey = "robot790.eventLogFilter.v1";
     const performanceModeStorageKey = "robot790.performanceMode.v1";
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
-    const modelPresetStorageKey = "robot790.modelPreset.v1";
+    const modelPresetStorageKey = "robot790.modelPreset.v2";
+    const customModelKeyStorageKey = "robot790.customModelKey.v1";
+    const customModelReasoningStorageKey = "robot790.customModelReasoning.v1";
+    const customModelContextStorageKey = "robot790.customModelContext.v1";
+    const customModelParallelStorageKey = "robot790.customModelParallel.v1";
     const micPanelStorageKey = "robot790.micPanel.open.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const loadEricMemoriesStorageKey = "robot790.loadEricMemories.v1";
@@ -2510,6 +2630,11 @@
       return qwen3TtsVoices.includes(voice) ? voice : "Eric";
     }
 
+    function currentTtsPrecision() {
+      const value = String(ttsPrecision?.value || "bfloat16").trim();
+      return ["bfloat16", "float16"].includes(value) ? value : "bfloat16";
+    }
+
     function populateTtsVoices() {
       ttsVoice.replaceChildren(
         ...qwen3TtsVoices.map((voice) => {
@@ -2528,6 +2653,15 @@
 
     function saveTtsVoice() {
       localStorage.setItem(ttsVoiceStorageKey, currentTtsVoice());
+    }
+
+    function loadTtsPrecision() {
+      const saved = localStorage.getItem(ttsPrecisionStorageKey);
+      if (ttsPrecision) ttsPrecision.value = ["bfloat16", "float16"].includes(saved) ? saved : "bfloat16";
+    }
+
+    function saveTtsPrecision() {
+      localStorage.setItem(ttsPrecisionStorageKey, currentTtsPrecision());
     }
 
     function loadTtsStyle() {
@@ -3066,8 +3200,36 @@
     }
 
     function currentModelPreset() {
-      const value = modelPreset.value || "qwen27";
-      return ["qwen27", "qwen9", "qwen4", "nemotron30", "openai"].includes(value) ? value : "qwen27";
+      const value = modelPreset.value || "qwen27-mtp-vlow";
+      return ["qwen27-mtp-vlow", "qwen27", "qwen9", "qwen4", "nemotron30", "openai", "custom"].includes(value)
+        ? value
+        : "qwen27-mtp-vlow";
+    }
+
+    function currentCustomModelKey() {
+      return String(customModelKey?.value || "").trim();
+    }
+
+    function currentCustomModelReasoning() {
+      const value = customModelReasoning?.value || "none";
+      return ["", "low", "medium", "xhigh", "none"].includes(value) ? value : "none";
+    }
+
+    function currentCustomModelContext() {
+      const value = Number(customModelContext?.value);
+      if (!Number.isFinite(value)) return 131072;
+      return Math.max(4096, Math.min(262144, Math.round(value)));
+    }
+
+    function currentCustomModelParallel() {
+      const value = Number(customModelParallel?.value);
+      if (!Number.isFinite(value)) return 4;
+      return Math.max(1, Math.min(8, Math.round(value)));
+    }
+
+    function updateCustomModelControls() {
+      if (!customModelControls) return;
+      customModelControls.hidden = currentModelPreset() !== "custom";
     }
 
     function loadModelPreset() {
@@ -3075,10 +3237,41 @@
       if (saved && [...modelPreset.options].some((option) => option.value === saved)) {
         modelPreset.value = saved;
       }
+      const savedModel = localStorage.getItem(customModelKeyStorageKey);
+      if (savedModel && customModelKey) customModelKey.value = savedModel;
+      const savedReasoning = localStorage.getItem(customModelReasoningStorageKey);
+      if (savedReasoning !== null && customModelReasoning && [...customModelReasoning.options].some((option) => option.value === savedReasoning)) {
+        customModelReasoning.value = savedReasoning;
+      }
+      const savedContext = Number(localStorage.getItem(customModelContextStorageKey));
+      if (Number.isFinite(savedContext) && customModelContext) {
+        customModelContext.value = String(Math.max(4096, Math.min(262144, Math.round(savedContext))));
+      }
+      const savedParallel = Number(localStorage.getItem(customModelParallelStorageKey));
+      if (Number.isFinite(savedParallel) && customModelParallel) {
+        customModelParallel.value = String(Math.max(1, Math.min(8, Math.round(savedParallel))));
+      }
+      updateCustomModelControls();
     }
 
     function saveModelPreset() {
       localStorage.setItem(modelPresetStorageKey, currentModelPreset());
+      localStorage.setItem(customModelKeyStorageKey, currentCustomModelKey());
+      localStorage.setItem(customModelReasoningStorageKey, currentCustomModelReasoning());
+      localStorage.setItem(customModelContextStorageKey, String(currentCustomModelContext()));
+      localStorage.setItem(customModelParallelStorageKey, String(currentCustomModelParallel()));
+    }
+
+    function currentModelRestartPayload() {
+      const preset = currentModelPreset();
+      const payload = { preset, tts_dtype: currentTtsPrecision() };
+      if (preset === "custom") {
+        payload.model = currentCustomModelKey();
+        payload.reasoning = currentCustomModelReasoning();
+        payload.context_length = currentCustomModelContext();
+        payload.parallel = currentCustomModelParallel();
+      }
+      return payload;
     }
 
     function loadSettingsPanelState() {
@@ -3329,10 +3522,171 @@
       dot.className = `dot ${kind === "ok" ? "ok" : kind === "warn" ? "warn" : ""}`;
     }
 
+    function currentTranscriptProsodyMode() {
+      const value = transcriptProsodyMode?.value || "compact";
+      return ["off", "compact", "full"].includes(value) ? value : "compact";
+    }
+
+    function mapVolumeToken(value) {
+      return ({ quiet: "q", medium: "m", loud: "l", pause: "p" })[String(value || "").toLowerCase()] || "";
+    }
+
+    function mapPitchToken(value) {
+      return ({ low: "low", mid: "mid", high: "hi" })[String(value || "").toLowerCase()] || "";
+    }
+
+    function compactSequence(values) {
+      const compact = [];
+      for (const value of values) {
+        if (value && compact[compact.length - 1] !== value) compact.push(value);
+      }
+      if (!compact.length) return "";
+      if (compact.length === 1) return compact[0];
+      return `${compact[0]}>${compact[compact.length - 1]}`;
+    }
+
+    function compactPitch(values) {
+      const seen = new Set(values.filter(Boolean));
+      return ["hi", "mid", "low"].filter((value) => seen.has(value)).join("-") || "pitch?";
+    }
+
+    function compactVoiceShape(rawShape) {
+      const raw = String(rawShape || "").trim();
+      if (!raw) return "";
+      const segments = raw
+        .replace(/^\[voice-shape:\s*/i, "")
+        .replace(/\]$/u, "")
+        .split(";")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      const volumes = [];
+      const speechVolumes = [];
+      const pitches = [];
+      let pauseCount = 0;
+      let quietCount = 0;
+      let loudCount = 0;
+      let hit = false;
+      for (const segment of segments) {
+        const tokens = segment.split(/\s+/);
+        const volToken = tokens.find((token) => token.startsWith("vol="));
+        const pitchToken = tokens.find((token) => token.startsWith("pitch="));
+        const vol = mapVolumeToken(volToken ? volToken.slice(4) : "");
+        const pitch = mapPitchToken(pitchToken ? pitchToken.slice(6) : "");
+        if (vol) volumes.push(vol);
+        if (vol && vol !== "p") speechVolumes.push(vol);
+        if (pitch) pitches.push(pitch);
+        if (vol === "p") pauseCount += 1;
+        if (vol === "q") quietCount += 1;
+        if (vol === "l") loudCount += 1;
+        if (tokens.includes("hit")) hit = true;
+      }
+      const volume = compactSequence(speechVolumes.length ? speechVolumes : volumes) || "v?";
+      const pitch = compactPitch(pitches);
+      const lastVolume = volumes[volumes.length - 1] || "";
+      const features = [];
+      if (hit) features.push("hit");
+      if (loudCount > 1 || (loudCount && quietCount)) features.push("punchy");
+      if (pauseCount > 1) features.push("pauses");
+      if (lastVolume === "p" || lastVolume === "q") features.push("soft-end");
+      if (!features.length) features.push("steady");
+      return `[v: ${volume}/${pitch}/${features.slice(0, 2).join("+")}]`;
+    }
+
+    function formatProsodyForTranscript(rawShape) {
+      const mode = currentTranscriptProsodyMode();
+      if (mode === "off") return "";
+      if (mode === "full") return String(rawShape || "").trim();
+      return compactVoiceShape(rawShape);
+    }
+
+    function eventLogMode() {
+      const value = eventLogFilter?.value || "all";
+      return [
+        "all",
+        "no_face",
+        "lab",
+        "voice",
+        "prosody",
+        "brain2",
+        "sensing",
+        "search_tools",
+        "recording",
+        "system",
+        "errors"
+      ].includes(value) ? value : "all";
+    }
+
+    function eventLineMatchesFilter(line, mode = eventLogMode()) {
+      if (mode === "all") return true;
+      const text = String(line || "").toLowerCase();
+      if (mode === "no_face") return !/\] face /.test(text);
+      if (mode === "lab") return /(first contact|idle |sensing|brain2|voice-shape|prosody|web search|recorded first_contact)/.test(text);
+      if (mode === "voice") return /(mic |input_audio|transcription|transcript|stt |prosody|voice-shape|speech_|barge-in|audio playback)/.test(text);
+      if (mode === "prosody") return /(prosody|voice-shape)/.test(text);
+      if (mode === "brain2") return /brain2/.test(text);
+      if (mode === "sensing") return /(sensing|live camera|camera frame|vision|image loaded|image staged)/.test(text);
+      if (mode === "search_tools") return /(web search|web page|weather|tool |brain status|image generation|cast media|note file|smart home)/.test(text);
+      if (mode === "recording") return /(audio record|recorded |record |splice|rollover|caption)/.test(text);
+      if (mode === "system") return /(startup|runtime|session\.|connected|disconnected|realtime|websocket|error)/.test(text);
+      if (mode === "errors") return /(error|failed|blocked|suppressed|bad event|fallback)/.test(text);
+      return true;
+    }
+
+    function eventsDisplayText() {
+      return eventLogLines.filter((line) => eventLineMatchesFilter(line)).join("\n") + (eventLogLines.length ? "\n" : "");
+    }
+
+    function renderEvents({ forceScroll = false } = {}) {
+      if (!events) return;
+      const nearBottom = forceScroll || (events.scrollHeight - events.scrollTop - events.clientHeight) < 80;
+      events.textContent = eventsDisplayText();
+      if (nearBottom) events.scrollTop = events.scrollHeight;
+    }
+
     function log(target, text) {
       const stamp = new Date().toLocaleTimeString();
+      const line = `[${stamp}] ${text}`;
+      if (target === events) {
+        eventLogLines.push(line);
+        renderEvents({ forceScroll: true });
+        return;
+      }
       target.textContent += `[${stamp}] ${text}\n`;
       target.scrollTop = target.scrollHeight;
+    }
+
+    function loadLogDisplayControls() {
+      if (transcriptProsodyMode) {
+        const savedProsody = localStorage.getItem(transcriptProsodyModeStorageKey);
+        transcriptProsodyMode.value = ["off", "compact", "full"].includes(savedProsody) ? savedProsody : "compact";
+      }
+      if (eventLogFilter) {
+        const savedFilter = localStorage.getItem(eventLogFilterStorageKey);
+        eventLogFilter.value = [
+          "all",
+          "no_face",
+          "lab",
+          "voice",
+          "prosody",
+          "brain2",
+          "sensing",
+          "search_tools",
+          "recording",
+          "system",
+          "errors"
+        ].includes(savedFilter) ? savedFilter : "all";
+      }
+      renderConversation();
+      renderEvents({ forceScroll: true });
+    }
+
+    function saveLogDisplayControls() {
+      if (transcriptProsodyMode) {
+        localStorage.setItem(transcriptProsodyModeStorageKey, currentTranscriptProsodyMode());
+      }
+      if (eventLogFilter) {
+        localStorage.setItem(eventLogFilterStorageKey, eventLogMode());
+      }
     }
 
     function updateBrain2Status() {
@@ -3394,12 +3748,16 @@
     }
 
     function logSnapshotHeader(source) {
+      const details = [];
+      if (source === "conversation") details.push(`Transcript prosody: ${currentTranscriptProsodyMode()}`);
+      if (source === "events") details.push(`Event filter: ${eventLogMode()}`);
       return [
         "Robot 790 Live Log Snapshot",
         "===========================",
         `Recorded: ${new Date().toISOString()}`,
         `Source: ${source}`,
         `Model: ${currentModelStamp()}`,
+        ...details,
         ""
       ].join("\n");
     }
@@ -3451,6 +3809,8 @@
         `Wonder: ${idleWonderLabel()}`,
         `Self-focus: ${idleSelfFocusLabel()}`,
         `Notes: ${idleNotesFocusLabel()}`,
+        `Transcript prosody: ${currentTranscriptProsodyMode()}`,
+        `Event filter: ${eventLogMode()}`,
         `Performance mode: ${performanceModeLabel()}`,
         `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
         `Enabled tools: ${enabledTools.map((tool) => tool.name).join(", ") || "none"}`,
@@ -5043,7 +5403,10 @@
     }
 
     function conversationDisplayText() {
-      const lines = [...conversationLines];
+      const lines = conversationLines.map((line, index) => {
+        const prosody = formatProsodyForTranscript(conversationProsodyByIndex[index]);
+        return prosody ? `${line}\n  ${prosody}` : line;
+      });
       if (inputDraft) lines.push(inputDraft);
       return lines.join("\n") + (lines.length ? "\n" : "");
     }
@@ -5155,7 +5518,7 @@
       logPane.textContent = conversationDisplayText();
       const statusLine = doc.querySelector("#conversationPopoutStatus");
       if (statusLine) {
-        statusLine.textContent = `${conversationLines.length} lines / ${new Date().toLocaleTimeString()} / ${currentModelStamp()}`;
+        statusLine.textContent = `${conversationLines.length} lines / prosody ${currentTranscriptProsodyMode()} / ${new Date().toLocaleTimeString()} / ${currentModelStamp()}`;
       }
       if (nearBottom) logPane.scrollTop = logPane.scrollHeight;
     }
@@ -5221,6 +5584,12 @@
       renderConversation();
       if (touchActivity) noteConversationActivity();
       return index;
+    }
+
+    function rememberConversationProsody(index, rawShape) {
+      if (index < 0 || !rawShape) return;
+      conversationProsodyByIndex[index] = String(rawShape || "").slice(-1000);
+      renderConversation();
     }
 
     function noteUserText(text) {
@@ -5324,10 +5693,10 @@
       if (update === "supersedes" && lastUserConversationIndex >= 0) {
         lastUserConversationIndex = replaceConversation(lastUserConversationIndex, `You: ${transcript}`);
         log(events, `stt transcript coalesced: ${transcript}`);
-        return { accepted: true, coalesced: true, transcript };
+        return { accepted: true, coalesced: true, transcript, index: lastUserConversationIndex };
       }
       lastUserConversationIndex = addConversation(`You: ${transcript}`);
-      return { accepted: true, coalesced: false, transcript };
+      return { accepted: true, coalesced: false, transcript, index: lastUserConversationIndex };
     }
 
     function updateInputDraft(text) {
@@ -6217,7 +6586,9 @@
       const conversationText = conversationLines.length
         ? conversationLines.join("\n")
         : String(conversation?.textContent || "");
-      const eventsText = String(events?.textContent || "");
+      const eventsText = eventLogLines.length
+        ? `${eventLogLines.join("\n")}\n`
+        : String(events?.textContent || "");
       const idleSettingsText = [
         `Idle drift: ${idleDriftLabel()}`,
         `Wonder: ${idleWonderLabel()}`,
@@ -8043,12 +8414,15 @@
         updateInputDraft(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.completed") {
         clearInputDraft();
+        let completedVoiceShape = "";
         if (event.voice_shape) {
-          lastInputVoiceShape = String(event.voice_shape || "").slice(-1000);
+          completedVoiceShape = String(event.voice_shape || "").slice(-1000);
+          lastInputVoiceShape = completedVoiceShape;
           log(events, `input prosody: ${event.voice_shape}`);
         }
         const recorded = recordUserTranscript(event.transcript || "");
         if (!recorded.accepted) return;
+        rememberConversationProsody(recorded.index, completedVoiceShape);
         noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
         idleExhaustionCount = 0;
         idleCooldownUntil = 0;
@@ -8183,7 +8557,7 @@
         const response = await fetch(new URL("/api/realtime/restart", location.href), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ preset: currentModelPreset() }),
+          body: JSON.stringify(currentModelRestartPayload()),
           cache: "no-store"
         });
         const result = await response.json().catch(() => ({}));
@@ -8281,7 +8655,12 @@
     disconnectButton.addEventListener("click", () => ws?.close());
     modelPreset.addEventListener("change", () => {
       saveModelPreset();
+      updateCustomModelControls();
       log(events, `model preset ${modelPreset.options[modelPreset.selectedIndex]?.text || currentModelPreset()}`);
+    });
+    [customModelKey, customModelReasoning, customModelContext, customModelParallel].forEach((control) => {
+      control?.addEventListener("change", saveModelPreset);
+      control?.addEventListener("input", saveModelPreset);
     });
     restartServerButton.addEventListener("click", () => {
       restartRealtimeServer().catch((error) => log(events, `realtime restart error: ${error.message}`));
@@ -8385,6 +8764,10 @@
     llmSmartHomeTools.addEventListener("change", updateSessionTools);
     loadEricMemories.addEventListener("change", handleEricMemoriesPrefChange);
     ttsVoice.addEventListener("change", () => updateSessionTtsStyle());
+    ttsPrecision.addEventListener("change", () => {
+      saveTtsPrecision();
+      log(events, `tts precision ${currentTtsPrecision()} (restart required)`);
+    });
     ttsPreset.addEventListener("change", () => {
       if (ttsPreset.value === "custom") return;
       ttsInstruct.value = ttsStylePresets[ttsPreset.value] || "";
@@ -8466,7 +8849,9 @@
     });
     clearLogButton.addEventListener("click", () => {
       conversationLines = [];
+      conversationProsodyByIndex = {};
       clearInputDraft();
+      eventLogLines = [];
       events.textContent = "";
       brain2Log.textContent = "";
       brain2QuestionCandidates = [];
@@ -8475,6 +8860,18 @@
       updateSessionTools({ quiet: true });
     });
     popoutConversationButton.addEventListener("click", openConversationPopout);
+    transcriptProsodyMode.addEventListener("change", () => {
+      saveLogDisplayControls();
+      renderConversation();
+      log(events, `transcript prosody ${currentTranscriptProsodyMode()}`);
+    });
+    prosodyKeyButton.addEventListener("click", () => {
+      prosodyKeyPanel.hidden = !prosodyKeyPanel.hidden;
+    });
+    eventLogFilter.addEventListener("change", () => {
+      saveLogDisplayControls();
+      renderEvents({ forceScroll: true });
+    });
     copyConversationButton.addEventListener("click", () => {
       copyLogPane(copyConversationButton, conversation, "conversation");
     });
@@ -8483,6 +8880,9 @@
     });
     recordConversationButton.addEventListener("click", () => {
       recordLogPane(recordConversationButton, conversation, "conversation");
+    });
+    quickRecordConversationButton.addEventListener("click", () => {
+      recordLogPane(quickRecordConversationButton, conversation, "conversation");
     });
     recordEventsButton.addEventListener("click", () => {
       recordLogPane(recordEventsButton, events, "events");
@@ -8520,6 +8920,7 @@
     loadMicPanelState();
     syncServerPanelToConnection();
     loadTtsVoice();
+    loadTtsPrecision();
     loadTtsStyle();
     loadInterruptSensitivity();
     loadIdleDrift();
@@ -8531,6 +8932,7 @@
     loadEricMemoriesPref();
     loadImageSettings();
     loadToolPrefs();
+    loadLogDisplayControls();
     loadRuntimeConfig();
     renderMemory();
     updateTypedInputButtons();

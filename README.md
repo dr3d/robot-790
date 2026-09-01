@@ -201,14 +201,14 @@ The usual all-local STS setup has three moving parts:
 3. Robot 790 browser page on `127.0.0.1:8790`.
 
 Here `gold` means the current best-known-good Eric runtime preset, not only the
-robot's gold body color. For the current gold setup, load Qwen 27B in LM Studio
-with one parallel prediction. Recent lab captures may show different parallel
-counts when LM Studio was loaded manually; the scripted baseline below favors
-one Eric client and lower VRAM pressure.
+robot's gold body color. The current fast setup uses the NVFP4 MTP Qwen 27B
+identifier with thinking off and four parallel predictions. That preserves the
+headroom needed for Brain2 and future verifier/lab lanes; lower parallel if VRAM
+pressure or latency spikes show up.
 
 ```powershell
-lms unload qwen/qwen3.8-27b
-lms load qwen/qwen3.8-27b --parallel 1 --context-length 131072 --gpu max --identifier qwen/qwen3.8-27b -y
+lms unload qwen3.8-27b-nvfp4-mtp
+lms load qwen3.8-27b-nvfp4-mtp --parallel 4 --context-length 131072 --gpu max --identifier qwen3.8-27b-nvfp4-mtp -y
 ```
 
 Start the realtime backend:
@@ -256,22 +256,26 @@ model, and start realtime again with Eric's Qwen3-TTS voice.
 
 Current presets:
 
-| Preset | LM Studio model | Context | Reasoning | Notes |
-| --- | --- | ---: | --- | --- |
-| Qwen 27B | `qwen/qwen3.8-27b` | 131K | `low` | Gold Eric baseline. Best current personality and overnight rumination choice. |
-| Qwen 9B | `qwen/qwen3.5-9b` | 131K | `low` | Middle-size comparison model. |
-| Qwen 4B | `qwen3.5-4b` | 131K | `none` | Small/fast comparison model. |
-| Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K requested / 32K observed | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like; verify actual context with brain status after restart. |
-| OpenAI | `$env:ROBOT_790_OPENAI_LLM_MODEL` | API | omitted | Cloud LLM comparison while keeping local Qwen3-TTS voice, face, and tools. Defaults to `gpt-4.1-mini`. |
+| Preset | LM Studio model | Context | Parallel | Reasoning | Notes |
+| --- | --- | ---: | ---: | --- | --- |
+| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 4 | `none` | Current fast Eric baseline. Same family, less lag, enough headroom for multi-lane work. |
+| Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | `low` | Older gold baseline and overnight rumination comparison. |
+| Qwen 9B | `qwen/qwen3.5-9b` | 131K | 1 | `low` | Middle-size comparison model. |
+| Qwen 4B | `qwen3.5-4b` | 131K | 1 | `none` | Small/fast comparison model. |
+| Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K requested / 32K observed | 1 | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like; verify actual context with brain status after restart. |
+| OpenAI | `$env:ROBOT_790_OPENAI_LLM_MODEL` | API | n/a | omitted | Cloud LLM comparison while keeping local Qwen3-TTS voice, face, and tools. Defaults to `gpt-4.1-mini`. |
+| Custom LM Studio | user-entered identifier | user-entered | 1-8 | user-entered | Paste the identifier from `lms ls` or LM Studio's load message, then restart. |
 
 The restart script behind the dropdown is:
 
 ```powershell
+.\scripts\restart_realtime_gold.ps1 -Preset qwen27-mtp-vlow
 .\scripts\restart_realtime_gold.ps1 -Preset qwen27
 .\scripts\restart_realtime_gold.ps1 -Preset qwen9
 .\scripts\restart_realtime_gold.ps1 -Preset qwen4
 .\scripts\restart_realtime_gold.ps1 -Preset nemotron30
 .\scripts\restart_realtime_gold.ps1 -Preset openai
+.\scripts\restart_realtime_gold.ps1 -Preset custom -Model qwen3.8-27b-nvfp4-mtp -Reasoning none -ContextLength 131072 -Parallel 4
 ```
 
 The OpenAI preset uses `OPENAI_API_KEY` from `.env` and skips LM Studio model

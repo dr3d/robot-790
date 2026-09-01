@@ -1,6 +1,15 @@
 # Robot 790 Evidence Map
 
-Core architecture rule: **model proposes; deterministic layers decide.**
+Core architecture rules: **model proposes; deterministic layers decide.** **Four diets, one mouth.**
+
+In the multi-brain design, independence comes less from how hard a lane thinks
+than from what it is allowed to eat. Brain 1 owns the only speaking voice.
+Other lanes write typed candidates to a small inbox: `sensor_observation`,
+`lab_warning`, `revision_candidate`, `mouth_aside`, `question_candidate`,
+`note_candidate`, and `itch_candidate`. Sensor observations outrank everything;
+if the inbox is empty, silence is an allowed result, not a failure to perform.
+The older blackboard/global-workspace analogy is useful, but the practical rule
+is simpler: different diets, one public mouth.
 
 This page is the working map of what the Eric Robot 790 project is learning.
 

@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eric Away</title>
+  <meta name="description" content="A small remote speech-to-speech surface for Eric Robot 790.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07090c;
+      --panel: rgba(17, 22, 28, 0.88);
+      --panel-2: rgba(24, 31, 38, 0.82);
+      --text: #f6f2e9;
+      --muted: #aab7c4;
+      --line: rgba(185, 205, 220, 0.18);
+      --green: #73e0a2;
+      --blue: #7db6ff;
+      --gold: #f0c76c;
+      --red: #ff7777;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(135deg, rgba(115, 224, 162, 0.08), transparent 36%),
+        linear-gradient(315deg, rgba(125, 182, 255, 0.08), transparent 38%),
+        var(--bg);
+      color: var(--text);
+      font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    button,
+    input {
+      color: inherit;
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(23, 29, 36, 0.84);
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+
+    .shell {
+      position: relative;
+      display: grid;
+      min-height: 100vh;
+      grid-template-rows: auto 1fr auto;
+      padding: clamp(16px, 3vw, 30px);
+      gap: 18px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 4.6rem);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--green);
+      font-size: 0.74rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .status-stack {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(16, 21, 26, 0.72);
+      padding: 7px 10px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      white-space: nowrap;
+    }
+
+    .chip.good {
+      border-color: rgba(115, 224, 162, 0.58);
+      color: #dffbea;
+    }
+
+    .chip.warn {
+      border-color: rgba(240, 199, 108, 0.6);
+      color: #ffe9ab;
+    }
+
+    .chip.bad {
+      border-color: rgba(255, 119, 119, 0.62);
+      color: #ffd0d0;
+    }
+
+    .stage {
+      display: grid;
+      min-height: 0;
+      place-items: center;
+    }
+
+    .orb-wrap {
+      display: grid;
+      place-items: center;
+      gap: 18px;
+    }
+
+    .orb {
+      position: relative;
+      width: min(46vh, 48vw, 360px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 1px solid rgba(115, 224, 162, 0.42);
+      background:
+        radial-gradient(circle at 38% 32%, rgba(246, 242, 233, 0.18), transparent 24%),
+        radial-gradient(circle at 52% 58%, rgba(115, 224, 162, 0.42), rgba(71, 111, 112, 0.28) 48%, rgba(9, 12, 15, 0.92) 72%);
+      box-shadow:
+        0 0 0 1px rgba(125, 182, 255, 0.08),
+        0 0 52px rgba(115, 224, 162, 0.18),
+        inset 0 0 56px rgba(0, 0, 0, 0.42);
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .orb::after {
+      position: absolute;
+      inset: 12%;
+      border: 1px solid rgba(246, 242, 233, 0.12);
+      border-radius: inherit;
+      content: "";
+    }
+
+    .orb.listening {
+      border-color: rgba(240, 199, 108, 0.8);
+      box-shadow:
+        0 0 0 1px rgba(240, 199, 108, 0.18),
+        0 0 76px rgba(240, 199, 108, 0.26),
+        inset 0 0 54px rgba(0, 0, 0, 0.32);
+      transform: scale(1.025);
+    }
+
+    .orb.speaking {
+      border-color: rgba(125, 182, 255, 0.82);
+      box-shadow:
+        0 0 0 1px rgba(125, 182, 255, 0.2),
+        0 0 84px rgba(125, 182, 255, 0.24),
+        inset 0 0 48px rgba(0, 0, 0, 0.3);
+    }
+
+    .orb-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .control-bar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      width: min(860px, 100%);
+      margin: 0 auto;
+    }
+
+    .endpoint {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(7, 9, 12, 0.64);
+      padding: 11px 12px;
+    }
+
+    .control-bar button {
+      min-height: 43px;
+      padding: 0 14px;
+    }
+
+    .lower {
+      display: grid;
+      grid-template-columns: minmax(220px, 320px) minmax(260px, 1fr);
+      gap: 14px;
+      align-items: end;
+    }
+
+    .camera,
+    .transcript {
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .camera video {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #050608;
+      object-fit: cover;
+    }
+
+    .camera-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .camera-actions button,
+    .text-row button {
+      min-height: 36px;
+      padding: 0 10px;
+    }
+
+    .log {
+      height: clamp(150px, 24vh, 260px);
+      overflow: auto;
+      padding: 12px;
+      color: #dce7ef;
+      font: 13px/1.45 "Cascadia Mono", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    .text-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      padding: 8px;
+      border-top: 1px solid var(--line);
+      background: rgba(7, 9, 12, 0.42);
+    }
+
+    .text-row input {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(7, 9, 12, 0.64);
+      padding: 9px 10px;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: auto;
+      }
+
+      .shell {
+        min-height: 100dvh;
+      }
+
+      header,
+      .lower,
+      .control-bar {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .status-stack {
+        justify-content: flex-start;
+      }
+
+      .orb {
+        width: min(62vw, 300px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">Eric Away</p>
+        <h1>Call Eric</h1>
+      </div>
+      <div class="status-stack" aria-live="polite">
+        <span id="socketStatus" class="chip bad">offline</span>
+        <span id="micStatus" class="chip">mic off</span>
+        <span id="audioStatus" class="chip">audio ready</span>
+      </div>
+    </header>
+
+    <section class="stage" aria-label="Remote speech control">
+      <div class="orb-wrap">
+        <button id="talkButton" class="orb" type="button" aria-label="Start or stop talking to Eric"></button>
+        <div id="orbLabel" class="orb-label">Tap To Start</div>
+      </div>
+    </section>
+
+    <section class="control-bar" aria-label="Connection controls">
+      <input id="endpointInput" class="endpoint" spellcheck="false" aria-label="Realtime websocket endpoint">
+      <button id="connectButton" type="button">Connect</button>
+      <button id="disconnectButton" type="button" disabled>End</button>
+    </section>
+
+    <section class="lower">
+      <div class="camera">
+        <video id="cameraPreview" muted playsinline></video>
+        <div class="camera-actions">
+          <button id="cameraOnButton" type="button">Camera</button>
+          <button id="shutterButton" type="button" disabled>Shutter</button>
+          <button id="cameraOffButton" type="button" disabled>Off</button>
+        </div>
+      </div>
+
+      <div class="transcript">
+        <div id="log" class="log" aria-live="polite"></div>
+        <form id="textForm" class="text-row">
+          <input id="textInput" autocomplete="off" spellcheck="true" placeholder="Text fallback" aria-label="Text fallback">
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const endpointInput = document.querySelector("#endpointInput");
+    const connectButton = document.querySelector("#connectButton");
+    const disconnectButton = document.querySelector("#disconnectButton");
+    const talkButton = document.querySelector("#talkButton");
+    const orbLabel = document.querySelector("#orbLabel");
+    const socketStatus = document.querySelector("#socketStatus");
+    const micStatus = document.querySelector("#micStatus");
+    const audioStatus = document.querySelector("#audioStatus");
+    const cameraPreview = document.querySelector("#cameraPreview");
+    const cameraOnButton = document.querySelector("#cameraOnButton");
+    const shutterButton = document.querySelector("#shutterButton");
+    const cameraOffButton = document.querySelector("#cameraOffButton");
+    const logPane = document.querySelector("#log");
+    const textForm = document.querySelector("#textForm");
+    const textInput = document.querySelector("#textInput");
+
+    const endpointStorageKey = "robot790.away.endpoint.v1";
+    const defaultEndpoint = location.hostname === "localhost" || location.hostname === "127.0.0.1"
+      ? "ws://127.0.0.1:8765/v1/realtime"
+      : "wss://your-eric-tunnel.example/v1/realtime";
+
+    let ws = null;
+    let audioContext = null;
+    let micContext = null;
+    let micStream = null;
+    let micSource = null;
+    let micProcessor = null;
+    let cameraStream = null;
+    let playbackTime = 0;
+    let audioFlushTimer = null;
+    let audioChunks = [];
+    let audioChunkBytes = 0;
+    const audioFlushMs = 120;
+    const minPlaybackBytes = 9600;
+
+    function log(text) {
+      const stamp = new Date().toLocaleTimeString();
+      logPane.textContent += `[${stamp}] ${text}\n`;
+      logPane.scrollTop = logPane.scrollHeight;
+    }
+
+    function setChip(element, text, kind = "") {
+      element.textContent = text;
+      element.className = `chip ${kind}`.trim();
+    }
+
+    function setOrb(mode, label) {
+      talkButton.classList.toggle("listening", mode === "listening");
+      talkButton.classList.toggle("speaking", mode === "speaking");
+      orbLabel.textContent = label;
+    }
+
+    function realtimeConnected() {
+      return ws && ws.readyState === WebSocket.OPEN;
+    }
+
+    function updateControls() {
+      const connected = realtimeConnected();
+      connectButton.disabled = connected;
+      disconnectButton.disabled = !connected;
+      talkButton.disabled = !connected;
+      setChip(socketStatus, connected ? "connected" : "offline", connected ? "good" : "bad");
+      setChip(micStatus, micStream ? "mic on" : "mic off", micStream ? "warn" : "");
+      setOrb(micStream ? "listening" : "", connected ? (micStream ? "Listening" : "Tap To Talk") : "Connect First");
+      cameraOnButton.disabled = Boolean(cameraStream);
+      shutterButton.disabled = !cameraStream || !connected;
+      cameraOffButton.disabled = !cameraStream;
+    }
+
+    function b64ToBytes(b64) {
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    function bytesToB64(bytes) {
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary);
+    }
+
+    function pcm16ToFloat32(bytes) {
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const output = new Float32Array(bytes.byteLength / 2);
+      for (let i = 0; i < output.length; i += 1) {
+        output[i] = Math.max(-1, Math.min(1, view.getInt16(i * 2, true) / 32768));
+      }
+      return output;
+    }
+
+    function float32ToPcm16(float32) {
+      const bytes = new Uint8Array(float32.length * 2);
+      const view = new DataView(bytes.buffer);
+      for (let i = 0; i < float32.length; i += 1) {
+        const sample = Math.max(-1, Math.min(1, float32[i]));
+        view.setInt16(i * 2, sample < 0 ? sample * 32768 : sample * 32767, true);
+      }
+      return bytes;
+    }
+
+    function resample(input, fromRate, toRate) {
+      if (fromRate === toRate) return input;
+      const ratio = fromRate / toRate;
+      const output = new Float32Array(Math.floor(input.length / ratio));
+      for (let i = 0; i < output.length; i += 1) {
+        const pos = i * ratio;
+        const left = Math.floor(pos);
+        const right = Math.min(input.length - 1, left + 1);
+        const frac = pos - left;
+        output[i] = input[left] * (1 - frac) + input[right] * frac;
+      }
+      return output;
+    }
+
+    function send(event) {
+      if (!realtimeConnected()) return;
+      ws.send(JSON.stringify(event));
+    }
+
+    async function ensurePlayback() {
+      audioContext ||= new AudioContext({ sampleRate: 16000 });
+      if (audioContext.state === "suspended") await audioContext.resume();
+    }
+
+    async function flushAudioQueue() {
+      if (!audioChunks.length) return;
+      await ensurePlayback();
+      const total = audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const merged = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of audioChunks) {
+        merged.set(chunk, offset);
+        offset += chunk.length;
+      }
+      audioChunks = [];
+      audioChunkBytes = 0;
+      const floats = pcm16ToFloat32(merged);
+      const buffer = audioContext.createBuffer(1, floats.length, 16000);
+      buffer.copyToChannel(floats, 0);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      const now = audioContext.currentTime;
+      playbackTime = Math.max(playbackTime, now + 0.02);
+      source.start(playbackTime);
+      playbackTime += buffer.duration;
+      setChip(audioStatus, "speaking", "good");
+      setOrb("speaking", micStream ? "Listening" : "Eric Speaking");
+      source.onended = () => {
+        setChip(audioStatus, "audio ready", "");
+        if (!micStream) setOrb("", realtimeConnected() ? "Tap To Talk" : "Connect First");
+      };
+    }
+
+    function queueAudioDelta(delta) {
+      const bytes = b64ToBytes(delta);
+      audioChunks.push(bytes);
+      audioChunkBytes += bytes.length;
+      if (audioChunkBytes >= minPlaybackBytes) {
+        if (audioFlushTimer) clearTimeout(audioFlushTimer);
+        audioFlushTimer = null;
+        flushAudioQueue().catch((error) => log(`audio error: ${error.message}`));
+      } else if (!audioFlushTimer) {
+        audioFlushTimer = setTimeout(() => {
+          audioFlushTimer = null;
+          flushAudioQueue().catch((error) => log(`audio error: ${error.message}`));
+        }, audioFlushMs);
+      }
+    }
+
+    async function connect() {
+      if (realtimeConnected()) return;
+      const endpoint = endpointInput.value.trim();
+      if (!endpoint) return;
+      localStorage.setItem(endpointStorageKey, endpoint);
+      setChip(socketStatus, "connecting", "warn");
+      log(`connect ${endpoint}`);
+      ws = new WebSocket(endpoint);
+      ws.onopen = () => {
+        log("connected");
+        updateControls();
+      };
+      ws.onclose = () => {
+        log("disconnected");
+        ws = null;
+        stopMic().catch(() => {});
+        updateControls();
+      };
+      ws.onerror = () => {
+        log("websocket error");
+        setChip(socketStatus, "socket error", "bad");
+      };
+      ws.onmessage = (message) => {
+        try {
+          handleEvent(JSON.parse(message.data));
+        } catch (error) {
+          log(`bad event: ${error.message}`);
+        }
+      };
+      updateControls();
+    }
+
+    function disconnect() {
+      stopMic().catch(() => {});
+      if (ws) ws.close();
+      ws = null;
+      updateControls();
+    }
+
+    async function startMic() {
+      if (!realtimeConnected() || micStream) return;
+      await ensurePlayback();
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        }
+      });
+      micContext = new AudioContext();
+      micSource = micContext.createMediaStreamSource(micStream);
+      micProcessor = micContext.createScriptProcessor(2048, 1, 1);
+      micProcessor.onaudioprocess = (event) => {
+        const input = event.inputBuffer.getChannelData(0);
+        const pcm16 = float32ToPcm16(resample(input, micContext.sampleRate, 16000));
+        send({ type: "input_audio_buffer.append", audio: bytesToB64(pcm16) });
+      };
+      micSource.connect(micProcessor);
+      micProcessor.connect(micContext.destination);
+      log("mic on");
+      updateControls();
+    }
+
+    async function stopMic() {
+      if (micProcessor) micProcessor.disconnect();
+      if (micSource) micSource.disconnect();
+      if (micStream) micStream.getTracks().forEach((track) => track.stop());
+      if (micContext) await micContext.close();
+      micProcessor = null;
+      micSource = null;
+      micStream = null;
+      micContext = null;
+      log("mic off");
+      updateControls();
+    }
+
+    async function toggleMic() {
+      if (micStream) {
+        await stopMic();
+      } else {
+        await startMic();
+      }
+    }
+
+    function handleEvent(event) {
+      if (event.type === "response.output_audio.delta" && event.delta) {
+        queueAudioDelta(event.delta);
+        return;
+      }
+      if (event.type === "response.output_audio.done" || event.type === "response.done") {
+        flushAudioQueue().catch((error) => log(`audio error: ${error.message}`));
+        return;
+      }
+      if (event.type === "conversation.item.input_audio_transcription.completed") {
+        if (event.transcript) log(`You: ${event.transcript}`);
+        if (event.voice_shape) log(event.voice_shape);
+        return;
+      }
+      if (event.type === "response.output_audio_transcript.done") {
+        if (event.transcript) log(`Eric: ${event.transcript}`);
+        return;
+      }
+      if (event.type === "error") {
+        log(`error: ${event.error?.message || JSON.stringify(event)}`);
+      }
+    }
+
+    async function startCamera() {
+      if (cameraStream) return;
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      });
+      cameraPreview.srcObject = cameraStream;
+      await cameraPreview.play().catch(() => {});
+      log("camera on");
+      updateControls();
+    }
+
+    function stopCamera() {
+      if (cameraStream) cameraStream.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+      cameraPreview.pause();
+      cameraPreview.removeAttribute("src");
+      cameraPreview.srcObject = null;
+      log("camera off");
+      updateControls();
+    }
+
+    function captureFrameDataUrl() {
+      const width = cameraPreview.videoWidth || 640;
+      const height = cameraPreview.videoHeight || 480;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(cameraPreview, 0, 0, width, height);
+      return canvas.toDataURL("image/jpeg", 0.82);
+    }
+
+    function shutter() {
+      if (!cameraStream || !realtimeConnected()) return;
+      const imageUrl = captureFrameDataUrl();
+      send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: "The remote user captured a still image into Robot 790's sensing eye. Treat it as temporary visual context, not memory. Do not answer yet unless the user asks about it."
+            },
+            { type: "input_image", image_url: imageUrl, detail: "auto" }
+          ]
+        }
+      });
+      log("shutter to sensing eye");
+    }
+
+    function sendText(text) {
+      const value = String(text || "").trim();
+      if (!value || !realtimeConnected()) return;
+      send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: value }]
+        }
+      });
+      send({
+        type: "response.create",
+        response: {
+          modalities: ["audio", "text"]
+        }
+      });
+      log(`You typed: ${value}`);
+    }
+
+    endpointInput.value = new URLSearchParams(location.search).get("ws")
+      || localStorage.getItem(endpointStorageKey)
+      || defaultEndpoint;
+    updateControls();
+
+    connectButton.addEventListener("click", () => connect().catch((error) => log(`connect error: ${error.message}`)));
+    disconnectButton.addEventListener("click", disconnect);
+    talkButton.addEventListener("click", () => toggleMic().catch((error) => log(`mic error: ${error.message}`)));
+    cameraOnButton.addEventListener("click", () => startCamera().catch((error) => log(`camera error: ${error.message}`)));
+    shutterButton.addEventListener("click", shutter);
+    cameraOffButton.addEventListener("click", stopCamera);
+    textForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      sendText(textInput.value);
+      textInput.value = "";
+    });
+  </script>
+</body>
+</html>

@@ -5,16 +5,16 @@
   "purpose": "Fast companion-house-pet tuning with strong character and low latency.",
   "realtime": {
     "launcher": "scripts/start_realtime_eric_qwen3.ps1",
-    "model": "qwen/qwen3.8-27b",
-    "reasoning_effort": "low",
+    "model": "qwen3.8-27b-nvfp4-mtp",
+    "reasoning_effort": "none",
     "num_pipelines": 1,
     "stream_batch_sentences": 1,
     "audio_max_tokens": 64
   },
   "lm_studio": {
     "context_length": 131072,
-    "parallel": 1,
-    "note": "Keep parallel at 1 for a single Eric client to reduce VRAM pressure on the 27B model."
+    "parallel": 4,
+    "note": "Fast default uses the NVFP4 MTP very-low GGUF with thinking disabled. Keep parallel at 4 when testing multi-lane thinking; lower it if VRAM pressure or latency spikes appear."
   },
   "tts": {
     "engine": "qwen3",
