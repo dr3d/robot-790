@@ -13,8 +13,8 @@
   },
   "lm_studio": {
     "context_length": 131072,
-    "parallel": 4,
-    "note": "Fast default uses the NVFP4 MTP very-low GGUF with thinking disabled. Keep parallel at 4 when testing multi-lane thinking; lower it if VRAM pressure or latency spikes appear."
+    "parallel": 2,
+    "note": "Fast default uses the NVFP4 MTP very-low GGUF with thinking disabled. Keep parallel at 2 for stable Brain1+Brain2 tests; raise it only when deliberately testing more lanes."
   },
   "tts": {
     "engine": "qwen3",

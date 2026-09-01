@@ -623,8 +623,10 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
     model = (
         os.getenv("ROBOT_790_BRAIN2_MODEL")
         or os.getenv("ROBOT_790_OPENAI_LLM_MODEL")
-        or "qwen/qwen3.8-27b"
+        or "qwen3.8-27b-nvfp4-mtp"
     ).strip()
+    if model == "qwen/qwen3.8-27b" and os.getenv("ROBOT_790_ALLOW_BRAIN2_OLD_QWEN27", "").lower() not in {"1", "true", "yes"}:
+        model = "qwen3.8-27b-nvfp4-mtp"
     api_key = os.getenv("ROBOT_790_BRAIN2_API_KEY") or os.getenv("ROBOT_790_OPENAI_LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "none"
     headers = {"Content-Type": "application/json"}
     if api_key and api_key.lower() not in {"none", "null", "false"}:

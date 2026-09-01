@@ -202,13 +202,13 @@ The usual all-local STS setup has three moving parts:
 
 Here `gold` means the current best-known-good Eric runtime preset, not only the
 robot's gold body color. The current fast setup uses the NVFP4 MTP Qwen 27B
-identifier with thinking off and four parallel predictions. That preserves the
-headroom needed for Brain2 and future verifier/lab lanes; lower parallel if VRAM
-pressure or latency spikes show up.
+identifier with thinking off and two parallel predictions. That preserves enough
+headroom for Brain1+Brain2 tests without preallocating the full four-lane budget;
+raise parallel only when deliberately testing more lanes.
 
 ```powershell
 lms unload qwen3.8-27b-nvfp4-mtp
-lms load qwen3.8-27b-nvfp4-mtp --parallel 4 --context-length 131072 --gpu max --identifier qwen3.8-27b-nvfp4-mtp -y
+lms load qwen3.8-27b-nvfp4-mtp --parallel 2 --context-length 131072 --gpu max --identifier qwen3.8-27b-nvfp4-mtp -y
 ```
 
 Start the realtime backend:
@@ -258,7 +258,7 @@ Current presets:
 
 | Preset | LM Studio model | Context | Parallel | Reasoning | Notes |
 | --- | --- | ---: | ---: | --- | --- |
-| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 4 | `none` | Current fast Eric baseline. Same family, less lag, enough headroom for multi-lane work. |
+| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Current fast Eric baseline. Same family, less lag, enough headroom for Brain1+Brain2 work. |
 | Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | `low` | Older gold baseline and overnight rumination comparison. |
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | 1 | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | 1 | `none` | Small/fast comparison model. |
@@ -275,7 +275,7 @@ The restart script behind the dropdown is:
 .\scripts\restart_realtime_gold.ps1 -Preset qwen4
 .\scripts\restart_realtime_gold.ps1 -Preset nemotron30
 .\scripts\restart_realtime_gold.ps1 -Preset openai
-.\scripts\restart_realtime_gold.ps1 -Preset custom -Model qwen3.8-27b-nvfp4-mtp -Reasoning none -ContextLength 131072 -Parallel 4
+.\scripts\restart_realtime_gold.ps1 -Preset custom -Model qwen3.8-27b-nvfp4-mtp -Reasoning none -ContextLength 131072 -Parallel 2
 ```
 
 The OpenAI preset uses `OPENAI_API_KEY` from `.env` and skips LM Studio model

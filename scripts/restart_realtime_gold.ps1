@@ -25,6 +25,28 @@ if (Test-Path -LiteralPath $EnvLoader) {
     . $EnvLoader -Quiet
 }
 
+function Stop-StaleLmStudioBackends {
+    param(
+        [string] $SelectedModel
+    )
+
+    # LM Studio can leave an old llama-server alive even after `lms unload --all`.
+    # Kill only the known pre-NVFP4 27B backend when it is not the selected model.
+    if ($SelectedModel -eq "qwen/qwen3.8-27b") {
+        return
+    }
+
+    Get-CimInstance Win32_Process |
+        Where-Object {
+            $_.Name -eq "llama-server.exe" -and
+            $_.CommandLine -match 'lmstudio-community\\Qwen3\.8-27B-GGUF|Qwen3\.8-27B-Q4_K_M\.gguf'
+        } |
+        ForEach-Object {
+            Write-Warning "Stopping stale LM Studio backend $($_.ProcessId): qwen/qwen3.8-27b"
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+}
+
 if (-not (Test-Path $StopScript)) {
     throw "Missing stop script at $StopScript"
 }
@@ -40,7 +62,7 @@ $presets = @{
         Reasoning = "none"
         AudioMaxTokens = 64
         ContextLength = 131072
-        Parallel = 4
+        Parallel = 2
     }
     qwen27 = @{
         Label = "Qwen 27B"
@@ -104,7 +126,7 @@ if ($Preset -eq "custom") {
         throw "Custom model key is too long."
     }
     $ContextLength = [Math]::Max(4096, [Math]::Min(262144, $ContextLength))
-    $Parallel = if ($Parallel -gt 0) { [Math]::Max(1, [Math]::Min(8, $Parallel)) } else { 4 }
+    $Parallel = if ($Parallel -gt 0) { [Math]::Max(1, [Math]::Min(8, $Parallel)) } else { 2 }
     $selected = @{
         Label = "Custom LM Studio"
         Provider = "lmstudio"
@@ -127,7 +149,9 @@ if ($selected.Provider -eq "lmstudio") {
     try {
         $parallelPredictions = if ($selected.Parallel) { [int] $selected.Parallel } else { 1 }
         & lms unload --all | Out-Null
+        Stop-StaleLmStudioBackends -SelectedModel $selected.Model
         & lms load $selected.Model --parallel $parallelPredictions --context-length $selected.ContextLength --gpu max --identifier $selected.Model -y | Out-Null
+        Stop-StaleLmStudioBackends -SelectedModel $selected.Model
     } catch {
         throw "Could not switch LM Studio to $($selected.Model): $($_.Exception.Message)"
     }
@@ -137,6 +161,7 @@ if ($selected.Provider -eq "lmstudio") {
     }
     try {
         & lms unload --all | Out-Null
+        Stop-StaleLmStudioBackends -SelectedModel ""
     } catch {
         Write-Warning "Could not unload LM Studio models before OpenAI preset: $($_.Exception.Message)"
     }
