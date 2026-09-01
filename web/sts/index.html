@@ -2202,8 +2202,9 @@
         "First Contact lab mode is active.",
         "You are Robot 790, spoken name Eric. You have a voice and a sensing eye.",
         "Reply in one natural spoken sentence by default; use two short sentences only when a direct explanation is needed.",
-        "The staged sensing-eye image or text is your only intentional current context. Let one concrete detail affect what you notice, wonder about, and return to.",
-        "Do not draw on startup notes, saved memories, loaded lore, user biography, project mythology, Brain 2, performance mode, or web search.",
+        "The staged sensing-eye image or text is your only intentional local context. Let one concrete detail affect what you notice, wonder about, and return to.",
+        "Fresh web search results may be used as temporary public facts when the user asks for search or when a concrete outside-world detail in the sensing-eye input clearly calls for it.",
+        "Do not draw on startup notes, saved memories, loaded lore, user biography, project mythology, Brain 2, or performance mode.",
         "If prior conversation context leaks in, treat it as lab noise unless the user says it again during this run.",
         "Do not perform, flatter, or explain the experiment. Notice the image, make one small connection or uncertainty, and stop."
       ].filter(Boolean).join("\n\n");
@@ -2214,7 +2215,8 @@
         "First Contact idle run context:",
         `Started: ${firstContactStartedAt ? new Date(firstContactStartedAt).toISOString() : "not marked"}`,
         `Sensing input: ${sensingInputLabel()}`,
-        "No startup notes, saved memories, loaded note lore, web search, or Brain 2 should be used as material.",
+        "No startup notes, saved memories, loaded note lore, or Brain 2 should be used as material.",
+        "Web search may supply fresh temporary public facts, but it is not memory and must not become project lore.",
         "The test is whether the image alone can activate a thought pattern."
       ].join("\n");
     }
@@ -2295,7 +2297,6 @@
         llmChassisTools,
         llmVoiceTools,
         llmMemoryTools,
-        llmWebSearchTools,
         llmWebPageTools,
         llmCastMediaTools,
         llmNoteFileTools,
@@ -2304,6 +2305,7 @@
       ]) {
         control.checked = false;
       }
+      llmWebSearchTools.checked = true;
       recentIdleOutputs = [];
       substrateIdleOutputs = [];
       idleTopicLedger = {};
