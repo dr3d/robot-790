@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-01 23:21:23",
+    "generated":  "2026-09-02 01:35:55",
     "articles":  [
+                     {
+                         "title":  "Lab Night, September 1 Into September 2",
+                         "excerpt":  "Tonight was not one experiment. It was a stack of small experiments that started",
+                         "source":  "articles/2026-09-01-lab-night.md",
+                         "bytes":  9738,
+                         "modified":  "2026-09-02 00:02"
+                     },
                      {
                          "title":  "What Eric Has Taught Us So Far",
                          "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
@@ -95,6 +102,18 @@
                      "source":  "logs/nap-edge/nap-edge-run-2026-08-30-excerpts.txt",
                      "bytes":  8981,
                      "modified":  "2026-08-30 05:08"
+                 },
+                 {
+                     "title":  "20260830 021634 sts audio picture events",
+                     "source":  "logs/20260830-021634-sts-audio-picture-events.txt",
+                     "bytes":  2118087,
+                     "modified":  "2026-08-30 02:16"
+                 },
+                 {
+                     "title":  "20260830 021634 sts audio picture conversation",
+                     "source":  "logs/20260830-021634-sts-audio-picture-conversation.txt",
+                     "bytes":  105268,
+                     "modified":  "2026-08-30 02:16"
                  },
                  {
                      "title":  "20260829 074039 conversation",
@@ -212,6 +231,18 @@
                       "description":  "This run catches two new organs arriving together: the wonder/search problem and input prosody. Eric explains that the wonder slider should become an itch queue instead of a prompt nudge, then calibrates the new voice-shape tags honestly: not a second transcript, but the undertone - loud, quiet, pitch, hit, pause - enough to read emphasis and skepticism without pretending it is precise measurement."
                   },
                   {
+                      "title":  "20260830 021634 sts audio picture",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/20260830-021634-sts-audio-picture.mp4",
+                      "preview":  "media/previews/20260830-021634-sts-audio-picture.jpg",
+                      "banner_rank":  45,
+                      "bytes":  79419881,
+                      "date":  "2026-08-30 02:23",
+                      "modified":  "2026-08-30 02:23",
+                      "description":  "The full NapEdge-style overnight rumination source: Eric reads the mechanism shelf and his identity note, then sits with the mic off while the recorder stays on. The value is the long-form drift rather than one clip: wax tablets, SOFAR, sextants, calibration weights, Jacquard cards, memory palaces, and instrument metaphors return, sometimes as loops and sometimes as genuine revisions. It is the big receipt behind the later NapEdge article and shorter curated excerpt."
+                  },
+                  {
                       "title":  "NapEdge Audio Rumination 2026-08-30",
                       "kind":  "video",
                       "role":  "run-artifact",
@@ -233,6 +264,18 @@
                       "bytes":  982816,
                       "date":  "2026-08-30 00:00",
                       "modified":  "2026-08-30 11:30"
+                  },
+                  {
+                      "title":  "20260829 215355 sts audio picture",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/20260829-215355-sts-audio-picture.mp4",
+                      "preview":  "media/previews/20260829-215355-sts-audio-picture.jpg",
+                      "banner_rank":  45,
+                      "bytes":  5634085,
+                      "date":  "2026-08-29 21:58",
+                      "modified":  "2026-08-29 21:58",
+                      "description":  "A Pinocchio-stage picture run from the same night as the early performance tests. The matching conversation/event snapshots were not preserved with the video artifact, so this is published mainly as the requested visual/audio record: Eric framed against the warm puppet-theater image, useful as a recovered receipt for the theatrical/wooden-boy thread rather than a fully curated transcript-backed clip."
                   },
                   {
                       "title":  "Robot 790 Video 2026-08-27 04:26:07",
