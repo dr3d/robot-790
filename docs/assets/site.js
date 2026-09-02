@@ -4,6 +4,7 @@ const articleList = document.querySelector("#article-list");
 const articleReader = document.querySelector("#article-reader");
 const articleReaderTitle = document.querySelector("#article-reader-title");
 const articleReaderBody = document.querySelector("#article-reader-body");
+const articleShare = document.querySelector("#article-share");
 const articleClose = document.querySelector("#article-close");
 const featuredArticleLink = document.querySelector("#featured-article-link");
 const mediaFeature = document.querySelector("#media-feature");
@@ -14,6 +15,7 @@ const logReader = document.querySelector("#log-reader");
 const pageHeader = document.querySelector(".page-header");
 const randomBanner = document.querySelector("#random-banner");
 const githubDocsBase = "https://github.com/dr3d/robot-790/blob/master/docs/";
+let currentArticle = null;
 let currentMedia = null;
 
 const bannerLines = [
@@ -129,6 +131,71 @@ function renderedMarkdownUrl(source) {
   return `${githubDocsBase}${value.replace(/^\/+/, "")}`;
 }
 
+function requestedArticleSource() {
+  try {
+    return new URL(location.href).searchParams.get("article") || "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+function articleShareUrl(article) {
+  const url = new URL(location.href);
+  url.searchParams.delete("media");
+  url.searchParams.set("article", article.source);
+  url.hash = "article-reader";
+  return url.toString();
+}
+
+async function copyArticleShareUrl(article, button) {
+  if (!article) return;
+  const shareUrl = articleShareUrl(article);
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: article.title, url: shareUrl });
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareUrl);
+    } else {
+      window.prompt("Copy article link", shareUrl);
+    }
+    if (button) {
+      const previous = button.textContent;
+      button.textContent = "Copied";
+      window.setTimeout(() => {
+        button.textContent = previous;
+      }, 1400);
+    }
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      window.prompt("Copy article link", shareUrl);
+    }
+  }
+}
+
+async function openArticle(article, { replaceUrl = false } = {}) {
+  currentArticle = article;
+  articleReaderTitle.textContent = article.title;
+  articleReaderBody.innerHTML = "<p>Loading...</p>";
+  articleReader.hidden = false;
+  articleReader.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (replaceUrl) {
+    const url = new URL(location.href);
+    if (url.searchParams.has("article")) {
+      url.searchParams.delete("media");
+      url.searchParams.set("article", article.source);
+      url.hash = "article-reader";
+      history.replaceState(null, "", url);
+    }
+  }
+  try {
+    const response = await fetch(article.source);
+    const text = await response.text();
+    articleReaderBody.innerHTML = renderMarkdown(text);
+  } catch (error) {
+    articleReaderBody.innerHTML = `<p>Could not load ${escapeHtml(article.source)}.</p>`;
+  }
+}
+
 function showArticles(articles) {
   if (!articles.length) {
     articleList.innerHTML = '<p class="empty">No articles found yet.</p>';
@@ -150,21 +217,19 @@ function showArticles(articles) {
   `).join("");
 
   articleList.querySelectorAll("[data-read-article]").forEach((button) => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", () => {
       const article = articles[Number(button.dataset.readArticle)];
-      articleReaderTitle.textContent = article.title;
-      articleReaderBody.innerHTML = "<p>Loading...</p>";
-      articleReader.hidden = false;
-      articleReader.scrollIntoView({ behavior: "smooth", block: "start" });
-      try {
-        const response = await fetch(article.source);
-        const text = await response.text();
-        articleReaderBody.innerHTML = renderMarkdown(text);
-      } catch (error) {
-        articleReaderBody.innerHTML = `<p>Could not load ${escapeHtml(article.source)}.</p>`;
-      }
+      openArticle(article, { replaceUrl: true });
     });
   });
+
+  const requested = requestedArticleSource();
+  if (requested) {
+    const selectedIndex = articles.findIndex((article) => article.source === requested);
+    if (selectedIndex >= 0) {
+      openArticle(articles[selectedIndex], { replaceUrl: false });
+    }
+  }
 
   if (featuredArticleLink) {
     featuredArticleLink.addEventListener("click", (event) => {
@@ -178,7 +243,7 @@ function showArticles(articles) {
         return;
       }
       event.preventDefault();
-      firstArticleButton.click();
+      openArticle(articles[targetIndex], { replaceUrl: true });
     });
   }
 }
@@ -271,6 +336,7 @@ function requestedMediaSource() {
 
 function mediaShareUrl(media) {
   const url = new URL(location.href);
+  url.searchParams.delete("article");
   url.searchParams.set("media", media.source);
   url.hash = "media";
   return url.toString();
@@ -342,6 +408,7 @@ function selectMedia(media, selectedButton = null, { replaceUrl = true } = {}) {
   if (replaceUrl) {
     const url = new URL(location.href);
     if (url.searchParams.has("media")) {
+      url.searchParams.delete("article");
       url.searchParams.set("media", media.source);
       url.hash = "media";
       history.replaceState(null, "", url);
@@ -395,7 +462,12 @@ function showLogs(logs) {
   }
 }
 
+articleShare.addEventListener("click", (event) => {
+  copyArticleShareUrl(currentArticle, event.currentTarget);
+});
+
 articleClose.addEventListener("click", () => {
+  currentArticle = null;
   articleReader.hidden = true;
   articleReaderBody.innerHTML = "";
 });

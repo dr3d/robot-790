@@ -224,6 +224,12 @@ main {
   margin-bottom: 16px;
 }
 
+.reader-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
 .article-body {
   max-width: 860px;
 }
@@ -446,6 +452,10 @@ code {
   nav {
     justify-content: flex-start;
     margin-top: 24px;
+  }
+
+  .reader-header {
+    display: grid;
   }
 
   .media-list {
