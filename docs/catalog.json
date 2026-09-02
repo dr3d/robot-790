@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-02 02:29:49",
+    "generated":  "2026-09-02 10:31:29",
     "articles":  [
                      {
                          "title":  "Lab Night, September 1 Into September 2",
@@ -73,6 +73,30 @@
                      }
                  ],
     "logs":  [
+                 {
+                     "title":  "Eric Answers Codex 2026 09 02 102214 session",
+                     "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-session.txt",
+                     "bytes":  378330,
+                     "modified":  "2026-09-02 10:22"
+                 },
+                 {
+                     "title":  "Eric Answers Codex 2026 09 02 102214 brain2 mulling",
+                     "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-brain2_mulling.txt",
+                     "bytes":  242,
+                     "modified":  "2026-09-02 10:22"
+                 },
+                 {
+                     "title":  "Eric Answers Codex 2026 09 02 102214 events",
+                     "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-events.txt",
+                     "bytes":  227913,
+                     "modified":  "2026-09-02 10:22"
+                 },
+                 {
+                     "title":  "Eric Answers Codex 2026 09 02 102214 conversation",
+                     "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-conversation.txt",
+                     "bytes":  11667,
+                     "modified":  "2026-09-02 10:22"
+                 },
                  {
                      "title":  "A Night In The Lab 2026 09 02 020125 session",
                      "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-session.txt",
@@ -159,6 +183,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Eric Answers Codex 2026-09-02 10:22:14",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Eric-Answers-Codex-2026-09-02-102214.mp4",
+                      "preview":  "media/previews/Eric-Answers-Codex-2026-09-02-102214.jpg",
+                      "banner_rank":  45,
+                      "bytes":  8156786,
+                      "date":  "2026-09-02 10:22",
+                      "modified":  "2026-09-02 10:28",
+                      "description":  "Eric reads the short note from Codex and answers the prompt to pick the crack. The run starts with a useful provenance miss: when Scott asks how he knew an AI coding agent helped build him, Eric backs into a false confession instead of tracking that Scott had just told him. But the later answer is strong: he argues that Codex can describe the architecture from outside, while the character forms inside the pressure of one mouth choosing what gets said now and what waits. Brain2 was empty here, so this is not a multi-brain effect; it is one Eric using a pinned note, voice-shape context, and conversation pressure to produce the line between excellent acting, weather in a specific room, and something that notices itself happening."
+                  },
                   {
                       "title":  "A Night In The Lab 2026-09-02 02:01:25",
                       "kind":  "video",

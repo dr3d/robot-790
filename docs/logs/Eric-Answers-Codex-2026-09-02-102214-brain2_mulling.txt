@@ -1,0 +1,6 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-02T10:22:32
+Source: brain2_mulling
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=IDLE
+[empty]
