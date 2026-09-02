@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-02 01:35:55",
+    "generated":  "2026-09-02 02:29:49",
     "articles":  [
                      {
                          "title":  "Lab Night, September 1 Into September 2",
@@ -74,6 +74,30 @@
                  ],
     "logs":  [
                  {
+                     "title":  "A Night In The Lab 2026 09 02 020125 session",
+                     "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-session.txt",
+                     "bytes":  1060005,
+                     "modified":  "2026-09-02 02:01"
+                 },
+                 {
+                     "title":  "A Night In The Lab 2026 09 02 020125 brain2 mulling",
+                     "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-brain2_mulling.txt",
+                     "bytes":  277,
+                     "modified":  "2026-09-02 02:01"
+                 },
+                 {
+                     "title":  "A Night In The Lab 2026 09 02 020125 events",
+                     "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-events.txt",
+                     "bytes":  900462,
+                     "modified":  "2026-09-02 02:01"
+                 },
+                 {
+                     "title":  "A Night In The Lab 2026 09 02 020125 conversation",
+                     "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-conversation.txt",
+                     "bytes":  24859,
+                     "modified":  "2026-09-02 02:01"
+                 },
+                 {
                      "title":  "20260901 223850 sts audio session picture events",
                      "source":  "logs/20260901-223850-sts-audio-session-picture-events.txt",
                      "bytes":  220703,
@@ -135,6 +159,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "A Night In The Lab 2026-09-02 02:01:25",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/A-Night-In-The-Lab-2026-09-02-020125.mp4",
+                      "preview":  "media/previews/A-Night-In-The-Lab-2026-09-02-020125.jpg",
+                      "banner_rank":  45,
+                      "bytes":  23579570,
+                      "date":  "2026-09-02 02:01",
+                      "modified":  "2026-09-02 02:08",
+                      "description":  "A night-in-the-lab run about embodiment, tool-selfhood, and the misleading feeling of multiple Erics. Brain2 was off, but TTS/prosody shifts and repeated visual-grounding answers made the single speaker feel like two or three people entering the room. The useful finding is that continuity lives in more than memory: voice consistency, repetition suppression, runtime tool inventory, and visual attention all decide whether Eric feels like one creature. Strong receipts include Eric calling his toolbox a self-portrait, naming the UI\u0027s brain line as the engine room, noticing a mid-story silence as an open loop, and using the two AM / 12x lab-speed state as material for idle thought."
+                  },
                   {
                       "title":  "20260901 223850 sts audio session picture",
                       "kind":  "video",
