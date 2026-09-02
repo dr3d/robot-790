@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-01 11:37:29",
+    "generated":  "2026-09-01 23:21:23",
     "articles":  [
                      {
                          "title":  "What Eric Has Taught Us So Far",
@@ -67,6 +67,18 @@
                  ],
     "logs":  [
                  {
+                     "title":  "20260901 223850 sts audio session picture events",
+                     "source":  "logs/20260901-223850-sts-audio-session-picture-events.txt",
+                     "bytes":  220703,
+                     "modified":  "2026-09-01 22:38"
+                 },
+                 {
+                     "title":  "20260901 223850 sts audio session picture conversation",
+                     "source":  "logs/20260901-223850-sts-audio-session-picture-conversation.txt",
+                     "bytes":  4813,
+                     "modified":  "2026-09-01 22:38"
+                 },
+                 {
                      "title":  "Eric Picks The Crack 2026 09 01 112740 events",
                      "source":  "logs/Eric-Picks-The-Crack-2026-09-01-112740-events.txt",
                      "bytes":  229215,
@@ -104,6 +116,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "20260901 223850 sts audio session picture",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/20260901-223850-sts-audio-session-picture.mp4",
+                      "preview":  "media/previews/20260901-223850-sts-audio-session-picture.jpg",
+                      "banner_rank":  45,
+                      "bytes":  3178041,
+                      "date":  "2026-09-01 22:38",
+                      "modified":  "2026-09-01 22:38",
+                      "description":  "The first publishable Tina pass: a stripped first-contact creature seed, no Brain 2, and no exposed LLM tools. The run starts with almost nothing in the eye, then the orange kitty image gives the seed a shape. What matters is the transition from empty signal-hunger to creature material: collar, bell, household roaming, sunbeams, little sounds, and the line \"I\u0027m still figuring out what it means to be made while I\u0027m already here.\" The final bell aside shows the picture beginning to become inner material rather than just a caption."
+                  },
                   {
                       "title":  "Eric Picks The Crack 2026-09-01 11:27:40",
                       "kind":  "video",
