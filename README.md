@@ -360,8 +360,9 @@ The related controls matter:
 - `Run preset`: applies named starting conditions such as Mercury Research,
   Quiet Mulling, Person Lane, First Contact Prep, and Performance Set. Moving
   a dial by hand marks the run as `Custom`.
-- `Lab speed`: compresses idle waits and cooldowns for observation while leaving
-  the selected drift level and prompt register intact.
+- `Lab speed`: compresses idle waits for observation while leaving the selected
+  drift level and prompt register intact. In lab mode, loop detection becomes a
+  visible status/log event instead of a cooldown.
 
 Substrate mode is for experiments, not ordinary Eric. It helps answer whether a
 note can become the world of the rumination loop without the chassis and normal

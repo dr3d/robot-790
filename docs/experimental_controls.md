@@ -24,16 +24,17 @@ active speed.
 
 Lab speed is meant to replace poking `Ponder` for observation runs. It
 compresses scheduler waits, user-turn settling, Brain 2 mull delays, Brain 2
-mouth-aside spacing, re-engage waits, search-repeat cooldowns, and loop
-cooldowns. Loop-recovery cooldowns use a stronger fast-lab compression than
-ordinary scheduling waits: at `12x`, a 15-minute loop guard is about 6 seconds
-instead of about 75 seconds. It also ages idle topic retirement and search
-fatigue windows faster. It does not intentionally compress audio buffering, mic
-maintenance, recording rollovers, barge-in safety, or hardware animation holds.
+mouth-aside spacing, re-engage waits, and search-repeat cooldowns. In lab mode,
+loop detection becomes instrumentation instead of a brake: the UI status says
+the loop was flagged and the scheduler keeps going without a loop-recovery
+cooldown. It also ages idle topic retirement and search fatigue windows faster.
+It does not intentionally compress audio buffering, mic maintenance, recording
+rollovers, barge-in safety, or hardware animation holds.
 
 If an exhausted-loop cooldown was created at real time, moving `Lab speed`
-above `1x` compresses the remaining cooldown immediately. This keeps a
-real-time 15-minute loop guard from trapping a later lab run.
+above `1x` clears it immediately and shows the clear in the `Idle:` status
+readout. This keeps a real-time 15-minute loop guard from trapping a later lab
+run.
 
 The `Idle:` readout beside `Ponder` is a scheduler diagnostic. It tells the
 operator whether idle is disconnected, off, firing, waiting for the next timed
