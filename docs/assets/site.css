@@ -249,8 +249,7 @@ code {
 
 .media-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
-  gap: 18px;
+  gap: 14px;
 }
 
 .review-frame {
@@ -282,7 +281,9 @@ code {
 }
 
 .review-frame figcaption {
-  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 14px;
   border-top: 1px solid var(--line);
   color: var(--muted);
 }
@@ -293,23 +294,39 @@ code {
   gap: 10px;
 }
 
+.media-list {
+  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+  align-items: stretch;
+}
+
 .media-item,
 .log-item {
   display: grid;
-  grid-template-columns: 84px 1fr;
-  gap: 12px;
-  align-items: center;
+  gap: 8px;
+  align-content: start;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(28, 33, 43, 0.74);
-  padding: 10px;
+  min-width: 0;
+  padding: 8px;
   cursor: pointer;
   text-align: left;
 }
 
+.media-item {
+  grid-template-columns: 1fr;
+}
+
+.media-item.selected,
+.media-item[aria-current="true"] {
+  border-color: rgba(99, 217, 153, 0.78);
+  background: rgba(99, 217, 153, 0.12);
+}
+
 .media-thumb {
-  width: 84px;
-  height: 58px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
   border-radius: 6px;
   background: #090b0f;
   object-fit: cover;
@@ -317,6 +334,14 @@ code {
 
 .media-copy {
   min-width: 0;
+}
+
+.media-copy strong {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.18;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .media-kind,
@@ -327,10 +352,14 @@ code {
 
 .media-description {
   display: block;
-  margin-top: 7px;
+  overflow: hidden;
+  margin-top: 6px;
   color: #d7e2ee;
   font-size: 0.84rem;
   line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .review-frame figcaption > span {
@@ -338,8 +367,20 @@ code {
 }
 
 .media-analysis {
-  margin: 8px 0 0;
+  height: clamp(120px, 20vh, 250px);
+  overflow: auto;
+  resize: vertical;
+  margin: 0;
+  border: 1px solid rgba(48, 56, 70, 0.78);
+  border-radius: 6px;
+  background: rgba(7, 8, 11, 0.46);
+  padding: 11px 12px;
   color: #d7e2ee;
+  line-height: 1.45;
+}
+
+.media-analysis:empty {
+  display: none;
 }
 
 .log-list {
@@ -382,8 +423,7 @@ code {
 }
 
 @media (max-width: 820px) {
-  .page-header,
-  .media-layout {
+  .page-header {
     display: block;
   }
 
@@ -394,5 +434,12 @@ code {
 
   .media-list {
     margin-top: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  }
+
+  .media-analysis {
+    height: auto;
+    max-height: 220px;
+    resize: none;
   }
 }

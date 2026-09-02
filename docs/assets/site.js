@@ -189,7 +189,7 @@ function mediaButton(media, index) {
     <button class="media-item" type="button" data-media="${index}">
       ${preview}
       <span class="media-copy">
-        <strong>${escapeHtml(media.title)}</strong><br>
+        <strong>${escapeHtml(media.title)}</strong>
         <span class="media-kind">${escapeHtml(media.kind)}${escapeHtml(role)} - ${bytesLabel(media.bytes)}</span>
         ${description}
       </span>
@@ -237,12 +237,22 @@ function showMedia(mediaItems) {
 
   mediaList.innerHTML = mediaItems.map(mediaButton).join("");
   mediaList.querySelectorAll("[data-media]").forEach((button) => {
-    button.addEventListener("click", () => selectMedia(mediaItems[Number(button.dataset.media)]));
+    button.addEventListener("click", () => selectMedia(mediaItems[Number(button.dataset.media)], button));
   });
-  selectMedia(mediaItems[0]);
+  const firstButton = mediaList.querySelector("[data-media]");
+  selectMedia(mediaItems[0], firstButton);
 }
 
-function selectMedia(media) {
+function selectMedia(media, selectedButton = null) {
+  mediaList.querySelectorAll("[data-media]").forEach((button) => {
+    const selected = button === selectedButton;
+    button.classList.toggle("selected", selected);
+    if (selected) {
+      button.setAttribute("aria-current", "true");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+  });
   const source = escapeHtml(media.source);
   if (media.kind === "video") {
     const poster = media.preview ? ` poster="${escapeHtml(media.preview)}"` : "";
@@ -259,9 +269,12 @@ function selectMedia(media) {
     : "";
   const meta = `${media.title} - ${media.kind}${role} - ${bytesLabel(media.bytes)}`;
   const description = media.description
-    ? `<p class="media-analysis">${escapeHtml(media.description)}</p>`
-    : "";
-  mediaCaption.innerHTML = `<span>${escapeHtml(meta)}</span>${description}`;
+    ? escapeHtml(media.description)
+    : "No curation note for this item yet.";
+  mediaCaption.innerHTML = `
+    <span>${escapeHtml(meta)}</span>
+    <p class="media-analysis" tabindex="0">${description}</p>
+  `;
 }
 
 async function selectLog(log, selectedButton) {

@@ -26,6 +26,10 @@ Publishing rule of thumb:
 - Avoid committing files over 50 MB unless there is a deliberate reason.
 - GitHub blocks normal git pushes for individual files over 100 MB.
 - Keep originals in ignored raw folders so the public copy can be regenerated.
+- In `run-notes.json`, mention notable hidden evidence when it matters:
+  Brain2 asides, held questions, revision candidates, prosody/voice-shape cues,
+  sensor/event-log receipts, or contrasts between what happened in the room and
+  what the logs reveal afterward.
 
 The helper script `scripts/compress_docs_videos.ps1` writes publishable videos
 to `videos/` and moves oversized results into `rejected/`.

@@ -129,6 +129,8 @@ voices, third-party code, and media assets carry their own licenses.
   images, audio, and video.
 - [Evidence Map](docs/evidence_map.md): working map of project claims,
   receipts, and open tests.
+- [Experimental Controls](docs/experimental_controls.md): STS run dials,
+  interactions, and evolving presets for repeatable experiments.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
   touch, camera, and possible tilt/rotate head direction.
 - [Future Directions](docs/future_directions.md): public-safe notes on the
@@ -338,8 +340,8 @@ This keeps the face responsive even when the LLM is slow or odd.
 
 Idle pondering is page-driven, not firmware-driven. The `Idle drift` slider is
 off at `0`; higher levels let the page request one-sentence ponders after quiet
-periods. Level `11` is intentionally overactive, and level `12` is a lab sprint
-for fast context-growth tests.
+periods. Level `11` and `12` are intentionally overactive registers. Use
+`Lab speed` above `1x` when the goal is to observe a lower-drift run quickly.
 
 Idle ponders use lanes such as object noticing, callback, status, question,
 addressed question, bridge, craft, curiosity, unresolved, lookup, and aside. The
@@ -355,10 +357,17 @@ The related controls matter:
 - `Notes`: controls how strongly loaded notes shape idle material.
 - `Substrate test`: suppresses ordinary Robot 790 self-reference so a loaded
   note can act as the temporary world for an experiment.
+- `Run preset`: applies named starting conditions such as Mercury Research,
+  Quiet Mulling, Person Lane, First Contact Prep, and Performance Set. Moving
+  a dial by hand marks the run as `Custom`.
+- `Lab speed`: compresses idle waits and cooldowns for observation while leaving
+  the selected drift level and prompt register intact.
 
 Substrate mode is for experiments, not ordinary Eric. It helps answer whether a
 note can become the world of the rumination loop without the chassis and normal
 identity pulling everything home.
+
+The longer runbook is in [Experimental Controls](docs/experimental_controls.md).
 
 ## Tools
 
