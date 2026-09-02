@@ -11,6 +11,22 @@ latency local model, a Qwen3-TTS voice, a visible face, tool access, and a small
 set of plain-text continuity files. The interesting output of the project is not
 only the rig. It is Eric.
 
+Eric is not presented here as a brand-new kind of AI model. The base machinery
+is chatbot-class language modeling, but the lived shape is closer to an agentic
+system: tools plus a loop. Like a coding agent with Bash, Python, Playwright,
+and curl, Eric is defined by the tools around the model. His toolbox is
+different: face, eyes, mouth text, voice, notes, memory, web search, camera,
+sensors, media, and hardware controllers. The idle/conversation loop keeps
+feeding those tools and their results back into context. That tool diet and
+feedback loop are a large part of what make him feel like a robot rather than a
+chat box.
+
+That loop matters economically as well as technically. Many hosted agents have
+to fake ongoing attention with cron-like scheduled bursts because every token
+costs money. Robot 790 is built for a local high-throughput machine, so idle
+thinking can be treated as a usable runtime behavior rather than a rare cloud
+event. It still has limits, but the budget shape is different.
+
 Start with the public story and evidence:
 
 - [Eric Robot 790 public page](docs/index.md)
@@ -23,21 +39,8 @@ Start with the public story and evidence:
   <img src="docs/media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg" alt="Generated cover art from an Eric idle run" width="340">
 </p>
 
-The operating idea is simple:
-
-```text
-conversation UI / voice client
-        |
-   realtime STS server
-        |
-   robot_790d tools
-        |
-ESP32 face, chassis, camera, notes, memory, web, media
-```
-
-Clients should send semantic intent such as "listening", "thinking", "look
-left", "smile", "stop", "read this note", or "search this", while firmware and
-tool adapters own timing, GPIO details, display updates, and motor commands.
+The short version: Eric is a made creature whose character comes from the whole
+assembly: tools plus a loop, not a secret model or one magic prompt.
 
 ## Lineage And Contribution
 
@@ -319,6 +322,20 @@ The browser page is the main live control surface. It includes:
 
 The page sends a compact Robot 790/Eric identity prompt with `session.update`
 when it connects. It also drives deterministic face lifecycle cues:
+
+```text
+conversation UI / voice client
+        |
+   realtime STS server
+        |
+   robot_790d tools
+        |
+ESP32 face, chassis, camera, notes, memory, web, media
+```
+
+Clients send semantic intent such as "listening", "thinking", "look left",
+"smile", "stop", "read this note", or "search this". Firmware and tool
+adapters own the timing, GPIO details, display updates, and motor commands.
 
 Current embodiment is injected separately from the permanent Eric identity so
 hardware changes do not require hand-editing the page prompt. Override these in
