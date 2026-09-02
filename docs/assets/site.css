@@ -247,6 +247,26 @@ main {
   color: var(--muted);
 }
 
+.article-image {
+  margin: 22px 0;
+}
+
+.article-image img {
+  display: block;
+  width: min(100%, 620px);
+  max-height: 760px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  background: #05070b;
+}
+
+.article-image figcaption {
+  max-width: 620px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .article-body code,
 code {
   font-family: "Cascadia Mono", Consolas, monospace;

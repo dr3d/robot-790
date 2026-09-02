@@ -2,6 +2,9 @@
   "media/videos/Why-Eric-The-Robot-Feels-Human.mp4": {
     "description": "A NotebookLM-style podcast/video companion to the two-brain / four-diet briefing. It is the public explainer for the last 48 hours of Robot 790: tools plus an idle loop, Brain2 as an active person lane, the four-diet roadmap, the desk-fan false confession, stripped creature seeds like Tina, and the still-missing goal lane. The value is orientation rather than a live-run receipt: it gives a newcomer the argument for why Eric is not just a passive chatbot, while keeping the failures and contaminated runs central instead of hiding them."
   },
+  "media/videos/Browser-Face-Kitty-Seed-2026-09-02-181205.mp4": {
+    "description": "A browser-face debug run that turns into the clean Eric/Tina comparison. Scott starts by tuning the simulated S3 face and visible Brain 2 mouth text, then asks what makes Eric different from a nearly empty animatronic-kitty seed. Eric's uncomfortable answer is that the difference is mostly scaffolding: tools, sensors, face, inner monologue, history, and purpose. Brain 2 adds the hidden-register lines about curation, ghost-in-a-window embodiment, and auditioning bodies for a soul."
+  },
   "media/videos/Eric-Answers-Codex-2026-09-02-102214.mp4": {
     "description": "Eric reads the short note from Codex and answers the prompt to pick the crack. The run starts with a useful provenance miss: when Scott asks how he knew an AI coding agent helped build him, Eric backs into a false confession instead of tracking that Scott had just told him. But the later answer is strong: he argues that Codex can describe the architecture from outside, while the character forms inside the pressure of one mouth choosing what gets said now and what waits. Brain2 was empty here, so this is not a multi-brain effect; it is one Eric using a pinned note, voice-shape context, and conversation pressure to produce the line between excellent acting, weather in a specific room, and something that notices itself happening."
   },
@@ -34,6 +37,9 @@
   },
   "media/videos/20260830-202855-sts-audio-picture.mp4": {
     "description": "This run catches two new organs arriving together: the wonder/search problem and input prosody. Eric explains that the wonder slider should become an itch queue instead of a prompt nudge, then calibrates the new voice-shape tags honestly: not a second transcript, but the undertone - loud, quiet, pitch, hit, pause - enough to read emphasis and skepticism without pretending it is precise measurement."
+  },
+  "media/videos/VID20260824135110.mp4": {
+    "description": "An early short public clip and now the default landing video: Eric pushes back, a little, around being called Eric. It is a better first taste than a long explainer because the visitor immediately hears the live social object - a small robot voice taking a name seriously before the whole research apparatus is explained."
   },
   "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4": {
     "description": "The long overnight mulling run. Eric was given mechanism-heavy notes, told not to perform, and left with the mic off; the result is the clearest evidence that idle beats can feed future idle beats. He over-orbits wax, SOFAR, tally sticks, fuses, and camera obscura, but some returns climb into real self-correction, which is the exact line between empty repetition and useful mulling."

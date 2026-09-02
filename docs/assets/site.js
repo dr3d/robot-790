@@ -1,4 +1,5 @@
 const catalogUrl = `catalog.json?v=${Date.now()}`;
+const preferredDefaultMediaSource = "media/videos/VID20260824135110.mp4";
 
 const articleList = document.querySelector("#article-list");
 const articleReader = document.querySelector("#article-reader");
@@ -115,6 +116,15 @@ function renderMarkdown(markdown) {
       flushParagraph();
       closeQuote();
       html.push(`<p>&bull; ${renderInlineMarkdown(trimmed.replace(/^[-*]\s+/, ""))}</p>`);
+      continue;
+    }
+    const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imageMatch) {
+      flushParagraph();
+      closeQuote();
+      const alt = imageMatch[1];
+      const source = imageMatch[2];
+      html.push(`<figure class="article-image"><img src="${escapeHtml(source)}" alt="${escapeHtml(alt)}">${alt ? `<figcaption>${renderInlineMarkdown(alt)}</figcaption>` : ""}</figure>`);
       continue;
     }
     paragraph.push(trimmed);
@@ -316,7 +326,7 @@ function showMedia(mediaItems) {
   const selectedIndex = requested
     ? mediaItems.findIndex((media) => media.source === requested)
     : -1;
-  const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultMediaIndex(mediaItems);
   const targetButton = mediaList.querySelector(`[data-media="${targetIndex}"]`);
   selectMedia(mediaItems[targetIndex], targetButton, { replaceUrl: false });
   if (selectedIndex >= 0 && location.hash === "#media") {
@@ -324,6 +334,23 @@ function showMedia(mediaItems) {
       document.querySelector("#media")?.scrollIntoView({ block: "start" });
     });
   }
+}
+
+function defaultMediaIndex(mediaItems) {
+  const preferredIndex = mediaItems.findIndex((media) => media.source === preferredDefaultMediaSource);
+  if (preferredIndex >= 0) return preferredIndex;
+
+  let oldestVideoIndex = 0;
+  let oldestVideoTime = Number.POSITIVE_INFINITY;
+  mediaItems.forEach((media, index) => {
+    if (media.kind !== "video") return;
+    const time = Date.parse(media.date || media.modified || 0) || Number.POSITIVE_INFINITY;
+    if (time < oldestVideoTime) {
+      oldestVideoIndex = index;
+      oldestVideoTime = time;
+    }
+  });
+  return oldestVideoIndex;
 }
 
 function requestedMediaSource() {

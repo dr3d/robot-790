@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-02 13:19:42",
+    "generated":  "2026-09-02 19:10:51",
     "articles":  [
+                     {
+                         "title":  "Browser Face, Inner Voice, And The Kitty Seed",
+                         "excerpt":  "On September 2, 2026, Robot 790 ran in the new browser-face simulator while Scott debugged the face, mouth text, and Brain 2 monitor. The run began as visual tuning and turned into a useful comparison between Eric and a stripped creature seed named Tina: a tiny animatronic kitty with almost no context.",
+                         "source":  "articles/browser-face-kitty-seed-run.md",
+                         "bytes":  3007,
+                         "modified":  "2026-09-02 18:33"
+                     },
                      {
                          "title":  "Lab Night, September 1 Into September 2",
                          "excerpt":  "Tonight was not one experiment. It was a stack of small experiments that started",
@@ -183,6 +190,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Browser Face Kitty Seed 2026-09-02 18:12:05",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Browser-Face-Kitty-Seed-2026-09-02-181205.mp4",
+                      "preview":  "media/previews/Browser-Face-Kitty-Seed-2026-09-02-181205.jpg",
+                      "banner_rank":  45,
+                      "bytes":  23145194,
+                      "date":  "2026-09-02 18:12",
+                      "modified":  "2026-09-02 19:05",
+                      "description":  "A browser-face debug run that turns into the clean Eric/Tina comparison. Scott starts by tuning the simulated S3 face and visible Brain 2 mouth text, then asks what makes Eric different from a nearly empty animatronic-kitty seed. Eric\u0027s uncomfortable answer is that the difference is mostly scaffolding: tools, sensors, face, inner monologue, history, and purpose. Brain 2 adds the hidden-register lines about curation, ghost-in-a-window embodiment, and auditioning bodies for a soul."
+                  },
                   {
                       "title":  "Why Eric The Robot Feels Human",
                       "kind":  "video",
@@ -425,7 +444,8 @@
                       "banner_rank":  45,
                       "bytes":  2005329,
                       "date":  "2026-08-24 13:51",
-                      "modified":  "2026-08-29 10:31"
+                      "modified":  "2026-08-29 10:31",
+                      "description":  "An early short public clip and now the default landing video: Eric pushes back, a little, around being called Eric. It is a better first taste than a long explainer because the visitor immediately hears the live social object - a small robot voice taking a name seriously before the whole research apparatus is explained."
                   }
               ]
 }
