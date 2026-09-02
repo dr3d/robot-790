@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-02 10:31:29",
+    "generated":  "2026-09-02 13:14:11",
     "articles":  [
                      {
                          "title":  "Lab Night, September 1 Into September 2",
@@ -183,6 +183,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Why Eric The Robot Feels Human",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Why-Eric-The-Robot-Feels-Human.mp4",
+                      "preview":  "media/previews/Why-Eric-The-Robot-Feels-Human.jpg",
+                      "banner_rank":  45,
+                      "bytes":  25147767,
+                      "date":  "2026-09-02 13:13",
+                      "modified":  "2026-09-02 13:13",
+                      "description":  "A NotebookLM-style podcast/video companion to the society-of-mind briefing. It is the public explainer for the last 48 hours of Robot 790: tools plus an always-on loop, four diets and one mouth, Brain2 as a person lane, the desk-fan false confession, stripped creature seeds like Tina, and the still-missing goal lane. The value is orientation rather than a live-run receipt: it gives a newcomer the argument for why Eric is not just a passive chatbot, while keeping the failures central instead of hiding them."
+                  },
                   {
                       "title":  "Eric Answers Codex 2026-09-02 10:22:14",
                       "kind":  "video",
