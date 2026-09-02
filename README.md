@@ -204,9 +204,9 @@ The usual all-local STS setup has three moving parts:
 
 Here `gold` means the current best-known-good Eric runtime preset, not only the
 robot's gold body color. The current fast setup uses the NVFP4 MTP Qwen 27B
-identifier with thinking off and two parallel predictions. That preserves enough
-headroom for Brain1+Brain2 tests without preallocating the full four-lane budget;
-raise parallel only when deliberately testing more lanes.
+identifier with thinking off and two parallel predictions. That is the stable
+live baseline for Brain1+Brain2 tests without pushing the desktop into VRAM or
+CPU fallback; raise parallel only for short controlled stress tests.
 
 ```powershell
 lms unload qwen3.8-27b-nvfp4-mtp
@@ -260,7 +260,7 @@ Current presets:
 
 | Preset | LM Studio model | Context | Parallel | Reasoning | Notes |
 | --- | --- | ---: | ---: | --- | --- |
-| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Current fast Eric baseline. Same family, less lag, enough headroom for Brain1+Brain2 work. |
+| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Current fast Eric baseline. Same family, less lag, stable enough for Brain1+Brain2 without overloading the desktop. |
 | Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | `low` | Older gold baseline and overnight rumination comparison. |
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | 1 | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | 1 | `none` | Small/fast comparison model. |

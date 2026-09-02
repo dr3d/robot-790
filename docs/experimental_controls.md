@@ -10,6 +10,20 @@ reveals the seams.
 
 ## Current Controls
 
+`Lab goal` is a session-only directed-reasoning target for idle. Use it for
+questions such as "what makes Eric different from a thin seeded creature?" or
+"what should the Mercury run discover?" It is injected ahead of loaded notes and
+recent conversation so the note becomes evidence instead of the agenda. When a
+goal is pinned, idle periodically chooses a `goal` lane that should answer,
+advance, or return to that target instead of orbiting the richest object nearby.
+It clears on page reload. This is not a verifier or hard brake yet; the event
+log is still the receipt for whether Eric stayed on task.
+
+When `Lab goal` is pinned and `Wonder` is `8/10` or higher, the goal lane may
+run the existing idle search prefetch even if `Idle drift` is below `10`. This
+lets a focused, slower run get an occasional outside anchor without switching
+into the high-drift lookup/wander regime.
+
 `Idle drift` controls how readily the page asks Eric to speak after quiet. Low
 values make silence normal. High values surface idle thoughts quickly. Level
 `11` and `12` are deliberately overactive registers. They are not the preferred
@@ -140,6 +154,11 @@ These presets are starting points, not doctrine.
 High `Idle drift` plus high `Notes` makes the note feel alive quickly, but it
 can also make the run sprawl. High `Wonder` adds pressure toward search, but the
 event log is the receipt for whether search actually happened.
+
+`Lab goal` plus high `Notes` is the preferred setup for a directed research
+question. The goal should be one sentence; the loaded note should contain
+evidence. If the run keeps making beautiful observations about the note instead
+of advancing the goal, that is a goal-keeping failure, not a note failure.
 
 Low `Idle drift` on real time can mean several minutes between ponders. Low
 `Idle drift` with `Lab speed` above `1x` preserves the low-drift instructions

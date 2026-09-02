@@ -168,6 +168,13 @@
     .idle-controls {
       grid-template-columns: repeat(6, minmax(110px, 1fr)) auto auto auto;
     }
+    .lab-goal-control {
+      grid-column: 1 / span 4;
+    }
+    .lab-goal-control textarea {
+      min-height: 54px;
+      max-height: 130px;
+    }
     .memory-controls {
       grid-template-columns: minmax(260px, 1fr) auto auto;
     }
@@ -550,6 +557,8 @@
       font-size: 13px;
       text-transform: none;
       letter-spacing: 0;
+      cursor: pointer;
+      user-select: none;
     }
     .tool-toggle-row {
       display: flex;
@@ -854,6 +863,12 @@
         </section>
 
         <section class="controls idle-controls">
+          <label class="lab-goal-control">
+            Lab goal
+            <textarea id="labGoal" rows="2" spellcheck="true" placeholder="Optional session-only question or job for idle to keep returning to..."></textarea>
+          </label>
+          <button id="labGoalClear" type="button">Clear Goal</button>
+          <span id="labGoalStatus" class="subtle">Goal: none</span>
           <label>
             Run preset
             <select id="runPreset" aria-label="Experimental run preset">
@@ -896,10 +911,10 @@
           </label>
           <button id="idlePonderNow" disabled>Ponder</button>
           <span id="idleSchedulerStatus" class="subtle idle-scheduler-status">Idle: disconnected</span>
-          <span class="toggle-row"><input id="performanceMode" type="checkbox"> Performance mode</span>
-          <span class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</span>
-          <span class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Brain 2 mouth</span>
-          <span class="toggle-row"><input id="brain2VoiceMonitor" type="checkbox"> Brain 2 voice</span>
+          <label class="toggle-row"><input id="performanceMode" type="checkbox"> Performance mode</label>
+          <label class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</label>
+          <label class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Brain 2 mouth</label>
+          <label class="toggle-row"><input id="brain2VoiceMonitor" type="checkbox"> Brain 2 voice</label>
           <label>
             B2 voice
             <select id="brain2VoiceSelect" aria-label="Brain 2 browser voice">
@@ -915,7 +930,7 @@
             <input id="brain2PersonFocus" type="range" min="0" max="10" step="1" value="5">
           </label>
           <button id="brain2MullNow" type="button">Mull</button>
-          <span class="toggle-row"><input id="firstContactMode" type="checkbox"> First contact</span>
+          <label class="toggle-row"><input id="firstContactMode" type="checkbox"> First contact</label>
           <button id="firstContactArm" type="button">Arm Contact</button>
           <button id="firstContactReport" type="button">Report</button>
         </section>
@@ -928,19 +943,19 @@
           </label>
           <button id="memoryRefresh">Refresh</button>
           <button id="memoryForgetAll">Forget All</button>
-          <span class="toggle-row"><input id="loadEricMemories" type="checkbox" checked> Load Eric memories on refresh</span>
+          <label class="toggle-row"><input id="loadEricMemories" type="checkbox" checked> Load Eric memories on refresh</label>
           <div class="tool-toggle-row">
-            <span class="toggle-row"><input id="llmTools" type="checkbox" checked> LLM face tools</span>
-            <span class="toggle-row"><input id="llmBodySensorTools" type="checkbox" checked> LLM body sensors</span>
-            <span class="toggle-row"><input id="llmChassisTools" type="checkbox" checked> LLM chassis tools</span>
-            <span class="toggle-row"><input id="llmVoiceTools" type="checkbox" checked> LLM voice tools</span>
-            <span class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</span>
-            <span class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</span>
-            <span class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</span>
-            <span class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</span>
-            <span class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</span>
-            <span class="toggle-row"><input id="llmImageTools" type="checkbox"> LLM image generation</span>
-            <span class="toggle-row"><input id="llmSmartHomeTools" type="checkbox"> LLM smart home</span>
+            <label class="toggle-row"><input id="llmTools" type="checkbox" checked> LLM face tools</label>
+            <label class="toggle-row"><input id="llmBodySensorTools" type="checkbox" checked> LLM body sensors</label>
+            <label class="toggle-row"><input id="llmChassisTools" type="checkbox" checked> LLM chassis tools</label>
+            <label class="toggle-row"><input id="llmVoiceTools" type="checkbox" checked> LLM voice tools</label>
+            <label class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</label>
+            <label class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</label>
+            <label class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</label>
+            <label class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</label>
+            <label class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</label>
+            <label class="toggle-row"><input id="llmImageTools" type="checkbox"> LLM image generation</label>
+            <label class="toggle-row"><input id="llmSmartHomeTools" type="checkbox"> LLM smart home</label>
           </div>
         </section>
       </div>
@@ -1053,6 +1068,9 @@
     const ttsInstruct = document.querySelector("#ttsInstruct");
     const ttsPreset = document.querySelector("#ttsPreset");
     const ttsApplyButton = document.querySelector("#ttsApply");
+    const labGoal = document.querySelector("#labGoal");
+    const labGoalClearButton = document.querySelector("#labGoalClear");
+    const labGoalStatus = document.querySelector("#labGoalStatus");
     const runPreset = document.querySelector("#runPreset");
     const creatureProfile = document.querySelector("#creatureProfile");
     const idleFastClockSpeed = document.querySelector("#idleFastClockSpeed");
@@ -1253,6 +1271,7 @@
     let idleSearchLedger = {};
     let lastAddressedIdleQuestionAt = 0;
     let lastIdleMouthAsideAt = 0;
+    let lastGoalIdleAt = 0;
     let idleTopicLedger = {};
     let idleCuriositySeeds = [];
     let recentIdleOutputs = [];
@@ -2050,6 +2069,20 @@
       },
       {
         type: "function",
+        name: "get_current_time",
+        description: (
+          "Read the current local clock and date from the browser host. Use when the user asks what time " +
+          "it is, what day it is, today's date, yesterday/tomorrow relative to now, or needs the current " +
+          "timestamp for a note or experiment."
+        ),
+        parameters: {
+          type: "object",
+          properties: {},
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
         name: "get_brain_status",
         description: (
           "Read Robot 790 local runtime diagnostics. Use when the user asks about your model, context length, " +
@@ -2264,6 +2297,8 @@
       "When using search_web, summarize the result naturally in one compact spoken sentence; mention the source site when useful.",
       "Use get_weather when the user asks about weather, temperature, rain, snow, wind, outside conditions, or whether it is sensible to go outside or ride a bike.",
       "When using get_weather, answer from the tool result compactly; do not invent live weather, and default to Salem, Massachusetts if the user gives no place.",
+      "Use get_current_time when the user asks what time it is, what day it is, today's date, yesterday, tomorrow, now, or for a timestamp.",
+      "When using get_current_time, answer from the tool result compactly; do not infer the current date or clock time from memory or context.",
       "Use get_brain_status when the user asks about your model, context length, token counts, tokens per second, latency, speed, audio generation, STT, TTS, or brain status.",
       "When using get_brain_status, say what is measured versus inferred; do not invent tok/sec or context-window numbers if the tool says unavailable.",
       "Use show_web_page when the user asks you to open, show, display, or bring up a web page in the UI.",
@@ -2795,6 +2830,7 @@
     function formatRuntimeStateForInstructions() {
       return [
         "Current Robot 790 browser/runtime state:",
+        formatLabGoalForInstructions(),
         `- Microphone is ${micStream ? "on" : "off"}.`,
         `- Browser live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
         `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
@@ -2807,6 +2843,36 @@
         `- Smart-home tools are ${llmSmartHomeTools?.checked ? "enabled" : "disabled"}.`,
         `- ${wonderSearchPolicyText()}`
       ].join("\n");
+    }
+
+    function currentLabGoal() {
+      return String(labGoal?.value || "").replace(/\s+/g, " ").trim().slice(0, 1200);
+    }
+
+    function formatLabGoalForInstructions() {
+      const goal = currentLabGoal();
+      if (!goal) return "- Lab goal is not pinned.";
+      return `- Pinned lab goal: ${goal}`;
+    }
+
+    function labGoalIdleContext() {
+      const goal = currentLabGoal();
+      if (!goal) return "";
+      return [
+        "Pinned lab goal:",
+        goal,
+        "Treat this as the current directed-reasoning job. Use notes, conversation, and sensor context as evidence for this goal instead of letting them become the goal.",
+        "If an idle thought starts orbiting a vivid object from the notes, turn it back toward the pinned goal."
+      ].join("\n");
+    }
+
+    function updateLabGoalUi({ quiet = false } = {}) {
+      const goal = currentLabGoal();
+      if (labGoalStatus) labGoalStatus.textContent = goal ? `Goal: pinned (${goal.length} chars)` : "Goal: none";
+      if (!quiet) log(events, goal ? `lab goal pinned: ${goal.slice(0, 140)}` : "lab goal cleared");
+      updateSessionTools({ quiet: true });
+      scheduleIdlePonder();
+      if (!quiet && contextPanel?.open) renderContextMap();
     }
 
     function formatEmbodimentForInstructions() {
@@ -3427,6 +3493,10 @@
     }
 
     function idleResponseInputContent(lane, { firstContactActive = false, performanceActive = false } = {}) {
+      const goal = currentLabGoal();
+      const normalText = goal
+        ? `Internal idle event: a ${lane.name} thought surfaced inside Robot 790 while this lab goal is pinned: ${goal}. Speak it aloud as self-talk. Scott did not ask for it.`
+        : `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. Speak it aloud as self-talk. Scott did not ask for it.`;
       const content = [
         {
           type: "input_text",
@@ -3434,7 +3504,7 @@
             ? `First Contact idle event: a ${lane.name} thought surfaced inside Robot 790. The temporary input, if any, is the only intended seed.`
             : performanceActive
             ? `Performance beat: continue Eric's act using the ${lane.name} lane.`
-            : `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. Speak it aloud as self-talk. Scott did not ask for it.`
+            : normalText
         }
       ];
       if (lane.name === "sensing_eye" && visionImageUrl) {
@@ -4261,6 +4331,15 @@
       return parts.join(" / ");
     }
 
+    function lmStudioStatusFromBrainStatus(status = latestBrainStatus) {
+      return String(status?.model?.lm_studio?.active_model?.status || "").trim().toUpperCase();
+    }
+
+    function lmStudioPromptBusy(status = latestBrainStatus) {
+      const value = lmStudioStatusFromBrainStatus(status);
+      return Boolean(value && value !== "IDLE" && /PROCESSING|LOADING|STARTING|QUEUED/.test(value));
+    }
+
     function currentModelStamp() {
       if (latestBrainStatus) return modelStampFromBrainStatus(latestBrainStatus);
       return "model not scanned";
@@ -4659,6 +4738,7 @@
       if (responseActive || outputAudioActive()) return "assistant busy";
       if (idleInFlight) return "idle already in flight";
       if (toolFollowupNeeded || pendingToolCalls > 0) return "tool followup pending";
+      if (lmStudioPromptBusy()) return `LM Studio ${lmStudioStatusFromBrainStatus().toLowerCase()}`;
       if (userSpeechActive) return "user speaking";
       if (userTurnPending()) return "user turn pending";
       const reengagePolicy = conversationReengagePolicy();
@@ -4810,15 +4890,26 @@
       idleTimerFireAt = Date.now() + waitMs;
       updateIdleSchedulerStatus();
       scheduleIdleSchedulerStatusTimer();
-      idleTimer = setTimeout(() => {
+      idleTimer = setTimeout(async () => {
         idleTimer = null;
         idleTimerFireAt = 0;
         updateIdleSchedulerStatus();
-        triggerIdlePonder().catch((error) => log(events, `idle ponder error: ${error.message}`));
+        const status = await refreshBrainStatusQuietly();
+        if (lmStudioPromptBusy(status)) {
+          log(events, `idle ponder skipped: LM Studio ${lmStudioStatusFromBrainStatus(status).toLowerCase()}`);
+          updateIdleSchedulerStatus();
+          scheduleIdlePonder();
+          return;
+        }
+        triggerIdlePonder({ statusChecked: true }).catch((error) => log(events, `idle ponder error: ${error.message}`));
       }, waitMs);
     }
 
     const idleLaneDefinitions = [
+      {
+        name: "goal",
+        prompt: "Work on the pinned lab goal directly. Use one concrete detail from notes, conversation, sensors, or memory only as evidence. Return to the question instead of orbiting the detail."
+      },
       {
         name: "object",
         prompt: "Pick one concrete object, place, photo detail, or hardware part from context. Give it one fresh angle. Avoid turning every object into a self-comparison."
@@ -4889,9 +4980,14 @@
 
     function chooseIdleLane(level) {
       const now = Date.now();
+      const goalLane = idleLaneDefinitions.find((lane) => lane.name === "goal");
+      if (goalLane && currentLabGoal() && now - lastGoalIdleAt >= idleSpecialLaneGapMs(level, 45 * 1000)) {
+        return goalLane;
+      }
       const lanes = idleLaneDefinitions.filter((lane) => {
         if (lane.minLevel && level < lane.minLevel) return false;
         if (!idleLaneAllowedByAttention(lane)) return false;
+        if (lane.name === "goal" && !currentLabGoal()) return false;
         if (lane.name === "sensing_eye" && !sensingInputActive()) return false;
         if (lane.name === "curiosity" && level < 10) return false;
         if (lane.name === "bridge" && (currentIdleWonder() < 7 || now - lastIdleBridgeAt < idleSpecialLaneGapMs(level, idleBridgeGapMs))) return false;
@@ -5317,7 +5413,7 @@
         ? "Experimental substrate test is on: treat the loaded note contents as the primary world. Do not lean on Robot 790's chassis, treads, mic, Cast, room telemetry, or usual body identity unless the loaded note itself mentions them."
         : "";
       const privacy = performancePrivacy ? performancePrivacyInstructions() : "";
-      return [privacy, substrate, idleAttentionContext({ suppressRobotBody, performancePrivacy }), loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", idleUnresolvedContext(), avoid, idleRetiredTopicsContext(), idleTemplateContext()]
+      return [privacy, substrate, labGoalIdleContext(), idleAttentionContext({ suppressRobotBody, performancePrivacy }), loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", idleUnresolvedContext(), avoid, idleRetiredTopicsContext(), idleTemplateContext()]
         .filter(Boolean)
         .join("\n\n");
     }
@@ -5645,8 +5741,23 @@
       return "curiosity";
     }
 
+    function chooseIdleGoalQuery() {
+      const goal = currentLabGoal();
+      const query = compactSearchQuery(goal);
+      if (!query) return null;
+      return {
+        key: normalizeIdleTopicKey(`lab goal ${query}`),
+        query,
+        re: /./
+      };
+    }
+
     function chooseIdleCuriosityQuery(context, { lookupLane = false, wanderLane = false } = {}) {
       if (wanderLane) return chooseIdleExpansionQuery(context);
+      if (!lookupLane && !wanderLane && currentLabGoal()) {
+        const goalQuery = chooseIdleGoalQuery();
+        if (goalQuery && idleSearchCandidateAvailable(goalQuery)) return goalQuery;
+      }
       const text = String(context || "");
       const loadedCandidates = loadedNoteTopicCandidates();
       const loadedSearchCandidates = loadedCandidates.filter((candidate) => idleSearchCandidateAvailable(candidate));
@@ -5710,8 +5821,11 @@
     async function maybeIdleCuriosityContext(level, lane, context) {
       const lookupLane = lane.name === "lookup";
       const wanderLane = lane.name === "wander";
-      if (!lookupLane && !wanderLane && lane.name !== "curiosity") return "";
-      if (level < 10 || !llmWebSearchTools.checked) return "";
+      const goalLane = lane.name === "goal";
+      if (!lookupLane && !wanderLane && !goalLane && lane.name !== "curiosity") return "";
+      if (!goalLane && level < 10) return "";
+      if (goalLane && currentIdleWonder() < 8) return "";
+      if (!llmWebSearchTools.checked) return "";
       if (!idleWebSearchReady(level)) return "";
       const laneName = idleSearchLaneName({ lookupLane, wanderLane });
       const choice = chooseIdleCuriosityQuery(context, { lookupLane, wanderLane });
@@ -6115,7 +6229,16 @@
       });
     }
 
-    async function triggerIdlePonder({ manual = false } = {}) {
+    async function triggerIdlePonder({ manual = false, statusChecked = false } = {}) {
+      if (!statusChecked) {
+        const status = await refreshBrainStatusQuietly();
+        if (lmStudioPromptBusy(status)) {
+          log(events, `idle ponder skipped: LM Studio ${lmStudioStatusFromBrainStatus(status).toLowerCase()}`);
+          updateIdleSchedulerStatus();
+          scheduleIdlePonder();
+          return;
+        }
+      }
       const blockedReason = idleBlockedReason({ manual });
       if (manual && blockedReason) {
         log(events, `idle ponder skipped: ${blockedReason}`);
@@ -6147,6 +6270,7 @@
       if (lane.name === "bridge") lastIdleBridgeAt = Date.now();
       if (lane.name === "revision") lastIdleRevisionAt = Date.now();
       if (lane.name === "revisit_unresolved") lastIdleUnresolvedAt = Date.now();
+      if (lane.name === "goal") lastGoalIdleAt = Date.now();
       const suppressRobotBody = idleSubstrateTestEnabled();
       const context = firstContactActive
         ? firstContactIdleContext()
@@ -6186,6 +6310,9 @@
           : "",
         lane.name === "lookup"
           ? "This is a lookup beat. Use the fresh lookup context if supplied. If no fresh lookup context is supplied, do not invent or state outside-world facts; make the absence of lookup quietly constrain the thought."
+          : "",
+        lane.name === "goal"
+          ? "This is a goal-keeping beat. Answer or advance the pinned lab goal. If fresh lookup context is supplied, use exactly one checked detail from it as evidence. If the prior idle beat drifted into a vivid object, name the drift compactly and return to the goal."
           : "",
         lane.name === "wander"
           ? performanceActive
@@ -7381,6 +7508,53 @@
       };
     }
 
+    function getCurrentTime() {
+      const now = new Date();
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      const weekday = new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(now);
+      const date = new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      }).format(now);
+      const time = new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZoneName: "short"
+      }).format(now);
+      const offsetMinutes = -now.getTimezoneOffset();
+      const offsetSign = offsetMinutes >= 0 ? "+" : "-";
+      const offsetAbs = Math.abs(offsetMinutes);
+      const utcOffset = `${offsetSign}${String(Math.floor(offsetAbs / 60)).padStart(2, "0")}:${String(offsetAbs % 60).padStart(2, "0")}`;
+      const localIso = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0")
+      ].join("-") + "T" + [
+        String(now.getHours()).padStart(2, "0"),
+        String(now.getMinutes()).padStart(2, "0"),
+        String(now.getSeconds()).padStart(2, "0")
+      ].join(":") + utcOffset;
+      const result = {
+        status: "ok",
+        tool: "get_current_time",
+        source: "browser_clock",
+        iso: localIso,
+        date: localIso.slice(0, 10),
+        time_24h: localIso.slice(11, 19),
+        local_date: date,
+        local_time: time,
+        weekday,
+        time_zone: timeZone,
+        utc_offset: utcOffset,
+        utc_iso: now.toISOString(),
+        unix_ms: now.getTime()
+      };
+      log(events, `time lookup: ${weekday} ${time}`);
+      return result;
+    }
+
     function formatWeatherPlace(place) {
       return [place?.name, place?.admin1, place?.country]
         .map((value) => String(value || "").trim())
@@ -7666,6 +7840,15 @@
             `Facts: ${facts.length}`,
             `Storage key: ${memoryStorageKey}`,
             facts.length ? `Names: ${facts.map((item) => item.name).slice(0, 10).join(", ")}` : "No browser facts in this origin"
+          ]
+        },
+        {
+          name: "Lab Goal",
+          role: "Session-only directed-reasoning target for idle",
+          text: labGoalIdleContext() || "No lab goal pinned.",
+          details: [
+            currentLabGoal() ? "Goal is active for idle and session instructions." : "No current directed goal.",
+            "Clears on page reload."
           ]
         },
         {
@@ -8577,6 +8760,7 @@
       if (name === "forget_fact") return forgetMemoryFact(args);
       if (name === "search_web") return searchWeb(args);
       if (name === "get_weather") return getWeather(args);
+      if (name === "get_current_time") return getCurrentTime(args);
       if (name === "get_brain_status") return getBrainStatus(args);
       if (name === "show_web_page") return showWebPage(args);
       if (name === "generate_image") return generateImage(args);
@@ -8707,6 +8891,15 @@
       );
     }
 
+    function timeFollowupInstructions(result) {
+      if (result?.status === "error") return exactSpeechInstruction("I could not check the time.");
+      return (
+        "Use the get_current_time tool output to answer naturally in one compact spoken sentence. " +
+        "For date questions, include the weekday and local date. For clock questions, include the local time and timezone when useful. " +
+        "Do not infer the current time from memory, context, or session logs."
+      );
+    }
+
     function brainStatusFollowupInstructions(result) {
       if (result?.status === "error") return exactSpeechInstruction("I could not check my status.");
       return (
@@ -8813,6 +9006,7 @@
         }
         if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
         if (event.name === "get_weather") toolFollowupInstructions = weatherFollowupInstructions(result);
+        if (event.name === "get_current_time") toolFollowupInstructions = timeFollowupInstructions(result);
         if (event.name === "get_brain_status") toolFollowupInstructions = brainStatusFollowupInstructions(result);
         if (event.name === "get_body_sensors") toolFollowupInstructions = bodySensorsFollowupInstructions(result);
         if (event.name === "show_web_page") toolFollowupExactText = webPageFollowupText(result);
@@ -8826,7 +9020,7 @@
           item: {
             type: "function_call_output",
             call_id: event.call_id,
-            output: JSON.stringify(["search_web", "get_weather", "get_brain_status"].includes(event.name) ? result : { status: "ok", result })
+            output: JSON.stringify(["search_web", "get_weather", "get_current_time", "get_brain_status"].includes(event.name) ? result : { status: "ok", result })
           }
         });
         if (event.name === "remember_fact" || event.name === "forget_fact" || loadedNoteContextDirty) {
@@ -8845,6 +9039,7 @@
         }
         if (event.name === "search_web") toolFollowupExactText = "I could not search.";
         if (event.name === "get_weather") toolFollowupExactText = "I could not check the weather.";
+        if (event.name === "get_current_time") toolFollowupExactText = "I could not check the time.";
         if (event.name === "get_brain_status") toolFollowupExactText = "I could not check my status.";
         if (event.name === "get_body_sensors") toolFollowupExactText = "I could not check my body sensors.";
         if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
@@ -9726,6 +9921,108 @@
       log(events, reason ? `mic stopped: ${reason}` : "mic stopped");
     }
 
+    const controlTooltips = {
+      quickRecordConversation: "Snapshot the conversation pane without opening the lower pane controls.",
+      showEssentials: "Open the panels most useful during live testing.",
+      collapsePanels: "Collapse optional control panels to give the logs more room.",
+      serverUrl: "WebSocket endpoint for the local speech-to-speech realtime server.",
+      modelPreset: "Choose the LLM backend preset used when restarting the realtime server.",
+      customModelKey: "LM Studio identifier for a custom loaded model.",
+      customModelReasoning: "Reasoning/thinking effort sent to the LLM backend when supported.",
+      customModelContext: "Context window requested for the model backend.",
+      customModelParallel: "Parallel prediction count for the loaded LM Studio model.",
+      connect: "Connect the browser UI to the realtime STS server.",
+      disconnect: "Close the current realtime connection.",
+      restartServer: "Restart the local realtime server using the selected model settings.",
+      visionDrop: "Drop an image, text file, or markdown note into Eric's sensing eye.",
+      visionClear: "Clear the currently staged sensing-eye input.",
+      visionCameraStart: "Start the browser camera preview.",
+      visionCameraFrame: "Capture the current browser camera frame into the sensing eye.",
+      visionCameraStop: "Stop the browser camera preview.",
+      interruptSensitivity: "How readily the mic interrupts Eric while he is speaking.",
+      startMic: "Open the microphone and start streaming speech to Eric.",
+      stopMic: "Stop the microphone stream.",
+      resetMic: "Reset the input audio buffer after long or garbled listening.",
+      typedInput: "Typed fallback input; useful for controlled tests or pronunciation.",
+      typedSend: "Send typed text as a user turn.",
+      typedSay: "Speak typed text through Eric's current voice without adding a user turn.",
+      startAudioRecord: "Start recording the current STS session audio/video artifact.",
+      stopAudioRecord: "Stop recording and snapshot conversation, events, and Brain 2 panes.",
+      generatedImageOpen: "Open the latest generated image.",
+      generatedImageClear: "Clear the generated-image preview.",
+      imageModel: "Image-generation model preference for generate_image.",
+      imageCost: "Cost/quality preference for image generation.",
+      faceUrl: "HTTP URL for the active face or embodiment controller.",
+      faceIdle: "Send the face back to idle.",
+      faceBeat: "Play a quick face animation beat.",
+      chassisUrl: "HTTP URL for the chassis controller.",
+      chassisStop: "Send a stop command to the chassis controller.",
+      ttsVoice: "Main Qwen3-TTS speaker voice.",
+      ttsPrecision: "Qwen3-TTS precision; bfloat16 is the usual stable default.",
+      ttsInstruct: "Operator-side TTS delivery instruction.",
+      ttsPreset: "Apply a saved voice-style instruction.",
+      ttsApply: "Apply the selected voice, precision, and delivery instruction.",
+      labGoal: "Session-only directed question/job that idle should keep returning to.",
+      labGoalClear: "Clear the pinned lab goal for this session.",
+      clearLog: "Clear visible conversation, event, and Brain 2 panes.",
+      runPreset: "Apply a session-only bundle of lab dials.",
+      creatureProfile: "Thin first-contact identity seed; resets to Eric on reload.",
+      idleFastClockSpeed: "Compress idle scheduling for lab observation; resets to 1x on reload.",
+      idleDrift: "How readily Eric generates idle speech after quiet.",
+      idleWonder: "Pressure toward curiosity, unresolved questions, and lookup-shaped behavior.",
+      idleSelfFocus: "How much idle attention points inward versus outward.",
+      idleNotesFocus: "How strongly loaded notes shape idle material.",
+      idlePonderNow: "Trigger a Brain1 idle ponder now; this usually speaks.",
+      performanceMode: "Shift idle output toward closed, stage-ready bits instead of open mulling.",
+      idleSubstrateTest: "Let a loaded note act as the temporary world by suppressing normal Robot 790 self-reference.",
+      brain2MouthBrain: "Allow Brain 2 to put short private asides on the mouth display.",
+      brain2VoiceMonitor: "Read Brain 2 surfaced asides through a quiet browser voice for monitoring.",
+      brain2VoiceSelect: "Browser speech-synthesis voice used only for the Brain 2 monitor.",
+      brain2VoiceVolume: "Volume for the Brain 2 monitor voice.",
+      brain2PersonFocus: "How strongly Brain 2 studies the user/person lane.",
+      brain2MullNow: "Trigger Brain 2 private mulling; it does not get Eric's speaking voice.",
+      firstContactMode: "Use stripped startup conditions for thin creature/seed tests.",
+      firstContactArm: "Clear normal context and prepare a clean first-contact run.",
+      firstContactReport: "Record a first-contact/debug report snapshot.",
+      memoryRefresh: "Reload browser memory preview and update session instructions.",
+      memoryForgetAll: "Clear Robot 790 browser memory facts.",
+      loadEricMemories: "Load Eric's memory note into startup context on refresh.",
+      llmTools: "Expose face and embodiment tools to the LLM.",
+      llmBodySensorTools: "Expose read-only body sensor/status tools to the LLM.",
+      llmChassisTools: "Expose chassis movement/stop tools to the LLM.",
+      llmVoiceTools: "Expose voice-changing tools to the LLM.",
+      llmMemoryTools: "Expose browser memory read/write tools to the LLM.",
+      llmWebSearchTools: "Expose web search to the LLM.",
+      llmWebPageTools: "Expose browser page-opening tools to the LLM.",
+      llmCastMediaTools: "Expose media/cast controls to the LLM.",
+      llmNoteFileTools: "Expose local note-file tools to the LLM.",
+      llmImageTools: "Expose image generation to the LLM.",
+      llmSmartHomeTools: "Expose smart-home tools to the LLM when configured.",
+      transcriptProsodyMode: "Choose whether conversation snapshots include compact or full prosody tags.",
+      recordConversation: "Snapshot the conversation pane.",
+      prosodyKey: "Show or hide the compact prosody notation key.",
+      popoutConversation: "Open the conversation pane in a separate window.",
+      copyConversation: "Copy the conversation pane.",
+      eventLogFilter: "Filter the event pane while keeping the raw log intact.",
+      recordEvents: "Snapshot the event pane.",
+      copyEvents: "Copy the event pane.",
+      recordBrain2: "Snapshot the Brain 2 pane.",
+      copyBrain2: "Copy the Brain 2 pane.",
+      contextMapRefresh: "Rescan the sources Eric can draw from.",
+      contextMapCopy: "Copy the current context map."
+    };
+
+    function applyControlTooltips() {
+      Object.entries(controlTooltips).forEach(([id, text]) => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        const target = element.closest("label") || element;
+        target.title = text;
+        element.title = text;
+        element.setAttribute("aria-description", text);
+      });
+    }
+
     connectButton.addEventListener("click", connect);
     disconnectButton.addEventListener("click", () => ws?.close());
     modelPreset.addEventListener("change", () => {
@@ -9736,6 +10033,13 @@
     [customModelKey, customModelReasoning, customModelContext, customModelParallel].forEach((control) => {
       control?.addEventListener("change", saveModelPreset);
       control?.addEventListener("input", saveModelPreset);
+    });
+    labGoal?.addEventListener("input", () => updateLabGoalUi({ quiet: true }));
+    labGoal?.addEventListener("change", () => updateLabGoalUi());
+    labGoalClearButton?.addEventListener("click", () => {
+      if (labGoal) labGoal.value = "";
+      lastGoalIdleAt = 0;
+      updateLabGoalUi();
     });
     restartServerButton.addEventListener("click", () => {
       restartRealtimeServer().catch((error) => log(events, `realtime restart error: ${error.message}`));
@@ -10022,6 +10326,7 @@
     });
     settingsPanel.addEventListener("toggle", saveSettingsPanelState);
     micPanel.addEventListener("toggle", saveMicPanelState);
+    applyControlTooltips();
     populateTtsVoices();
     loadModelPreset();
     loadSettingsPanelState();
@@ -10047,6 +10352,7 @@
     loadLogDisplayControls();
     loadRuntimeConfig();
     renderMemory();
+    updateLabGoalUi({ quiet: true });
     updateTypedInputButtons();
     updateVisionButtons();
     updateVisionCameraButtons();

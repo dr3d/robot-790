@@ -4,6 +4,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlparse
 
@@ -415,6 +416,16 @@ TOOLS: list[dict[str, object]] = [
     },
     {
         "type": "function",
+        "name": "get_current_time",
+        "description": (
+            "Read the current local clock and date from the host machine. Use when the user asks what time "
+            "it is, what day it is, today's date, yesterday/tomorrow relative to now, or needs the current "
+            "timestamp for a note or experiment."
+        ),
+        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+    },
+    {
+        "type": "function",
         "name": "get_brain_status",
         "description": (
             "Read local Robot 790 realtime diagnostics from logs. Use when the user asks about your LLM model, "
@@ -631,6 +642,8 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_search_web, parsed)
     elif name == "get_weather":
         result = await asyncio.to_thread(_get_weather, parsed)
+    elif name == "get_current_time":
+        result = await asyncio.to_thread(_get_current_time)
     elif name == "get_brain_status":
         result = await asyncio.to_thread(_get_brain_status)
     elif name == "cast_media":
@@ -912,6 +925,24 @@ def _get_weather(arguments: dict[str, object]) -> dict[str, object]:
     ).strip()
     unit = str(arguments.get("unit") or os.getenv("ROBOT_790_WEATHER_UNIT") or "fahrenheit").strip()
     return lookup_weather(location or DEFAULT_WEATHER_LOCATION, unit=unit)
+
+
+def _get_current_time() -> dict[str, object]:
+    local_now = datetime.now().astimezone()
+    utc_now = local_now.astimezone(timezone.utc)
+    return {
+        "status": "ok",
+        "tool": "get_current_time",
+        "source": "host_clock",
+        "iso": local_now.isoformat(timespec="seconds"),
+        "date": local_now.date().isoformat(),
+        "time": local_now.strftime("%I:%M:%S %p").lstrip("0"),
+        "time_24h": local_now.strftime("%H:%M:%S"),
+        "weekday": local_now.strftime("%A"),
+        "timezone": local_now.tzname(),
+        "utc_iso": utc_now.isoformat(timespec="seconds"),
+        "unix_ms": int(local_now.timestamp() * 1000),
+    }
 
 
 def _get_brain_status() -> dict[str, object]:

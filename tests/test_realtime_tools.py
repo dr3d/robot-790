@@ -92,6 +92,7 @@ def test_realtime_tool_catalog_exposes_robot_actions() -> None:
         "forget_fact",
         "search_web",
         "get_weather",
+        "get_current_time",
         "get_brain_status",
         "show_web_page",
         "generate_image",
@@ -313,6 +314,18 @@ def test_get_weather_tool_uses_shared_helper(monkeypatch) -> None:
         "location": "Salem, Massachusetts",
         "unit": "celsius",
     }
+
+
+def test_get_current_time_tool_reads_host_clock() -> None:
+    result = realtime_tools._get_current_time()
+
+    assert result["status"] == "ok"
+    assert result["tool"] == "get_current_time"
+    assert result["source"] == "host_clock"
+    assert result["date"]
+    assert result["time"]
+    assert result["weekday"]
+    assert result["utc_iso"].endswith("+00:00")
 
 
 def test_get_brain_status_tool_uses_shared_helper(monkeypatch) -> None:
