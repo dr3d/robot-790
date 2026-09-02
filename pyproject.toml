@@ -39,6 +39,7 @@ dev = [
 [project.scripts]
 robot-790d = "robot_790d.cli:main"
 robot-790-realtime = "robot_790d.realtime_entry:main"
+robot-790-face-sim = "robot_790d.face_sim_server:main"
 robot-790-qwen-tts = "robot_790_tts.server:main"
 robot-790-qwen-smoke = "robot_790_tts.smoke_synthesize:main"
 

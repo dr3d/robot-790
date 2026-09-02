@@ -15,6 +15,12 @@
       "label": "External eyes and mask face",
       "face_url": "http://esp32-eyes.local/",
       "description": "The external-display face rig with round eyes, mouth/aux display, and skull-mask enclosure experiments."
+    },
+    {
+      "key": "browser_face",
+      "label": "Browser face simulator",
+      "face_url": "http://127.0.0.1:8791/",
+      "description": "A local browser-window embodiment that renders Robot 790's face from the same semantic face API as the ESP32-S3 face."
     }
   ],
   "session_behavior_rules": [
