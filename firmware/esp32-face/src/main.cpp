@@ -18,6 +18,32 @@
 
 #include "reachy_config.h"
 
+#if __has_include("firmware_build.h")
+#include "firmware_build.h"
+#endif
+
+#ifndef ROBOT790_FIRMWARE_TARGET
+#define ROBOT790_FIRMWARE_TARGET "esp32-face"
+#endif
+#ifndef ROBOT790_FIRMWARE_VERSION
+#define ROBOT790_FIRMWARE_VERSION "0.3.0-dev"
+#endif
+#ifndef ROBOT790_FIRMWARE_GIT_COMMIT
+#define ROBOT790_FIRMWARE_GIT_COMMIT "unknown"
+#endif
+#ifndef ROBOT790_FIRMWARE_GIT_BRANCH
+#define ROBOT790_FIRMWARE_GIT_BRANCH "unknown"
+#endif
+#ifndef ROBOT790_FIRMWARE_GIT_DIRTY
+#define ROBOT790_FIRMWARE_GIT_DIRTY 1
+#endif
+#ifndef ROBOT790_FIRMWARE_BUILT_AT
+#define ROBOT790_FIRMWARE_BUILT_AT __DATE__ " " __TIME__
+#endif
+#ifndef ROBOT790_FIRMWARE_FEATURES
+#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,mouth_x_offset,external_eyes,mouth_display"
+#endif
+
 namespace {
 
 constexpr int16_t SCREEN_W = 240;
@@ -47,7 +73,9 @@ constexpr uint32_t MOUTH_TALK_RELEASE_MS = 160;
 constexpr uint8_t MOUTH_TEXT_MAX = 96;
 constexpr uint32_t MOUTH_TEXT_FRAME_MS = 50;
 constexpr uint8_t MOUTH_TEXT_MARQUEE_MS_PER_PX = 12;
+constexpr uint32_t MOUTH_TEXT_MARQUEE_END_PAD_MS = 250;
 constexpr uint32_t MOUTH_TEXT_FLASH_MS = 120;
+constexpr int16_t MOUTH_RENDER_X_OFFSET_PX = -10;
 constexpr float API_NORMALIZED_GAZE_X_MM = 190.0f;
 constexpr float API_NORMALIZED_GAZE_Y_MM = 110.0f;
 constexpr float API_NORMALIZED_GAZE_Z_MM = 360.0f;
@@ -955,6 +983,26 @@ EyeRenderStyle eyeRenderStyle = EyeRenderStyle::Friendly;
 float pupilRadius = 16.0f;
 uint32_t lastFrame = 0;
 uint32_t lastUpdate = 0;
+
+uint32_t fitMouthMarqueePeriodMs(uint32_t defaultPeriodMs) {
+  if (mouthState.textUntil == 0 || defaultPeriodMs == 0) return 0;
+  const uint32_t holdMs = mouthState.textUntil - mouthState.textStarted;
+  const uint32_t fitMs = holdMs > MOUTH_TEXT_MARQUEE_END_PAD_MS
+                             ? holdMs - MOUTH_TEXT_MARQUEE_END_PAD_MS
+                             : holdMs;
+  return fitMs > 0 && fitMs < defaultPeriodMs ? fitMs : 0;
+}
+
+uint32_t mouthMarqueeOffset(uint32_t elapsedMs, uint32_t travelPx, uint32_t defaultMsPerPx) {
+  const uint32_t safeTravel = travelPx == 0 ? 1 : travelPx;
+  const uint32_t defaultPeriodMs = safeTravel * defaultMsPerPx;
+  const uint32_t fitPeriodMs = fitMouthMarqueePeriodMs(defaultPeriodMs);
+  if (fitPeriodMs > 0) {
+    if (elapsedMs >= fitPeriodMs) return safeTravel - 1;
+    return uint32_t((uint64_t(elapsedMs) * uint64_t(safeTravel)) / uint64_t(fitPeriodMs));
+  }
+  return (elapsedMs / defaultMsPerPx) % safeTravel;
+}
 #if REACHY_HAS_AUX_DISPLAY
 uint32_t lastAuxFrame = 0;
 bool auxNeedsFullPaint = true;
@@ -2208,9 +2256,9 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now) {
       uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS) {
     const int16_t sleepX = 18;
     const int16_t sleepY = 119;
-    frame.fillRoundRect(sleepX, sleepY, 198, 15, 7, rgb(118, 28, 44));
-    frame.drawFastHLine(sleepX + 22, sleepY + 3, 142, rgb(218, 92, 102));
-    frame.drawFastHLine(sleepX + 30, sleepY + 12, 126, rgb(58, 8, 22));
+    frame.fillRoundRect(sleepX + MOUTH_RENDER_X_OFFSET_PX, sleepY, 198, 15, 7, rgb(118, 28, 44));
+    frame.drawFastHLine(sleepX + MOUTH_RENDER_X_OFFSET_PX + 22, sleepY + 3, 142, rgb(218, 92, 102));
+    frame.drawFastHLine(sleepX + MOUTH_RENDER_X_OFFSET_PX + 30, sleepY + 12, 126, rgb(58, 8, 22));
     return;
   }
 
@@ -2224,7 +2272,7 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now) {
     ? int16_t(2.0f * sinf(float(now) * 0.0027f + 0.6f))
     : 0;
   const bool isSmirk = shape == MouthShape::SmirkLeft || shape == MouthShape::SmirkRight;
-  const int16_t cx = 120 + int16_t(pose.skew * (isSmirk ? 48.0f : 26.0f)) + driftX;
+  const int16_t cx = 120 + MOUTH_RENDER_X_OFFSET_PX + int16_t(pose.skew * (isSmirk ? 48.0f : 26.0f)) + driftX;
   const int16_t cy = 126 + int16_t(pose.tension * 4.0f) + driftY;
   const int16_t curve = int16_t(pose.curve * 18.0f);
   const int16_t asym = (mouthState.talkLevel > 0.01f
@@ -2335,15 +2383,15 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now) {
 void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now) {
   const float talkMix = clampf(mouthState.talkLevel * 0.85f, 0.0f, 1.0f);
   frame.fillScreen(BLACK);
-  frame.fillRoundRect(8, 54, 224, 132, 34, rgb(0, 8, 16));
-  frame.drawRoundRect(9, 55, 222, 130, 33, rgb(30, 118, 132));
-  frame.drawRoundRect(15, 61, 210, 118, 28, rgb(12, 58, 78));
+  frame.fillRoundRect(8 + MOUTH_RENDER_X_OFFSET_PX, 54, 224, 132, 34, rgb(0, 8, 16));
+  frame.drawRoundRect(9 + MOUTH_RENDER_X_OFFSET_PX, 55, 222, 130, 33, rgb(30, 118, 132));
+  frame.drawRoundRect(15 + MOUTH_RENDER_X_OFFSET_PX, 61, 210, 118, 28, rgb(12, 58, 78));
   constexpr uint8_t barCount = 11;
   constexpr int16_t barW = 12;
   constexpr int16_t barGap = 6;
   constexpr int16_t barStep = barW + barGap;
   constexpr int16_t barsW = barCount * barW + (barCount - 1) * barGap;
-  const int16_t barsX = CX - barsW / 2;
+  const int16_t barsX = CX + MOUTH_RENDER_X_OFFSET_PX - barsW / 2;
   for (uint8_t i = 0; i < barCount; ++i) {
     const int16_t x = barsX + int16_t(i) * barStep;
     const float center = float(barCount - 1) * 0.5f;
@@ -2396,8 +2444,8 @@ void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now) {
     frame.drawFastVLine(x + 4, 120 - barH / 2 + 5 + ySkew, maxi16(1, barH - 10), hi);
   }
   if (shape == MouthShape::Sleep) {
-    frame.drawFastHLine(52, 120, 136, rgb(44, 220, 232));
-    frame.drawFastHLine(70, 126, 100, rgb(12, 58, 78));
+    frame.drawFastHLine(52 + MOUTH_RENDER_X_OFFSET_PX, 120, 136, rgb(44, 220, 232));
+    frame.drawFastHLine(70 + MOUTH_RENDER_X_OFFSET_PX, 126, 100, rgb(12, 58, 78));
   }
 }
 
@@ -2466,7 +2514,11 @@ void drawMouthTextPanel(Adafruit_GFX &g, int16_t w, int16_t h, uint32_t now) {
   if (marquee) {
     const uint32_t elapsed = now - mouthState.textStarted;
     const int16_t travel = textW + panelW + 42;
-    const int16_t offset = int16_t((elapsed / MOUTH_TEXT_MARQUEE_MS_PER_PX) % uint32_t(maxi16(1, travel)));
+    const int16_t offset = int16_t(mouthMarqueeOffset(
+      elapsed,
+      uint32_t(maxi16(1, travel)),
+      MOUTH_TEXT_MARQUEE_MS_PER_PX
+    ));
     x = panelX + panelW + 18 - offset;
   }
   if (flashLit || !mouthState.textFlash) {
@@ -2648,10 +2700,10 @@ void renderAuxMouthMirror(uint32_t now) {
   deselectDisplayBus();
   if (mouthState.style == MouthStyle::Robot) {
     const float talkMix = clampf(mouthState.talkLevel * 0.85f, 0.0f, 1.0f);
-    const int16_t cx = screenW / 2;
-    auxMouthFrame.fillRoundRect(8, 54 - yOffset, screenW - 16, 132, 34, rgb(0, 8, 16));
-    auxMouthFrame.drawRoundRect(9, 55 - yOffset, screenW - 18, 130, 33, rgb(30, 118, 132));
-    auxMouthFrame.drawRoundRect(15, 61 - yOffset, screenW - 30, 118, 28, rgb(12, 58, 78));
+    const int16_t cx = screenW / 2 + MOUTH_RENDER_X_OFFSET_PX;
+    auxMouthFrame.fillRoundRect(8 + MOUTH_RENDER_X_OFFSET_PX, 54 - yOffset, screenW - 16, 132, 34, rgb(0, 8, 16));
+    auxMouthFrame.drawRoundRect(9 + MOUTH_RENDER_X_OFFSET_PX, 55 - yOffset, screenW - 18, 130, 33, rgb(30, 118, 132));
+    auxMouthFrame.drawRoundRect(15 + MOUTH_RENDER_X_OFFSET_PX, 61 - yOffset, screenW - 30, 118, 28, rgb(12, 58, 78));
     constexpr uint8_t barCount = 13;
     constexpr int16_t barW = 12;
     constexpr int16_t barGap = 7;
@@ -2710,8 +2762,8 @@ void renderAuxMouthMirror(uint32_t now) {
       auxMouthFrame.drawFastVLine(x + 4, 120 - barH / 2 + 5 + ySkew - yOffset, maxi16(1, barH - 10), hi);
     }
     if (shape == MouthShape::Sleep) {
-      auxMouthFrame.drawFastHLine(52, 120 - yOffset, screenW - 104, rgb(44, 220, 232));
-      auxMouthFrame.drawFastHLine(70, 126 - yOffset, screenW - 140, rgb(12, 58, 78));
+      auxMouthFrame.drawFastHLine(52 + MOUTH_RENDER_X_OFFSET_PX, 120 - yOffset, screenW - 104, rgb(44, 220, 232));
+      auxMouthFrame.drawFastHLine(70 + MOUTH_RENDER_X_OFFSET_PX, 126 - yOffset, screenW - 140, rgb(12, 58, 78));
     }
   } else {
     if (mouthState.talkLevel > 0.01f) {
@@ -2725,9 +2777,9 @@ void renderAuxMouthMirror(uint32_t now) {
         uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS) {
       const int16_t sleepX = 30;
       const int16_t sleepY = screenH / 2 - 7;
-      auxMouthFrame.fillRoundRect(sleepX, sleepY - yOffset, screenW - 60, 15, 7, rgb(118, 28, 44));
-      auxMouthFrame.drawFastHLine(sleepX + 24, sleepY + 3 - yOffset, screenW - 112, rgb(218, 92, 102));
-      auxMouthFrame.drawFastHLine(sleepX + 32, sleepY + 12 - yOffset, screenW - 128, rgb(58, 8, 22));
+      auxMouthFrame.fillRoundRect(sleepX + MOUTH_RENDER_X_OFFSET_PX, sleepY - yOffset, screenW - 60, 15, 7, rgb(118, 28, 44));
+      auxMouthFrame.drawFastHLine(sleepX + MOUTH_RENDER_X_OFFSET_PX + 24, sleepY + 3 - yOffset, screenW - 112, rgb(218, 92, 102));
+      auxMouthFrame.drawFastHLine(sleepX + MOUTH_RENDER_X_OFFSET_PX + 32, sleepY + 12 - yOffset, screenW - 128, rgb(58, 8, 22));
     } else {
       const int16_t w = mini16(screenW - 22, int16_t(150.0f + pose.width * 178.0f));
       const int16_t openH = int16_t(7.0f + pose.open * 92.0f);
@@ -2739,7 +2791,7 @@ void renderAuxMouthMirror(uint32_t now) {
         ? int16_t(2.0f * sinf(float(now) * 0.0027f + 0.6f))
         : 0;
       const bool isSmirk = shape == MouthShape::SmirkLeft || shape == MouthShape::SmirkRight;
-      const int16_t cx = screenW / 2 + int16_t(pose.skew * (isSmirk ? 50.0f : 28.0f)) + driftX;
+      const int16_t cx = screenW / 2 + MOUTH_RENDER_X_OFFSET_PX + int16_t(pose.skew * (isSmirk ? 50.0f : 28.0f)) + driftX;
       const int16_t cy = screenH / 2 + 6 + int16_t(pose.tension * 4.0f) + driftY;
       const int16_t curve = int16_t(pose.curve * 18.0f);
       const int16_t asym = (mouthState.talkLevel > 0.01f
@@ -3634,8 +3686,25 @@ bool releaseToken(const char *text) {
 }
 
 void addState(JsonDocument &doc, uint32_t now) {
+  const bool stationConnected = WiFi.status() == WL_CONNECTED;
+  const wifi_mode_t mode = WiFi.getMode();
+  const bool accessPointEnabled = mode == WIFI_AP || mode == WIFI_AP_STA;
+  const char *wifiMode = stationConnected && accessPointEnabled ? "ap+station"
+                         : stationConnected                  ? "station"
+                         : accessPointEnabled                ? "ap"
+                         : mode == WIFI_OFF                  ? "off"
+                                                              : "connecting";
+
   doc["ok"] = true;
   doc["running"] = true;
+  doc["name"] = "Robot 790 ESP32 Face";
+  doc["hostname"] = REACHY_HOSTNAME;
+  doc["mdns_url"] = String("http://") + REACHY_HOSTNAME + ".local/";
+  doc["ip"] = stationConnected ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
+  doc["wifi_mode"] = wifiMode;
+  doc["display"] = bool(REACHY_HAS_MOUTH) || bool(REACHY_HAS_AUX_DISPLAY);
+  doc["eyes"] = true;
+  doc["external_eyes"] = true;
   doc["idle"] = apiState.idleEnabled;
   doc["autonomous"] = apiState.idleEnabled && !apiState.moodOverride && !apiState.gazeOverride;
   doc["mood"] = moodName(currentMood(now));
@@ -3647,15 +3716,17 @@ void addState(JsonDocument &doc, uint32_t now) {
   doc["sleeping"] = currentMood(now) == Mood::Sleep;
   doc["director"] = idleBeatName(idleDirector.beat);
 
+  JsonObject firmware = doc["firmware"].to<JsonObject>();
+  firmware["target"] = ROBOT790_FIRMWARE_TARGET;
+  firmware["version"] = ROBOT790_FIRMWARE_VERSION;
+  firmware["git_commit"] = ROBOT790_FIRMWARE_GIT_COMMIT;
+  firmware["git_branch"] = ROBOT790_FIRMWARE_GIT_BRANCH;
+  firmware["git_dirty"] = bool(ROBOT790_FIRMWARE_GIT_DIRTY);
+  firmware["built_at"] = ROBOT790_FIRMWARE_BUILT_AT;
+  firmware["features"] = ROBOT790_FIRMWARE_FEATURES;
+
   JsonObject wifi = doc["wifi"].to<JsonObject>();
-  const bool stationConnected = WiFi.status() == WL_CONNECTED;
-  const wifi_mode_t mode = WiFi.getMode();
-  const bool accessPointEnabled = mode == WIFI_AP || mode == WIFI_AP_STA;
-  wifi["mode"] = stationConnected && accessPointEnabled ? "ap+station"
-                 : stationConnected                  ? "station"
-                 : accessPointEnabled                ? "ap"
-                 : mode == WIFI_OFF                  ? "off"
-                                                      : "connecting";
+  wifi["mode"] = wifiMode;
   wifi["connected"] = stationConnected;
   wifi["ssid"] = stationConnected ? WiFi.SSID() : REACHY_AP_SSID;
   wifi["ip"] = stationConnected ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
@@ -3667,6 +3738,7 @@ void addState(JsonDocument &doc, uint32_t now) {
 
   JsonObject mouth = doc["mouth"].to<JsonObject>();
   mouth["present"] = bool(REACHY_HAS_MOUTH);
+  mouth["render_offset_x_px"] = MOUTH_RENDER_X_OFFSET_PX;
   mouth["style"] = mouthStyleName(mouthState.style);
   mouth["shape"] = mouthShapeName(activeMouthShape(now));
   mouth["manual"] = mouthState.overrideShape;
@@ -4184,6 +4256,8 @@ void setupHttpRoutes() {
   });
   server.on("/health", HTTP_GET, [] { sendOk("healthy"); });
   server.on("/state", HTTP_GET, handleHttpState);
+  server.on("/status", HTTP_GET, handleHttpState);
+  server.on("/api/status", HTTP_GET, handleHttpState);
   server.on("/wifi", HTTP_GET, handleHttpWifi);
 
   server.on("/moods", HTTP_GET, [] {

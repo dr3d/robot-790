@@ -61,6 +61,11 @@ After it has Wi-Fi and OTA is running:
 pio run -e esp32-s3-face-ota -t upload
 ```
 
+Each PlatformIO build writes `include/firmware_build.h` with the current git
+commit, dirty flag, UTC build time, and feature list. The generated stamp is
+reported from `/state` as `firmware`, so the STS page can tell which body build
+Eric is actually running after an OTA flash.
+
 ## Wi-Fi Config
 
 Copy the example private header:

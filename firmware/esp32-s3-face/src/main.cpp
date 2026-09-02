@@ -14,6 +14,32 @@
 #include "esp_camera.h"
 #include "face_brain_config.h"
 
+#if __has_include("firmware_build.h")
+#include "firmware_build.h"
+#endif
+
+#ifndef ROBOT790_FIRMWARE_TARGET
+#define ROBOT790_FIRMWARE_TARGET "esp32-s3-face"
+#endif
+#ifndef ROBOT790_FIRMWARE_VERSION
+#define ROBOT790_FIRMWARE_VERSION "0.3.0-dev"
+#endif
+#ifndef ROBOT790_FIRMWARE_GIT_COMMIT
+#define ROBOT790_FIRMWARE_GIT_COMMIT "unknown"
+#endif
+#ifndef ROBOT790_FIRMWARE_GIT_BRANCH
+#define ROBOT790_FIRMWARE_GIT_BRANCH "unknown"
+#endif
+#ifndef ROBOT790_FIRMWARE_GIT_DIRTY
+#define ROBOT790_FIRMWARE_GIT_DIRTY 1
+#endif
+#ifndef ROBOT790_FIRMWARE_BUILT_AT
+#define ROBOT790_FIRMWARE_BUILT_AT __DATE__ " " __TIME__
+#endif
+#ifndef ROBOT790_FIRMWARE_FEATURES
+#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,touch_probe,imu_probe"
+#endif
+
 namespace {
 
 Arduino_DataBus *displayBus = new Arduino_ESP32SPI(
@@ -87,6 +113,8 @@ constexpr uint32_t MOUTH_FRAME_MS = 80;
 constexpr uint32_t EYE_FRAME_MS = 50;
 constexpr size_t MOUTH_TEXT_MAX_CHARS = 96;
 constexpr uint32_t MOUTH_TEXT_FLASH_MS = 120;
+constexpr uint32_t MOUTH_TEXT_MARQUEE_MS_PER_PX = 28;
+constexpr uint32_t MOUTH_TEXT_MARQUEE_END_PAD_MS = 250;
 constexpr int16_t INTEGRATED_EYE_BAND_H = 120;
 constexpr int16_t INTEGRATED_MOUTH_BAND_H = 100;
 constexpr int16_t INTEGRATED_MOUTH_Y = FACE_LCD_HEIGHT - INTEGRATED_MOUTH_BAND_H;
@@ -395,6 +423,28 @@ float pupilRadius = 15.5f;
 uint32_t lastUpdate = 0;
 uint32_t lastEyeFrame = 0;
 uint32_t lastMouthFrame = 0;
+
+uint32_t fitMouthMarqueePeriodMs(uint32_t defaultPeriodMs)
+{
+  if (mouthState.textUntil == 0 || defaultPeriodMs == 0) return 0;
+  const uint32_t holdMs = mouthState.textUntil - mouthState.textStarted;
+  const uint32_t fitMs = holdMs > MOUTH_TEXT_MARQUEE_END_PAD_MS
+                             ? holdMs - MOUTH_TEXT_MARQUEE_END_PAD_MS
+                             : holdMs;
+  return fitMs > 0 && fitMs < defaultPeriodMs ? fitMs : 0;
+}
+
+uint32_t mouthMarqueeOffset(uint32_t elapsedMs, uint32_t travelPx, uint32_t defaultMsPerPx)
+{
+  const uint32_t safeTravel = travelPx == 0 ? 1 : travelPx;
+  const uint32_t defaultPeriodMs = safeTravel * defaultMsPerPx;
+  const uint32_t fitPeriodMs = fitMouthMarqueePeriodMs(defaultPeriodMs);
+  if (fitPeriodMs > 0) {
+    if (elapsedMs >= fitPeriodMs) return safeTravel - 1;
+    return uint32_t((uint64_t(elapsedMs) * uint64_t(safeTravel)) / uint64_t(fitPeriodMs));
+  }
+  return (elapsedMs / defaultMsPerPx) % safeTravel;
+}
 
 const char FACE_UI_HTML[] PROGMEM = R"FACEUI(
 <!doctype html>
@@ -1717,7 +1767,10 @@ void renderMouthText(uint32_t now)
   if (mouthState.textMarquee && textW > maxTextW) {
     const int16_t travel = textW + screenW + padX * 2;
     const uint32_t elapsed = now - mouthState.textStarted;
-    const int16_t x = screenW - int16_t((elapsed / 28U) % uint32_t(max(int16_t(1), travel)));
+    const int16_t x = screenW - int16_t(mouthMarqueeOffset(
+        elapsed,
+        uint32_t(max(int16_t(1), travel)),
+        MOUTH_TEXT_MARQUEE_MS_PER_PX));
     if (flashLit || !mouthState.textFlash) {
       g.setCursor(x, baselineY);
       g.print(text);
@@ -2424,6 +2477,16 @@ void addState(JsonDocument &doc, uint32_t now)
   doc["mdns_url"] = "http://" FACE_HOSTNAME ".local/";
   doc["ip"] = ipString();
   doc["wifi_mode"] = wifiStation ? "station" : "ap";
+
+  JsonObject firmware = doc["firmware"].to<JsonObject>();
+  firmware["target"] = ROBOT790_FIRMWARE_TARGET;
+  firmware["version"] = ROBOT790_FIRMWARE_VERSION;
+  firmware["git_commit"] = ROBOT790_FIRMWARE_GIT_COMMIT;
+  firmware["git_branch"] = ROBOT790_FIRMWARE_GIT_BRANCH;
+  firmware["git_dirty"] = bool(ROBOT790_FIRMWARE_GIT_DIRTY);
+  firmware["built_at"] = ROBOT790_FIRMWARE_BUILT_AT;
+  firmware["features"] = ROBOT790_FIRMWARE_FEATURES;
+
   doc["uptime_ms"] = now - bootMs;
   doc["free_heap"] = ESP.getFreeHeap();
   doc["psram"] = psramFound();

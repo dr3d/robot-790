@@ -184,6 +184,11 @@ Build:
 pio run
 ```
 
+Each build writes `include/firmware_build.h` with the current git commit, dirty
+flag, UTC build time, and feature list. The generated stamp is reported from
+`/status` as `firmware`, so the STS page and logs can tell which external-eye
+body build Eric is actually running.
+
 Then upload this file in the OTA Firmware card:
 
 ```text
@@ -206,6 +211,8 @@ Read endpoints:
 ```bash
 curl "$EYES_URL/health"
 curl "$EYES_URL/state"
+curl "$EYES_URL/status"
+curl "$EYES_URL/api/status"
 curl "$EYES_URL/wifi"
 curl "$EYES_URL/styles"
 curl "$EYES_URL/moods"

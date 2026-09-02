@@ -20,6 +20,7 @@ docs/media/raw-video/
 docs/media/rejected/
 .pio/
 firmware/**/.pio/
+firmware/**/include/firmware_build.h
 firmware/**/include/*_private.h
 firmware/esp32-face/include/reachy_config_private.h
 firmware/esp32-cam/include/cam_config_private.h
