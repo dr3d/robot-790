@@ -2134,10 +2134,21 @@ void drawIntegratedStatus(Arduino_GFX &g, uint32_t now)
   const int16_t noseY = INTEGRATED_STATUS_Y + INTEGRATED_STATUS_H / 2 - 10;
   const int16_t noseRx = 68;
   const int16_t noseRy = 53;
-  fillEllipse(g, noseX, noseY, noseRx, noseRy, rgb(5, 20, 30));
-  g.drawEllipse(noseX, noseY, noseRx + 3, noseRy + 2, mixColor(moodColor, rgb(6, 24, 34), 0.42f));
-  g.drawEllipse(noseX, noseY, noseRx, noseRy, moodColor);
-  g.drawEllipse(noseX, noseY, noseRx - 5, noseRy - 5, mixColor(moodColor, rgb(8, 42, 56), 0.64f));
+  const float pulse = 0.5f + 0.5f * sinf(float(now) * 0.0024f);
+  const int16_t haloGrow = int16_t(4.0f + pulse * 5.0f);
+  const uint16_t haloOuter = mixColor(BLACK, moodColor, 0.14f + pulse * 0.08f);
+  const uint16_t haloMid = mixColor(BLACK, moodColor, 0.24f + pulse * 0.10f);
+  const uint16_t noseBase = mixColor(rgb(5, 20, 30), moodColor, 0.30f);
+  const uint16_t noseCore = mixColor(rgb(10, 42, 54), moodColor, 0.48f);
+  const uint16_t noseHot = mixColor(moodColor, WHITE, 0.36f);
+  fillEllipse(g, noseX, noseY, noseRx + 18 + haloGrow, noseRy + 13 + haloGrow / 2, haloOuter);
+  fillEllipse(g, noseX, noseY, noseRx + 9 + haloGrow / 2, noseRy + 7 + haloGrow / 3, haloMid);
+  fillEllipse(g, noseX, noseY, noseRx, noseRy, noseBase);
+  fillEllipse(g, noseX, noseY, noseRx - 13, noseRy - 13, noseCore);
+  fillEllipse(g, noseX - 20, noseY - 18, 12, 7, mixColor(noseHot, WHITE, 0.35f));
+  g.drawEllipse(noseX, noseY, noseRx + 5, noseRy + 4, mixColor(moodColor, WHITE, 0.18f));
+  g.drawEllipse(noseX, noseY, noseRx, noseRy, noseHot);
+  g.drawEllipse(noseX, noseY, noseRx - 7, noseRy - 7, mixColor(moodColor, WHITE, 0.08f));
 
   const uint16_t mainText = rgb(204, 236, 244);
   const int16_t textW = noseRx * 2 - 18;
