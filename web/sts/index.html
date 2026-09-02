@@ -1227,6 +1227,7 @@
       default_embodiment: "",
       embodiments: []
     };
+    let runtimeConfigLoadPromise = null;
     let currentEmbodimentKey = "";
     let responseActive = false;
     let toolMarkupSuppressed = false;
@@ -2944,6 +2945,11 @@
         currentEmbodimentKey = "";
         log(events, `runtime config defaulted: ${error.message}`);
       }
+    }
+
+    function ensureRuntimeConfigLoaded() {
+      runtimeConfigLoadPromise ||= loadRuntimeConfig();
+      return runtimeConfigLoadPromise;
     }
 
     function matchingConfiguredEmbodimentKey(faceBaseUrl) {
@@ -9740,6 +9746,7 @@
     async function connect() {
       if (ws && ws.readyState === WebSocket.OPEN) return;
       setState("Connecting", "warn");
+      await ensureRuntimeConfigLoaded();
       await ensurePlayback();
       ws = new WebSocket(serverUrl.value.trim());
       ws.addEventListener("open", () => {
@@ -10350,7 +10357,7 @@
     loadToolPrefs();
     loadRunPreset();
     loadLogDisplayControls();
-    loadRuntimeConfig();
+    ensureRuntimeConfigLoaded();
     renderMemory();
     updateLabGoalUi({ quiet: true });
     updateTypedInputButtons();
