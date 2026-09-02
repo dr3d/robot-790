@@ -198,6 +198,56 @@ def test_record_log_snapshot_accepts_recording_stop_report_source(tmp_path) -> N
     assert (tmp_path / result["latest"]).name == "latest-recording_stop_report.txt"
 
 
+def test_operator_command_queue_lists_new_commands(tmp_path) -> None:
+    queued = sts_page_server.enqueue_operator_command(
+        "Eric, read labtable/day_002/to_eric.md.",
+        repo_root=tmp_path,
+    )
+
+    result = sts_page_server.list_operator_commands(repo_root=tmp_path)
+
+    assert result["status"] == "ok"
+    assert len(result["commands"]) == 1
+    command = result["commands"][0]
+    assert command["kind"] == "user_text"
+    assert command["source"] == "codex"
+    assert command["text"] == "Eric, read labtable/day_002/to_eric.md."
+    assert command["seq"] == queued["command"]["seq"]
+
+    after = sts_page_server.list_operator_commands(after=int(command["seq"]), repo_root=tmp_path)
+    assert after["commands"] == []
+
+
+def test_operator_command_queue_accepts_say_text(tmp_path) -> None:
+    sts_page_server.enqueue_operator_command(
+        "Say this line exactly.",
+        kind="say_text",
+        source="test",
+        repo_root=tmp_path,
+    )
+
+    result = sts_page_server.list_operator_commands(repo_root=tmp_path)
+
+    assert result["commands"][0]["kind"] == "say_text"
+    assert result["commands"][0]["source"] == "test"
+
+
+def test_operator_command_queue_rejects_empty_and_unknown_kind(tmp_path) -> None:
+    try:
+        sts_page_server.enqueue_operator_command("   ", repo_root=tmp_path)
+    except ValueError as exc:
+        assert "text is required" in str(exc)
+    else:
+        raise AssertionError("Expected empty operator command to fail")
+
+    try:
+        sts_page_server.enqueue_operator_command("hello", kind="launch", repo_root=tmp_path)
+    except ValueError as exc:
+        assert "Unsupported operator command kind" in str(exc)
+    else:
+        raise AssertionError("Expected unsupported operator command kind to fail")
+
+
 def test_record_audio_snapshot_returns_picture_mp4(monkeypatch, tmp_path) -> None:
     image_path = tmp_path / "logs" / "generated-images" / "last-image.png"
     image_path.parent.mkdir(parents=True)
@@ -579,6 +629,7 @@ def test_recording_audio_filter_can_trim_silence(monkeypatch) -> None:
     monkeypatch.setenv("ROBOT_790_AUDIO_TRIM_THRESHOLD", "-42dB")
     monkeypatch.setenv("ROBOT_790_AUDIO_TRIM_SILENCE_S", "1.25")
     monkeypatch.setenv("ROBOT_790_AUDIO_TRIM_KEEP_S", "0.2")
+    monkeypatch.setenv("ROBOT_790_AUDIO_TRIM_END_KEEP_S", "1.2")
 
     value = sts_page_server._recording_audio_filter(trim_silence=True)
 
@@ -587,6 +638,7 @@ def test_recording_audio_filter_can_trim_silence(monkeypatch) -> None:
     assert value.count("start_threshold=-42dB") == 2
     assert "start_duration=1.250" in value
     assert "start_silence=0.200" in value
+    assert "start_silence=1.200" in value
     assert ",areverse,silenceremove=" in value
 
 
@@ -613,10 +665,12 @@ def test_recording_audio_filter_cleanup_can_be_disabled(monkeypatch) -> None:
 def test_recording_audio_filter_keeps_more_tail_by_default(monkeypatch) -> None:
     monkeypatch.setenv("ROBOT_790_AUDIO_TRIM_SILENCE", "true")
     monkeypatch.delenv("ROBOT_790_AUDIO_TRIM_KEEP_S", raising=False)
+    monkeypatch.delenv("ROBOT_790_AUDIO_TRIM_END_KEEP_S", raising=False)
 
     value = sts_page_server._recording_audio_filter(trim_silence=True)
 
     assert "start_silence=0.650" in value
+    assert "start_silence=1.650" in value
 
 
 def test_recorded_audio_path_stays_inside_audio_dir(tmp_path) -> None:

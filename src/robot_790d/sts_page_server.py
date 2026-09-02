@@ -6,6 +6,7 @@ import mimetypes
 import os
 import re
 import subprocess
+import time
 from datetime import datetime
 from email import policy
 from email.parser import BytesParser
@@ -45,6 +46,7 @@ DEFAULT_SESSION_BEHAVIOR_RULES = [
     ),
 ]
 RUNTIME_CONFIG_PATH = Path("config") / "runtime.json"
+OPERATOR_COMMANDS_PATH = Path("logs") / "operator_commands.jsonl"
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
@@ -73,6 +75,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/notes/list":
             self._handle_note_list()
+            return
+        if parsed.path == "/api/operator/poll":
+            self._handle_operator_poll(parsed.query)
             return
         super().do_GET()
 
@@ -105,6 +110,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/realtime/restart":
             self._handle_realtime_restart()
             return
+        if parsed.path == "/api/operator/enqueue":
+            self._handle_operator_enqueue()
+            return
         self._send_json(404, {"status": "error", "error": "Unknown API endpoint."})
 
     def _handle_search(self, query_string: str) -> None:
@@ -132,6 +140,30 @@ class StsPageHandler(SimpleHTTPRequestHandler):
 
     def _handle_runtime_config(self) -> None:
         self._send_json(200, runtime_config())
+
+    def _handle_operator_poll(self, query_string: str) -> None:
+        params = parse_qs(query_string)
+        after = _int_param(params, "after", 0)
+        limit = _int_param(params, "limit", 10)
+        try:
+            payload = list_operator_commands(after=after, limit=limit)
+        except OSError as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, payload)
+
+    def _handle_operator_enqueue(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = enqueue_operator_command(
+                str(payload.get("text") or ""),
+                kind=str(payload.get("kind") or "user_text"),
+                source=str(payload.get("source") or "codex"),
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
 
     def _handle_note_read(self, query_string: str) -> None:
         params = parse_qs(query_string)
@@ -625,6 +657,92 @@ def _runtime_embodiments(value: object) -> list[dict[str, str]]:
             }
         )
     return embodiments
+
+
+def enqueue_operator_command(
+    text: str,
+    *,
+    kind: str = "user_text",
+    source: str = "codex",
+    repo_root: Path | None = None,
+) -> dict[str, object]:
+    command_text = str(text or "").replace("\r\n", "\n").strip()
+    if not command_text:
+        raise ValueError("Operator command text is required.")
+    if len(command_text) > 8000:
+        raise ValueError("Operator command text is too long.")
+
+    command_kind = str(kind or "user_text").strip().lower()
+    if command_kind not in {"user_text", "say_text"}:
+        raise ValueError("Unsupported operator command kind.")
+
+    command_source = " ".join(str(source or "codex").split())[:80] or "codex"
+    root = repo_root or Path(__file__).resolve().parents[2]
+    path = root / OPERATOR_COMMANDS_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    command = {
+        "seq": time.time_ns(),
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "kind": command_kind,
+        "source": command_source,
+        "text": command_text,
+    }
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(command, ensure_ascii=True) + "\n")
+    return {
+        "status": "ok",
+        "tool": "enqueue_operator_command",
+        "command": command,
+        "path": str(path),
+    }
+
+
+def list_operator_commands(
+    *,
+    after: int = 0,
+    limit: int = 10,
+    repo_root: Path | None = None,
+) -> dict[str, object]:
+    root = repo_root or Path(__file__).resolve().parents[2]
+    path = root / OPERATOR_COMMANDS_PATH
+    safe_after = max(0, int(after or 0))
+    safe_limit = max(1, min(50, int(limit or 10)))
+    commands: list[dict[str, object]] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        lines = []
+    for line in lines[-1000:]:
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(item, dict):
+            continue
+        try:
+            seq = int(item.get("seq") or 0)
+        except (TypeError, ValueError):
+            continue
+        if seq <= safe_after:
+            continue
+        commands.append(
+            {
+                "seq": seq,
+                "created_at": str(item.get("created_at") or ""),
+                "kind": str(item.get("kind") or "user_text"),
+                "source": str(item.get("source") or "codex"),
+                "text": str(item.get("text") or ""),
+            }
+        )
+        if len(commands) >= safe_limit:
+            break
+    return {
+        "status": "ok",
+        "tool": "list_operator_commands",
+        "after": safe_after,
+        "commands": commands,
+        "latest_seq": commands[-1]["seq"] if commands else safe_after,
+    }
 
 
 def _bounded_float_env(name: str, default: float, *, minimum: float, maximum: float) -> float:
@@ -1726,15 +1844,23 @@ def _recording_audio_filter(*, trim_silence: bool) -> str:
     if trim_silence and _audio_recording_trim_enabled():
         threshold = _env_text("ROBOT_790_AUDIO_TRIM_THRESHOLD") or "-45dB"
         silence_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_SILENCE_S", 0.8, minimum=0.1, maximum=5.0)
-        keep_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_KEEP_S", 0.65, minimum=0.0, maximum=2.0)
-        edge_trim = (
+        start_keep_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_KEEP_S", 0.65, minimum=0.0, maximum=2.0)
+        end_keep_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_END_KEEP_S", 1.65, minimum=0.0, maximum=4.0)
+        start_trim = (
             "silenceremove="
             "start_periods=1:"
             f"start_duration={silence_s:.3f}:"
             f"start_threshold={threshold}:"
-            f"start_silence={keep_s:.3f}"
+            f"start_silence={start_keep_s:.3f}"
         )
-        filters.extend([edge_trim, "areverse", edge_trim, "areverse"])
+        end_trim = (
+            "silenceremove="
+            "start_periods=1:"
+            f"start_duration={silence_s:.3f}:"
+            f"start_threshold={threshold}:"
+            f"start_silence={end_keep_s:.3f}"
+        )
+        filters.extend([start_trim, "areverse", end_trim, "areverse"])
     return ",".join(filters)
 
 

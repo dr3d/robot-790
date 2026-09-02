@@ -12,7 +12,7 @@ param(
   [double]$MinAutoDurationSeconds = 6.0,
   [double]$MaxAutoDurationSeconds = 45.0,
   [double]$SilenceSeconds = 1.15,
-  [double]$SilencePadSeconds = 0.5,
+  [double]$SilencePadSeconds = 1.5,
   [string]$SilenceThreshold = "-45dB"
 )
 

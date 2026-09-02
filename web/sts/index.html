@@ -817,6 +817,10 @@
       <div class="settings-body">
         <section class="controls url-controls">
           <label>
+            Embodiment
+            <select id="embodimentSelect" aria-label="Active embodiment"></select>
+          </label>
+          <label>
             Face controller
             <input id="faceUrl" value="http://esp32-s3-face.local/" spellcheck="false">
           </label>
@@ -873,6 +877,7 @@
             Run preset
             <select id="runPreset" aria-label="Experimental run preset">
               <option value="custom">Custom</option>
+              <option value="deep_probe">Deep Probe</option>
               <option value="mercury_research">Mercury Research</option>
               <option value="quiet_mulling">Quiet Mulling</option>
               <option value="person_lane">Person Lane</option>
@@ -1034,6 +1039,7 @@
   <script>
     const serverUrl = document.querySelector("#serverUrl");
     const faceUrl = document.querySelector("#faceUrl");
+    const embodimentSelect = document.querySelector("#embodimentSelect");
     const chassisUrlInput = document.querySelector("#chassisUrl");
     const connectButton = document.querySelector("#connect");
     const disconnectButton = document.querySelector("#disconnect");
@@ -1168,6 +1174,8 @@
     let visionCameraStream;
     let micSource;
     let micProcessor;
+    let brain2MonitorAudioActive = false;
+    let brain2MonitorAudioUntil = 0;
     let recordingDestination;
     let audioRecorder;
     let audioRecordChunks = [];
@@ -1185,6 +1193,7 @@
     let audioRecordRolloverTimer = null;
     let audioRecordStoppingForRollover = false;
     let audioRecordSnapshotAfterStop = false;
+    let audioRecordFinalizing = false;
     let playbackTime = 0;
     const audioFlushMs = 120;
     const minPlaybackBytes = 9600;
@@ -1200,6 +1209,11 @@
     let conversationProsodyByIndex = {};
     let eventLogLines = [];
     let inputDraft = "";
+    let operatorCommandLastSeq = 0;
+    let operatorCommandPollTimer = null;
+    let operatorCommandPollInFlight = false;
+    let operatorBlockedSeq = 0;
+    let operatorBlockedReason = "";
     let lastUserText = "";
     let recentUserTexts = [];
     let lastAcceptedUserTranscript = "";
@@ -1351,6 +1365,9 @@
     const loadEricMemoriesStorageKey = "robot790.loadEricMemories.v1";
     const imageModelStorageKey = "robot790.imageModel.v1";
     const imageCostStorageKey = "robot790.imageCost.v1";
+    const operatorDefaultsStorageKey = "robot790.operatorDefaults.v1";
+    const operatorDefaultsVersion = "deep-probe-20260902c";
+    const operatorCommandSeqStorageKey = "robot790.operatorCommandSeq.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
     const maxMemoryFactChars = 320;
@@ -1363,6 +1380,7 @@
     const micQuietBufferResetMs = 15 * 60 * 1000;
     const micFreshnessCheckMs = 60 * 1000;
     const logAutosaveMs = 2 * 60 * 1000;
+    const operatorCommandPollMs = 1500;
     const audioRecordRolloverMs = 12 * 60 * 1000;
     const lastAutosavedLogText = new Map();
     const startupNoteFilenames = ["core/erics_memories.txt"];
@@ -1406,6 +1424,23 @@
       }
     };
     const runPresets = {
+      deep_probe: {
+        label: "Deep Probe",
+        settings: {
+          idleDrift: 7,
+          idleWonder: 5,
+          idleSelfFocus: 6,
+          idleNotesFocus: 10,
+          idleFastClockSpeed: 8,
+          brain2MouthBrain: true,
+          brain2VoiceMonitor: true,
+          brain2VoiceVolume: 12,
+          brain2PersonFocus: 4,
+          performanceMode: false,
+          idleSubstrateTest: false,
+          firstContactMode: false
+        }
+      },
       mercury_research: {
         label: "Mercury Research",
         settings: {
@@ -1503,6 +1538,7 @@
     const addressedIdleQuestionGapMs = 8 * 60 * 1000;
     const idleMouthAsideGapMs = 45 * 1000;
     const brain2MinGapMs = 14 * 1000;
+    const brain2FastClockFloorMs = 8 * 1000;
     const brain2DeferredSurfaceMaxAgeMs = 90 * 1000;
     const performanceAutoMs = 8 * 60 * 1000;
     const idleCuriositySeedRetireMs = 45 * 60 * 1000;
@@ -1792,6 +1828,28 @@
           description: String(item?.description || "").trim()
         }))
         .filter((item) => item.key && item.face_url);
+    }
+
+    function populateEmbodimentSelect() {
+      if (!embodimentSelect) return;
+      const embodiments = configuredEmbodiments();
+      const customOption = document.createElement("option");
+      customOption.value = "";
+      customOption.textContent = "Custom URL";
+      const options = embodiments.map((item) => {
+        const option = document.createElement("option");
+        option.value = item.key;
+        option.textContent = item.label || item.key;
+        return option;
+      });
+      embodimentSelect.replaceChildren(customOption, ...options);
+      syncEmbodimentSelect();
+    }
+
+    function syncEmbodimentSelect() {
+      if (!embodimentSelect) return;
+      currentEmbodimentKey = matchingConfiguredEmbodimentKey(normalizeFaceBaseUrl());
+      embodimentSelect.value = currentEmbodimentKey || "";
     }
 
     function embodimentTools() {
@@ -2931,6 +2989,7 @@
           embodiments: Array.isArray(result.embodiments) ? result.embodiments : []
         };
         currentEmbodimentKey = matchingConfiguredEmbodimentKey(normalizeFaceBaseUrl());
+        populateEmbodimentSelect();
         log(events, "runtime config loaded");
         updateSessionTools();
       } catch (error) {
@@ -2943,6 +3002,7 @@
           embodiments: []
         };
         currentEmbodimentKey = "";
+        populateEmbodimentSelect();
         log(events, `runtime config defaulted: ${error.message}`);
       }
     }
@@ -2973,7 +3033,8 @@
       if (!revisionLines.length && !questionLines.length) return "";
       return [
         "Private Brain 2 notes:",
-        "Brain 2 is a slow advisory lane. It cannot speak, interrupt, use tools, or overrule you.",
+        "Brain 2 is a slow advisory lane inside your runtime, not Scott, not a sensor, and not a command.",
+        "It cannot use tools or overrule you. Treat its notes as private draft material you may use, revise, or ignore.",
         revisionLines.length
           ? `Revision candidates from Brain 2:\n${revisionLines.join("\n")}\nWhen the floor is free and you agree, you may voice one compact public correction in your own words. Do not mention Brain 2. Ignore weak candidates.`
           : "",
@@ -3164,6 +3225,7 @@
       }
 
       currentEmbodimentKey = target.key;
+      syncEmbodimentSelect();
       runtimeConfig.current_embodiment = [
         `Your current embodiment is ${target.label}.`,
         target.description || "",
@@ -3339,7 +3401,16 @@
       idleWonder.value = String(settings.idleWonder);
       idleSelfFocus.value = String(settings.idleSelfFocus);
       idleNotesFocus.value = String(settings.idleNotesFocus);
+      if (Number.isFinite(Number(settings.idleFastClockSpeed))) {
+        idleFastClockSpeed.value = String(Math.max(1, Math.min(12, Number(settings.idleFastClockSpeed))));
+      }
       brain2MouthBrain.checked = Boolean(settings.brain2MouthBrain);
+      if (typeof settings.brain2VoiceMonitor === "boolean") {
+        brain2VoiceMonitor.checked = settings.brain2VoiceMonitor;
+      }
+      if (Number.isFinite(Number(settings.brain2VoiceVolume))) {
+        brain2VoiceVolume.value = String(Math.max(0, Math.min(60, Number(settings.brain2VoiceVolume))));
+      }
       brain2PersonFocus.value = String(settings.brain2PersonFocus);
       performanceMode.checked = Boolean(settings.performanceMode);
       idleSubstrateTest.checked = Boolean(settings.idleSubstrateTest);
@@ -3351,7 +3422,9 @@
       updateIdleWonderUi();
       updateIdleSelfFocusUi();
       updateIdleNotesFocusUi();
+      updateIdleFastClockUi({ quiet: true });
       updateBrain2Controls();
+      updateBrain2VoiceMonitorUi({ quiet: true });
       savePerformanceMode();
       updateSessionTools();
       if (contextPanel?.open) renderContextMap();
@@ -3372,28 +3445,31 @@
 
     function brain2BlockedReason({ manual = false } = {}) {
       if (brain2InFlight) return "already in flight";
+      if (!manual && !realtimeConnected()) return "disconnected";
       if (!manual && !brain2MouthBrainEnabled()) return "brain 2 off";
       if (currentBrain2PersonFocus() <= 0) return "person lane off";
       if (!conversationLines.length) return "no conversation";
       if (userSpeechActive) return "user speaking";
-      if (!manual && Date.now() - lastBrain2MullAt < compressIdleMs(brain2MinGapMs, { floorMs: 3000 })) return "cooldown";
+      if (!manual && Date.now() - lastBrain2MullAt < compressIdleMs(brain2MinGapMs, { floorMs: brain2FastClockFloorMs })) return "cooldown";
       return "";
     }
 
     function brain2DelayMs() {
       const focus = currentBrain2PersonFocus();
       if (focus <= 0) return Infinity;
-      return compressIdleMs(Math.max(10000, 52000 - focus * 4200), { floorMs: 3000 });
+      return compressIdleMs(Math.max(10000, 52000 - focus * 4200), { floorMs: brain2FastClockFloorMs });
     }
 
     function scheduleBrain2Mull() {
       clearBrain2Timer();
+      if (!realtimeConnected()) return;
       if (!brain2MouthBrainEnabled()) return;
       const delay = brain2DelayMs();
       if (!Number.isFinite(delay)) return;
+      const activityAnchor = lastUserTurnActivityAt || lastConversationActivityAt;
       const fireAt = Math.max(
-        lastConversationActivityAt + delay,
-        lastBrain2MullAt + compressIdleMs(brain2MinGapMs, { floorMs: 3000 }),
+        activityAnchor + delay,
+        lastBrain2MullAt + compressIdleMs(brain2MinGapMs, { floorMs: brain2FastClockFloorMs }),
         userTurnPendingUntil
       );
       brain2Timer = setTimeout(() => {
@@ -4112,6 +4188,85 @@
       localStorage.setItem(toolPrefsStorageKey, JSON.stringify(prefs));
     }
 
+    function setToolPrefs(values) {
+      for (const field of toolPrefFields) {
+        if (!Object.prototype.hasOwnProperty.call(values, field.key)) continue;
+        field.element().checked = Boolean(values[field.key]);
+      }
+      saveToolPrefs();
+    }
+
+    function applyOperatorDefaultsOnce() {
+      if (localStorage.getItem(operatorDefaultsStorageKey) === operatorDefaultsVersion) return;
+
+      localStorage.setItem(operatorDefaultsStorageKey, operatorDefaultsVersion);
+      const preset = runPresets.deep_probe;
+      if (runPreset) {
+        runPreset.value = "deep_probe";
+        applyRunPreset("deep_probe", { quiet: true });
+      }
+      if (preset?.settings) {
+        localStorage.setItem(idleDriftStorageKey, String(preset.settings.idleDrift));
+        localStorage.setItem(idleWonderStorageKey, String(preset.settings.idleWonder));
+        localStorage.setItem(idleSelfFocusStorageKey, String(preset.settings.idleSelfFocus));
+        localStorage.setItem(idleNotesFocusStorageKey, String(preset.settings.idleNotesFocus));
+        localStorage.setItem(brain2MouthBrainStorageKey, String(Boolean(preset.settings.brain2MouthBrain)));
+        localStorage.setItem(brain2PersonFocusStorageKey, String(preset.settings.brain2PersonFocus));
+        localStorage.setItem(brain2VoiceMonitorStorageKey, String(Boolean(preset.settings.brain2VoiceMonitor)));
+        localStorage.setItem(brain2VoiceVolumeStorageKey, String(preset.settings.brain2VoiceVolume));
+        localStorage.setItem(performanceModeStorageKey, String(Boolean(preset.settings.performanceMode)));
+      }
+
+      if (modelPreset) modelPreset.value = "qwen27-mtp-vlow";
+      if (customModelKey) customModelKey.value = "qwen3.8-27b-nvfp4-mtp";
+      if (customModelReasoning) customModelReasoning.value = "none";
+      if (customModelContext) customModelContext.value = "131072";
+      if (customModelParallel) customModelParallel.value = "2";
+      saveModelPreset();
+      updateCustomModelControls();
+
+      if (creatureProfile) {
+        creatureProfile.value = "eric";
+        applyCreatureProfile({ quiet: true });
+      }
+      if (ttsVoice) ttsVoice.value = "Eric";
+      if (ttsPrecision) ttsPrecision.value = "bfloat16";
+      if (ttsPreset && ttsInstruct) {
+        ttsPreset.value = "dry";
+        ttsInstruct.value = ttsStylePresets.dry;
+      }
+      saveTtsVoice();
+      saveTtsPrecision();
+      saveTtsStyle();
+
+      if (loadEricMemories) {
+        loadEricMemories.checked = true;
+        saveEricMemoriesPref();
+      }
+
+      setToolPrefs({
+        faceTools: true,
+        bodySensorTools: true,
+        chassisTools: false,
+        voiceTools: true,
+        memoryTools: false,
+        webSearchTools: true,
+        webPageTools: true,
+        castMediaTools: true,
+        noteFileTools: true,
+        imageTools: false,
+        smartHomeTools: false
+      });
+
+      if (transcriptProsodyMode) transcriptProsodyMode.value = "compact";
+      if (eventLogFilter) eventLogFilter.value = "no_face";
+      saveLogDisplayControls();
+      renderConversation();
+      renderEvents({ forceScroll: true });
+      updateSessionTools({ quiet: true });
+      log(events, "operator defaults applied: Deep Probe / Eric / Brain2 monitor / web+sensor tools / no-face events");
+    }
+
     function setState(text, kind = "bad") {
       state.textContent = text;
       dot.className = `dot ${kind === "ok" ? "ok" : kind === "warn" ? "warn" : ""}`;
@@ -4472,7 +4627,15 @@
     function recordingSnapshotPaneText(source) {
       if (source === "conversation") return conversationDisplayText().trimEnd() || "[empty]";
       if (source === "events") return eventLogLines.join("\n").trimEnd() || "[empty]";
-      if (source === "brain2_mulling") return brain2Log.textContent.trimEnd() || "[empty]";
+      if (source === "brain2_mulling") {
+        const paneText = brain2Log.textContent.trimEnd();
+        if (paneText) return paneText;
+        const eventText = eventLogLines
+          .filter((line) => /\bbrain2\b/i.test(line))
+          .join("\n")
+          .trimEnd();
+        return eventText || "[empty]";
+      }
       return "[empty]";
     }
 
@@ -4486,7 +4649,7 @@
 
     function recordingCurationSignals() {
       const allEvents = eventLogLines.join("\n");
-      const brain2Text = brain2Log.textContent.trimEnd();
+      const brain2Text = recordingSnapshotPaneText("brain2_mulling");
       const brain2Signals = interestingLines(
         brain2Text,
         /\b(mouth|held|question candidate|revision candidate|fired|skipped|surface|failed|reason)\b/i,
@@ -4563,8 +4726,8 @@
     async function recordAudioStopSnapshots({ recordingResult = null, finalResult = null, recordingName = "" } = {}) {
       const snapshots = [
         ["conversation", recordingSnapshotPaneText("conversation")],
-        ["events", recordingSnapshotPaneText("events")],
         ["brain2_mulling", recordingSnapshotPaneText("brain2_mulling")],
+        ["events", recordingSnapshotPaneText("events")],
         ["recording_stop_report", recordingStopReportText({ recordingResult, finalResult, recordingName })]
       ];
       const saved = [];
@@ -4582,7 +4745,9 @@
 
     async function recordLogPane(button, target, source) {
       const originalText = button.textContent;
-      const rawText = target.textContent.trimEnd();
+      const rawText = source === "brain2_mulling"
+        ? recordingSnapshotPaneText("brain2_mulling")
+        : target.textContent.trimEnd();
       const text = rawText || (source === "brain2_mulling" ? "[empty]" : "");
       try {
         const result = await recordLogSnapshot(source, text);
@@ -4601,7 +4766,9 @@
     }
 
     async function autosaveLogPane(target, source) {
-      const text = target.textContent.trimEnd();
+      const text = source === "brain2_mulling"
+        ? recordingSnapshotPaneText("brain2_mulling")
+        : target.textContent.trimEnd();
       if (!text || lastAutosavedLogText.get(source) === text) return;
       const result = await recordLogSnapshot(source, text);
       lastAutosavedLogText.set(source, text);
@@ -4611,13 +4778,26 @@
     function autosaveSessionLogs(reason = "autosave") {
       autosaveLogPane(conversation, "conversation").catch((error) => log(events, `${reason} conversation error: ${error.message}`));
       autosaveLogPane(events, "events").catch((error) => log(events, `${reason} events error: ${error.message}`));
+      autosaveLogPane(brain2Log, "brain2_mulling").catch((error) => log(events, `${reason} brain2_mulling error: ${error.message}`));
     }
 
     function beaconLogSnapshot(target, source) {
-      const text = target.textContent.trimEnd();
+      const text = source === "brain2_mulling"
+        ? recordingSnapshotPaneText("brain2_mulling")
+        : target.textContent.trimEnd();
       if (!text || lastAutosavedLogText.get(source) === text) return;
       const body = JSON.stringify({ source, content: text });
       navigator.sendBeacon?.(new URL("/api/logs/record", location.href), new Blob([body], { type: "application/json" }));
+    }
+
+    function beaconAllLogSnapshots() {
+      beaconLogSnapshot(conversation, "conversation");
+      beaconLogSnapshot(events, "events");
+      beaconLogSnapshot(brain2Log, "brain2_mulling");
+    }
+
+    function recordingUnloadWarningActive() {
+      return Boolean(audioRecordingActive() || audioRecordStoppingForRollover || audioRecordFinalizing);
     }
 
     function noteConversationActivity() {
@@ -5592,9 +5772,31 @@
       utterance.volume = currentBrain2VoiceVolume() / 100;
       utterance.rate = 1.12;
       utterance.pitch = 0.62;
+      utterance.onstart = () => {
+        brain2MonitorAudioActive = true;
+        brain2MonitorAudioUntil = Date.now() + Math.max(1800, value.length * 70);
+      };
+      utterance.onend = () => {
+        brain2MonitorAudioActive = false;
+        brain2MonitorAudioUntil = Date.now() + 500;
+      };
+      utterance.onerror = () => {
+        brain2MonitorAudioActive = false;
+        brain2MonitorAudioUntil = Date.now() + 500;
+      };
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
       logBrain2("voice", value);
+    }
+
+    function cancelBrain2MonitorSpeech() {
+      brain2MonitorAudioActive = false;
+      brain2MonitorAudioUntil = 0;
+      if (browserSpeechAvailable()) window.speechSynthesis.cancel();
+    }
+
+    function brain2MonitorAudioShouldMuteMic() {
+      return brain2MonitorAudioActive || Date.now() < brain2MonitorAudioUntil;
     }
 
     async function surfaceBrain2MouthText(mouthText) {
@@ -6921,6 +7123,90 @@
         typedStatus.textContent = "Sent to Eric";
         log(events, `typed user turn: ${text.slice(0, 120)}`);
       }
+    }
+
+    function operatorCommandBusyReason() {
+      if (!realtimeConnected()) return "connect first";
+      if (responseActive) return "response active";
+      if (pendingToolCalls > 0) return "tool pending";
+      if (userSpeechActive) return "user speaking";
+      return "";
+    }
+
+    function rememberOperatorCommandSeq(seq) {
+      const value = Number(seq) || 0;
+      if (value <= operatorCommandLastSeq) return;
+      operatorCommandLastSeq = value;
+      localStorage.setItem(operatorCommandSeqStorageKey, String(operatorCommandLastSeq));
+      operatorBlockedSeq = 0;
+      operatorBlockedReason = "";
+    }
+
+    function handleOperatorCommand(command) {
+      const seq = Number(command?.seq) || 0;
+      const text = String(command?.text || "").trim();
+      const kind = String(command?.kind || "user_text").trim().toLowerCase();
+      if (!seq) return true;
+      if (!text) {
+        rememberOperatorCommandSeq(seq);
+        return true;
+      }
+      const blocked = operatorCommandBusyReason();
+      if (blocked) {
+        if (operatorBlockedSeq !== seq || operatorBlockedReason !== blocked) {
+          operatorBlockedSeq = seq;
+          operatorBlockedReason = blocked;
+          log(events, `operator command waiting: ${blocked}`);
+        }
+        return false;
+      }
+      if (kind === "say_text") {
+        sayTypedAsEric(text);
+        typedStatus.textContent = "Operator pronunciation sent";
+        log(events, `operator pronunciation: ${text.slice(0, 120)}`);
+      } else {
+        sendTypedUserTurn(text);
+        typedStatus.textContent = "Operator sent to Eric";
+        log(events, `operator user turn: ${text.slice(0, 120)}`);
+      }
+      rememberOperatorCommandSeq(seq);
+      return true;
+    }
+
+    function scheduleOperatorCommandPoll() {
+      if (operatorCommandPollTimer) clearTimeout(operatorCommandPollTimer);
+      operatorCommandPollTimer = setTimeout(pollOperatorCommands, operatorCommandPollMs);
+    }
+
+    async function pollOperatorCommands() {
+      if (window.__robot790PageUnloading) return;
+      if (operatorCommandPollInFlight) {
+        scheduleOperatorCommandPoll();
+        return;
+      }
+      operatorCommandPollInFlight = true;
+      try {
+        const url = new URL("/api/operator/poll", location.href);
+        url.searchParams.set("after", String(operatorCommandLastSeq));
+        const response = await fetch(url, { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        for (const command of result.commands || []) {
+          if (!handleOperatorCommand(command)) break;
+        }
+      } catch (error) {
+        log(events, `operator poll error: ${error.message}`);
+      } finally {
+        operatorCommandPollInFlight = false;
+        scheduleOperatorCommandPoll();
+      }
+    }
+
+    function startOperatorCommandPolling() {
+      operatorCommandLastSeq = Number(localStorage.getItem(operatorCommandSeqStorageKey) || "0") || 0;
+      scheduleOperatorCommandPoll();
     }
 
     function normalizeFaceBaseUrl() {
@@ -9163,8 +9449,9 @@
     function updateAudioRecordButtons() {
       const supported = audioRecordingSupported();
       const isRecording = audioRecorder && audioRecorder.state === "recording";
-      startAudioRecordButton.disabled = !supported || isRecording;
-      stopAudioRecordButton.disabled = !isRecording;
+      const isBusy = Boolean(audioRecordFinalizing || audioRecordStoppingForRollover);
+      startAudioRecordButton.disabled = !supported || isRecording || isBusy;
+      stopAudioRecordButton.disabled = !isRecording || isBusy;
       if (!supported) audioRecordStatus.textContent = "Browser recording is not supported.";
     }
 
@@ -9191,8 +9478,9 @@
         return;
       }
       audioRecordStoppingForRollover = true;
+      audioRecordFinalizing = true;
       clearAudioRecordRolloverTimer();
-      audioRecordStatus.textContent = "Finalizing recording...";
+      audioRecordStatus.textContent = "Finalizing recording; please wait...";
       updateAudioRecordButtons();
       updateSessionTools();
       Promise.resolve(cover)
@@ -9417,8 +9705,12 @@
         if (event.data && event.data.size > 0) audioRecordChunks.push(event.data);
       });
       audioRecorder.addEventListener("stop", async () => {
-        const restartAfterStop = audioRecordStoppingForRollover && Boolean(micStream);
-        const snapshotAfterStop = audioRecordSnapshotAfterStop && !restartAfterStop;
+        audioRecordFinalizing = true;
+        updateAudioRecordButtons();
+        updateSessionTools();
+        const wasRolloverStop = audioRecordStoppingForRollover;
+        const restartAfterStop = wasRolloverStop && Boolean(micStream);
+        const snapshotAfterStop = !restartAfterStop && (audioRecordSnapshotAfterStop || !wasRolloverStop);
         audioRecordSnapshotAfterStop = false;
         audioRecordStoppingForRollover = false;
         clearAudioRecordRolloverTimer();
@@ -9504,7 +9796,7 @@
         }
         if (snapshotAfterStop) {
           const priorStatus = audioRecordStatus.textContent || `Saved ${savedRecordingName}`;
-          audioRecordStatus.textContent = `${priorStatus} Snapshotting panes...`;
+          audioRecordStatus.textContent = `${priorStatus} Snapshotting panes; please wait...`;
           try {
             await recordAudioStopSnapshots({
               recordingResult: uploadResult,
@@ -9516,6 +9808,7 @@
           }
           audioRecordStatus.textContent = priorStatus;
         }
+        audioRecordFinalizing = false;
         updateAudioRecordButtons();
         updateSessionTools();
         if (restartAfterStop) {
@@ -9537,8 +9830,9 @@
       if (!audioRecorder || audioRecorder.state !== "recording") return;
       audioRecordStoppingForRollover = Boolean(rollover);
       audioRecordSnapshotAfterStop = !rollover;
+      audioRecordFinalizing = true;
       clearAudioRecordRolloverTimer();
-      audioRecordStatus.textContent = "Finalizing recording...";
+      audioRecordStatus.textContent = "Finalizing recording; please wait...";
       audioRecorder.stop();
       updateAudioRecordButtons();
       updateSessionTools();
@@ -9781,6 +10075,7 @@
         clearIdleSchedulerStatusTimer();
         clearBrain2Timer();
         clearBrain2SurfaceTimer();
+        cancelBrain2MonitorSpeech();
         if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
         imageToolProtectionTimer = null;
         imageToolProtectionUntil = 0;
@@ -9890,6 +10185,7 @@
         for (const sample of input) peak = Math.max(peak, Math.abs(sample));
         level.style.width = `${Math.min(100, peak * 180)}%`;
         maybeBargeInFromMicPeak(peak);
+        if (brain2MonitorAudioShouldMuteMic()) return;
         const pcm16 = float32ToPcm16(resample(input, micContext.sampleRate, 16000));
         send({ type: "input_audio_buffer.append", audio: bytesToB64(pcm16) });
       };
@@ -10150,9 +10446,25 @@
     llmNoteFileTools.addEventListener("change", updateSessionTools);
     llmSmartHomeTools.addEventListener("change", updateSessionTools);
     faceUrl.addEventListener("change", () => {
-      currentEmbodimentKey = matchingConfiguredEmbodimentKey(normalizeFaceBaseUrl());
+      syncEmbodimentSelect();
       updateSessionTools();
     });
+    if (embodimentSelect) {
+      embodimentSelect.addEventListener("change", () => {
+        const embodiment = embodimentSelect.value;
+        if (!embodiment) {
+          syncEmbodimentSelect();
+          return;
+        }
+        setEmbodiment({ embodiment, reason: "manual UI selection" }).then(
+          () => log(events, `embodiment selected: ${embodiment}`),
+          (error) => {
+            syncEmbodimentSelect();
+            log(events, `embodiment select error: ${error.message}`);
+          }
+        );
+      });
+    }
     loadEricMemories.addEventListener("change", handleEricMemoriesPrefChange);
     ttsVoice.addEventListener("change", () => updateSessionTtsStyle());
     ttsPrecision.addEventListener("change", () => {
@@ -10317,12 +10629,17 @@
     showEssentialsButton.addEventListener("click", showEssentialPanels);
     collapsePanelsButton.addEventListener("click", collapseAllPanels);
     window.addEventListener("resize", scheduleLogPaneHeightUpdate);
+    window.addEventListener("beforeunload", (event) => {
+      if (!recordingUnloadWarningActive()) return undefined;
+      beaconAllLogSnapshots();
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    });
     window.addEventListener("pagehide", () => {
       window.__robot790PageUnloading = true;
       closeConversationPopout({ quiet: true });
-      beaconLogSnapshot(conversation, "conversation");
-      beaconLogSnapshot(events, "events");
-      beaconLogSnapshot(brain2Log, "brain2_mulling");
+      beaconAllLogSnapshots();
       stopVisionCamera({ quiet: true });
     });
     document.querySelectorAll(".settings-panel").forEach((panel) => {
@@ -10357,6 +10674,7 @@
     loadToolPrefs();
     loadRunPreset();
     loadLogDisplayControls();
+    applyOperatorDefaultsOnce();
     ensureRuntimeConfigLoaded();
     renderMemory();
     updateLabGoalUi({ quiet: true });
@@ -10368,6 +10686,7 @@
     loadStartupNotes();
     if (contextPanel.open) renderContextMap();
     scheduleLogPaneHeightUpdate();
+    startOperatorCommandPolling();
     setInterval(() => autosaveSessionLogs(), logAutosaveMs);
     if (browserSpeechAvailable()) {
       window.speechSynthesis.onvoiceschanged = populateBrain2Voices;
