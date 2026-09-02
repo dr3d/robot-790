@@ -13,6 +13,7 @@ const logList = document.querySelector("#log-list");
 const logReader = document.querySelector("#log-reader");
 const pageHeader = document.querySelector(".page-header");
 const randomBanner = document.querySelector("#random-banner");
+const githubDocsBase = "https://github.com/dr3d/robot-790/blob/master/docs/";
 
 const bannerLines = [
   "The room has started keeping receipts.",
@@ -121,6 +122,12 @@ function renderMarkdown(markdown) {
   return html.join("\n");
 }
 
+function renderedMarkdownUrl(source) {
+  const value = String(source || "");
+  if (!/\.md$/i.test(value) || /^[a-z]+:/i.test(value) || value.startsWith("//")) return value;
+  return `${githubDocsBase}${value.replace(/^\/+/, "")}`;
+}
+
 function showArticles(articles) {
   if (!articles.length) {
     articleList.innerHTML = '<p class="empty">No articles found yet.</p>';
@@ -136,7 +143,7 @@ function showArticles(articles) {
       </div>
       <div class="card-actions">
         <button type="button" data-read-article="${index}">Read Here</button>
-        <a href="${escapeHtml(article.source)}">Open File</a>
+        <a href="${escapeHtml(renderedMarkdownUrl(article.source))}">Open File</a>
       </div>
     </section>
   `).join("");
