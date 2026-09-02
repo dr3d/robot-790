@@ -175,6 +175,12 @@ function Get-MediaDescription {
     return ""
 }
 
+function Get-PublicLogStem {
+    param([System.IO.FileInfo]$File)
+    $base = [System.IO.Path]::GetFileNameWithoutExtension($File.Name)
+    return $base -replace "[-_](conversation|events|brain2_mulling|session|recording_stop_report)$", ""
+}
+
 $articles = @()
 $articleDir = Join-Path $root "articles"
 if (Test-Path $articleDir) {
@@ -199,6 +205,14 @@ if (Test-Path $logDir) {
     $logExtensions = @(".txt", ".log", ".md")
     $logs = Get-ChildItem -Path $logDir -File -Recurse |
         Where-Object { $logExtensions -contains $_.Extension.ToLowerInvariant() -and $_.Name -ne "README.md" } |
+        Group-Object { Get-PublicLogStem $_ } |
+        ForEach-Object {
+            $_.Group |
+                Sort-Object @{ Expression = { $_.LastWriteTime }; Descending = $true },
+                            @{ Expression = { $_.Length }; Descending = $true },
+                            @{ Expression = { $_.Name }; Descending = $true } |
+                Select-Object -First 1
+        } |
         Sort-Object LastWriteTime -Descending |
         ForEach-Object {
             [ordered]@{

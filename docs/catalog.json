@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-02 19:10:51",
+    "generated":  "2026-09-02 19:15:59",
     "articles":  [
                      {
                          "title":  "Browser Face, Inner Voice, And The Kitty Seed",
@@ -87,45 +87,9 @@
                      "modified":  "2026-09-02 10:22"
                  },
                  {
-                     "title":  "Eric Answers Codex 2026 09 02 102214 brain2 mulling",
-                     "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-brain2_mulling.txt",
-                     "bytes":  242,
-                     "modified":  "2026-09-02 10:22"
-                 },
-                 {
-                     "title":  "Eric Answers Codex 2026 09 02 102214 events",
-                     "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-events.txt",
-                     "bytes":  227913,
-                     "modified":  "2026-09-02 10:22"
-                 },
-                 {
-                     "title":  "Eric Answers Codex 2026 09 02 102214 conversation",
-                     "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-conversation.txt",
-                     "bytes":  11667,
-                     "modified":  "2026-09-02 10:22"
-                 },
-                 {
                      "title":  "A Night In The Lab 2026 09 02 020125 session",
                      "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-session.txt",
                      "bytes":  1060005,
-                     "modified":  "2026-09-02 02:01"
-                 },
-                 {
-                     "title":  "A Night In The Lab 2026 09 02 020125 brain2 mulling",
-                     "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-brain2_mulling.txt",
-                     "bytes":  277,
-                     "modified":  "2026-09-02 02:01"
-                 },
-                 {
-                     "title":  "A Night In The Lab 2026 09 02 020125 events",
-                     "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-events.txt",
-                     "bytes":  900462,
-                     "modified":  "2026-09-02 02:01"
-                 },
-                 {
-                     "title":  "A Night In The Lab 2026 09 02 020125 conversation",
-                     "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-conversation.txt",
-                     "bytes":  24859,
                      "modified":  "2026-09-02 02:01"
                  },
                  {
@@ -135,21 +99,9 @@
                      "modified":  "2026-09-01 22:38"
                  },
                  {
-                     "title":  "20260901 223850 sts audio session picture conversation",
-                     "source":  "logs/20260901-223850-sts-audio-session-picture-conversation.txt",
-                     "bytes":  4813,
-                     "modified":  "2026-09-01 22:38"
-                 },
-                 {
                      "title":  "Eric Picks The Crack 2026 09 01 112740 events",
                      "source":  "logs/Eric-Picks-The-Crack-2026-09-01-112740-events.txt",
                      "bytes":  229215,
-                     "modified":  "2026-09-01 11:28"
-                 },
-                 {
-                     "title":  "Eric Picks The Crack 2026 09 01 112740 conversation",
-                     "source":  "logs/Eric-Picks-The-Crack-2026-09-01-112740-conversation.txt",
-                     "bytes":  8866,
                      "modified":  "2026-09-01 11:28"
                  },
                  {
@@ -162,12 +114,6 @@
                      "title":  "20260830 021634 sts audio picture events",
                      "source":  "logs/20260830-021634-sts-audio-picture-events.txt",
                      "bytes":  2118087,
-                     "modified":  "2026-08-30 02:16"
-                 },
-                 {
-                     "title":  "20260830 021634 sts audio picture conversation",
-                     "source":  "logs/20260830-021634-sts-audio-picture-conversation.txt",
-                     "bytes":  105268,
                      "modified":  "2026-08-30 02:16"
                  },
                  {
