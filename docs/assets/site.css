@@ -366,6 +366,22 @@ code {
   color: var(--muted);
 }
 
+.media-caption-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.media-caption-bar span {
+  color: var(--muted);
+}
+
+.media-share {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
 .media-analysis {
   height: clamp(120px, 20vh, 250px);
   overflow: auto;
@@ -441,5 +457,9 @@ code {
     height: auto;
     max-height: 220px;
     resize: none;
+  }
+
+  .media-caption-bar {
+    display: grid;
   }
 }

@@ -14,6 +14,7 @@ const logReader = document.querySelector("#log-reader");
 const pageHeader = document.querySelector(".page-header");
 const randomBanner = document.querySelector("#random-banner");
 const githubDocsBase = "https://github.com/dr3d/robot-790/blob/master/docs/";
+let currentMedia = null;
 
 const bannerLines = [
   "The room has started keeping receipts.",
@@ -246,11 +247,61 @@ function showMedia(mediaItems) {
   mediaList.querySelectorAll("[data-media]").forEach((button) => {
     button.addEventListener("click", () => selectMedia(mediaItems[Number(button.dataset.media)], button));
   });
-  const firstButton = mediaList.querySelector("[data-media]");
-  selectMedia(mediaItems[0], firstButton);
+  const requested = requestedMediaSource();
+  const selectedIndex = requested
+    ? mediaItems.findIndex((media) => media.source === requested)
+    : -1;
+  const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const targetButton = mediaList.querySelector(`[data-media="${targetIndex}"]`);
+  selectMedia(mediaItems[targetIndex], targetButton, { replaceUrl: false });
+  if (selectedIndex >= 0 && location.hash === "#media") {
+    requestAnimationFrame(() => {
+      document.querySelector("#media")?.scrollIntoView({ block: "start" });
+    });
+  }
 }
 
-function selectMedia(media, selectedButton = null) {
+function requestedMediaSource() {
+  try {
+    return new URL(location.href).searchParams.get("media") || "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+function mediaShareUrl(media) {
+  const url = new URL(location.href);
+  url.searchParams.set("media", media.source);
+  url.hash = "media";
+  return url.toString();
+}
+
+async function copyMediaShareUrl(media, button) {
+  const shareUrl = mediaShareUrl(media);
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: media.title, url: shareUrl });
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareUrl);
+    } else {
+      window.prompt("Copy media link", shareUrl);
+    }
+    if (button) {
+      const previous = button.textContent;
+      button.textContent = "Copied";
+      window.setTimeout(() => {
+        button.textContent = previous;
+      }, 1400);
+    }
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      window.prompt("Copy media link", shareUrl);
+    }
+  }
+}
+
+function selectMedia(media, selectedButton = null, { replaceUrl = true } = {}) {
+  currentMedia = media;
   mediaList.querySelectorAll("[data-media]").forEach((button) => {
     const selected = button === selectedButton;
     button.classList.toggle("selected", selected);
@@ -279,9 +330,23 @@ function selectMedia(media, selectedButton = null) {
     ? escapeHtml(media.description)
     : "No curation note for this item yet.";
   mediaCaption.innerHTML = `
-    <span>${escapeHtml(meta)}</span>
+    <div class="media-caption-bar">
+      <span>${escapeHtml(meta)}</span>
+      <button type="button" class="media-share" data-share-media>Share</button>
+    </div>
     <p class="media-analysis" tabindex="0">${description}</p>
   `;
+  mediaCaption.querySelector("[data-share-media]")?.addEventListener("click", (event) => {
+    copyMediaShareUrl(currentMedia, event.currentTarget);
+  });
+  if (replaceUrl) {
+    const url = new URL(location.href);
+    if (url.searchParams.has("media")) {
+      url.searchParams.set("media", media.source);
+      url.hash = "media";
+      history.replaceState(null, "", url);
+    }
+  }
 }
 
 async function selectLog(log, selectedButton) {
