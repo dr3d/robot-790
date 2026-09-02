@@ -1,6 +1,52 @@
 from robot_790d import sts_page_server
 
 
+def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    (config_dir / "runtime.json").write_text(
+        """
+        {
+          "current_embodiment": "Current test body.",
+          "body_trajectory": "Bodies are test fixtures.",
+          "idle_level12_cooldown_s": 3.5,
+          "default_embodiment": "mask",
+          "embodiments": [
+            {
+              "key": "mask",
+              "label": "Mask face",
+              "face_url": "http://esp32-eyes.local/",
+              "description": "External mask rig."
+            },
+            {
+              "key": "",
+              "face_url": "http://ignored.local/"
+            }
+          ],
+          "session_behavior_rules": ["Advance, do not echo."]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    result = sts_page_server.runtime_config(repo_root=tmp_path)
+
+    assert result["status"] == "ok"
+    assert result["current_embodiment"] == "Current test body."
+    assert result["body_trajectory"] == "Bodies are test fixtures."
+    assert result["idle_level12_cooldown_s"] == 3.5
+    assert result["default_embodiment"] == "mask"
+    assert result["session_behavior_rules"] == ["Advance, do not echo."]
+    assert result["embodiments"] == [
+        {
+            "key": "mask",
+            "label": "Mask face",
+            "face_url": "http://esp32-eyes.local/",
+            "description": "External mask rig.",
+        }
+    ]
+
+
 def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
     calls = []
 
@@ -44,6 +90,7 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
             "conversation": "Scott: I keep seeing it differently on replay.\nRobot 790: The cold pass has teeth.",
             "person_focus": 8,
             "voice_shape": "loud-mid, trailing",
+            "recent_brain2": "- mouth: replay changes the room",
         }
     )
 
@@ -54,6 +101,7 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
     assert result["should_surface"] is True
     assert result["person_focus"] == 8
     assert calls[0][0] == "http://127.0.0.1:1234/v1/chat/completions"
+    assert "Recent Brain 2 outputs to avoid repeating" in calls[0][2]["messages"][1]["content"]
 
 
 def test_mull_second_brain_requires_recent_conversation() -> None:
@@ -137,6 +185,17 @@ def test_record_log_snapshot_accepts_brain2_mulling_source(tmp_path) -> None:
 
     assert result["source"] == "brain2_mulling"
     assert (tmp_path / result["latest"]).name == "latest-brain2_mulling.txt"
+
+
+def test_record_log_snapshot_accepts_recording_stop_report_source(tmp_path) -> None:
+    result = sts_page_server.record_log_snapshot(
+        "recording_stop_report",
+        "Curation Signals\nBrain2 / Inner Lane\nProsody / STT Shape",
+        repo_root=tmp_path,
+    )
+
+    assert result["source"] == "recording_stop_report"
+    assert (tmp_path / result["latest"]).name == "latest-recording_stop_report.txt"
 
 
 def test_record_audio_snapshot_returns_picture_mp4(monkeypatch, tmp_path) -> None:
@@ -324,6 +383,120 @@ def test_finalize_audio_recording_session_sequences_chunk_videos(monkeypatch, tm
     assert (tmp_path / result["raw_latest"]).read_bytes() == b"raw together"
 
 
+def test_finalize_audio_recording_session_sorts_chunks_by_index(monkeypatch, tmp_path) -> None:
+    audio_dir = tmp_path / "logs" / "audio"
+    audio_dir.mkdir(parents=True)
+    first_raw = audio_dir / "first-source.webm"
+    second_raw = audio_dir / "second-source.webm"
+    first_mp4 = audio_dir / "first-picture.mp4"
+    second_mp4 = audio_dir / "second-picture.mp4"
+    for path in [first_raw, second_raw, first_mp4, second_mp4]:
+        path.write_bytes(path.name.encode("utf-8"))
+
+    def fake_concat_audio(paths, output_path, _repo_root):
+        assert paths == [first_raw, second_raw]
+        output_path.write_bytes(b"raw timeline")
+        return {"status": "ok"}
+
+    def fake_concat_video(paths, output_path, _repo_root):
+        assert paths == [first_mp4, second_mp4]
+        output_path.write_bytes(b"video timeline")
+        return {"status": "ok", "duration_s": 7.5}
+
+    monkeypatch.setattr(sts_page_server, "_concat_audio_sources", fake_concat_audio)
+    monkeypatch.setattr(sts_page_server, "_concat_picture_audio_mp4s", fake_concat_video)
+
+    result = sts_page_server.finalize_audio_recording_session(
+        [
+            {
+                "index": 1,
+                "raw_filename": "logs/audio/second-source.webm",
+                "filename": "logs/audio/second-picture.mp4",
+                "image_filename": "second-cover.jpg",
+                "captioned": False,
+                "caption_events": 0,
+            },
+            {
+                "index": 0,
+                "raw_filename": "logs/audio/first-source.webm",
+                "filename": "logs/audio/first-picture.mp4",
+                "image_filename": "first-cover.jpg",
+                "captioned": True,
+                "caption_events": 2,
+            },
+        ],
+        repo_root=tmp_path,
+    )
+
+    assert result["status"] == "ok"
+    assert result["video_spliced"] is True
+    assert result["image_filename"] == "second-cover.jpg"
+    assert result["captioned"] is True
+    assert result["caption_events"] == 2
+    assert (tmp_path / result["latest"]).read_bytes() == b"video timeline"
+    assert (tmp_path / result["raw_latest"]).read_bytes() == b"raw timeline"
+
+
+def test_finalize_audio_recording_session_preserves_first_placeholder_cover(monkeypatch, tmp_path) -> None:
+    audio_dir = tmp_path / "logs" / "audio"
+    audio_dir.mkdir(parents=True)
+    first_raw = audio_dir / "first-source.webm"
+    second_raw = audio_dir / "second-source.webm"
+    first_mp4 = audio_dir / "first-picture.mp4"
+    second_mp4 = audio_dir / "second-picture.mp4"
+    first_cover = audio_dir / "first-placeholder-cover.jpg"
+    second_cover = audio_dir / "second-real-cover.jpg"
+    final_cover = audio_dir / "final-cover.jpg"
+    for path in [first_raw, second_raw, first_mp4, second_mp4, first_cover, second_cover, final_cover]:
+        path.write_bytes(path.name.encode("utf-8"))
+
+    selected_images = []
+
+    def fake_concat_audio(paths, output_path, _repo_root):
+        assert paths == [first_raw, second_raw]
+        output_path.write_bytes(b"raw together")
+        return {"status": "ok"}
+
+    def fake_convert(audio_path, output_path, selected_image_path, _repo_root, **_kwargs):
+        selected_images.append((audio_path, selected_image_path))
+        output_path.write_bytes(f"{audio_path.name}:{selected_image_path.name}".encode("utf-8"))
+        return {"status": "ok", "duration_s": 3.0}
+
+    def fake_concat_video(paths, output_path, _repo_root):
+        assert paths != [first_mp4, second_mp4]
+        assert all(path.name.endswith(".mp4") for path in paths)
+        output_path.write_bytes(b"video together")
+        return {"status": "ok", "duration_s": 5.8}
+
+    monkeypatch.setattr(sts_page_server, "_concat_audio_sources", fake_concat_audio)
+    monkeypatch.setattr(sts_page_server, "_make_picture_audio_mp4", fake_convert)
+    monkeypatch.setattr(sts_page_server, "_concat_picture_audio_mp4s", fake_concat_video)
+
+    result = sts_page_server.finalize_audio_recording_session(
+        [
+            {
+                "raw_filename": "logs/audio/first-source.webm",
+                "filename": "logs/audio/first-picture.mp4",
+                "image_filename": "first-placeholder-cover.jpg",
+                "cover_source": "previous visual placeholder",
+            },
+            {
+                "raw_filename": "logs/audio/second-source.webm",
+                "filename": "logs/audio/second-picture.mp4",
+                "image_filename": "second-real-cover.jpg",
+                "cover_source": "sensing eye",
+            },
+        ],
+        repo_root=tmp_path,
+        image_filename="final-cover.jpg",
+    )
+
+    assert result["status"] == "ok"
+    assert result["video_spliced"] is True
+    assert [image for _audio, image in selected_images] == [first_cover, second_cover]
+    assert result["image_filename"] == "second-real-cover.jpg"
+
+
 def test_concat_picture_audio_mp4s_crossfades_chunks(monkeypatch, tmp_path) -> None:
     first = tmp_path / "first-picture.mp4"
     second = tmp_path / "second-picture.mp4"
@@ -356,8 +529,11 @@ def test_concat_picture_audio_mp4s_crossfades_chunks(monkeypatch, tmp_path) -> N
     assert result["crossfaded"] is True
     assert result["crossfade_s"] == 0.4
     command = " ".join(calls[0])
-    assert "xfade=transition=fade:duration=0.400:offset=3.600" in command
-    assert "acrossfade=d=0.400" in command
+    assert "fade=t=out:st=3.600:d=0.400" in command
+    assert "fade=t=in:st=0:d=0.400" in command
+    assert "afade=t=out:st=3.600:d=0.400" in command
+    assert "afade=t=in:st=0:d=0.400" in command
+    assert "concat=n=2:v=1:a=1[vout][aout]" in command
 
 
 def test_finalize_audio_recording_session_requires_two_chunks(tmp_path) -> None:
@@ -406,12 +582,32 @@ def test_recording_audio_filter_can_trim_silence(monkeypatch) -> None:
 
     value = sts_page_server._recording_audio_filter(trim_silence=True)
 
-    assert value.startswith("aresample=async=1:first_pts=0,silenceremove=")
+    assert value.startswith("aresample=async=1:first_pts=0,")
     assert "start_threshold=-42dB" in value
     assert value.count("start_threshold=-42dB") == 2
     assert "start_duration=1.250" in value
     assert "start_silence=0.200" in value
     assert ",areverse,silenceremove=" in value
+
+
+def test_recording_audio_filter_cleans_boomy_mic_by_default(monkeypatch) -> None:
+    monkeypatch.delenv("ROBOT_790_AUDIO_CLEANUP", raising=False)
+
+    value = sts_page_server._recording_audio_filter(trim_silence=False)
+
+    assert "highpass=f=90.0" in value
+    assert "equalizer=f=180.0:t=q:w=1.1:g=-4.5" in value
+    assert "equalizer=f=320.0:t=q:w=1.0:g=-2.5" in value
+    assert "acompressor=threshold=-20dB:ratio=2:attack=8:release=80:makeup=1" in value
+    assert "alimiter=limit=0.97" in value
+
+
+def test_recording_audio_filter_cleanup_can_be_disabled(monkeypatch) -> None:
+    monkeypatch.setenv("ROBOT_790_AUDIO_CLEANUP", "false")
+
+    value = sts_page_server._recording_audio_filter(trim_silence=False)
+
+    assert value == "aresample=async=1:first_pts=0"
 
 
 def test_recording_audio_filter_keeps_more_tail_by_default(monkeypatch) -> None:

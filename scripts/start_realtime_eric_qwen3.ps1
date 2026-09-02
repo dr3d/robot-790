@@ -15,7 +15,7 @@ param(
     [ValidateSet("bfloat16", "float16")]
     [string] $TtsDtype = "bfloat16",
     [string] $Speaker = "Eric",
-    [string] $TtsInstruct = "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
+    [string] $TtsInstruct = "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
     [string] $PromptPath = "",
     [string[]] $ExtraArgs = @()
 )

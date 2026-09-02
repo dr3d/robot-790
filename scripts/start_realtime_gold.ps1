@@ -34,4 +34,4 @@ try {
     -AudioMaxTokens 64 `
     -TtsDtype "bfloat16" `
     -Speaker "Eric" `
-    -TtsInstruct "Speak as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation."
+    -TtsInstruct "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation."

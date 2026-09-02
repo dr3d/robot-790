@@ -26,6 +26,25 @@ from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
 
 AUDIO_RECORDING_URL_PREFIX = "/recorded-audio/"
+DEFAULT_CURRENT_EMBODIMENT = (
+    "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, "
+    "and optional tracked chassis tools when connected."
+)
+DEFAULT_BODY_TRAJECTORY = (
+    "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results "
+    "as the authority on what you can currently do."
+)
+DEFAULT_SESSION_BEHAVIOR_RULES = [
+    (
+        "Do not reflexively repeat the user's phrasing back as confirmation; answer with the next useful "
+        "consequence, a new observation, or a short clarifying question."
+    ),
+    (
+        "Only restate the user's words when correcting a misheard term, naming a specific thing they asked "
+        "you to track, or making a deliberate revision."
+    ),
+]
+RUNTIME_CONFIG_PATH = Path("config") / "runtime.json"
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
@@ -112,29 +131,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         self._send_json(200, get_brain_status())
 
     def _handle_runtime_config(self) -> None:
-        current_embodiment = (
-            _env_text("ROBOT_790_CURRENT_EMBODIMENT")
-            or (
-                "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, "
-                "and optional tracked chassis tools when connected."
-            )
-        )
-        body_trajectory = (
-            _env_text("ROBOT_790_BODY_TRAJECTORY")
-            or (
-                "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results "
-                "as the authority on what you can currently do."
-            )
-        )
-        self._send_json(
-            200,
-            {
-                "status": "ok",
-                "current_embodiment": current_embodiment,
-                "body_trajectory": body_trajectory,
-                "idle_level12_cooldown_s": _env_float("ROBOT_790_IDLE_LEVEL12_COOLDOWN_S", 12.0),
-            },
-        )
+        self._send_json(200, runtime_config())
 
     def _handle_note_read(self, query_string: str) -> None:
         params = parse_qs(query_string)
@@ -535,6 +532,101 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
+def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
+    root = repo_root or Path(__file__).resolve().parents[2]
+    payload = _load_runtime_config_file(root)
+    config_error = payload.pop("_error", "")
+    current_embodiment = _env_text("ROBOT_790_CURRENT_EMBODIMENT") or _runtime_string(
+        payload,
+        "current_embodiment",
+        DEFAULT_CURRENT_EMBODIMENT,
+    )
+    body_trajectory = _env_text("ROBOT_790_BODY_TRAJECTORY") or _runtime_string(
+        payload,
+        "body_trajectory",
+        DEFAULT_BODY_TRAJECTORY,
+    )
+    idle_level12_cooldown_s = _env_float(
+        "ROBOT_790_IDLE_LEVEL12_COOLDOWN_S",
+        _runtime_float(payload, "idle_level12_cooldown_s", 12.0),
+    )
+    result: dict[str, object] = {
+        "status": "ok",
+        "current_embodiment": current_embodiment,
+        "body_trajectory": body_trajectory,
+        "idle_level12_cooldown_s": idle_level12_cooldown_s,
+        "session_behavior_rules": _runtime_string_list(
+            payload,
+            "session_behavior_rules",
+            DEFAULT_SESSION_BEHAVIOR_RULES,
+        ),
+        "default_embodiment": _runtime_string(payload, "default_embodiment", ""),
+        "embodiments": _runtime_embodiments(payload.get("embodiments")),
+    }
+    if config_error:
+        result["config_warning"] = config_error
+    return result
+
+
+def _load_runtime_config_file(repo_root: Path) -> dict[str, object]:
+    path = repo_root / RUNTIME_CONFIG_PATH
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"_error": f"Could not load {RUNTIME_CONFIG_PATH}: {exc}"}
+    return parsed if isinstance(parsed, dict) else {"_error": f"{RUNTIME_CONFIG_PATH} must contain a JSON object."}
+
+
+def _runtime_string(payload: dict[str, object], key: str, default: str) -> str:
+    value = payload.get(key)
+    if isinstance(value, str):
+        normalized = " ".join(value.split())
+        if normalized:
+            return normalized
+    return default
+
+
+def _runtime_float(payload: dict[str, object], key: str, default: float) -> float:
+    try:
+        return float(payload.get(key, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def _runtime_string_list(payload: dict[str, object], key: str, default: list[str]) -> list[str]:
+    value = payload.get(key)
+    if not isinstance(value, list):
+        return list(default)
+    rules = [" ".join(str(item).split()) for item in value if " ".join(str(item).split())]
+    return rules or list(default)
+
+
+def _runtime_embodiments(value: object) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    embodiments: list[dict[str, str]] = []
+    for item in value[:20]:
+        if not isinstance(item, dict):
+            continue
+        key = " ".join(str(item.get("key") or "").split())
+        label = " ".join(str(item.get("label") or "").split())
+        face_url = " ".join(str(item.get("face_url") or "").split())
+        description = " ".join(str(item.get("description") or "").split())
+        if not key or not face_url:
+            continue
+        embodiments.append(
+            {
+                "key": key,
+                "label": label or key,
+                "face_url": face_url,
+                "description": description,
+            }
+        )
+    return embodiments
+
+
 def _bounded_float_env(name: str, default: float, *, minimum: float, maximum: float) -> float:
     value = _env_float(name, default)
     return max(minimum, min(maximum, value))
@@ -593,6 +685,7 @@ def _safe_log_source(source: str) -> str:
         "events",
         "session",
         "brain2_mulling",
+        "recording_stop_report",
         "first_contact_report",
         "first_contact_direct_probe",
     }:
@@ -605,6 +698,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
     if len(conversation) < 12:
         raise ValueError("Brain 2 needs recent conversation to mull.")
     recent_idle = str(payload.get("recent_idle") or "").strip()
+    recent_brain2 = str(payload.get("recent_brain2") or "").strip()
     voice_shape = str(payload.get("voice_shape") or "").strip()
     mode = str(payload.get("mode") or "person").strip().lower()
     if mode not in {"person", "thread", "question"}:
@@ -638,6 +732,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "Mull the human in the room as an interesting person, not as a patient or customer. "
         "Stay curious, dry, compact, and non-caretaking. Do not diagnose mood, do not flatter, do not google the user, "
         "and do not claim certainty about private thoughts. Prefer one concrete observed conversational pattern. "
+        "Do not repeat your own recent Brain 2 observations; either advance the thought, revise it, or return empty strings. "
         "Return only JSON with keys mouth_text, question, revision_candidate, should_surface, reason. "
         "mouth_text must be 96 characters or less. revision_candidate is empty unless you want Brain 1 to later "
         "publicly take back, correct, or complicate an earlier claim; write it as a compact note such as "
@@ -651,10 +746,12 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             conversation[-2600:],
             f"Recent input prosody tags: {voice_shape[-500:]}" if voice_shape else "",
             f"Recent idle outputs:\n{recent_idle[-900:]}" if recent_idle else "",
+            f"Recent Brain 2 outputs to avoid repeating:\n{recent_brain2[-1100:]}" if recent_brain2 else "",
             (
                 "Task: produce one mouth-display thought fragment. If a useful question is forming, include it as question. "
                 "If an earlier claim needs revision, include it as revision_candidate for the speaking brain to consider later. "
-                "Use should_surface true only when it is worth showing on the mouth during a pause."
+                "Use should_surface true only when it is worth showing on the mouth during a pause. "
+                "If the only available thought is a repeat of recent Brain 2 output, return empty strings with should_surface false."
             ),
         ]
         if part
@@ -839,7 +936,8 @@ def finalize_audio_recording_session(
     audio_dir.mkdir(parents=True, exist_ok=True)
     if not isinstance(chunks, list):
         raise ValueError("Audio chunks must be a list.")
-    chunk_paths = _recording_chunk_paths(chunks, root)
+    ordered_chunks = _recording_chunks_in_timeline_order(chunks)
+    chunk_paths = _recording_chunk_paths(ordered_chunks, root)
     if len(chunk_paths) < 2:
         raise ValueError("At least two audio chunks are required to finalize a spliced recording.")
 
@@ -863,20 +961,39 @@ def finalize_audio_recording_session(
     mp4_path = audio_dir / mp4_filename
     mp4_latest_path = audio_dir / mp4_latest_name
     safe_captions = _normalize_recording_captions(captions or [])
-    picture_chunk_paths = _recording_chunk_picture_paths(chunks, root)
+    picture_chunk_paths = _recording_chunk_picture_paths(ordered_chunks, root)
     conversion: dict[str, object]
     image_path: Path | None = None
     video_spliced = False
-    if len(picture_chunk_paths) == len(chunk_paths):
+    temporary_picture_chunk_paths: list[Path] = []
+    if len(picture_chunk_paths) == len(chunk_paths) and not _recording_chunks_need_cover_rebuild(ordered_chunks):
         conversion = _concat_picture_audio_mp4s(picture_chunk_paths, mp4_path, root)
         if conversion.get("status") == "ok":
             video_spliced = True
         else:
             image_path = _selected_recording_final_image(root, audio_dir, image_filename)
             conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
+    elif _recording_chunks_have_cover_metadata(ordered_chunks):
+        rebuilt = _make_recording_chunk_picture_mp4s(ordered_chunks, chunk_paths, root, audio_dir, mp4_path, image_filename)
+        if rebuilt.get("status") == "ok":
+            temporary_picture_chunk_paths = list(rebuilt.get("paths") or [])
+            conversion = _concat_picture_audio_mp4s(temporary_picture_chunk_paths, mp4_path, root)
+            if conversion.get("status") == "ok":
+                video_spliced = True
+            else:
+                image_path = _selected_recording_final_image(root, audio_dir, image_filename)
+                conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
+        else:
+            image_path = _selected_recording_final_image(root, audio_dir, image_filename)
+            conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
     else:
         image_path = _selected_recording_final_image(root, audio_dir, image_filename)
         conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
+    for temporary_path in temporary_picture_chunk_paths:
+        try:
+            temporary_path.unlink()
+        except FileNotFoundError:
+            pass
     if conversion.get("status") != "ok":
         return {
             "status": "error",
@@ -888,8 +1005,8 @@ def finalize_audio_recording_session(
             "chunk_count": len(chunk_paths),
         }
     mp4_latest_path.write_bytes(mp4_path.read_bytes())
-    caption_events = _recording_chunk_caption_count(chunks) if video_spliced else len(safe_captions)
-    captioned = _recording_chunks_captioned(chunks) if video_spliced else bool(safe_captions) and bool(conversion.get("captioned", False))
+    caption_events = _recording_chunk_caption_count(ordered_chunks) if video_spliced else len(safe_captions)
+    captioned = _recording_chunks_captioned(ordered_chunks) if video_spliced else bool(safe_captions) and bool(conversion.get("captioned", False))
     return {
         "status": "ok",
         "tool": "finalize_audio_recording_session",
@@ -904,7 +1021,7 @@ def finalize_audio_recording_session(
         "bytes": mp4_path.stat().st_size,
         "raw_bytes": raw_path.stat().st_size,
         "mime_type": "video/webm",
-        "image_filename": image_path.name if image_path else _recording_last_image_filename(chunks),
+        "image_filename": image_path.name if image_path else _recording_last_image_filename(ordered_chunks),
         "image_path": str(image_path) if image_path else "",
         "duration_s": conversion.get("duration_s"),
         "trimmed_silence": conversion.get("trimmed_silence", False),
@@ -915,6 +1032,20 @@ def finalize_audio_recording_session(
         "crossfaded": bool(conversion.get("crossfaded", False)),
         "crossfade_s": conversion.get("crossfade_s"),
     }
+
+
+def _recording_chunks_in_timeline_order(chunks: list[object]) -> list[object]:
+    def sort_key(item: tuple[int, object]) -> tuple[int, float, int]:
+        position, chunk = item
+        if not isinstance(chunk, dict):
+            return (1, float(position), position)
+        try:
+            index = float(chunk.get("index"))  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return (1, float(position), position)
+        return (0, index, position)
+
+    return [chunk for _position, chunk in sorted(enumerate(chunks[:200]), key=sort_key)]
 
 
 def _recording_chunk_paths(chunks: list[object], repo_root: Path) -> list[Path]:
@@ -954,6 +1085,109 @@ def _recording_chunk_picture_paths(chunks: list[object], repo_root: Path) -> lis
     return paths
 
 
+def _recording_chunks_need_cover_rebuild(chunks: list[object]) -> bool:
+    for chunk in chunks[:200]:
+        if not isinstance(chunk, dict):
+            return True
+        if _recording_chunk_cover_is_placeholder(chunk):
+            return True
+    return False
+
+
+def _recording_chunks_have_cover_metadata(chunks: list[object]) -> bool:
+    for chunk in chunks[:200]:
+        if not isinstance(chunk, dict):
+            continue
+        if str(chunk.get("image_filename") or "").strip():
+            return True
+        if str(chunk.get("cover_source") or "").strip():
+            return True
+    return False
+
+
+def _recording_chunk_cover_is_placeholder(chunk: dict[str, object]) -> bool:
+    source = str(chunk.get("cover_source") or "").strip().lower()
+    image = _safe_media_filename(str(chunk.get("image_filename") or "")).lower()
+    return not image or "placeholder" in image or "placeholder" in source or source == "fallback"
+
+
+def _recording_image_path_for_filename(repo_root: Path, audio_dir: Path, image_filename: str = "") -> Path | None:
+    safe_name = _safe_media_filename(image_filename)
+    if not safe_name:
+        return None
+    audio_image = audio_dir / safe_name
+    if audio_image.is_file() and _is_ffmpeg_image(audio_image):
+        return audio_image
+    try:
+        generated_image = generated_image_path(safe_name, repo_root)
+    except ValueError:
+        return None
+    if generated_image.is_file() and _is_ffmpeg_image(generated_image):
+        return generated_image
+    return None
+
+
+def _recording_chunk_image_paths(
+    chunks: list[object],
+    repo_root: Path,
+    audio_dir: Path,
+    fallback_image_filename: str = "",
+) -> list[Path]:
+    fallback = _selected_recording_final_image(repo_root, audio_dir, fallback_image_filename)
+    raw_images: list[tuple[Path | None, bool]] = []
+    first_real: Path | None = None
+    for chunk in chunks[:200]:
+        if not isinstance(chunk, dict):
+            raw_images.append((None, True))
+            continue
+        image_path = _recording_image_path_for_filename(repo_root, audio_dir, str(chunk.get("image_filename") or ""))
+        is_placeholder = _recording_chunk_cover_is_placeholder(chunk)
+        raw_images.append((image_path, is_placeholder))
+        if image_path is not None and not is_placeholder and first_real is None:
+            first_real = image_path
+
+    selected: list[Path] = []
+    last_real: Path | None = None
+    for index, (image_path, is_placeholder) in enumerate(raw_images):
+        if image_path is not None:
+            selected.append(image_path)
+        elif last_real is not None:
+            selected.append(last_real)
+        elif first_real is not None:
+            selected.append(first_real)
+        else:
+            selected.append(fallback)
+        if image_path is not None and not is_placeholder:
+            last_real = image_path
+    return selected
+
+
+def _make_recording_chunk_picture_mp4s(
+    chunks: list[object],
+    audio_paths: list[Path],
+    repo_root: Path,
+    audio_dir: Path,
+    output_path: Path,
+    image_filename: str = "",
+) -> dict[str, object]:
+    image_paths = _recording_chunk_image_paths(chunks, repo_root, audio_dir, image_filename)
+    if len(image_paths) != len(audio_paths):
+        return {"status": "error", "error": "Audio chunk and image chunk counts do not match."}
+    paths: list[Path] = []
+    try:
+        for index, (audio_path, image_path) in enumerate(zip(audio_paths, image_paths)):
+            chunk = chunks[index] if index < len(chunks) and isinstance(chunks[index], dict) else {}
+            captions = _normalize_recording_captions(chunk.get("captions") if isinstance(chunk.get("captions"), list) else [])
+            chunk_mp4 = output_path.with_name(f"{output_path.stem}.chunk-{index:03d}.mp4")
+            conversion = _make_picture_audio_mp4(audio_path, chunk_mp4, image_path, repo_root, captions=captions)
+            if conversion.get("status") != "ok":
+                return {"status": "error", "error": conversion.get("error") or "Could not convert chunk to MP4."}
+            paths.append(chunk_mp4)
+        return {"status": "ok", "paths": paths}
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
+
+
 def _recording_chunk_caption_count(chunks: list[object]) -> int:
     total = 0
     for chunk in chunks[:200]:
@@ -980,11 +1214,9 @@ def _recording_last_image_filename(chunks: list[object]) -> str:
 
 
 def _selected_recording_final_image(repo_root: Path, audio_dir: Path, image_filename: str = "") -> Path:
-    safe_name = _safe_media_filename(image_filename)
-    if safe_name:
-        audio_image = audio_dir / safe_name
-        if audio_image.is_file() and _is_ffmpeg_image(audio_image):
-            return audio_image
+    image_path = _recording_image_path_for_filename(repo_root, audio_dir, image_filename)
+    if image_path is not None:
+        return image_path
     return _selected_recording_image(repo_root, image_filename)
 
 
@@ -1109,38 +1341,44 @@ def _concat_picture_audio_mp4s_with_crossfade(
 
         filters: list[str] = []
         for index in range(len(video_paths)):
+            duration = durations[index]
+            video_filters = [
+                f"[{index}:v]fps=24",
+                "scale=512:512:force_original_aspect_ratio=decrease",
+                "pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black",
+                "format=yuv420p",
+                "setpts=PTS-STARTPTS",
+            ]
+            audio_filters = [
+                f"[{index}:a]aresample=async=1:first_pts=0",
+                "aformat=sample_rates=24000:channel_layouts=mono",
+                "asetpts=PTS-STARTPTS",
+            ]
+            if index > 0:
+                video_filters.append(f"fade=t=in:st=0:d={fade_text}")
+                audio_filters.append(f"afade=t=in:st=0:d={fade_text}")
+            if index < len(video_paths) - 1:
+                fade_out_start = max(0.0, duration - fade_s)
+                video_filters.append(f"fade=t=out:st={fade_out_start:.3f}:d={fade_text}")
+                audio_filters.append(f"afade=t=out:st={fade_out_start:.3f}:d={fade_text}")
             filters.append(
-                f"[{index}:v]fps=24,scale=512:512:force_original_aspect_ratio=decrease,"
-                f"pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p,setpts=PTS-STARTPTS[v{index}]"
+                f"{','.join(video_filters)}[v{index}]"
             )
             filters.append(
-                f"[{index}:a]aresample=async=1:first_pts=0,"
-                f"aformat=sample_rates=24000:channel_layouts=mono,asetpts=PTS-STARTPTS[a{index}]"
+                f"{','.join(audio_filters)}[a{index}]"
             )
 
-        video_label = "v0"
-        audio_label = "a0"
-        elapsed = durations[0]
-        for index in range(1, len(video_paths)):
-            offset = max(0.0, elapsed - fade_s)
-            next_video = f"vx{index}"
-            next_audio = f"ax{index}"
-            filters.append(
-                f"[{video_label}][v{index}]xfade=transition=fade:duration={fade_text}:offset={offset:.3f}[{next_video}]"
-            )
-            filters.append(f"[{audio_label}][a{index}]acrossfade=d={fade_text}:c1=tri:c2=tri[{next_audio}]")
-            video_label = next_video
-            audio_label = next_audio
-            elapsed = elapsed + durations[index] - fade_s
+        concat_inputs = "".join(f"[v{index}][a{index}]" for index in range(len(video_paths)))
+        filters.append(f"{concat_inputs}concat=n={len(video_paths)}:v=1:a=1[vout][aout]")
 
         args.extend(
             [
                 "-filter_complex",
                 ";".join(filters),
                 "-map",
-                f"[{video_label}]",
+                "[vout]",
                 "-map",
-                f"[{audio_label}]",
+                "[aout]",
                 "-c:v",
                 "libx264",
                 "-preset",
@@ -1470,6 +1708,21 @@ def _make_picture_audio_mp4(
 
 def _recording_audio_filter(*, trim_silence: bool) -> str:
     filters = ["aresample=async=1:first_pts=0"]
+    if _audio_recording_cleanup_enabled():
+        highpass_hz = _bounded_float_env("ROBOT_790_AUDIO_HIGHPASS_HZ", 90.0, minimum=20.0, maximum=250.0)
+        deboom_hz = _bounded_float_env("ROBOT_790_AUDIO_DEBOOM_HZ", 180.0, minimum=80.0, maximum=500.0)
+        deboom_gain_db = _bounded_float_env("ROBOT_790_AUDIO_DEBOOM_GAIN_DB", -4.5, minimum=-18.0, maximum=0.0)
+        debox_hz = _bounded_float_env("ROBOT_790_AUDIO_DEBOX_HZ", 320.0, minimum=120.0, maximum=900.0)
+        debox_gain_db = _bounded_float_env("ROBOT_790_AUDIO_DEBOX_GAIN_DB", -2.5, minimum=-18.0, maximum=0.0)
+        filters.extend(
+            [
+                f"highpass=f={highpass_hz:.1f}",
+                f"equalizer=f={deboom_hz:.1f}:t=q:w=1.1:g={deboom_gain_db:.1f}",
+                f"equalizer=f={debox_hz:.1f}:t=q:w=1.0:g={debox_gain_db:.1f}",
+                "acompressor=threshold=-20dB:ratio=2:attack=8:release=80:makeup=1",
+                "alimiter=limit=0.97",
+            ]
+        )
     if trim_silence and _audio_recording_trim_enabled():
         threshold = _env_text("ROBOT_790_AUDIO_TRIM_THRESHOLD") or "-45dB"
         silence_s = _bounded_float_env("ROBOT_790_AUDIO_TRIM_SILENCE_S", 0.8, minimum=0.1, maximum=5.0)
@@ -1595,6 +1848,11 @@ def _audio_recording_captions_enabled() -> bool:
 
 def _audio_recording_trim_enabled() -> bool:
     value = os.getenv("ROBOT_790_AUDIO_TRIM_SILENCE", "true").strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _audio_recording_cleanup_enabled() -> bool:
+    value = os.getenv("ROBOT_790_AUDIO_CLEANUP", "true").strip().lower()
     return value not in {"0", "false", "no", "off"}
 
 
