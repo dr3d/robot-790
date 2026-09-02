@@ -3190,6 +3190,12 @@
       return Math.max(floorMs, Math.round(ms / currentIdleFastClockSpeed()));
     }
 
+    function compressIdleCooldownMs(ms, { floorMs = 3000 } = {}) {
+      if (!idleFastClockEnabled() || !Number.isFinite(ms)) return ms;
+      const speed = currentIdleFastClockSpeed();
+      return Math.max(floorMs, Math.round(ms / (speed * speed)));
+    }
+
     function idleClockLabel() {
       return idleFastClockEnabled() ? `lab speed ${currentIdleFastClockSpeed()}x` : "real time";
     }
@@ -3217,7 +3223,7 @@
       if (!idleFastClockEnabled() || idleCooldownUntil <= Date.now()) return;
       const previousUntil = idleCooldownUntil;
       const remainingMs = previousUntil - Date.now();
-      const compressedMs = compressIdleMs(remainingMs, { floorMs: 5000 });
+      const compressedMs = compressIdleCooldownMs(remainingMs, { floorMs: 3000 });
       if (compressedMs >= remainingMs) return;
       idleCooldownUntil = Date.now() + compressedMs;
       log(events, `idle cooldown compressed by lab speed ${currentIdleFastClockSpeed()}x: ${Math.round(compressedMs / 1000)}s until ${new Date(idleCooldownUntil).toLocaleTimeString()}`);
@@ -5952,7 +5958,9 @@
         const level = currentIdleDrift();
         const yackMode = idleLevel12YackActive(level);
         const rawCooldownMs = yackMode ? idleLevel12CooldownMs() : (level >= 11 ? 8 : 15) * 60 * 1000;
-        const cooldownMs = compressIdleMs(rawCooldownMs, { floorMs: yackMode ? 3000 : idleFastClockEnabled() ? 5000 : 45000 });
+        const cooldownMs = idleFastClockEnabled()
+          ? compressIdleCooldownMs(rawCooldownMs, { floorMs: 3000 })
+          : compressIdleMs(rawCooldownMs, { floorMs: yackMode ? 3000 : 45000 });
         idleCooldownUntil = Date.now() + cooldownMs;
         idleExhaustionCount = 0;
         if (yackMode) {

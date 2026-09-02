@@ -25,9 +25,11 @@ active speed.
 Lab speed is meant to replace poking `Ponder` for observation runs. It
 compresses scheduler waits, user-turn settling, Brain 2 mull delays, Brain 2
 mouth-aside spacing, re-engage waits, search-repeat cooldowns, and loop
-cooldowns. It also ages idle topic retirement and search fatigue windows faster.
-It does not intentionally compress audio buffering, mic maintenance, recording
-rollovers, barge-in safety, or hardware animation holds.
+cooldowns. Loop-recovery cooldowns use a stronger fast-lab compression than
+ordinary scheduling waits: at `12x`, a 15-minute loop guard is about 6 seconds
+instead of about 75 seconds. It also ages idle topic retirement and search
+fatigue windows faster. It does not intentionally compress audio buffering, mic
+maintenance, recording rollovers, barge-in safety, or hardware animation holds.
 
 If an exhausted-loop cooldown was created at real time, moving `Lab speed`
 above `1x` compresses the remaining cooldown immediately. This keeps a
