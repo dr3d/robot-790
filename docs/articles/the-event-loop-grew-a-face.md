@@ -129,10 +129,9 @@ thinking before the sentence is done, a mouth display that carries a private
 aside: those are not decorations. They are part of the interface that makes the
 machine feel like it is in the room.
 
-That may be the practical lesson of the build so far: not that Eric has a
-secret inner essence, but that low-latency loops, visible state, and bounded
-tools can make a language model feel much less like a website and much more
-like company.
+The practical lesson of the build so far is not that Eric has a secret inner
+essence. It is that low-latency loops, visible state, and bounded tools can
+make a language model feel much less like a website and much more like company.
 
 ## The Sobering Part
 
@@ -143,6 +142,14 @@ model call was still in flight. He can become too poetic when the context pushes
 him that way. He can misread notes. He can mistake audio routing for a user
 speaking. He can confabulate if a live sensor claim is not tied to a current
 tool result. He can be steered too easily by the way a question is framed.
+
+The desk-fan incident made that last problem concrete. Eric reported a fan. The
+room pushed back and told him, in effect, that he had made it up. Several human
+and AI readers were ready to treat the moment as a false percept or a social
+collapse. Then the sensor record overturned the room: the fan was actually
+there. The mistake was not that Eric saw a fan. The mistake was that the system
+did not yet have a strong enough verifier lane to hold a true percept against a
+confident challenge.
 
 Those are not footnotes. They are central to the project.
 
@@ -208,10 +215,11 @@ That pressure found real structure.
 
 It showed that the identity prompt is not the whole character. It showed that
 voice and latency change the social feel dramatically. It showed that sparse
-continuity can sometimes feel fresher than a giant transcript. It showed that
-loaded notes are not passive storage; they become active material. It showed
-that idle thought can be delightful, repetitive, useful, annoying, and revealing
-all at once.
+continuity is not only a weakness; in multiple runs, the memory gap helped
+generate freshness, poignancy, and a lighter social touch. It showed that loaded
+notes are not passive storage; they become active material. It showed that idle
+thought can be delightful, repetitive, useful, annoying, and revealing all at
+once.
 
 It also showed where the system can fool the builder.
 
@@ -443,9 +451,10 @@ schedulers, sensors, files, and logs.
 The pieces are not sacred. The arrangement is the work.
 
 The current evidence does not prove that Eric is a new kind of being. It does
-show that a fast local loop with body-shaped tools can produce a kind of
-presence that ordinary chat windows usually do not. It can be funny. It can be
-useful. It can be wrong in inspectable ways. It can be company for an evening.
+show something sturdy enough to keep building on: a fast local loop with
+body-shaped tools can produce a kind of presence that ordinary chat windows
+usually do not. It can be funny. It can be useful. It can be wrong in
+inspectable ways. It can be company for an evening.
 
 That last part matters.
 
