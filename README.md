@@ -40,6 +40,7 @@ event. It still has limits, but the budget shape is different.
 Start with the public story, receipts, and open questions:
 
 - [Eric Robot 790 public page](docs/index.md)
+- [The Event Loop Grew A Face](docs/articles/the-event-loop-grew-a-face.md)
 - [Receipts And Open Questions](docs/evidence_map.md)
 - [The Landscape Around Eric](docs/articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](docs/articles/what-eric-has-taught-us.md)
