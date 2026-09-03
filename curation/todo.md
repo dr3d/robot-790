@@ -6,3 +6,8 @@
 - Current preview: `docs/media/previews/Eric-Great-Time-Machine-2026-08-29-162843.jpg`
 - Request: find a better image and replace the cover art/preview for the media item titled `Eric Great Time Machine 2026-08-29 16:28:43`.
 - Status: waiting for image choice.
+
+## Docs Article Read/TTS
+
+- Report: article read did not work in the browser.
+- Status: parked for later diagnosis.
