@@ -11,6 +11,17 @@ if the inbox is empty, silence is an allowed result, not a failure to perform.
 The older blackboard/global-workspace analogy is useful, but the practical rule
 is simpler: different diets, one public mouth.
 
+Safety follows the same architectural rule. The project acknowledges Asimov's
+robot-law tradition as lineage, but does not put "the laws" inside Eric's charm
+or identity prompt. Brain 1 may request and explain actions. Brain 3 is the
+verifier, or keeper of truth, checking claims against receipts. Brain 4 is the
+nervous system, carrying live input events such as touch, IMU, camera state,
+latency, and embodiment changes. Deterministic adapters still clamp, refuse, or
+stop unsafe actuator commands; no generated sentence outranks those rails. This
+is the responsible-design version of the old science-fiction promise: not a bot
+that says it follows non-overridable rules, but a system built around
+non-overridable subsystems.
+
 This page is the working map of what the Eric Robot 790 project is learning.
 
 It is not a proof that Eric is secretly human, and it is not a benchmark sheet

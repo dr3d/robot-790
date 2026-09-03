@@ -63,6 +63,14 @@ and mechanical protection.
 In practice, that means Eric can make semantic requests, but the device layer
 owns reality.
 
+This is also where the robot-law question lands. Asimov's rules are useful as a
+historical nod and a design pressure, but Robot 790 should not depend on a
+prompted personality promising to be safe. Safety belongs in the deterministic
+body layer: explicit user intent before motion, speed and range limits, stop and
+e-stop paths, refusal of unsafe actuator requests, and receipts that Brain3 can
+check before Brain1 explains what happened. The serious version of the old
+movie promise is non-overridable subsystems, not a robot reciting rules.
+
 Eric can request "look toward Scott" or "nudge into a skeptical tilt." The
 device controller decides whether that is possible, how far it may move, how
 fast it may move, and when to refuse.

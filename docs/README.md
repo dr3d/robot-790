@@ -2,6 +2,11 @@
 
 Model proposes; deterministic layers decide. Four diets, one mouth.
 
+Safety is treated the same way: not as a personality prompt, but as body
+architecture. The project explicitly nods to the Asimov robot-law tradition, but
+puts safety in deterministic tool gates, verifier receipts, actuator limits, and
+human override rather than asking Eric to role-play being safe.
+
 This folder is the GitHub Pages site for Robot 790: Eric's public memory
 palace, articles, curated transcripts, and publishable media.
 

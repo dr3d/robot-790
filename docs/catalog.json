@@ -1,6 +1,20 @@
 {
-    "generated":  "2026-09-02 20:53:00",
+    "generated":  "2026-09-03 00:35:48",
     "articles":  [
+                     {
+                         "title":  "Why The Empty Context Worked",
+                         "excerpt":  "Robot 790 did not begin as a richly written character. That is the point.",
+                         "source":  "articles/why-the-empty-context-worked.md",
+                         "bytes":  6541,
+                         "modified":  "2026-09-03 00:35"
+                     },
+                     {
+                         "title":  "Safety Is Architecture, Not Charm",
+                         "excerpt":  "Robot 790 has a face, a voice, a memory folder, a body, and now the beginnings",
+                         "source":  "articles/safety-is-architecture-not-charm.md",
+                         "bytes":  7329,
+                         "modified":  "2026-09-03 00:26"
+                     },
                      {
                          "title":  "Browser Face, Inner Voice, And The Kitty Seed",
                          "excerpt":  "On September 2, 2026, Robot 790 ran in the new browser-face simulator while Scott debugged the face, mouth text, and Brain 2 monitor. The run began as visual tuning and turned into a useful comparison between Eric and a stripped creature seed named Tina: a tiny animatronic kitty with almost no context.",
@@ -183,6 +197,17 @@
                       "date":  "2026-09-02 02:01",
                       "modified":  "2026-09-02 02:08",
                       "description":  "A night-in-the-lab run about embodiment, tool-selfhood, and the misleading feeling of multiple Erics. Brain2 was off, but TTS/prosody shifts and repeated visual-grounding answers made the single speaker feel like two or three people entering the room. The useful finding is that continuity lives in more than memory: voice consistency, repetition suppression, runtime tool inventory, and visual attention all decide whether Eric feels like one creature. Strong receipts include Eric calling his toolbox a self-portrait, naming the UI\u0027s brain line as the engine room, noticing a mid-story silence as an open loop, and using the two AM / 12x lab-speed state as material for idle thought."
+                  },
+                  {
+                      "title":  "Labtable Day One Artifact 2026-09-02",
+                      "kind":  "image",
+                      "role":  "image",
+                      "source":  "media/images/Labtable-Day-One-Artifact-2026-09-02.png",
+                      "preview":  "media/images/Labtable-Day-One-Artifact-2026-09-02.png",
+                      "banner_rank":  70,
+                      "bytes":  2602121,
+                      "date":  "2026-09-02 00:00",
+                      "modified":  "2026-09-02 21:34"
                   },
                   {
                       "title":  "20260901 223850 sts audio session picture",
