@@ -42,10 +42,10 @@
       overflow: hidden;
     }
     canvas {
-      width: min(100%, calc((100dvh - 16px) * 0.75), 760px);
+      width: min(100%, calc((100dvh - 16px) * 0.675), 684px);
       min-width: 0;
-      max-width: 760px;
-      aspect-ratio: 3 / 4;
+      max-width: 684px;
+      aspect-ratio: 27 / 40;
       border: 1px solid rgba(136, 164, 178, 0.18);
       background: #030508;
       box-shadow: 0 24px 90px rgba(0, 0, 0, 0.62);
@@ -105,7 +105,7 @@
       main { grid-template-columns: 1fr; }
       .stage { height: 100dvh; padding: 6px; }
       canvas {
-        width: min(calc(100vw - 12px), calc((100dvh - 12px) * 0.75));
+        width: min(calc(100vw - 12px), calc((100dvh - 12px) * 0.675));
         min-width: 0;
       }
       aside { display: none; }
@@ -345,7 +345,7 @@
       eyeBandH: 360,
       statusY: 330,
       statusH: 280,
-      mouthY: 570,
+      mouthY: 555,
       mouthH: 390,
       eyePadX: 18,
       mouthPadX: 18,
@@ -967,8 +967,9 @@
       const cx = 360;
       const cy = faceLayout.statusY + faceLayout.statusH / 2;
       ctx.save();
-      const rimRx = 184;
-      const rimRy = 118;
+      // The browser pane is intentionally narrowed; compensate so the nose reads round on screen.
+      const rimRy = 136;
+      const rimRx = 160;
       const glowLayers = [
         [42, 0.035],
         [30, 0.055],
@@ -998,15 +999,16 @@
       drawEllipse(cx, cy, rimRx - 26, rimRy - 22, "rgba(5, 18, 24, 0.80)");
       ctx.restore();
       ctx.fillStyle = "#d9f7f4";
-      ctx.font = "32px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.font = "34px ui-monospace, SFMono-Regular, Consolas, monospace";
       ctx.textAlign = "center";
-      ctx.fillText(mood.slice(0, 12), cx, cy - 38);
+      ctx.textBaseline = "middle";
+      ctx.fillText(mood.slice(0, 12), cx, cy - 48);
       ctx.fillStyle = "#91d6e2";
-      ctx.font = "26px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.font = "28px ui-monospace, SFMono-Regular, Consolas, monospace";
       ctx.fillText(state?.mouth?.shape || "neutral", cx, cy);
       ctx.fillStyle = "#6eb8c8";
-      ctx.font = "24px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.fillText(state?.style || "robot", cx, cy + 34);
+      ctx.font = "26px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.fillText(state?.style || "robot", cx, cy + 44);
     }
 
     function draw() {
