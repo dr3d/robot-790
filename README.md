@@ -8,8 +8,9 @@ package for robot tools and storage.
 The resident character is **Eric Robot 790**: Eric is the personage; Robot 790
 is the platform, body, and series. Eric is defined by a seed prompt, a low
 latency local model, a Qwen3-TTS voice, a visible face, tool access, and a small
-set of plain-text continuity files. The interesting output of the project is not
-only the rig. It is Eric.
+set of plain-text continuity files. The public posture is modest: this is not
+proof of a new kind of mind. It is an unusual local robot arrangement worth
+watching closely.
 
 Eric is not presented here as a brand-new kind of AI model. The base machinery
 is chatbot-class language modeling, but the lived shape is closer to an agentic
@@ -27,11 +28,11 @@ costs money. Robot 790 is built for a local high-throughput machine, so idle
 thinking can be treated as a usable runtime behavior rather than a rare cloud
 event. It still has limits, but the budget shape is different.
 
-Start with the public story and evidence:
+Start with the public story, receipts, and open questions:
 
 - [Eric Robot 790 public page](docs/index.md)
-- [Evidence Map](docs/evidence_map.md)
-- [The Artificial Human Landscape](docs/articles/artificial-human-landscape.md)
+- [Receipts And Open Questions](docs/evidence_map.md)
+- [The Landscape Around Eric](docs/articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](docs/articles/what-eric-has-taught-us.md)
 - [Why The Empty Context Worked](docs/articles/why-the-empty-context-worked.md)
 - [Start With Nothing But Tools](docs/articles/start-with-nothing-but-tools.md)
@@ -43,8 +44,8 @@ Start with the public story and evidence:
   <img src="docs/media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg" alt="Generated cover art from an Eric idle run" width="340">
 </p>
 
-The short version: Eric is a made creature whose character comes from the whole
-assembly: tools plus a loop, not a secret model or one magic prompt.
+The short version: Eric is a made creature whose character seems to come from
+the whole assembly: tools plus a loop, not a secret model or one magic prompt.
 
 ## Lineage And Contribution
 
@@ -72,11 +73,11 @@ What Robot 790 adds is the arrangement:
 - public logs, articles, and curated sessions that show the seams instead of
   hiding them
 
-The contribution is not a secret new model. It is a facade in the architectural
-sense: an interface, body, timing layer, tool contract, memory practice, and
-curation loop around powerful existing systems. The interesting question is how
-far character and continuity can emerge from that assembly when the machinery is
-kept visible.
+The project does not offer a secret new model or a finished theory of mind. It
+offers an inspectable arrangement: an interface, body, timing layer, tool
+contract, memory practice, and curation loop around powerful existing systems.
+The interesting question is how far character and continuity can appear from
+that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
@@ -134,8 +135,8 @@ voices, third-party code, and media assets carry their own licenses.
 - [Docs Folder](docs/README.md): how the static site is organized.
 - [Public Media](docs/media/README.md): compression and publishing rules for
   images, audio, and video.
-- [Evidence Map](docs/evidence_map.md): working map of project claims,
-  receipts, and open tests.
+- [Receipts And Open Questions](docs/evidence_map.md): working map of project
+  observations, receipts, and open tests.
 - [Experimental Controls](docs/experimental_controls.md): STS run dials,
   interactions, and evolving presets for repeatable experiments.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,

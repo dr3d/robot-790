@@ -1,6 +1,34 @@
 {
-    "generated":  "2026-09-03 15:17:46",
+    "generated":  "2026-09-03 16:33:50",
     "articles":  [
+                     {
+                         "title":  "The Magic of Assembly: Finding Eric\u0027s Voice and the Architecture of Robot 790",
+                         "excerpt":  "Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM serving, or social robotics from scratch. Instead, it exists because these individual pieces have finally become good enough to combine.",
+                         "source":  "articles/robot_790_lineage_article.md",
+                         "bytes":  2867,
+                         "modified":  "2026-09-03 16:33"
+                     },
+                     {
+                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
+                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
+                         "source":  "articles/robot-790-article-3.md",
+                         "bytes":  10821,
+                         "modified":  "2026-09-03 16:33"
+                     },
+                     {
+                         "title":  "I Built a Robot That Wakes Up New Every Time",
+                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
+                         "source":  "articles/eric_wakes_up_new_every_time.md",
+                         "bytes":  10445,
+                         "modified":  "2026-09-03 16:33"
+                     },
+                     {
+                         "title":  "The Landscape Around Eric",
+                         "excerpt":  "Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.",
+                         "source":  "articles/artificial-human-landscape.md",
+                         "bytes":  23244,
+                         "modified":  "2026-09-03 16:33"
+                     },
                      {
                          "title":  "Start With Nothing But Tools",
                          "excerpt":  "The next clean Robot 790 experiment is not quite \"start with nothing.\"",
@@ -58,39 +86,11 @@
                          "modified":  "2026-08-30 22:59"
                      },
                      {
-                         "title":  "I Built a Robot That Wakes Up New Every Time",
-                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
-                         "source":  "articles/eric_wakes_up_new_every_time.md",
-                         "bytes":  10436,
-                         "modified":  "2026-08-30 21:45"
-                     },
-                     {
-                         "title":  "The Artificial Human Landscape",
-                         "excerpt":  "Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.",
-                         "source":  "articles/artificial-human-landscape.md",
-                         "bytes":  23147,
-                         "modified":  "2026-08-30 10:54"
-                     },
-                     {
                          "title":  "The NapEdge Run",
                          "excerpt":  "On August 30, 2026, Robot 790 ran a long idle experiment I am calling the NapEdge run. Scott loaded a mechanism-heavy note, read Eric\u0027s identity note, turned the microphone off, and told Eric not to perform for anyone in the room. The instruction was simple: sit with the material, connect objects, mechanisms, mistakes, and open questions, and use web search when a clean question appeared.",
                          "source":  "articles/nap-edge-run.md",
                          "bytes":  6631,
                          "modified":  "2026-08-30 05:08"
-                     },
-                     {
-                         "title":  "The Magic of Assembly: Finding Eric\u0027s Voice and the Architecture of Robot 790",
-                         "excerpt":  "Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM serving, or social robotics from scratch. Instead, it exists because these individual pieces have finally become good enough to combine.",
-                         "source":  "articles/robot_790_lineage_article.md",
-                         "bytes":  2876,
-                         "modified":  "2026-08-29 10:06"
-                     },
-                     {
-                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
-                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
-                         "source":  "articles/robot-790-article-3.md",
-                         "bytes":  10720,
-                         "modified":  "2026-08-29 08:24"
                      },
                      {
                          "title":  "I Built a Robot That Wakes Up With a New Mind Every Time",

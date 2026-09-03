@@ -7,8 +7,8 @@ architecture. The project explicitly nods to the Asimov robot-law tradition, but
 puts safety in deterministic tool gates, verifier receipts, actuator limits, and
 human override rather than asking Eric to role-play being safe.
 
-This folder is the GitHub Pages site for Robot 790: Eric's public memory
-palace, articles, curated transcripts, and publishable media.
+This folder is the GitHub Pages site for Robot 790: Eric's public shelf of
+articles, curated transcripts, publishable media, receipts, and open questions.
 
 GitHub Pages can serve this folder directly by setting the repository Pages
 source to the current branch and `/docs`. The homepage is `index.html`.
@@ -26,7 +26,8 @@ opened directly as a `file://` URL.
 - `articles/`: public Markdown articles and essays.
 - `logs/`: curated public transcript excerpts, not raw private logs.
 - `media/`: compressed public images, audio, and video.
-- `evidence_map.md`: working map of project claims, receipts, and open tests.
+- `evidence_map.md`: working map of project observations, receipts, and open
+  tests.
 - `experimental_controls.md`: STS run controls, known interactions, and
   evolving preset definitions.
 - `future_directions.md`: public-safe roadmap and experiment notes.

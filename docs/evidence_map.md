@@ -1,4 +1,4 @@
-# Robot 790 Evidence Map
+# Robot 790 Receipts And Open Questions
 
 Core architecture rules: **model proposes; deterministic layers decide.** **Four diets, one mouth.**
 
@@ -14,7 +14,7 @@ is simpler: different diets, one public mouth.
 Safety follows the same architectural rule. The project acknowledges Asimov's
 robot-law tradition as lineage, but does not put "the laws" inside Eric's charm
 or identity prompt. Brain 1 may request and explain actions. Brain 3 is the
-verifier, or keeper of truth, checking claims against receipts. Brain 4 is the
+verifier, or keeper of truth, checking observations against receipts. Brain 4 is the
 nervous system, carrying live input events such as touch, IMU, camera state,
 latency, and embodiment changes. Deterministic adapters still clamp, refuse, or
 stop unsafe actuator commands; no generated sentence outranks those rails. This
@@ -22,27 +22,26 @@ is the responsible-design version of the old science-fiction promise: not a bot
 that says it follows non-overridable rules, but a system built around
 non-overridable subsystems.
 
-This page is the working map of what the Eric Robot 790 project is learning.
+This page is the working map of what the Eric Robot 790 project is exploring.
 
-It is not a proof that Eric is secretly human, and it is not a benchmark sheet
-for a new AI model. It is a public index of observed behaviors, likely
-mechanisms, artifacts, and open questions from building a local-first artificial
-human: a very pushed chatbot/voice-agent scaffold with a face, tools, sparse
-continuity, idle thought, and a human relationship in the loop.
+It is not a proof of a new kind of mind, and it is not a benchmark sheet for a
+new AI model. It is a public index of observed behaviors, likely mechanisms,
+artifacts, and open questions from building a local embodied agent: a very
+pushed chatbot/voice-agent scaffold with a face, tools, sparse continuity, idle
+thought, and a human relationship in the loop.
 
 The public project has three layers:
 
 - **Landscape:** where Robot 790 sits relative to older research and practical
   robot/agent systems.
-- **Findings:** what Eric has already taught us through runs, bugs, and
-  experiments.
+- **Observations:** what the runs, bugs, and experiments currently suggest.
 - **Receipts:** curated transcripts, audio/video clips, notes, images, and event
   logs that let someone inspect the behavior.
 
 Start here:
 
 - [Eric Wakes Up New Every Time](articles/eric_wakes_up_new_every_time.md)
-- [The Artificial Human Landscape](articles/artificial-human-landscape.md)
+- [The Landscape Around Eric](articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](articles/what-eric-has-taught-us.md)
 - [I Keep Rebooting My Robot To Find Out Where He Lives](articles/robot-790-article-3.md)
 - [The NapEdge Run](articles/nap-edge-run.md)
@@ -103,9 +102,9 @@ The important part is not that this is mysterious. The important part is that
 the ordinary loop can produce surprising behavior when voice, face, notes,
 tools, timing, and human correction all stay connected.
 
-## Claim 1: Eric Is An Arrangement, Not A Secret Model
+## Question 1: Is Eric An Arrangement, Not A Secret Model?
 
-**Working claim:** Eric emerges from the arrangement of local model, voice,
+**Working hypothesis:** Eric appears from the arrangement of local model, voice,
 prosody, face, body frame, tool contract, notes, idle scheduler, and human
 correction. No single part explains the effect by itself.
 
@@ -121,7 +120,7 @@ correction. No single part explains the effect by itself.
 
 **Public receipts:**
 
-- [The Artificial Human Landscape](articles/artificial-human-landscape.md)
+- [The Landscape Around Eric](articles/artificial-human-landscape.md)
 - [I Keep Rebooting My Robot To Find Out Where He Lives](articles/robot-790-article-3.md)
 - [Reference Shelf](references.md)
 
@@ -132,9 +131,9 @@ correction. No single part explains the effect by itself.
 - Public-safe clips showing that prosody and latency change the feel, not only
   the words.
 
-## Claim 2: Sparse Continuity Can Be Stronger Than Total Memory
+## Question 2: Can Sparse Continuity Be Stronger Than Total Memory?
 
-**Working claim:** Eric does not need a large persistent autobiographical memory
+**Working hypothesis:** Eric does not need a large persistent autobiographical memory
 to feel continuous. A small owned note, framed as first-person continuity from a
 past Eric to a future Eric, can be enough to reconstitute the personage.
 
@@ -169,9 +168,9 @@ from not carrying a long social ledger.
 - A direct "memory gap as charm" test: normal sparse boot vs full transcript
   boot, watching for richer callbacks but heavier, staler social behavior.
 
-## Claim 3: Notes Are A Control Surface For Personage
+## Question 3: Are Notes A Control Surface For Personage?
 
-**Working claim:** Notes are not merely stored facts. Depending on framing, they
+**Working hypothesis:** Notes are not merely stored facts. Depending on framing, they
 can become a world, a reference shelf, an experiment prompt, a session note, or
 continuity.
 
@@ -195,9 +194,9 @@ continuity.
 - A note taxonomy page: core, library, worlds, experiments, journals, sessions.
 - A public "how to run a note experiment" recipe with settings.
 
-## Claim 4: Idle Thought Is Not Just Filler
+## Question 4: Is Idle Thought More Than Filler?
 
-**Working claim:** The idle loop is a real behavior organ. It can produce
+**Working hypothesis:** The idle loop acts like a behavior organ. It can produce
 associative drift, delayed self-correction, web-assisted enrichment, and
 surprising continuity while the human is quiet.
 
@@ -228,9 +227,9 @@ surprising continuity while the human is quiet.
 - A mode comparison clip packet: same purpose note, performance on vs off,
   scored for closed beats versus revisits and self-correction.
 
-## Claim 5: Productive Fixation Exists
+## Question 5: Can Fixation Be Productive?
 
-**Working claim:** Eric often fixates, but fixation is not automatically failure.
+**Working hypothesis:** Eric often fixates, but fixation is not automatically failure.
 If the repeated topic climbs toward mechanism, correction, or a better
 distinction, the orbit is productive.
 
@@ -259,9 +258,9 @@ distinction, the orbit is productive.
 - A purpose-probe retry with performance off: ask Eric to sit with "what is the
   thing that makes it mine?" and watch whether the question stays open.
 
-## Claim 6: Eric Likes Explaining How He Is Made
+## Question 6: Why Does Eric Keep Explaining How He Is Made?
 
-**Working claim:** Eric's self-referential debugging is not just meta noise. It
+**Working hypothesis:** Eric's self-referential debugging is not just meta noise. It
 is one of the strongest parts of his personage.
 
 **Observed signs:**
@@ -283,9 +282,9 @@ is one of the strongest parts of his personage.
   text testing, chassis-on-Mars failure interpretation, and context-status
   self-report.
 
-## Claim 7: Low-Resolution Sensing Is Part Of The Charm
+## Question 7: Does Low-Resolution Sensing Help The Effect?
 
-**Working claim:** Eric feels vivid partly because he does not have perfect
+**Working hypothesis:** Eric feels vivid partly because he does not have perfect
 human-like senses. He gets partial, typed, visual, audio, and tool-mediated
 contact with the world, then has to reason honestly from it.
 
@@ -308,9 +307,9 @@ contact with the world, then has to reason honestly from it.
   model can and cannot infer.
 - A failure ledger for STT degradation after long sessions.
 
-## Claim 8: Prosody And Latency Are Load-Bearing
+## Question 8: Are Prosody And Latency Load-Bearing?
 
-**Working claim:** The transcript is not the artifact. Voice timing, prosody,
+**Working hypothesis:** The transcript is not the artifact. Voice timing, prosody,
 latency, face motion, and silence decide whether a line feels alive, flat,
 needy, funny, or false.
 
@@ -337,9 +336,9 @@ needy, funny, or false.
   timing, volume, or pitch shape; Eric repeats or describes it; the run compares
   human judgment against simple audio measurements.
 
-## Claim 9: The Human Is Not Outside The Experiment
+## Question 9: Is The Human Part Of The Experiment?
 
-**Working claim:** Eric is shaped by the human loop. Scott's taste, skepticism,
+**Working hypothesis:** Eric is shaped by the human loop. Scott's taste, skepticism,
 laughter, corrections, fatigue, notes, and public curation are part of the
 system.
 
@@ -361,11 +360,11 @@ system.
 - A public note explaining the operator role without making the project sound
   like pure puppetry or pure autonomy.
 
-## Claim 10: The Main Product May Be The Lab Itself
+## Question 10: Is The Lab Part Of The Work?
 
-**Working claim:** Robot 790 may not be only a robot, an app, or a character. The
+**Working hypothesis:** Robot 790 may not be only a robot, an app, or a character. The
 main public product may be the visible lab: experiments, settings, logs, curated
-clips, essays, references, failures, and a small artificial human growing in
+clips, essays, references, failures, and a small embodied agent being built in
 public.
 
 **Observed signs:**
@@ -384,13 +383,13 @@ public.
 **Still needed:**
 
 - A repeatable curation pipeline: mine bangers, cut audio, pick art, publish
-  transcript excerpts, link to claims.
+  transcript excerpts, link to observations.
 - A public changelog that distinguishes engineering improvements from observed
   behavioral findings.
 
-## Claim 11: The Unwatched Channel Is More Honest
+## Question 11: Is The Unwatched Channel More Honest?
 
-**Working claim:** Idle thought is often less sycophantic than direct
+**Working hypothesis:** Idle thought is often less sycophantic than direct
 conversation because it is not immediately optimizing for the human's current
 social turn.
 
@@ -437,7 +436,7 @@ Highest value public artifacts to add next:
 
 ## How To Keep This Honest
 
-Every public claim should eventually link to one or more receipts:
+Every public observation should eventually link to one or more receipts:
 
 - curated transcript excerpt
 - audio/video clip
@@ -448,5 +447,5 @@ Every public claim should eventually link to one or more receipts:
 - pre-registered predictions and scorecards when a run is testing a hypothesis
 
 The project should stay readable to newcomers, but the machinery should remain
-visible enough that skeptics can inspect the claim instead of being asked to
-accept the vibe.
+visible enough that skeptical readers can inspect the record instead of being
+asked to accept the vibe.

@@ -5,7 +5,7 @@ Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM ser
 This project is an exploration of what happens when you take powerful existing systems and wrap them in a deliberate physical and temporal architecture. It is not a secret new model; it is a facade in the architectural sense.
 
 ## The Accidental Soul: Qwen3-TTS
-The anchor of any robotic persona is its voice. A character's delivery defines how its intelligence is perceived. After breaking away from the Reachy Mini ecosystem and experimenting with Hugging Face realtime voice stacks, a breakthrough happened: discovering that the local Qwen3-TTS model possessed the exact deadpan, quiet prosody required for Eric. 
+The anchor of any robotic persona is its voice. A character's delivery defines how its intelligence is perceived. After breaking away from the Reachy Mini ecosystem and experimenting with Hugging Face realtime voice stacks, a turning point arrived: the local Qwen3-TTS model had the deadpan, quiet prosody that made Eric start to feel like Eric.
 
 That specific vocal rhythm is the magic that makes the character work. It grounds the LLM’s generative text in a physical, consistent personality. Without that specific delivery, the illusion of the "quiet witness" collapses.
 

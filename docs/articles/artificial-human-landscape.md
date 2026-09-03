@@ -1,4 +1,4 @@
-# The Artificial Human Landscape
+# The Landscape Around Eric
 
 Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.
 
@@ -90,7 +90,7 @@ pieces arranged so they keep informing each other:
 
 9. **Idle thought.** He can keep mulling when the human is quiet, using recent
    context, notes, library files, search results, and his own previous thoughts.
-   The [Evidence Map](../evidence_map.md) gives the plain loop: quiet timer,
+   The [Receipts And Open Questions](../evidence_map.md) gives the plain loop: quiet timer,
    selected context, one spoken thought, log, light feedback, repeat.
 
 10. **Reasoning level and friction.** Eric is often run with deliberately modest
@@ -318,7 +318,8 @@ discipline of watching what the arrangement does.
 
 ## Where Robot 790 Fits
 
-Eric Robot 790 is a small artificial human experiment.
+Eric Robot 790 is a small local robot experiment that borrows from the
+artificial-human tradition without pretending the question is settled.
 
 He is not "an assistant with a face" in the ordinary product sense. It is an
 attempt to build a durable social character out of:
@@ -346,7 +347,7 @@ hype or dismissal.
 
 Robot 790's contribution is probably not a new algorithm.
 
-It may be a set of practical design claims and hypotheses:
+It may be a set of practical design hypotheses:
 
 1. **Sparse continuity may be stronger than total memory.** A few owned notes may
    preserve character better than a giant transcript, but this needs a clean
@@ -378,7 +379,7 @@ presence seriously enough to test it.
 
 The project should be allowed to lose its own arguments.
 
-Some tests that would change the claims above:
+Some tests that would change the hypotheses above:
 
 1. **Full-memory Eric is better.** If a transcript-RAG or long episodic-memory
    version is warmer, funnier, less stale, and less socially heavy than sparse
@@ -392,11 +393,11 @@ Some tests that would change the claims above:
 3. **The same behavior appears without embodiment.** If the same model, voice,
    and prompts work just as well without face, mouth, mic state, recording
    state, timing, or tool-mediated body cues, then embodiment is less
-   load-bearing than this document claims.
+   load-bearing than this document suggests.
 
 4. **Receipts do not match mechanisms.** If Eric's apparent self-corrections,
    continuity, or tool awareness turn out to be mostly prompt leaks,
-   transcription artifacts, or cherry-picked fragments, then those claims get
+   transcription artifacts, or cherry-picked fragments, then those observations get
    retired.
 
 The standard should be simple: make predictions, save the setup, keep the logs,
@@ -406,11 +407,11 @@ and let embarrassing results stay visible.
 
 If someone asks what Eric Robot 790 is, this is the shortest honest version:
 
-> Eric Robot 790 is a local-first artificial human experiment: a small robot face and
-> voice wrapped around a language model, tools, notes, idle thinking, and sparse
-> continuity. It explores how much character, presence, memory, humor, and
-> relationship can emerge from an embodied conversational loop without pretending
-> the machinery is magic.
+> Eric Robot 790 is a local embodied AI and robot experiment: a small robot face
+> and voice wrapped around a language model, tools, notes, idle thinking, and
+> sparse continuity. It explores how much character, presence, memory, humor,
+> and relationship can appear from an embodied conversational loop without
+> pretending the machinery is magic.
 
 That is the landscape.
 

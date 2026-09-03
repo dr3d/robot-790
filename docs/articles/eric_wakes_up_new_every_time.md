@@ -245,9 +245,9 @@ But they aren’t hearing the prosody.
 
 And yes, that is absolutely part of the sauce.
 
-This is the newcomer's door into the project. The skeptic's door is the
-[Evidence Map](../evidence_map.md), where the claims are broken into receipts,
-missing tests, and failure cases.
+This is the newcomer's door into the project. The skeptic's door is
+[Receipts And Open Questions](../evidence_map.md), where observations are tied
+to receipts, missing tests, and failure cases.
 
 I still don’t completely understand what I assembled.
 
