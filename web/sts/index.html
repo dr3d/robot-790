@@ -976,13 +976,13 @@
             <label class="toggle-row"><input id="llmBodySensorTools" type="checkbox" checked> LLM body sensors</label>
             <label class="toggle-row"><input id="llmChassisTools" type="checkbox" checked> LLM chassis tools</label>
             <label class="toggle-row"><input id="llmVoiceTools" type="checkbox" checked> LLM voice tools</label>
-            <label class="toggle-row"><input id="llmMemoryTools" type="checkbox"> LLM memory tools</label>
+            <label class="toggle-row"><input id="llmMemoryTools" type="checkbox" checked> LLM memory tools</label>
             <label class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</label>
             <label class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</label>
             <label class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</label>
             <label class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</label>
-            <label class="toggle-row"><input id="llmImageTools" type="checkbox"> LLM image generation</label>
-            <label class="toggle-row"><input id="llmSmartHomeTools" type="checkbox"> LLM smart home</label>
+            <label class="toggle-row"><input id="llmImageTools" type="checkbox" checked> LLM image generation</label>
+            <label class="toggle-row"><input id="llmSmartHomeTools" type="checkbox" checked> LLM smart home</label>
           </div>
         </section>
       </div>
@@ -1403,7 +1403,7 @@
     const imageModelStorageKey = "robot790.imageModel.v1";
     const imageCostStorageKey = "robot790.imageCost.v1";
     const operatorDefaultsStorageKey = "robot790.operatorDefaults.v1";
-    const operatorDefaultsVersion = "nvfp4-return-20260903a";
+    const operatorDefaultsVersion = "nvfp4-return-20260903b";
     const operatorCommandSeqStorageKey = "robot790.operatorCommandSeq.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
@@ -4409,8 +4409,8 @@
       { key: "webPageTools", element: () => llmWebPageTools, defaultValue: true },
       { key: "castMediaTools", element: () => llmCastMediaTools, defaultValue: true },
       { key: "noteFileTools", element: () => llmNoteFileTools, defaultValue: true },
-      { key: "imageTools", element: () => llmImageTools, defaultValue: false },
-      { key: "smartHomeTools", element: () => llmSmartHomeTools, defaultValue: false }
+      { key: "imageTools", element: () => llmImageTools, defaultValue: true },
+      { key: "smartHomeTools", element: () => llmSmartHomeTools, defaultValue: true }
     ];
 
     function readToolPrefValue(prefs, key, defaultValue) {
@@ -4502,15 +4502,15 @@
       setToolPrefs({
         faceTools: true,
         bodySensorTools: true,
-        chassisTools: false,
+        chassisTools: true,
         voiceTools: true,
-        memoryTools: false,
+        memoryTools: true,
         webSearchTools: true,
         webPageTools: true,
         castMediaTools: true,
         noteFileTools: true,
-        imageTools: false,
-        smartHomeTools: false
+        imageTools: true,
+        smartHomeTools: true
       });
 
       if (transcriptProsodyMode) transcriptProsodyMode.value = "compact";
@@ -4519,7 +4519,7 @@
       renderConversation();
       renderEvents({ forceScroll: true });
       updateSessionTools({ quiet: true });
-      log(events, "operator defaults applied: Deep Probe / Eric / Brain2 monitor / web+sensor tools / no-face events");
+      log(events, "operator defaults applied: Deep Probe / Eric / Brain2 monitor / all LLM tools / no-face events");
     }
 
     function setState(text, kind = "bad") {
