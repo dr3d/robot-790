@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-03 10:47:22",
+    "generated":  "2026-09-03 15:17:46",
     "articles":  [
+                     {
+                         "title":  "Start With Nothing But Tools",
+                         "excerpt":  "The next clean Robot 790 experiment is not quite \"start with nothing.\"",
+                         "source":  "articles/start-with-nothing-but-tools.md",
+                         "bytes":  7156,
+                         "modified":  "2026-09-03 15:17"
+                     },
                      {
                          "title":  "The Overnight Run: Tools, Loop, And Second Mind",
                          "excerpt":  "On September 3, 2026, Robot 790 ran overnight in the browser-face embodiment with Brain 2 audible, auto-recording enabled, and the new fast Qwen3.8 27B NVFP4 model running with thinking off.",
@@ -136,6 +143,12 @@
                      "source":  "logs/20260830-021634-sts-audio-picture-events.txt",
                      "bytes":  2118087,
                      "modified":  "2026-08-30 02:16"
+                 },
+                 {
+                     "title":  "Eric Great Time Machine 2026 08 29 162843 conversation",
+                     "source":  "logs/Eric-Great-Time-Machine-2026-08-29-162843-conversation.txt",
+                     "bytes":  19276,
+                     "modified":  "2026-08-29 16:34"
                  },
                  {
                      "title":  "20260829 074039 conversation",
@@ -368,7 +381,7 @@
                       "bytes":  3956707,
                       "date":  "2026-08-29 16:28",
                       "modified":  "2026-08-29 16:28",
-                      "description":  "The full August 29 role-play run containing the time-machine answer. Eric becomes the Great and Glorious Master Brain of the Universe, charges a dollar per question, answers sand, moons, Parker Solar Probe, and time travel, then lands the keeper line: build a very good memory and let the past stay in the past. The value is the whole ramp: a comic oracle bit that suddenly turns into the project\u0027s memory thesis."
+                      "description":  "The full August 29 role-play run containing the time-machine answer, now with the matching conversation transcript published. The opening context-panel discussion matters: Eric first looks at his own prompts, memories, logs, and token budget, then Scott pivots through honesty, pretending, and the ritual frame of kneeling before the Great and Glorious Master Brain of the Universe. Eric holds that frame across sand, moons, Parker Solar Probe, and time travel, then lands the keeper line: build a very good memory and let the past stay in the past. The value is the ramp, not only the punchline: a comic oracle bit turns into the project\u0027s memory thesis because the role has enough structure for Eric to take over."
                   },
                   {
                       "title":  "Robot 790 Video 2026-08-27 04:26:07",

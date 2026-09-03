@@ -2,7 +2,7 @@
   "name": "robot-790-gold",
   "label": "Robot 790 Gold Personality",
   "captured_date": "2026-08-25",
-  "purpose": "Fast companion-house-pet tuning with strong character and low latency.",
+  "purpose": "Fast NVFP4 MTP gold runtime for responsive Robot 790 testing.",
   "realtime": {
     "launcher": "scripts/start_realtime_eric_qwen3.ps1",
     "model": "qwen3.8-27b-nvfp4-mtp",
@@ -14,7 +14,7 @@
   "lm_studio": {
     "context_length": 131072,
     "parallel": 2,
-    "note": "Fast default uses the NVFP4 MTP very-low GGUF with thinking disabled. Keep parallel at 2 for stable Brain1+Brain2 tests; raise it only when deliberately testing more lanes."
+    "note": "Current gold returns to the faster NVFP4 MTP build: responsive Brain1 behavior, 131K context, and two parallel predictions when the desktop can tolerate it. The original Qwen 27B remains available as qwen27 for comparison days."
   },
   "tts": {
     "engine": "qwen3",

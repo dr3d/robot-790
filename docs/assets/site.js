@@ -5,6 +5,9 @@ const articleList = document.querySelector("#article-list");
 const articleReader = document.querySelector("#article-reader");
 const articleReaderTitle = document.querySelector("#article-reader-title");
 const articleReaderBody = document.querySelector("#article-reader-body");
+const articleRead = document.querySelector("#article-read");
+const articlePause = document.querySelector("#article-pause");
+const articleStop = document.querySelector("#article-stop");
 const articleShare = document.querySelector("#article-share");
 const articleClose = document.querySelector("#article-close");
 const featuredArticleLink = document.querySelector("#featured-article-link");
@@ -20,6 +23,7 @@ const githubDocsBase = "https://github.com/dr3d/robot-790/blob/master/docs/";
 const firstVisitStorageKey = "robot790.docs.firstMediaLanding.v1";
 let currentArticle = null;
 let currentMedia = null;
+let articleSpeechState = "idle";
 
 const bannerLines = [
   "The room has started keeping receipts.",
@@ -151,6 +155,103 @@ function requestedArticleSource() {
   }
 }
 
+function articleSpeechAvailable() {
+  return Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
+}
+
+function articleSpeechVoice() {
+  if (!articleSpeechAvailable()) return null;
+  const voices = window.speechSynthesis.getVoices?.() || [];
+  const englishVoices = voices.filter((voice) => /^en\b/i.test(voice.lang || ""));
+  const preferred = [
+    /natural/i,
+    /jenny/i,
+    /aria/i,
+    /guy/i,
+    /sonia/i,
+    /google.*english/i,
+    /microsoft.*english/i
+  ];
+  for (const pattern of preferred) {
+    const voice = englishVoices.find((candidate) => pattern.test(candidate.name || ""));
+    if (voice) return voice;
+  }
+  return englishVoices[0] || voices[0] || null;
+}
+
+function articleSpeechText() {
+  const title = articleReaderTitle?.textContent?.trim() || "";
+  const body = articleReaderBody?.innerText?.trim() || "";
+  return [title, body]
+    .filter(Boolean)
+    .join(".\n\n")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function updateArticleSpeechButtons() {
+  const available = articleSpeechAvailable();
+  const hasArticle = Boolean(currentArticle && articleSpeechText());
+  if (articleRead) {
+    articleRead.disabled = !available || !hasArticle;
+    articleRead.textContent = articleSpeechState === "paused" ? "Resume" : "Read";
+    articleRead.title = available
+      ? "Read the current article aloud with the browser's speech voice."
+      : "This browser does not expose speech synthesis.";
+  }
+  if (articlePause) {
+    articlePause.disabled = !available || articleSpeechState !== "speaking";
+  }
+  if (articleStop) {
+    articleStop.disabled = !available || articleSpeechState === "idle";
+  }
+}
+
+function stopArticleSpeech() {
+  if (articleSpeechAvailable()) {
+    window.speechSynthesis.cancel();
+  }
+  articleSpeechState = "idle";
+  updateArticleSpeechButtons();
+}
+
+function pauseArticleSpeech() {
+  if (!articleSpeechAvailable()) return;
+  window.speechSynthesis.pause();
+  articleSpeechState = "paused";
+  updateArticleSpeechButtons();
+}
+
+function readArticleAloud() {
+  if (!articleSpeechAvailable()) return;
+  if (articleSpeechState === "paused") {
+    window.speechSynthesis.resume();
+    articleSpeechState = "speaking";
+    updateArticleSpeechButtons();
+    return;
+  }
+  const text = articleSpeechText();
+  if (!text) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  const voice = articleSpeechVoice();
+  if (voice) utterance.voice = voice;
+  utterance.rate = 0.96;
+  utterance.pitch = 0.92;
+  utterance.volume = 1;
+  utterance.onend = () => {
+    articleSpeechState = "idle";
+    updateArticleSpeechButtons();
+  };
+  utterance.onerror = () => {
+    articleSpeechState = "idle";
+    updateArticleSpeechButtons();
+  };
+  articleSpeechState = "speaking";
+  updateArticleSpeechButtons();
+  window.speechSynthesis.speak(utterance);
+}
+
 function articleShareUrl(article) {
   const url = new URL(location.href);
   url.searchParams.delete("media");
@@ -185,9 +286,11 @@ async function copyArticleShareUrl(article, button) {
 }
 
 async function openArticle(article, { replaceUrl = false } = {}) {
+  stopArticleSpeech();
   currentArticle = article;
   articleReaderTitle.textContent = article.title;
   articleReaderBody.innerHTML = "<p>Loading...</p>";
+  updateArticleSpeechButtons();
   articleReader.hidden = false;
   articleReader.scrollIntoView({ behavior: "smooth", block: "start" });
   if (replaceUrl) {
@@ -203,8 +306,10 @@ async function openArticle(article, { replaceUrl = false } = {}) {
     const response = await fetch(article.source);
     const text = await response.text();
     articleReaderBody.innerHTML = renderMarkdown(text);
+    updateArticleSpeechButtons();
   } catch (error) {
     articleReaderBody.innerHTML = `<p>Could not load ${escapeHtml(article.source)}.</p>`;
+    updateArticleSpeechButtons();
   }
 }
 
@@ -553,11 +658,22 @@ articleShare.addEventListener("click", (event) => {
   copyArticleShareUrl(currentArticle, event.currentTarget);
 });
 
+articleRead?.addEventListener("click", readArticleAloud);
+articlePause?.addEventListener("click", pauseArticleSpeech);
+articleStop?.addEventListener("click", stopArticleSpeech);
+
 articleClose.addEventListener("click", () => {
+  stopArticleSpeech();
   currentArticle = null;
   articleReader.hidden = true;
   articleReaderBody.innerHTML = "";
+  updateArticleSpeechButtons();
 });
+
+if (articleSpeechAvailable()) {
+  window.speechSynthesis.onvoiceschanged = updateArticleSpeechButtons;
+}
+updateArticleSpeechButtons();
 
 fetch(catalogUrl)
   .then((response) => response.json())

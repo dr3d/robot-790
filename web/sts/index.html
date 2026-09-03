@@ -194,6 +194,10 @@
       min-height: 52px;
       max-height: 180px;
     }
+    #typedInput {
+      font-size: 20px;
+      line-height: 1.35;
+    }
     .typed-actions {
       display: grid;
       gap: 8px;
@@ -689,6 +693,7 @@
           <button id="connect" class="primary">Connect</button>
           <button id="disconnect" class="danger" disabled>Disconnect</button>
           <button id="restartServer" class="warn">Restart</button>
+          <button id="unloadServer" class="danger">Unload</button>
         </section>
         <section id="customModelControls" class="controls custom-model-controls" hidden>
           <label>
@@ -750,6 +755,13 @@
             <span>Mic</span>
             <div class="bar"><span id="level"></span></div>
           </div>
+          <label>
+            Microphone
+            <select id="micDevice">
+              <option value="">System default</option>
+            </select>
+          </label>
+          <button id="refreshMicDevices" type="button">Refresh Mics</button>
           <label>
             Interrupt <span id="interruptSensitivityValue">6/10</span>
             <input id="interruptSensitivity" type="range" min="0" max="10" step="1" value="6">
@@ -857,6 +869,10 @@
           <label>
             Voice style
             <input id="ttsInstruct" class="compact-text" spellcheck="false">
+          </label>
+          <label>
+            Pace <span id="ttsPaceValue">1.00x</span>
+            <input id="ttsPace" type="range" min="0.85" max="1.25" step="0.05" value="1">
           </label>
           <select id="ttsPreset" aria-label="Voice style preset">
             <option value="neutral">Neutral</option>
@@ -1050,6 +1066,7 @@
     const connectButton = document.querySelector("#connect");
     const disconnectButton = document.querySelector("#disconnect");
     const restartServerButton = document.querySelector("#restartServer");
+    const unloadServerButton = document.querySelector("#unloadServer");
     const modelPreset = document.querySelector("#modelPreset");
     const customModelControls = document.querySelector("#customModelControls");
     const customModelKey = document.querySelector("#customModelKey");
@@ -1078,6 +1095,8 @@
     const ttsVoice = document.querySelector("#ttsVoice");
     const ttsPrecision = document.querySelector("#ttsPrecision");
     const ttsInstruct = document.querySelector("#ttsInstruct");
+    const ttsPace = document.querySelector("#ttsPace");
+    const ttsPaceValue = document.querySelector("#ttsPaceValue");
     const ttsPreset = document.querySelector("#ttsPreset");
     const ttsApplyButton = document.querySelector("#ttsApply");
     const labGoal = document.querySelector("#labGoal");
@@ -1172,6 +1191,8 @@
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
     const level = document.querySelector("#level");
+    const micDeviceSelect = document.querySelector("#micDevice");
+    const refreshMicDevicesButton = document.querySelector("#refreshMicDevices");
     const conversation = document.querySelector("#conversation");
     const events = document.querySelector("#events");
     const settingsPanel = document.querySelector("#settingsPanel");
@@ -1354,6 +1375,7 @@
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
     const ttsPrecisionStorageKey = "robot790.ttsPrecision.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
+    const ttsPaceStorageKey = "robot790.ttsPace.v1";
     const idleDriftStorageKey = "robot790.idleDrift.v1";
     const idleWonderStorageKey = "robot790.idleWonder.v1";
     const idleSelfFocusStorageKey = "robot790.idleSelfFocus.v1";
@@ -1369,6 +1391,7 @@
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
     const autoAudioRecordStorageKey = "robot790.autoAudioRecord.v1";
     const ericAudioMutedStorageKey = "robot790.ericAudioMuted.v1";
+    const micDeviceStorageKey = "robot790.micDevice.v1";
     const modelPresetStorageKey = "robot790.modelPreset.v2";
     const customModelKeyStorageKey = "robot790.customModelKey.v1";
     const customModelReasoningStorageKey = "robot790.customModelReasoning.v1";
@@ -1380,7 +1403,7 @@
     const imageModelStorageKey = "robot790.imageModel.v1";
     const imageCostStorageKey = "robot790.imageCost.v1";
     const operatorDefaultsStorageKey = "robot790.operatorDefaults.v1";
-    const operatorDefaultsVersion = "deep-probe-20260902c";
+    const operatorDefaultsVersion = "nvfp4-return-20260903a";
     const operatorCommandSeqStorageKey = "robot790.operatorCommandSeq.v1";
     const maxMemoryFacts = 80;
     const maxMemoryNameChars = 48;
@@ -3131,6 +3154,28 @@
       return String(ttsInstruct.value || "").trim();
     }
 
+    function currentTtsPace() {
+      const value = Number(ttsPace?.value);
+      if (!Number.isFinite(value)) return 1;
+      return Math.max(0.85, Math.min(1.25, Math.round(value * 20) / 20));
+    }
+
+    function ttsPaceLabel() {
+      return `${currentTtsPace().toFixed(2)}x`;
+    }
+
+    function ttsPaceInstruction() {
+      const pace = currentTtsPace();
+      if (pace >= 1.18) return "For this technical run, speak noticeably faster than usual while keeping articulation crisp; do not rush or swallow words.";
+      if (pace >= 1.08) return "For this technical run, speak a little faster than usual while keeping articulation crisp.";
+      if (pace <= 0.92) return "Speak a little slower than usual, with relaxed spacing.";
+      return "";
+    }
+
+    function effectiveTtsInstruct() {
+      return [currentTtsInstruct(), ttsPaceInstruction()].filter(Boolean).join(" ");
+    }
+
     function currentTtsVoice() {
       const voice = String(ttsVoice.value || "").trim();
       return qwen3TtsVoices.includes(voice) ? voice : "Eric";
@@ -3185,6 +3230,21 @@
 
     function saveTtsStyle() {
       localStorage.setItem(ttsStyleStorageKey, currentTtsInstruct());
+    }
+
+    function loadTtsPace() {
+      const saved = Number(localStorage.getItem(ttsPaceStorageKey));
+      if (ttsPace) ttsPace.value = Number.isFinite(saved) ? String(Math.max(0.85, Math.min(1.25, saved))) : "1";
+      updateTtsPaceUi({ persist: false });
+    }
+
+    function saveTtsPace() {
+      localStorage.setItem(ttsPaceStorageKey, String(currentTtsPace()));
+    }
+
+    function updateTtsPaceUi({ persist = true } = {}) {
+      if (ttsPaceValue) ttsPaceValue.textContent = ttsPaceLabel();
+      if (persist) saveTtsPace();
     }
 
     function matchingTtsPresetName(instruct = currentTtsInstruct()) {
@@ -3921,7 +3981,7 @@
 
     function currentCustomModelParallel() {
       const value = Number(customModelParallel?.value);
-      if (!Number.isFinite(value)) return 4;
+      if (!Number.isFinite(value)) return 2;
       return Math.max(1, Math.min(8, Math.round(value)));
     }
 
@@ -4032,6 +4092,68 @@
     function micRuntimeLabel() {
       if (!micStream) return "off";
       return micMutedForNarration ? "on, muted for Eric/narration" : "on";
+    }
+
+    function selectedMicDeviceId() {
+      return micDeviceSelect?.value || "";
+    }
+
+    function micDeviceLabel() {
+      const selected = micDeviceSelect?.selectedOptions?.[0]?.textContent?.trim() || "System default";
+      const activeTrack = micStream?.getAudioTracks?.()[0];
+      const activeLabel = activeTrack?.label?.trim() || "";
+      if (activeLabel) return activeLabel;
+      return selected;
+    }
+
+    function micDeviceReportLabel() {
+      const selected = micDeviceSelect?.selectedOptions?.[0]?.textContent?.trim() || "System default";
+      const activeTrack = micStream?.getAudioTracks?.()[0];
+      const activeLabel = activeTrack?.label?.trim() || "";
+      if (activeLabel && activeLabel !== selected && selectedMicDeviceId()) {
+        return `${selected} (active: ${activeLabel})`;
+      }
+      return activeLabel || selected;
+    }
+
+    async function refreshMicDevices({ preserveSelection = null, quiet = false } = {}) {
+      if (!micDeviceSelect || !navigator.mediaDevices?.enumerateDevices) return;
+      const wanted = preserveSelection ?? selectedMicDeviceId() ?? localStorage.getItem(micDeviceStorageKey) ?? "";
+      let devices = [];
+      try {
+        devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === "audioinput");
+      } catch (error) {
+        if (!quiet) log(events, `mic device refresh error: ${error.message}`);
+        return;
+      }
+      const options = [Object.assign(document.createElement("option"), {
+        value: "",
+        textContent: "System default"
+      })];
+      devices.forEach((device, index) => {
+        const label = device.label || `Microphone ${index + 1}`;
+        const option = document.createElement("option");
+        option.value = device.deviceId;
+        option.textContent = label;
+        option.selected = device.deviceId === wanted;
+        options.push(option);
+      });
+      micDeviceSelect.replaceChildren(...options);
+      if (wanted && !devices.some((device) => device.deviceId === wanted)) {
+        micDeviceSelect.value = "";
+      }
+      if (!quiet) log(events, `mic devices refreshed: ${devices.length}`);
+    }
+
+    function saveMicDevicePref() {
+      if (!micDeviceSelect) return;
+      localStorage.setItem(micDeviceStorageKey, micDeviceSelect.value || "");
+      log(events, `mic device selected: ${micDeviceReportLabel()}`);
+    }
+
+    function loadMicDevicePref() {
+      if (!micDeviceSelect) return;
+      micDeviceSelect.value = localStorage.getItem(micDeviceStorageKey) || "";
     }
 
     function ericAudioRuntimeLabel() {
@@ -4180,7 +4302,7 @@
     }
 
     function ttsRuntimeConfig() {
-      const instruct = currentTtsInstruct();
+      const instruct = effectiveTtsInstruct();
       const voice = currentTtsVoice();
       return {
         qwen3_tts_speaker: voice,
@@ -4212,9 +4334,9 @@
         }
       });
       if (announce) {
-        log(events, currentTtsInstruct()
-          ? `voice ${currentTtsVoice()} style applied`
-          : `voice ${currentTtsVoice()} neutral`);
+        log(events, effectiveTtsInstruct()
+          ? `voice ${currentTtsVoice()} style applied; pace ${ttsPaceLabel()}`
+          : `voice ${currentTtsVoice()} neutral; pace ${ttsPaceLabel()}`);
       }
     }
 
@@ -4690,6 +4812,7 @@
         `Run preset: ${runPresetLabel()}`,
         `Creature seed: ${currentCreatureProfile().label}`,
         `Lab voice: ${currentTtsVoice()} / ${matchingTtsPresetName()}`,
+        `Speech pace: ${ttsPaceLabel()}`,
         `Idle clock: ${idleClockLabel()}`,
         `First contact mode: ${firstContactModeEnabled() ? "on" : "off"}`,
         `Sensing input: ${sensingInputLabel()}`,
@@ -4824,6 +4947,7 @@
         `Sensing input: ${sensingInputLabel()}`,
         `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
         `Mic: ${micRuntimeLabel()}`,
+        `Mic device: ${micDeviceReportLabel()}`,
         `Eric speaker audio: ${ericAudioRuntimeLabel()}`,
         `Auto audio record: ${autoAudioRecordEnabled() ? "on" : "off"}`,
         `Idle drift: ${idleDriftLabel()}`,
@@ -8219,6 +8343,7 @@
       const idleSettingsText = [
         `Run preset: ${runPresetLabel()}`,
         `Creature seed: ${currentCreatureProfile().label}`,
+        `Speech pace: ${ttsPaceLabel()}`,
         `Idle clock: ${idleClockLabel()}`,
         `Idle drift: ${idleDriftLabel()}`,
         `Wonder: ${idleWonderLabel()}`,
@@ -8280,7 +8405,8 @@
             `Prompt rules: ${baseSessionInstructions.length}`,
             `Tool definitions available: ${enabledTools.length}`,
             `Voice: ${currentTtsVoice()}`,
-            `Voice style chars: ${currentTtsInstruct().length}`
+            `Voice style chars: ${currentTtsInstruct().length}`,
+            `Speech pace: ${ttsPaceLabel()}`
           ]
         },
         {
@@ -10293,6 +10419,7 @@
 
     async function restartRealtimeServer() {
       restartServerButton.disabled = true;
+      unloadServerButton.disabled = true;
       log(events, "realtime restart requested");
       try {
         if (micStream) await stopMic();
@@ -10319,15 +10446,60 @@
         log(events, `realtime restart started: ${result.preset || currentModelPreset()} pid ${result.pid || "unknown"}`);
         setTimeout(() => {
           restartServerButton.disabled = false;
+          unloadServerButton.disabled = false;
           connectButton.disabled = false;
           setState("Disconnected");
           log(events, "realtime restart launched; reconnect when ready");
         }, 5000);
       } catch (error) {
         restartServerButton.disabled = false;
+        unloadServerButton.disabled = false;
         connectButton.disabled = false;
         setState("Restart failed");
         log(events, `realtime restart error: ${error.message}`);
+      }
+    }
+
+    async function unloadRealtimeServer() {
+      restartServerButton.disabled = true;
+      unloadServerButton.disabled = true;
+      log(events, "realtime unload requested");
+      try {
+        if (micStream) await stopMic({ reason: "realtime unload" });
+      } catch (error) {
+        log(events, `mic stop during unload error: ${error.message}`);
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+      clearAudioQueue();
+      setState("Unloading realtime", "warn");
+      connectButton.disabled = true;
+      disconnectButton.disabled = true;
+
+      try {
+        const response = await fetch(new URL("/api/realtime/unload", location.href), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+          cache: "no-store"
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        log(events, `realtime unload started: pid ${result.pid || "unknown"}`);
+        setTimeout(() => {
+          restartServerButton.disabled = false;
+          unloadServerButton.disabled = false;
+          connectButton.disabled = false;
+          setState("Unloaded");
+          log(events, "realtime backend stopped; LM Studio unload requested");
+        }, 4000);
+      } catch (error) {
+        restartServerButton.disabled = false;
+        unloadServerButton.disabled = false;
+        connectButton.disabled = false;
+        setState("Unload failed");
+        log(events, `realtime unload error: ${error.message}`);
       }
     }
 
@@ -10348,14 +10520,20 @@
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       if (micStream) return;
       resetInputAudioBuffer(reason ? `before mic start: ${reason}` : "before mic start");
+      const deviceId = selectedMicDeviceId();
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1
+      };
+      if (deviceId) {
+        audioConstraints.deviceId = { exact: deviceId };
+      }
       micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1
-        }
+        audio: audioConstraints
       });
+      await refreshMicDevices({ preserveSelection: deviceId, quiet: true });
       micContext = new AudioContext();
       micSource = micContext.createMediaStreamSource(micStream);
       micProcessor = micContext.createScriptProcessor(2048, 1, 1);
@@ -10377,7 +10555,7 @@
       stopMicButton.disabled = false;
       updateMicMuteButton();
       syncMicPanelToMic();
-      log(events, reason ? `mic started: ${reason}` : "mic started");
+      log(events, reason ? `mic started: ${reason}; device: ${micDeviceReportLabel()}` : `mic started; device: ${micDeviceReportLabel()}`);
       if (!audioRecordingActive() && autoAudioRecordEnabled()) {
         startAudioRecording().catch((error) => log(events, `auto audio record error: ${error.message}`));
       } else if (!audioRecordingActive()) {
@@ -10423,11 +10601,14 @@
       connect: "Connect the browser UI to the realtime STS server.",
       disconnect: "Close the current realtime connection.",
       restartServer: "Restart the local realtime server using the selected model settings.",
+      unloadServer: "Disconnect, stop the realtime backend, and unload LM Studio models to reclaim GPU memory.",
       visionDrop: "Drop an image, text file, or markdown note into Eric's sensing eye.",
       visionClear: "Clear the currently staged sensing-eye input.",
       visionCameraStart: "Start the browser camera preview.",
       visionCameraFrame: "Capture the current browser camera frame into the sensing eye.",
       visionCameraStop: "Stop the browser camera preview.",
+      micDevice: "Choose the browser microphone input. Use this after adding a new mic or if STT gets garbled.",
+      refreshMicDevices: "Refresh the browser's microphone list and labels.",
       interruptSensitivity: "How readily the mic interrupts Eric while he is speaking.",
       startMic: "Open the microphone and start streaming speech to Eric.",
       stopMic: "Stop the microphone stream.",
@@ -10452,6 +10633,7 @@
       ttsVoice: "Main Qwen3-TTS speaker voice.",
       ttsPrecision: "Qwen3-TTS precision; bfloat16 is the usual stable default.",
       ttsInstruct: "Operator-side TTS delivery instruction.",
+      ttsPace: "Instruction-level speech pace for Eric. Default is 1.00x; higher values ask for brisker technical delivery.",
       ttsPreset: "Apply a saved voice-style instruction.",
       ttsApply: "Apply the selected voice, precision, and delivery instruction.",
       labGoal: "Session-only directed question/job that idle should keep returning to.",
@@ -10536,6 +10718,9 @@
     restartServerButton.addEventListener("click", () => {
       restartRealtimeServer().catch((error) => log(events, `realtime restart error: ${error.message}`));
     });
+    unloadServerButton.addEventListener("click", () => {
+      unloadRealtimeServer().catch((error) => log(events, `realtime unload error: ${error.message}`));
+    });
     faceIdleButton.addEventListener("click", () => setFaceMode({ mode: "idle" }).then(
       (result) => log(events, `face idle: ${JSON.stringify(result)}`),
       (error) => log(events, `face idle error: ${error.message}`)
@@ -10551,6 +10736,15 @@
     startMicButton.addEventListener("click", () => {
       if (castPlaybackActive) micPausedForCast = false;
       startMic().catch((error) => log(events, `mic error: ${error.message}`));
+    });
+    micDeviceSelect?.addEventListener("change", () => {
+      saveMicDevicePref();
+      if (micStream) {
+        resetMicFreshEars({ reason: "mic device changed" }).catch((error) => log(events, `mic device change error: ${error.message}`));
+      }
+    });
+    refreshMicDevicesButton?.addEventListener("click", () => {
+      refreshMicDevices().catch((error) => log(events, `mic device refresh error: ${error.message}`));
     });
     stopMicButton.addEventListener("click", () => {
       micPausedForCast = false;
@@ -10688,6 +10882,12 @@
       ttsPreset.value = Object.entries(ttsStylePresets)
         .find(([, value]) => value === currentTtsInstruct())?.[0] || "custom";
       saveTtsStyle();
+    });
+    ttsPace?.addEventListener("input", () => {
+      updateTtsPaceUi();
+    });
+    ttsPace?.addEventListener("change", () => {
+      updateSessionTtsStyle();
     });
     interruptSensitivity.addEventListener("input", updateInterruptSensitivityUi);
     runPreset.addEventListener("change", () => applyRunPreset(currentRunPreset()));
@@ -10845,6 +11045,9 @@
       beaconAllLogSnapshots();
       stopVisionCamera({ quiet: true });
     });
+    navigator.mediaDevices?.addEventListener?.("devicechange", () => {
+      refreshMicDevices({ quiet: true }).catch(() => {});
+    });
     document.querySelectorAll(".settings-panel").forEach((panel) => {
       panel.addEventListener("toggle", scheduleLogPaneHeightUpdate);
     });
@@ -10862,9 +11065,12 @@
     loadTtsVoice();
     loadTtsPrecision();
     loadTtsStyle();
+    loadTtsPace();
     resetCreatureProfileForReload();
     loadAutoAudioRecordPref();
     loadEricAudioMutePref();
+    loadMicDevicePref();
+    refreshMicDevices({ quiet: true }).catch(() => {});
     loadInterruptSensitivity();
     loadIdleFastClock();
     loadIdleDrift();

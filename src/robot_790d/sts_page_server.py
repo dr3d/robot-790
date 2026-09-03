@@ -110,6 +110,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/realtime/restart":
             self._handle_realtime_restart()
             return
+        if parsed.path == "/api/realtime/unload":
+            self._handle_realtime_unload()
+            return
         if parsed.path == "/api/operator/enqueue":
             self._handle_operator_enqueue()
             return
@@ -440,6 +443,48 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 "preset": preset,
                 "pid": process.pid,
                 "message": "Realtime backend restart started.",
+            },
+        )
+
+    def _handle_realtime_unload(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        script_path = repo_root / "scripts" / "unload_realtime.ps1"
+        if not script_path.exists():
+            self._send_json(500, {"status": "error", "error": f"Missing unload script at {script_path}."})
+            return
+
+        logs_dir = repo_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        out_log = logs_dir / "sts-realtime-unload.out.log"
+        err_log = logs_dir / "sts-realtime-unload.err.log"
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        try:
+            with out_log.open("ab") as stdout, err_log.open("ab") as stderr:
+                process = subprocess.Popen(
+                    [
+                        "powershell.exe",
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(script_path),
+                    ],
+                    cwd=repo_root,
+                    stdout=stdout,
+                    stderr=stderr,
+                    creationflags=creationflags,
+                )
+        except OSError as exc:
+            self._send_json(500, {"status": "error", "error": str(exc)})
+            return
+
+        self._send_json(
+            202,
+            {
+                "status": "ok",
+                "tool": "unload_realtime_server",
+                "pid": process.pid,
+                "message": "Realtime backend stop and LM Studio unload started.",
             },
         )
 

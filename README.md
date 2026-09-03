@@ -34,6 +34,7 @@ Start with the public story and evidence:
 - [The Artificial Human Landscape](docs/articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](docs/articles/what-eric-has-taught-us.md)
 - [Why The Empty Context Worked](docs/articles/why-the-empty-context-worked.md)
+- [Start With Nothing But Tools](docs/articles/start-with-nothing-but-tools.md)
 - [Safety Is Architecture, Not Charm](docs/articles/safety-is-architecture-not-charm.md)
 - [The Overnight Run: Tools, Loop, And Second Mind](docs/articles/overnight-run-tools-loop-second-mind.md)
 
@@ -209,13 +210,12 @@ The usual all-local STS setup has three moving parts:
 3. Robot 790 browser page on `127.0.0.1:8790`.
 
 Here `gold` means the current best-known-good Eric runtime preset, not only the
-robot's gold body color. The current fast setup uses the NVFP4 MTP Qwen 27B
-identifier with thinking off and two parallel predictions. That is the stable
-live baseline for Brain1+Brain2 tests without pushing the desktop into VRAM or
-CPU fallback; raise parallel only for short controlled stress tests.
+robot's gold body color. The current gold baseline is back on the faster NVFP4
+MTP build because responsive Brain1 timing matters more than the old-model
+comparison for ordinary lab work.
 
 ```powershell
-lms unload qwen3.8-27b-nvfp4-mtp
+lms unload --all
 lms load qwen3.8-27b-nvfp4-mtp --parallel 2 --context-length 131072 --gpu max --identifier qwen3.8-27b-nvfp4-mtp -y
 ```
 
@@ -266,8 +266,8 @@ Current presets:
 
 | Preset | LM Studio model | Context | Parallel | Reasoning | Notes |
 | --- | --- | ---: | ---: | --- | --- |
-| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Current fast Eric baseline. Same family, less lag, stable enough for Brain1+Brain2 without overloading the desktop. |
-| Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | `low` | Older gold baseline and overnight rumination comparison. |
+| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Current gold baseline: faster response, less lag, and better for testing Brain1 without patience becoming the experiment. |
+| Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | `low` | Old-brain comparison preset: slower, subtly familiar, useful for calibration days. |
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | 1 | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | 1 | `none` | Small/fast comparison model. |
 | Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K requested / 32K observed | 1 | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like; verify actual context with brain status after restart. |
