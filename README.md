@@ -33,6 +33,9 @@ Start with the public story and evidence:
 - [Evidence Map](docs/evidence_map.md)
 - [The Artificial Human Landscape](docs/articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](docs/articles/what-eric-has-taught-us.md)
+- [Why The Empty Context Worked](docs/articles/why-the-empty-context-worked.md)
+- [Safety Is Architecture, Not Charm](docs/articles/safety-is-architecture-not-charm.md)
+- [The Overnight Run: Tools, Loop, And Second Mind](docs/articles/overnight-run-tools-loop-second-mind.md)
 
 <p>
   <img src="docs/media/previews/VID20260827042607.jpg" alt="Robot 790 face rig with eyes, status display, and mouth" width="340">
@@ -414,6 +417,11 @@ The realtime page can expose these tools to the LLM:
 - `write_text_file`, `read_text_file`, `list_text_files`: text-note file tools.
 - `get_brain_status`: local diagnostics such as model, context, token pressure,
   latency, TTS timing, and approximate browser context contribution.
+
+Tool routing includes a small lookup reflex: when an unfamiliar term has been
+repeated, spelled, typed, or otherwise pinned as an exact string, Eric should
+search before asking for more context unless the user clearly frames it as
+private or local.
 
 Image generation is opt-in from the `LLM image generation` checkbox because a
 cloud provider may charge per image. The default provider is OpenAI:
