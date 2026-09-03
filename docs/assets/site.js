@@ -14,8 +14,10 @@ const mediaList = document.querySelector("#media-list");
 const logList = document.querySelector("#log-list");
 const logReader = document.querySelector("#log-reader");
 const pageHeader = document.querySelector(".page-header");
+const headerBannerImage = document.querySelector("#header-banner-image");
 const randomBanner = document.querySelector("#random-banner");
 const githubDocsBase = "https://github.com/dr3d/robot-790/blob/master/docs/";
+const firstVisitStorageKey = "robot790.docs.firstMediaLanding.v1";
 let currentArticle = null;
 let currentMedia = null;
 
@@ -293,14 +295,14 @@ function bannerImageSource(media) {
 }
 
 function applyHeaderBanner(mediaItems) {
-  if (!pageHeader || !mediaItems.length) return;
+  if (!pageHeader || !headerBannerImage || !mediaItems.length) return;
   const ranked = mediaItems
     .filter((media) => bannerImageSource(media))
     .slice()
     .sort((a, b) => {
-      const timeDelta = mediaTimestamp(b) - mediaTimestamp(a);
-      if (timeDelta) return timeDelta;
-      return (Number(b.banner_rank) || 0) - (Number(a.banner_rank) || 0);
+      const rankDelta = (Number(b.banner_rank) || 0) - (Number(a.banner_rank) || 0);
+      if (rankDelta) return rankDelta;
+      return mediaTimestamp(b) - mediaTimestamp(a);
     });
   const banner = ranked[0];
   const source = banner ? bannerImageSource(banner) : "";
@@ -308,8 +310,38 @@ function applyHeaderBanner(mediaItems) {
   const version = encodeURIComponent(String(banner.modified || banner.date || ""));
   const versionedSource = version ? `${source}${source.includes("?") ? "&" : "?"}v=${version}` : source;
   const safeSource = versionedSource.replace(/\\/g, "/").replace(/"/g, "%22");
+  headerBannerImage.onload = () => pageHeader.classList.add("has-banner");
+  headerBannerImage.onerror = () => pageHeader.classList.remove("has-banner");
+  headerBannerImage.src = safeSource;
   pageHeader.style.setProperty("--header-image", `url("${safeSource}")`);
-  pageHeader.classList.add("has-banner");
+}
+
+function hasExplicitLandingTarget() {
+  try {
+    const url = new URL(location.href);
+    return Boolean(location.hash || url.searchParams.has("media") || url.searchParams.has("article"));
+  } catch (_error) {
+    return Boolean(location.hash);
+  }
+}
+
+function firstVisitMediaLandingEnabled() {
+  if (hasExplicitLandingTarget()) return false;
+  try {
+    if (localStorage.getItem(firstVisitStorageKey)) return false;
+    localStorage.setItem(firstVisitStorageKey, new Date().toISOString());
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function scrollToMediaLanding() {
+  requestAnimationFrame(() => {
+    window.setTimeout(() => {
+      document.querySelector("#media")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 180);
+  });
 }
 
 function showMedia(mediaItems) {
@@ -333,6 +365,8 @@ function showMedia(mediaItems) {
     requestAnimationFrame(() => {
       document.querySelector("#media")?.scrollIntoView({ block: "start" });
     });
+  } else if (firstVisitMediaLandingEnabled()) {
+    scrollToMediaLanding();
   }
 }
 
