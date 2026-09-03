@@ -1,5 +1,7 @@
 # The Event Loop Grew A Face
 
+![Eric in a Halloween-street version of the Robot 790 face, generated during the September 1 lab work.](assets/article-images/eric-halloween-look-2026-09-01.jpg)
+
 Robot 790 began as a practical build: speech in, language model, voice out,
 face state, tools, logs. A little local machine with eyes, a mouth display,
 notes, and a voice.

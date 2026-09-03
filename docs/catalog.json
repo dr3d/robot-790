@@ -1,12 +1,12 @@
 {
-    "generated":  "2026-09-03 17:21:08",
+    "generated":  "2026-09-03 17:23:31",
     "articles":  [
                      {
                          "title":  "The Event Loop Grew A Face",
                          "excerpt":  "Robot 790 began as a practical build: speech in, language model, voice out,",
                          "source":  "articles/the-event-loop-grew-a-face.md",
-                         "bytes":  19620,
-                         "modified":  "2026-09-03 17:21"
+                         "bytes":  19783,
+                         "modified":  "2026-09-03 17:22"
                      },
                      {
                          "title":  "The Landscape Around Eric",

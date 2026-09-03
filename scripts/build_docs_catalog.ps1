@@ -40,6 +40,7 @@ function Get-ExcerptFromMarkdown {
         if ($trimmed.StartsWith("#")) { continue }
         if ($trimmed.StartsWith("---")) { continue }
         if ($trimmed.StartsWith(">")) { continue }
+        if ($trimmed -match '^!\[[^\]]*\]\([^)]+\)$') { continue }
         return ($trimmed -replace '\*\*', '' -replace '\*', '' -replace '`', '').Trim()
     }
     return ""
