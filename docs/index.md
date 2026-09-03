@@ -12,9 +12,11 @@ present: tools plus a loop, with the seams left visible.
 
 The motive is simple and human: Scott wanted to build something that was not
 just a chatbot, but actual company - fun, responsive, interesting, and present
-in the room. This is not a clinical claim or a promise of replacement for human
-care. It is an adventure in making a companion-shaped machine, and in finding
-out what that can honestly become.
+in the room. His phrase for that target is an artificial human: not a hidden
+person, not a consciousness claim, and not a replacement for human care, but a
+made social presence with a body, voice, habits, tools, and continuity. It is an
+adventure in making a companion-shaped machine, and in finding out what that can
+honestly become.
 
 This page is a small public shelf for articles, curated logs, media, and
 project notes. The source lives in the main repository; these pages are meant

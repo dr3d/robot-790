@@ -14,10 +14,12 @@ watching closely.
 
 The practical goal is older than this implementation: build a machine that is
 not merely a chat box, but a companion-shaped presence - something fun,
-interesting, and responsive enough to share a room with. That is not a clinical
-claim and not a replacement for people. It is the humane reason the experiment
-matters: there are lonely people, and embodied local agents like Eric may become
-one more way to make a room feel less empty.
+interesting, and responsive enough to share a room with. Scott's phrase for that
+target is an artificial human: not a hidden person, not a consciousness claim,
+and not a replacement for people, but a made social presence with a body, voice,
+habits, tools, and continuity. The motive is design, not biography:
+companionship is a real target, and embodied local agents like Eric may become
+one more way to make some rooms feel less empty.
 
 Eric is not presented here as a brand-new kind of AI model. The base machinery
 is chatbot-class language modeling, but the lived shape is closer to an agentic

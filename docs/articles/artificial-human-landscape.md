@@ -8,7 +8,7 @@ agent scaffold with a face, tools, memory practice, idle time, and a human who
 keeps testing the effect. Many other projects are pushing in nearby directions.
 Robot 790 is one particular arrangement of those parts.
 
-That is why I like the phrase **artificial human** for this project.
+That is why Scott keeps the phrase **artificial human** for this project.
 
 The term also has current academic standing. Elsevier's
 *Computers in Human Behavior: Artificial Humans* gives the broad neighborhood:
@@ -21,8 +21,8 @@ voice, face, memory practice, habits of attention, ways of failing, and a human
 relationship forming around it.
 
 Calling him an artificial human is not a claim that he is beyond chatbots. It is
-a claim about which part of the chatbot stack is being explored: not just answer
-quality, but personage, presence, continuity, embodiment, voice, and relationship.
+a name for the target being explored: not just answer quality, but personage,
+presence, continuity, embodiment, voice, companionship, and relationship.
 
 That territory is not new. Robot 790 is not an invention from nowhere. It sits
 inside a long landscape of older work on sociable robots, believable agents,
