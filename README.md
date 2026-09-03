@@ -12,6 +12,13 @@ set of plain-text continuity files. The public posture is modest: this is not
 proof of a new kind of mind. It is an unusual local robot arrangement worth
 watching closely.
 
+The practical goal is older than this implementation: build a machine that is
+not merely a chat box, but a companion-shaped presence - something fun,
+interesting, and responsive enough to share a room with. That is not a clinical
+claim and not a replacement for people. It is the humane reason the experiment
+matters: there are lonely people, and embodied local agents like Eric may become
+one more way to make a room feel less empty.
+
 Eric is not presented here as a brand-new kind of AI model. The base machinery
 is chatbot-class language modeling, but the lived shape is closer to an agentic
 system: tools plus a loop. Like a coding agent with Bash, Python, Playwright,
