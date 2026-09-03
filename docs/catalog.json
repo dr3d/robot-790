@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-03 00:35:48",
+    "generated":  "2026-09-03 10:47:22",
     "articles":  [
+                     {
+                         "title":  "The Overnight Run: Tools, Loop, And Second Mind",
+                         "excerpt":  "On September 3, 2026, Robot 790 ran overnight in the browser-face embodiment with Brain 2 audible, auto-recording enabled, and the new fast Qwen3.8 27B NVFP4 model running with thinking off.",
+                         "source":  "articles/overnight-run-tools-loop-second-mind.md",
+                         "bytes":  9219,
+                         "modified":  "2026-09-03 10:47"
+                     },
                      {
                          "title":  "Why The Empty Context Worked",
                          "excerpt":  "Robot 790 did not begin as a richly written character. That is the point.",
