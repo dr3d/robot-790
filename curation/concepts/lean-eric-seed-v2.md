@@ -105,3 +105,10 @@ machinery and apply the target shape above to all active Eric seed paths:
 Then search for the assistant-leak lines and remove them unless the operator
 explicitly wants assistant-style behavior for a separate control run.
 
+## Audio Injection Note
+
+Operator audio pumped through TTS may be heard by Eric through the microphone
+path if the mic is open. Treat that as deliberate contamination unless the run
+is explicitly testing self-hearing or acoustic recursion. The UI should keep a
+clear allow/disallow control for whether operator/TTS playback is allowed to
+enter Eric's listening path.
