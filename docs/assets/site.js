@@ -360,7 +360,10 @@ function showMedia(mediaItems) {
     : -1;
   const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultMediaIndex(mediaItems);
   const targetButton = mediaList.querySelector(`[data-media="${targetIndex}"]`);
-  selectMedia(mediaItems[targetIndex], targetButton, { replaceUrl: false });
+  selectMedia(mediaItems[targetIndex], targetButton, {
+    replaceUrl: false,
+    autoplay: selectedIndex >= 0 && requestedMediaAutoplay()
+  });
   if (selectedIndex >= 0 && location.hash === "#media") {
     requestAnimationFrame(() => {
       document.querySelector("#media")?.scrollIntoView({ block: "start" });
@@ -395,16 +398,34 @@ function requestedMediaSource() {
   }
 }
 
-function mediaShareUrl(media) {
+function requestedMediaAutoplay() {
+  try {
+    return new URL(location.href).searchParams.get("autoplay") === "1";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function selectedMediaIsPlaying() {
+  const player = mediaFeature?.querySelector("video, audio");
+  return Boolean(player && !player.paused && !player.ended);
+}
+
+function mediaShareUrl(media, { autoplay = false } = {}) {
   const url = new URL(location.href);
   url.searchParams.delete("article");
   url.searchParams.set("media", media.source);
+  if (autoplay && media.kind === "video") {
+    url.searchParams.set("autoplay", "1");
+  } else {
+    url.searchParams.delete("autoplay");
+  }
   url.hash = "media";
   return url.toString();
 }
 
 async function copyMediaShareUrl(media, button) {
-  const shareUrl = mediaShareUrl(media);
+  const shareUrl = mediaShareUrl(media, { autoplay: selectedMediaIsPlaying() });
   try {
     if (navigator.share) {
       await navigator.share({ title: media.title, url: shareUrl });
@@ -427,7 +448,7 @@ async function copyMediaShareUrl(media, button) {
   }
 }
 
-function selectMedia(media, selectedButton = null, { replaceUrl = true } = {}) {
+function selectMedia(media, selectedButton = null, { replaceUrl = true, autoplay = false } = {}) {
   currentMedia = media;
   mediaList.querySelectorAll("[data-media]").forEach((button) => {
     const selected = button === selectedButton;
@@ -466,11 +487,16 @@ function selectMedia(media, selectedButton = null, { replaceUrl = true } = {}) {
   mediaCaption.querySelector("[data-share-media]")?.addEventListener("click", (event) => {
     copyMediaShareUrl(currentMedia, event.currentTarget);
   });
+  if (autoplay && media.kind === "video") {
+    const player = mediaFeature.querySelector("video");
+    player?.play?.().catch(() => {});
+  }
   if (replaceUrl) {
     const url = new URL(location.href);
     if (url.searchParams.has("media")) {
       url.searchParams.delete("article");
       url.searchParams.set("media", media.source);
+      url.searchParams.delete("autoplay");
       url.hash = "media";
       history.replaceState(null, "", url);
     }

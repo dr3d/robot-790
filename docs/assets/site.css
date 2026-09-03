@@ -69,7 +69,7 @@ button {
 }
 
 .page-header.has-banner .header-banner-image {
-  opacity: 0.42;
+  opacity: 0.35;
 }
 
 .page-header > :not(.header-banner-image) {
