@@ -1002,6 +1002,7 @@
 
     function drawNose(t) {
       const mood = state?.mood || "curious";
+      const director = state?.director && state.director !== "sim" ? state.director : "none";
       const color = state?.status_tint_override ? state?.status_tint || colorForMood(mood) : colorForMood(mood);
       const pulse = 0.5 + Math.sin(t * 0.0017) * 0.5;
       const glow = 0.35 + 0.65 * (pulse * pulse * (3 - 2 * pulse));
@@ -1009,8 +1010,8 @@
       const cy = faceLayout.statusY + faceLayout.statusH / 2;
       ctx.save();
       // The browser pane is intentionally narrowed; compensate so the nose reads round on screen.
-      const rimRy = 136;
-      const rimRx = 160;
+      const rimRy = 127;
+      const rimRx = 151;
       const glowLayers = [
         [42, 0.035],
         [30, 0.055],
@@ -1043,13 +1044,16 @@
       ctx.font = "34px ui-monospace, SFMono-Regular, Consolas, monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(mood.slice(0, 12), cx, cy - 48);
+      ctx.fillText(mood.slice(0, 12), cx, cy - 50);
       ctx.fillStyle = "#91d6e2";
-      ctx.font = "28px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.fillText(state?.mouth?.shape || "neutral", cx, cy);
+      ctx.font = "34px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.fillText(String(state?.mouth?.shape || "neutral").slice(0, 12), cx, cy - 6);
+      ctx.fillStyle = "#b4e0d6";
+      ctx.font = "34px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.fillText(String(director).slice(0, 12), cx, cy + 34);
       ctx.fillStyle = "#6eb8c8";
-      ctx.font = "26px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.fillText(state?.director || "none", cx, cy + 44);
+      ctx.font = "22px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.fillText("sim", cx, cy + 82);
     }
 
     function draw() {
