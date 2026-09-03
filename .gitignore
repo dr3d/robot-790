@@ -6,6 +6,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+tmp/
 .env
 qwen3_tts.env
 *.log
