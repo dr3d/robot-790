@@ -37,7 +37,7 @@
 #define ROBOT790_FIRMWARE_BUILT_AT __DATE__ " " __TIME__
 #endif
 #ifndef ROBOT790_FIRMWARE_FEATURES
-#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,touch_probe,imu_probe"
+#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,touch_probe,imu_probe,eye_pose_modes"
 #endif
 
 namespace {
@@ -113,7 +113,7 @@ constexpr uint32_t MOUTH_FRAME_MS = 80;
 constexpr uint32_t EYE_FRAME_MS = 50;
 constexpr size_t MOUTH_TEXT_MAX_CHARS = 96;
 constexpr uint32_t MOUTH_TEXT_FLASH_MS = 120;
-constexpr uint32_t MOUTH_TEXT_MARQUEE_MS_PER_PX = 28;
+constexpr uint32_t MOUTH_TEXT_MARQUEE_MS_PER_PX = 13;
 constexpr uint32_t MOUTH_TEXT_MARQUEE_END_PAD_MS = 250;
 constexpr int16_t INTEGRATED_EYE_BAND_H = 120;
 constexpr int16_t INTEGRATED_MOUTH_BAND_H = 100;
@@ -122,6 +122,7 @@ constexpr int16_t INTEGRATED_STATUS_Y = INTEGRATED_EYE_BAND_H;
 constexpr int16_t INTEGRATED_STATUS_H = INTEGRATED_MOUTH_Y - INTEGRATED_STATUS_Y;
 constexpr int16_t INTEGRATED_EYE_Y = 0;
 constexpr float INTEGRATED_HUMAN_MOUTH_SCALE = 0.66f;
+constexpr int16_t INTEGRATED_HUMAN_MOUTH_X_OFFSET = -2;
 constexpr int16_t INTEGRATED_HUMAN_MOUTH_Y_OFFSET = 3;
 
 uint16_t rgb(uint8_t r, uint8_t g, uint8_t b)
@@ -266,6 +267,13 @@ enum class EyeRenderStyle : uint8_t {
   Robot,
   Sinister,
   Sleepy
+};
+
+enum class EyePoseMode : uint8_t {
+  Normal,
+  Crossed,
+  Swapped,
+  Googly
 };
 
 enum class MouthStyle : uint8_t {
@@ -419,6 +427,7 @@ ApiState apiState;
 MouthState mouthState;
 IdleDirector idleDirector;
 EyeRenderStyle eyeRenderStyle = EyeRenderStyle::Robot;
+EyePoseMode eyePoseMode = EyePoseMode::Normal;
 float pupilRadius = 15.5f;
 uint32_t lastUpdate = 0;
 uint32_t lastEyeFrame = 0;
@@ -474,7 +483,9 @@ select,input{width:100%;min-width:0;border:1px solid var(--line);background:var(
 <div class="card">
 <h2>Eyes</h2>
 <div class="row"><label for="style">Style</label><select id="style"></select></div>
+<div class="row"><label for="eyeMode">Eye Mode</label><select id="eyeMode"></select></div>
 <div class="actions"><button class="primary" data-post="/style" data-select="style" data-key="name">Apply Style</button></div>
+<div class="actions"><button data-post="/style" data-select="eyeMode" data-key="eye_mode">Apply Eye Mode</button></div>
 <div class="row"><label for="mood">Mood</label><select id="mood"></select></div>
 <div class="row"><label for="moodDur">Duration s</label><input id="moodDur" type="number" min="0" step="0.1" value="4"></div>
 <div class="actions">
@@ -536,7 +547,7 @@ select,input{width:100%;min-width:0;border:1px solid var(--line);background:var(
 </section>
 </main>
 <script>
-const fallback={style:["friendly","classic","cartoony","robot","sinister","sleepy"],mood:["calm","curious","surprised","suspicious","afraid","angry","sleepy","sleep","goofy","robotic","wonder","glitchy","happy","delighted","bashful","bored","focused","confused","proud","mischief","affection"],beat:["slow_smile","affection","inspect","thoughtful","daydream","mischief","confused","focus_lock","double_take","goofy","drowsy","robot_scan","wary","startle"],mouthStyle:["human","robot"],mouthShape:["neutral","smile","smirk_left","smirk_right","open","wide","frown","grimace","sneer","sleep"]};
+const fallback={style:["friendly","classic","cartoony","robot","sinister","sleepy"],eyeMode:["normal","crossed","swapped","googly"],mood:["calm","curious","surprised","suspicious","afraid","angry","sleepy","sleep","goofy","robotic","wonder","glitchy","happy","delighted","bashful","bored","focused","confused","proud","mischief","affection"],beat:["slow_smile","affection","inspect","thoughtful","daydream","mischief","confused","focus_lock","double_take","goofy","drowsy","robot_scan","wary","startle"],mouthStyle:["human","robot"],mouthShape:["neutral","smile","smirk_left","smirk_right","open","wide","frown","grimace","sneer","sleep"]};
 const $=id=>document.getElementById(id);
 function fill(id,values){$(id).innerHTML=values.map(v=>'<option value="'+v+'">'+v+'</option>').join("")}
 async function values(path,key,id){try{const r=await fetch(path);const j=await r.json();fill(id,j[key]||fallback[id])}catch(e){fill(id,fallback[id])}}
@@ -565,7 +576,7 @@ else if(b.id==="sleep")await post("/control",{sleep:true,duration:0});
 else if(b.id==="release")await post("/control",{release:true});
 else if(b.id==="refresh")await refresh();
 }catch(err){$("dot").className="dot bad";$("summary").textContent=err.message;$("status").textContent=err.stack||err.message}});
-async function init(){await Promise.all([values("/styles","styles","style"),values("/moods","moods","mood"),values("/beats","beats","beat"),values("/mouth_styles","mouth_styles","mouthStyle"),values("/mouth_shapes","mouth_shapes","mouthShape")]);await refresh();setInterval(refresh,2500)}
+async function init(){await Promise.all([values("/styles","styles","style"),values("/eye_modes","eye_modes","eyeMode"),values("/moods","moods","mood"),values("/beats","beats","beat"),values("/mouth_styles","mouth_styles","mouthStyle"),values("/mouth_shapes","mouth_shapes","mouthShape")]);await refresh();setInterval(refresh,2500)}
 init();
 </script>
 </body>
@@ -648,6 +659,31 @@ bool parseEyeStyleName(const char *text, EyeRenderStyle &style)
   else if (equalsIgnoreCase(text, "robot") || equalsIgnoreCase(text, "dot") || equalsIgnoreCase(text, "big_dot")) style = EyeRenderStyle::Robot;
   else if (equalsIgnoreCase(text, "sinister") || equalsIgnoreCase(text, "red")) style = EyeRenderStyle::Sinister;
   else if (equalsIgnoreCase(text, "sleepy") || equalsIgnoreCase(text, "steel")) style = EyeRenderStyle::Sleepy;
+  else return false;
+  return true;
+}
+
+const char *eyePoseModeName(EyePoseMode mode)
+{
+  switch (mode) {
+    case EyePoseMode::Crossed: return "crossed";
+    case EyePoseMode::Swapped: return "swapped";
+    case EyePoseMode::Googly: return "googly";
+    case EyePoseMode::Normal:
+    default: return "normal";
+  }
+}
+
+bool parseEyePoseModeName(const char *text, EyePoseMode &mode)
+{
+  if (equalsIgnoreCase(text, "normal") || equalsIgnoreCase(text, "default") || equalsIgnoreCase(text, "auto") ||
+      equalsIgnoreCase(text, "clear") || equalsIgnoreCase(text, "straight")) mode = EyePoseMode::Normal;
+  else if (equalsIgnoreCase(text, "crossed") || equalsIgnoreCase(text, "cross") || equalsIgnoreCase(text, "cross_eye") ||
+           equalsIgnoreCase(text, "cross_eyed") || equalsIgnoreCase(text, "crosseyed")) mode = EyePoseMode::Crossed;
+  else if (equalsIgnoreCase(text, "swapped") || equalsIgnoreCase(text, "swap") || equalsIgnoreCase(text, "swap_eyes") ||
+           equalsIgnoreCase(text, "swapped_eyes")) mode = EyePoseMode::Swapped;
+  else if (equalsIgnoreCase(text, "googly") || equalsIgnoreCase(text, "googly_eyes") ||
+           equalsIgnoreCase(text, "loose") || equalsIgnoreCase(text, "loose_eyes")) mode = EyePoseMode::Googly;
   else return false;
   return true;
 }
@@ -1477,6 +1513,24 @@ Vec2 projectTargetForEye(const Vec3 &target, bool leftEye)
           clampf(-pitch / MAX_PITCH, -1.0f, 1.0f) * MAX_GAZE_Y_PX + gazeState.microY};
 }
 
+void applyEyePoseMode(Vec2 &gaze, bool leftEye, uint32_t now)
+{
+  if (eyePoseMode == EyePoseMode::Crossed) {
+    gaze.x += (leftEye ? 18.0f : -18.0f) * EYE_SCALE;
+    gaze.y += 2.0f * EYE_SCALE;
+  } else if (eyePoseMode == EyePoseMode::Swapped) {
+    gaze.x = -gaze.x;
+  } else if (eyePoseMode == EyePoseMode::Googly) {
+    const float phase = leftEye ? 0.35f : 2.7f;
+    gaze.x = (sinf(float(now) * 0.0041f + phase) * 25.0f +
+              sinf(float(now) * 0.0107f + phase * 1.9f) * 8.0f) * EYE_SCALE;
+    gaze.y = (cosf(float(now) * 0.0037f + phase * 1.3f) * 16.0f +
+              sinf(float(now) * 0.012f + phase) * 5.0f) * EYE_SCALE;
+  }
+  gaze.x = clampf(gaze.x, -MAX_GAZE_X_PX, MAX_GAZE_X_PX);
+  gaze.y = clampf(gaze.y, -MAX_GAZE_Y_PX, MAX_GAZE_Y_PX);
+}
+
 struct EyePalette {
   int16_t irisR;
   float pupilScale;
@@ -1607,25 +1661,27 @@ void renderEyeFrame(bool leftEye, uint32_t now)
   const Mood mood = currentMood(now);
   if (mood == Mood::Sleep) return;
 
-  Vec2 gaze = projectTargetForEye(gazeState.now, leftEye);
+  const bool eyeballLeft = eyePoseMode == EyePoseMode::Swapped ? !leftEye : leftEye;
+  Vec2 gaze = projectTargetForEye(gazeState.now, eyeballLeft);
   if (mood == Mood::Afraid) {
-    gaze.x += sinf(float(now) * 0.032f + (leftEye ? 0.0f : 1.4f)) * 1.4f * EYE_SCALE;
+    gaze.x += sinf(float(now) * 0.032f + (eyeballLeft ? 0.0f : 1.4f)) * 1.4f * EYE_SCALE;
     gaze.y += sinf(float(now) * 0.027f + 2.1f) * 0.8f * EYE_SCALE;
   } else if (mood == Mood::Goofy) {
-    gaze.x += (leftEye ? 5.5f : -5.5f) * EYE_SCALE;
-    gaze.y += (leftEye ? -4.5f : 4.5f) * EYE_SCALE;
+    gaze.x += (eyeballLeft ? 5.5f : -5.5f) * EYE_SCALE;
+    gaze.y += (eyeballLeft ? -4.5f : 4.5f) * EYE_SCALE;
   } else if (mood == Mood::Robotic) {
     gaze.x = roundf(gaze.x / (8.0f * EYE_SCALE)) * (8.0f * EYE_SCALE);
     gaze.y = roundf(gaze.y / (6.0f * EYE_SCALE)) * (6.0f * EYE_SCALE);
   } else if (mood == Mood::Sleepy || mood == Mood::Bored) {
     gaze.y += 8.0f * EYE_SCALE;
   } else if (mood == Mood::Glitchy) {
-    const int32_t tick = int32_t(now / 75 + (leftEye ? 0 : 3));
+    const int32_t tick = int32_t(now / 75 + (eyeballLeft ? 0 : 3));
     gaze.x += float((tick % 5) - 2) * 1.8f * EYE_SCALE;
     gaze.y += float(((tick / 2) % 3) - 1) * 1.6f * EYE_SCALE;
   } else if (mood == Mood::Proud) {
     gaze.y -= 8.0f * EYE_SCALE;
   }
+  applyEyePoseMode(gaze, leftEye, now);
 
   if (eyeRenderStyle == EyeRenderStyle::Robot) {
     fillEllipse(g, EYE_CX, EYE_CY, EYE_SCLERA_RX, EYE_SCLERA_RY, WHITE);
@@ -1634,7 +1690,7 @@ void renderEyeFrame(bool leftEye, uint32_t now)
     fillEllipse(g, EYE_CX, EYE_CY + scaledEye(3.0f), max(int16_t(1), int16_t(EYE_SCLERA_RX - scaledEye(9.0f))),
                 max(int16_t(1), int16_t(EYE_SCLERA_RY - scaledEye(12.0f))), WHITE);
   }
-  drawIris(g, EYE_CX + int16_t(gaze.x), EYE_CY + int16_t(gaze.y), pupilRadius, leftEye);
+  drawIris(g, EYE_CX + int16_t(gaze.x), EYE_CY + int16_t(gaze.y), pupilRadius, eyeballLeft);
   if (mood == Mood::Delighted || mood == Mood::Affection) {
     drawSparkle(g, leftEye ? FACE_EYE_WIDTH - scaledEye(54.0f) : scaledEye(52.0f),
                 scaledEye(68.0f), scaledEye(4.0f), rgb(246, 248, 221));
@@ -1744,7 +1800,7 @@ void renderMouthText(uint32_t now)
   const int16_t screenW = g.width();
   const int16_t mouthY = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_Y : 0;
   const int16_t screenH = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_BAND_H : g.height();
-  const int16_t padX = FACE_INTEGRATED_VIEWPORTS ? 8 : 14;
+  const int16_t padX = FACE_INTEGRATED_VIEWPORTS ? 14 : 14;
   const int16_t maxTextW = screenW - padX * 2;
   const int16_t maxTextH = screenH - 18;
   const char *text = mouthState.text;
@@ -1853,7 +1909,7 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
   const int16_t screenW = g.width();
   const int16_t mouthY = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_Y : 0;
   const int16_t screenH = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_MOUTH_BAND_H : g.height();
-  const int16_t cx0 = screenW / 2;
+  const int16_t cx0 = screenW / 2 + (FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_HUMAN_MOUTH_X_OFFSET : 0);
   const int16_t cy0 = mouthY + screenH / 2 + (FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_HUMAN_MOUTH_Y_OFFSET : 0);
   const float mouthScale = FACE_INTEGRATED_VIEWPORTS ? INTEGRATED_HUMAN_MOUTH_SCALE : 1.0f;
 
@@ -1869,7 +1925,7 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
   if (shape == MouthShape::Sleep && mouthState.talkLevel <= 0.01f &&
       uint32_t(now - mouthState.poseStarted) >= MOUTH_TRANSITION_MS) {
     const int16_t sleepW = int16_t(float(screenW - 84) * mouthScale);
-    const int16_t sleepX = (screenW - sleepW) / 2;
+    const int16_t sleepX = cx0 - sleepW / 2;
     const int16_t sleepY = cy0 - 8;
     g.fillRoundRect(sleepX, sleepY, sleepW, 16, 8, rgb(118, 28, 44));
     g.drawFastHLine(sleepX + 24, sleepY + 3, sleepW - 58, rgb(218, 92, 102));
@@ -2513,6 +2569,7 @@ void addState(JsonDocument &doc, uint32_t now)
   doc["mood"] = moodName(currentMood(now));
   doc["eye_mood"] = moodName(currentMood(now));
   doc["style"] = eyeStyleName(eyeRenderStyle);
+  doc["eye_mode"] = eyePoseModeName(eyePoseMode);
   doc["mood_override"] = apiState.moodOverride;
   doc["gaze_override"] = apiState.gazeOverride;
   doc["status_tint_override"] = statusTintOverride;
@@ -2609,6 +2666,14 @@ void handleEyes()
     EyeRenderStyle style;
     if (parseEyeStyleName(server.arg("style").c_str(), style)) eyeRenderStyle = style;
   }
+  if (server.hasArg("eye_mode")) {
+    EyePoseMode mode;
+    if (parseEyePoseModeName(server.arg("eye_mode").c_str(), mode)) eyePoseMode = mode;
+  }
+  if (server.hasArg("mode")) {
+    EyePoseMode mode;
+    if (parseEyePoseModeName(server.arg("mode").c_str(), mode)) eyePoseMode = mode;
+  }
   if (server.hasArg("animate")) {
     apiState.idleEnabled = server.arg("animate") == "1" || server.arg("animate") == "true";
   }
@@ -2702,6 +2767,17 @@ bool handleHttpStyleName(const char *name)
     return false;
   }
   eyeRenderStyle = style;
+  return true;
+}
+
+bool handleHttpEyeModeName(const char *name)
+{
+  EyePoseMode mode;
+  if (name == nullptr || !parseEyePoseModeName(name, mode)) {
+    sendError("unknown eye mode");
+    return false;
+  }
+  eyePoseMode = mode;
   return true;
 }
 
@@ -2881,6 +2957,12 @@ void handleHttpControl()
   if (doc["style"].is<const char *>()) {
     if (!handleHttpStyleName(doc["style"].as<const char *>())) return;
   }
+  if (doc["eye_mode"].is<const char *>()) {
+    if (!handleHttpEyeModeName(doc["eye_mode"].as<const char *>())) return;
+  }
+  if (doc["mode"].is<const char *>()) {
+    if (!handleHttpEyeModeName(doc["mode"].as<const char *>())) return;
+  }
   if (!doc["flip"].isNull()) {
     if (!handleHttpDisplayFlip(doc["flip"])) return;
   }
@@ -2947,7 +3029,14 @@ void handleHttpStyleEndpoint()
   requests++;
   JsonDocument doc;
   if (!parseBody(doc)) return;
-  if (!handleHttpStyleName(doc["name"] | "")) return;
+  const char *name = doc["name"].is<const char *>() ? doc["name"].as<const char *>() : (doc["style"] | "");
+  if (name != nullptr && name[0] != '\0' && !handleHttpStyleName(name)) return;
+  if (doc["eye_mode"].is<const char *>()) {
+    if (!handleHttpEyeModeName(doc["eye_mode"].as<const char *>())) return;
+  }
+  if (doc["mode"].is<const char *>()) {
+    if (!handleHttpEyeModeName(doc["mode"].as<const char *>())) return;
+  }
   handleHttpState();
 }
 
@@ -3037,6 +3126,10 @@ void initHttp()
   server.on("/styles", HTTP_GET, [] {
     static const char *const values[] = {"friendly", "classic", "cartoony", "robot", "sinister", "sleepy"};
     listValues("styles", values, sizeof(values) / sizeof(values[0]));
+  });
+  server.on("/eye_modes", HTTP_GET, [] {
+    static const char *const values[] = {"normal", "crossed", "swapped", "googly"};
+    listValues("eye_modes", values, sizeof(values) / sizeof(values[0]));
   });
   server.on("/mouth_styles", HTTP_GET, [] {
     static const char *const values[] = {"human", "robot"};

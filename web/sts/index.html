@@ -179,7 +179,7 @@
       grid-template-columns: minmax(260px, 1fr) auto auto;
     }
     .mic-vision-controls {
-      grid-template-columns: 152px auto 152px auto minmax(140px, 1fr) minmax(120px, 160px) auto auto auto;
+      grid-template-columns: 152px auto 152px auto minmax(140px, 1fr) minmax(120px, 160px);
     }
     .audio-record-controls {
       grid-template-columns: minmax(220px, 1fr) auto auto auto;
@@ -756,6 +756,8 @@
           </label>
           <button id="startMic" disabled>Start Mic</button>
           <button id="stopMic" disabled>Stop Mic</button>
+          <button id="muteMicForEric" type="button" disabled aria-pressed="false">Mute Me</button>
+          <button id="muteEricAudio" type="button" aria-pressed="false">Mute Eric</button>
           <button id="resetMic" disabled>Fresh Ears</button>
         </section>
         <section class="controls text-injection-controls">
@@ -774,6 +776,10 @@
             <strong>Audio recording</strong><br>
             <span id="audioRecordStatus">Not recording</span>
           </div>
+          <label class="toggle-row">
+            <input id="autoAudioRecord" type="checkbox" checked>
+            Auto record
+          </label>
           <button id="startAudioRecord">Record Audio</button>
           <button id="stopAudioRecord" disabled>Stop Recording</button>
           <a id="downloadAudioRecord" class="button-link" href="#" download hidden>Download</a>
@@ -1108,6 +1114,8 @@
     const interruptSensitivityValue = document.querySelector("#interruptSensitivityValue");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
+    const muteMicForEricButton = document.querySelector("#muteMicForEric");
+    const muteEricAudioButton = document.querySelector("#muteEricAudio");
     const resetMicButton = document.querySelector("#resetMic");
     const typedInput = document.querySelector("#typedInput");
     const typedSendButton = document.querySelector("#typedSend");
@@ -1117,6 +1125,7 @@
     const brain2Status = document.querySelector("#brain2Status");
     const copyBrain2Button = document.querySelector("#copyBrain2");
     const recordBrain2Button = document.querySelector("#recordBrain2");
+    const autoAudioRecord = document.querySelector("#autoAudioRecord");
     const startAudioRecordButton = document.querySelector("#startAudioRecord");
     const stopAudioRecordButton = document.querySelector("#stopAudioRecord");
     const downloadAudioRecordLink = document.querySelector("#downloadAudioRecord");
@@ -1169,8 +1178,11 @@
 
     let ws;
     let audioContext;
+    let ericPlaybackGain;
     let micContext;
     let micStream;
+    let micMutedForNarration = false;
+    let ericAudioMuted = false;
     let visionCameraStream;
     let micSource;
     let micProcessor;
@@ -1355,6 +1367,8 @@
     const eventLogFilterStorageKey = "robot790.eventLogFilter.v1";
     const performanceModeStorageKey = "robot790.performanceMode.v1";
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
+    const autoAudioRecordStorageKey = "robot790.autoAudioRecord.v1";
+    const ericAudioMutedStorageKey = "robot790.ericAudioMuted.v1";
     const modelPresetStorageKey = "robot790.modelPreset.v2";
     const customModelKeyStorageKey = "robot790.customModelKey.v1";
     const customModelReasoningStorageKey = "robot790.customModelReasoning.v1";
@@ -1677,8 +1691,24 @@
       },
       {
         type: "function",
+        name: "set_face_animation",
+        description: "Turn Robot 790's background idle face animation on or off when the user asks the face to hold still, stop idling, stop wandering, freeze idle animation, or return to autonomous idle animation. This does not sleep the robot and does not change a deliberate mouth, mood, or gaze by itself.",
+        parameters: {
+          type: "object",
+          properties: {
+            enabled: {
+              type: "boolean",
+              description: "False disables background idle face animation; true re-enables it."
+            }
+          },
+          required: ["enabled"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
         name: "set_eye_style",
-        description: "Set Robot 790's eye rendering style when the user asks for eye style, robot eyes, friendly eyes, classic eyes, cartoony eyes, sinister/red eyes, or sleepy eyes.",
+        description: "Set Robot 790's eye rendering style or eye behavior mode when the user asks for eye style, robot eyes, friendly eyes, classic eyes, cartoony eyes, sinister/red eyes, sleepy eyes, crossed eyes, swapped eyes, or googly eyes.",
         parameters: {
           type: "object",
           properties: {
@@ -1686,9 +1716,13 @@
               type: "string",
               enum: ["friendly", "classic", "cartoony", "robot", "sinister", "sleepy"],
               description: "Eye style supported by the ESP32 face firmware."
+            },
+            eye_mode: {
+              type: "string",
+              enum: ["normal", "crossed", "swapped", "googly"],
+              description: "Eye behavior mode. Use crossed for cross-eye, swapped to swap the eye behavior, googly for loose independent eyes, and normal to clear it."
             }
           },
-          required: ["name"],
           additionalProperties: false
         }
       },
@@ -2338,8 +2372,9 @@
       "For wake up or open your eyes, call set_robot_mode with mode idle before answering.",
       "Never say you set, moved, closed, opened, or changed your eyes unless an eye or face tool was actually called successfully.",
       "Use set_face_mood for named moods such as glitchy, goofy, happy, curious, confused, focused, suspicious, or mischief. Include color only when the user asks for a face glow, face tint, nose color, or mood-ring color.",
+      "Use set_face_animation when the user asks you to hold still, stop idling, stop the idle face animation, freeze your face, stop wandering your face, or turn idle face animation back on.",
       "Use play_face_beat for animated beats such as funny face, silly face, scan, double take, startle, mischief, thoughtful, or slow smile.",
-      "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes.",
+      "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes, or an eye mode such as crossed/cross-eye, swapped/swap eyes, googly eyes, or normal eyes.",
       "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
       "Use set_mouth when the user asks for a mouth style or shape such as human, robot, smile, smirk, frown, grimace, sneer, open, talking, sleep, or auto mouth.",
       "Use set_mouth_text when the user asks you to put words, a caption, a transcript, or a hidden aside on your mouth display.",
@@ -2886,15 +2921,31 @@
       return Boolean(audioRecorder && audioRecorder.state === "recording");
     }
 
+    function autoAudioRecordEnabled() {
+      return autoAudioRecord ? autoAudioRecord.checked : true;
+    }
+
+    function loadAutoAudioRecordPref() {
+      if (!autoAudioRecord) return;
+      const saved = localStorage.getItem(autoAudioRecordStorageKey);
+      autoAudioRecord.checked = saved === null ? true : saved === "true";
+    }
+
+    function saveAutoAudioRecordPref() {
+      if (!autoAudioRecord) return;
+      localStorage.setItem(autoAudioRecordStorageKey, String(autoAudioRecordEnabled()));
+    }
+
     function formatRuntimeStateForInstructions() {
       return [
         "Current Robot 790 browser/runtime state:",
         formatLabGoalForInstructions(),
-        `- Microphone is ${micStream ? "on" : "off"}.`,
+        `- Microphone is ${micRuntimeLabel()}.`,
+        `- Eric speaker audio is ${ericAudioRuntimeLabel()}.`,
         `- Browser live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
         `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
         `- Temporary sensing-eye text is ${sensingTextContent ? "present" : "absent"}${sensingTextContent ? ` (${sensingTextName || "unnamed text"})` : ""}.`,
-        `- Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
+        `- Audio recording is ${audioRecordingActive() ? "on" : "off"}; auto-record is ${autoAudioRecordEnabled() ? "on" : "off"}.`,
         audioRecordingActive()
           ? "If recording is on, you may naturally know this session is being captured. Do not overperform or constantly mention it; let it lightly affect self-aware comments when relevant."
           : "If recording is off, do not claim the session is being recorded unless the user says another recorder is active.",
@@ -3977,6 +4028,77 @@
       return Boolean(ws && ws.readyState === WebSocket.OPEN);
     }
 
+    function micRuntimeLabel() {
+      if (!micStream) return "off";
+      return micMutedForNarration ? "on, muted for Eric/narration" : "on";
+    }
+
+    function ericAudioRuntimeLabel() {
+      return ericAudioMuted ? "muted" : "audible";
+    }
+
+    function updateEricAudioGain() {
+      if (!ericPlaybackGain) return;
+      ericPlaybackGain.gain.setTargetAtTime(ericAudioMuted ? 0 : 1, audioContext?.currentTime || 0, 0.015);
+    }
+
+    function ensureEricPlaybackGain() {
+      if (!audioContext) return null;
+      if (!ericPlaybackGain || ericPlaybackGain.context !== audioContext) {
+        ericPlaybackGain = audioContext.createGain();
+        ericPlaybackGain.connect(audioContext.destination);
+      }
+      ericPlaybackGain.gain.value = ericAudioMuted ? 0 : 1;
+      return ericPlaybackGain;
+    }
+
+    function updateEricMuteButton() {
+      if (!muteEricAudioButton) return;
+      muteEricAudioButton.textContent = ericAudioMuted ? "Eric Muted" : "Mute Eric";
+      muteEricAudioButton.classList.toggle("warn", ericAudioMuted);
+      muteEricAudioButton.setAttribute("aria-pressed", ericAudioMuted ? "true" : "false");
+    }
+
+    function setEricAudioMuted(enabled, { quiet = false } = {}) {
+      ericAudioMuted = Boolean(enabled);
+      localStorage.setItem(ericAudioMutedStorageKey, String(ericAudioMuted));
+      updateEricMuteButton();
+      updateEricAudioGain();
+      updateSessionTools({ quiet: true });
+      if (!quiet) log(events, `Eric audio ${ericAudioMuted ? "muted" : "unmuted"}`);
+    }
+
+    function loadEricAudioMutePref() {
+      ericAudioMuted = localStorage.getItem(ericAudioMutedStorageKey) === "true";
+      updateEricMuteButton();
+    }
+
+    function updateMicMuteButton() {
+      if (!muteMicForEricButton) return;
+      muteMicForEricButton.disabled = !micStream;
+      muteMicForEricButton.textContent = micMutedForNarration ? "Mic Muted" : "Mute Me";
+      muteMicForEricButton.classList.toggle("warn", micMutedForNarration);
+      muteMicForEricButton.setAttribute("aria-pressed", micMutedForNarration ? "true" : "false");
+    }
+
+    function setMicMutedForNarration(enabled, { reason = "manual" } = {}) {
+      const next = Boolean(enabled && micStream);
+      if (micMutedForNarration === next) {
+        updateMicMuteButton();
+        return;
+      }
+      micMutedForNarration = next;
+      resetInputAudioBuffer(next ? `narration mute on: ${reason}` : `narration mute off: ${reason}`);
+      if (next) clearInputDraft();
+      if (next) clearMicFreshnessTimer();
+      else scheduleMicFreshnessCheck();
+      updateMicMuteButton();
+      if (audioRecordingActive()) {
+        audioRecordStatus.textContent = next ? "Recording Eric and narrator mic." : "Recording Eric and mic.";
+      }
+      log(events, next ? "mic muted for Eric: narration mode" : "mic unmuted for Eric");
+    }
+
     function updateVisionButtons() {
       visionClearButton.disabled = !visionImageUrl && !sensingTextContent;
     }
@@ -4700,7 +4822,9 @@
         `Idle clock: ${idleClockLabel()}`,
         `Sensing input: ${sensingInputLabel()}`,
         `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
-        `Mic: ${micStream ? "on" : "off"}`,
+        `Mic: ${micRuntimeLabel()}`,
+        `Eric speaker audio: ${ericAudioRuntimeLabel()}`,
+        `Auto audio record: ${autoAudioRecordEnabled() ? "on" : "off"}`,
         `Idle drift: ${idleDriftLabel()}`,
         `Performance mode: ${performanceModeLabel()}`,
         `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
@@ -4878,6 +5002,7 @@
         realtimeConnected()
         && policy.enabled
         && micStream
+        && !micMutedForNarration
         && lastAcceptedUserTranscriptAt
         && lastAssistantResponseDoneAt > lastAcceptedUserTranscriptAt
         && now - lastAcceptedUserTranscriptAt < goneAfterMs
@@ -4887,6 +5012,7 @@
     function conversationReengageBlockedReason() {
       if (!realtimeConnected()) return "disconnected";
       if (!micStream) return "mic off";
+      if (micMutedForNarration) return "muted for narration";
       if (!lastAcceptedUserTranscriptAt) return "no user turn";
       if (Date.now() - lastAcceptedUserTranscriptAt >= compressIdleMs(reengageGoneAfterMs, { floorMs: 15000 })) return "user away";
       if (lastAssistantResponseDoneAt <= lastAcceptedUserTranscriptAt) return "waiting for assistant reply";
@@ -6316,7 +6442,7 @@
       if (performanceActive) {
         return [
           `Performance state: ${performanceModeLabel()}; idle level ${level}; lane ${lane.name}; wonder ${idleWonderLabel()}; self-focus ${idleSelfFocusLabel()}; notes ${idleNotesFocusLabel()}.`,
-          `Mic is ${micStream ? "on" : "off"}. Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
+          `Mic is ${micRuntimeLabel()}. Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
           idleFastClockEnabled() ? `Lab speed is ${currentIdleFastClockSpeed()}x: idle timers are compressed for observation, but the real quiet time is still short.` : "",
           "Treat clock time and quiet seconds as backstage telemetry, not stage material. Mention them only if they become a deliberate dead-air joke.",
           "Verified telemetry supplied on this performance beat: mode state, lane, mic state, audio-recording state, and current conversation context only."
@@ -6325,7 +6451,7 @@
       return [
         `Ambient state: local browser time ${new Date().toLocaleTimeString()}.`,
         `Idle level ${level}; lane ${lane.name}; wonder ${idleWonderLabel()}; self-focus ${idleSelfFocusLabel()}; notes ${idleNotesFocusLabel()}; quiet for about ${quietSeconds} seconds.`,
-        `Mic is ${micStream ? "on" : "off"}.`,
+        `Mic is ${micRuntimeLabel()}.`,
         `Audio recording is ${audioRecordingActive() ? "on" : "off"}.`,
         idleFastClockEnabled() ? `Lab speed is ${currentIdleFastClockSpeed()}x: idle timers are compressed for observation, but the actual quiet seconds above are the real elapsed time.` : "",
         statusLane ? `Cast playback is ${castPlaybackActive ? "active" : "inactive"}.` : "",
@@ -7008,13 +7134,13 @@
 
     function scheduleMicFreshnessCheck() {
       clearMicFreshnessTimer();
-      if (!micStream || !realtimeConnected()) return;
+      if (!micStream || micMutedForNarration || !realtimeConnected()) return;
       micFreshnessTimer = setTimeout(checkMicFreshness, micFreshnessCheckMs);
     }
 
     function checkMicFreshness() {
       micFreshnessTimer = null;
-      if (!micStream || !realtimeConnected()) return;
+      if (!micStream || micMutedForNarration || !realtimeConnected()) return;
       if (userSpeechActive || responseActive || outputAudioActive() || idleInFlight || reengageInFlight) {
         scheduleMicFreshnessCheck();
         return;
@@ -7287,6 +7413,15 @@
       return allowed.has(color) ? color : "";
     }
 
+    function normalizeBoolean(value, fallback = false) {
+      if (typeof value === "boolean") return value;
+      if (typeof value === "number") return value !== 0;
+      const text = String(value ?? "").trim().toLowerCase();
+      if (["1", "true", "yes", "on", "enabled", "enable"].includes(text)) return true;
+      if (["0", "false", "no", "off", "disabled", "disable"].includes(text)) return false;
+      return fallback;
+    }
+
     async function setFaceMode({ mode, energy = 0.55, color = "" } = {}) {
       const tint = normalizeFaceTintColor(color);
       if (mode === "idle") {
@@ -7381,9 +7516,36 @@
       return result;
     }
 
-    async function setEyeStyle({ name } = {}) {
-      if (!name) throw new Error("Missing eye style name");
-      const result = await postFace("style", { name });
+    async function setFaceAnimation({ enabled } = {}) {
+      if (enabled === undefined) throw new Error("Missing enabled value");
+      const on = normalizeBoolean(enabled, true);
+      const result = await postFace("control", { idle: on, autonomous: on, animate: on });
+      if (on) {
+        clearFaceVisualHold();
+        clearGazeHold();
+      } else {
+        noteFaceVisualHold(0);
+      }
+      return { status: "ok", tool: "set_face_animation", enabled: on, face: result };
+    }
+
+    function normalizeEyeMode(mode) {
+      const value = String(mode || "").trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+      if (!value) return "";
+      if (["normal", "default", "auto", "clear", "straight"].includes(value)) return "normal";
+      if (["crossed", "cross", "cross_eye", "cross_eyed", "crosseyed"].includes(value)) return "crossed";
+      if (["swapped", "swap", "swap_eyes", "swapped_eyes"].includes(value)) return "swapped";
+      if (["googly", "googly_eyes", "loose", "loose_eyes"].includes(value)) return "googly";
+      throw new Error(`Unknown eye mode: ${mode}`);
+    }
+
+    async function setEyeStyle({ name, eye_mode: eyeMode, mode } = {}) {
+      const payload = {};
+      if (name) payload.name = name;
+      const normalizedMode = normalizeEyeMode(eyeMode || mode);
+      if (normalizedMode) payload.eye_mode = normalizedMode;
+      if (!payload.name && !payload.eye_mode) throw new Error("Missing eye style name or eye mode");
+      const result = await postFace("style", payload);
       noteFaceVisualHold(3);
       return result;
     }
@@ -7915,6 +8077,8 @@
         session: {
           connected: realtimeConnected(),
           mic_on: Boolean(micStream),
+          mic_input_muted: micMutedForNarration,
+          eric_audio_muted: ericAudioMuted,
           audio_recording_on: audioRecordingActive(),
           idle_level: currentIdleDrift(),
           wonder_level: currentIdleWonder(),
@@ -7957,6 +8121,8 @@
         ...(result.session || {}),
         connected: realtimeConnected(),
         mic_on: Boolean(micStream),
+        mic_input_muted: micMutedForNarration,
+        eric_audio_muted: ericAudioMuted,
         audio_recording_on: audioRecordingActive(),
         idle_level: currentIdleDrift(),
         wonder_level: currentIdleWonder(),
@@ -8079,7 +8245,8 @@
       ].filter(Boolean).join("\n");
       const telemetryText = [
         `Realtime connected: ${realtimeConnected() ? "yes" : "no"}`,
-        `Mic: ${micStream ? "on" : "off"}`,
+        `Mic: ${micRuntimeLabel()}`,
+        `Eric speaker audio: ${ericAudioRuntimeLabel()}`,
         `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
@@ -8204,7 +8371,7 @@
           text: telemetryText,
           details: [
             `Connection: ${realtimeConnected() ? "connected" : "disconnected"}`,
-            `Mic: ${micStream ? "on" : "off"}`,
+            `Mic: ${micRuntimeLabel()}`,
             `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
             `Sensing input: ${sensingInputLabel()}`
           ]
@@ -9042,6 +9209,7 @@
       if (name === "set_robot_mode") return setFaceMode(args);
       if (name === "play_face_beat") return playFaceBeat(args);
       if (name === "set_face_mood") return setFaceMood(args);
+      if (name === "set_face_animation") return setFaceAnimation(args);
       if (name === "set_eye_style") return setEyeStyle(args);
       if (name === "set_eye_gaze") return setEyeGaze(args);
       if (name === "set_mouth") return setMouth(args);
@@ -9286,6 +9454,9 @@
         const result = await executeTool(event.name, event.arguments);
         if (event.name === "set_voice") toolFollowupExactText = voiceFollowupText(result);
         if (event.name === "set_embodiment") toolFollowupExactText = embodimentFollowupText(result);
+        if (event.name === "set_face_animation") {
+          toolFollowupExactText = result.enabled === false ? "I will hold my idle face still." : "My idle face animation is back on.";
+        }
         if (event.name === "set_chassis") toolFollowupExactText = chassisFollowupText(result);
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = memoryFollowupText(event.name, result);
@@ -9322,6 +9493,7 @@
       } catch (error) {
         if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
         if (event.name === "set_embodiment") toolFollowupExactText = "I could not move there.";
+        if (event.name === "set_face_animation") toolFollowupExactText = "I could not change my idle face animation.";
         if (event.name === "set_chassis") toolFollowupExactText = "I could not move.";
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = "I could not save that.";
@@ -9423,6 +9595,7 @@
     async function ensurePlayback() {
       audioContext ||= new AudioContext({ sampleRate: 16000 });
       if (audioContext.state === "suspended") await audioContext.resume();
+      ensureEricPlaybackGain();
     }
 
     function clearAudioQueue() {
@@ -9453,6 +9626,9 @@
       startAudioRecordButton.disabled = !supported || isRecording || isBusy;
       stopAudioRecordButton.disabled = !isRecording || isBusy;
       if (!supported) audioRecordStatus.textContent = "Browser recording is not supported.";
+      else if (!isRecording && !isBusy && !autoAudioRecordEnabled() && audioRecordStatus.textContent === "Not recording") {
+        audioRecordStatus.textContent = "Not recording; auto off.";
+      }
     }
 
     function clearAudioRecordRolloverTimer() {
@@ -9819,7 +9995,7 @@
         }
       });
       audioRecorder.start(1000);
-      audioRecordStatus.textContent = micStream ? "Recording Eric and mic." : "Recording Eric audio.";
+      audioRecordStatus.textContent = micStream ? (micMutedForNarration ? "Recording Eric and narrator mic." : "Recording Eric and mic.") : "Recording Eric audio.";
       log(events, "audio recording started");
       updateAudioRecordButtons();
       updateSessionTools();
@@ -9899,7 +10075,7 @@
       buffer.copyToChannel(samples, 0);
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(audioContext.destination);
+      source.connect(ensureEricPlaybackGain() || audioContext.destination);
       if (recordingDestination) source.connect(recordingDestination);
       activeAudioSources.add(source);
       source.onended = () => {
@@ -10049,6 +10225,7 @@
         disconnectButton.disabled = false;
         startMicButton.disabled = false;
         resetMicButton.disabled = false;
+        updateMicMuteButton();
         faceIdleButton.disabled = false;
         faceBeatButton.disabled = false;
         idlePonderNowButton.disabled = false;
@@ -10096,6 +10273,8 @@
         startMicButton.disabled = true;
         stopMicButton.disabled = true;
         resetMicButton.disabled = true;
+        micMutedForNarration = false;
+        updateMicMuteButton();
         faceIdleButton.disabled = true;
         faceBeatButton.disabled = true;
         idlePonderNowButton.disabled = true;
@@ -10184,8 +10363,8 @@
         let peak = 0;
         for (const sample of input) peak = Math.max(peak, Math.abs(sample));
         level.style.width = `${Math.min(100, peak * 180)}%`;
+        if (micMutedForNarration || brain2MonitorAudioShouldMuteMic()) return;
         maybeBargeInFromMicPeak(peak);
-        if (brain2MonitorAudioShouldMuteMic()) return;
         const pcm16 = float32ToPcm16(resample(input, micContext.sampleRate, 16000));
         send({ type: "input_audio_buffer.append", audio: bytesToB64(pcm16) });
       };
@@ -10195,10 +10374,14 @@
       micStartedAt = Date.now();
       startMicButton.disabled = true;
       stopMicButton.disabled = false;
+      updateMicMuteButton();
       syncMicPanelToMic();
       log(events, reason ? `mic started: ${reason}` : "mic started");
-      if (!audioRecordingActive()) {
+      if (!audioRecordingActive() && autoAudioRecordEnabled()) {
         startAudioRecording().catch((error) => log(events, `auto audio record error: ${error.message}`));
+      } else if (!audioRecordingActive()) {
+        audioRecordStatus.textContent = "Not recording; auto off.";
+        log(events, "auto audio record skipped: disabled");
       }
       scheduleMicFreshnessCheck();
     }
@@ -10214,11 +10397,13 @@
       micStream = null;
       micContext = null;
       micStoppedAt = Date.now();
+      micMutedForNarration = false;
       clearMicFreshnessTimer();
       resetInputAudioBuffer(reason ? `after mic stop: ${reason}` : "after mic stop");
       level.style.width = "0";
       startMicButton.disabled = !(ws && ws.readyState === WebSocket.OPEN);
       stopMicButton.disabled = true;
+      updateMicMuteButton();
       resetConversationReengageCycle();
       syncMicPanelToMic();
       log(events, reason ? `mic stopped: ${reason}` : "mic stopped");
@@ -10245,10 +10430,13 @@
       interruptSensitivity: "How readily the mic interrupts Eric while he is speaking.",
       startMic: "Open the microphone and start streaming speech to Eric.",
       stopMic: "Stop the microphone stream.",
+      muteMicForEric: "Keep recording your mic, but stop sending it to Eric/STT while you narrate.",
+      muteEricAudio: "Mute or unmute Eric's browser speaker audio without stopping the session or recorder.",
       resetMic: "Reset the input audio buffer after long or garbled listening.",
       typedInput: "Typed fallback input; useful for controlled tests or pronunciation.",
       typedSend: "Send typed text as a user turn.",
       typedSay: "Speak typed text through Eric's current voice without adding a user turn.",
+      autoAudioRecord: "Automatically start recording when the microphone starts. Turn off for non-recorded test runs.",
       startAudioRecord: "Start recording the current STS session audio/video artifact.",
       stopAudioRecord: "Stop recording and snapshot conversation, events, and Brain 2 panes.",
       generatedImageOpen: "Open the latest generated image.",
@@ -10367,6 +10555,12 @@
       micPausedForCast = false;
       stopMic().catch((error) => log(events, `mic stop error: ${error.message}`));
     });
+    muteMicForEricButton?.addEventListener("click", () => {
+      setMicMutedForNarration(!micMutedForNarration);
+    });
+    muteEricAudioButton?.addEventListener("click", () => {
+      setEricAudioMuted(!ericAudioMuted);
+    });
     resetMicButton.addEventListener("click", () => {
       resetMicFreshEars().catch((error) => log(events, `mic fresh ears error: ${error.message}`));
     });
@@ -10376,6 +10570,14 @@
         updateAudioRecordButtons();
         log(events, `audio record error: ${error.message}`);
       });
+    });
+    autoAudioRecord?.addEventListener("change", () => {
+      saveAutoAudioRecordPref();
+      if (!audioRecordingActive() && !audioRecordFinalizing && !audioRecordStoppingForRollover) {
+        audioRecordStatus.textContent = autoAudioRecordEnabled() ? "Not recording" : "Not recording; auto off.";
+      }
+      log(events, `auto audio record ${autoAudioRecordEnabled() ? "on" : "off"}`);
+      updateSessionTools();
     });
     stopAudioRecordButton.addEventListener("click", stopAudioRecording);
     typedInput.addEventListener("input", updateTypedInputButtons);
@@ -10660,6 +10862,8 @@
     loadTtsPrecision();
     loadTtsStyle();
     resetCreatureProfileForReload();
+    loadAutoAudioRecordPref();
+    loadEricAudioMutePref();
     loadInterruptSensitivity();
     loadIdleFastClock();
     loadIdleDrift();

@@ -160,10 +160,31 @@ TOOLS: list[dict[str, object]] = [
     },
     {
         "type": "function",
+        "name": "set_face_animation",
+        "description": (
+            "Turn Robot 790's background idle face animation on or off when the user asks the face to "
+            "hold still, stop idling, stop wandering, freeze idle animation, or return to autonomous idle animation. "
+            "This does not sleep the robot and does not change a deliberate mouth, mood, or gaze by itself."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "False disables background idle face animation; true re-enables it.",
+                }
+            },
+            "required": ["enabled"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
         "name": "set_eye_style",
         "description": (
-            "Set Robot 790's eye rendering style when the user explicitly asks for eye style, "
-            "robot eyes, friendly eyes, classic eyes, cartoony eyes, sinister/red eyes, or sleepy eyes."
+            "Set Robot 790's eye rendering style or eye behavior mode when the user explicitly asks for "
+            "eye style, robot eyes, friendly eyes, classic eyes, cartoony eyes, sinister/red eyes, "
+            "sleepy eyes, crossed eyes, swapped eyes, or googly eyes."
         ),
         "parameters": {
             "type": "object",
@@ -172,9 +193,16 @@ TOOLS: list[dict[str, object]] = [
                     "type": "string",
                     "enum": ["friendly", "classic", "cartoony", "robot", "sinister", "sleepy"],
                     "description": "Eye style supported by the ESP32 face firmware.",
-                }
+                },
+                "eye_mode": {
+                    "type": "string",
+                    "enum": ["normal", "crossed", "swapped", "googly"],
+                    "description": (
+                        "Eye behavior mode. Use crossed for cross-eye, swapped to swap eye behavior, "
+                        "googly for loose independent eyes, and normal to clear it."
+                    ),
+                },
             },
-            "required": ["name"],
             "additionalProperties": False,
         },
     },
@@ -626,6 +654,8 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
         result = await asyncio.to_thread(_play_face_beat, parsed)
     elif name == "set_face_mood":
         result = await asyncio.to_thread(_set_face_mood, parsed)
+    elif name == "set_face_animation":
+        result = await asyncio.to_thread(_set_face_animation, parsed)
     elif name == "set_eye_style":
         result = await asyncio.to_thread(_set_eye_style, parsed)
     elif name == "set_eye_gaze":
@@ -724,18 +754,35 @@ def _set_face_mood(arguments: dict[str, object]) -> dict[str, object]:
     return payload
 
 
-def _set_eye_style(arguments: dict[str, object]) -> dict[str, object]:
-    style_name = str(arguments.get("name", "")).strip()
-    if not style_name:
-        return {"status": "error", "error": "Missing required argument: name"}
-
+def _set_face_animation(arguments: dict[str, object]) -> dict[str, object]:
+    enabled = _bool_argument(arguments.get("enabled"), default=True)
     _daemon, face = _build_daemon()
     try:
-        result = face.style(style_name)
+        result = face.idle_animation(enabled)
     finally:
         face.close()
 
-    return {"status": "ok", "tool": "set_eye_style", "style": style_name, "face": result}
+    return {"status": "ok", "tool": "set_face_animation", "enabled": enabled, "face": result}
+
+
+def _set_eye_style(arguments: dict[str, object]) -> dict[str, object]:
+    style_name = str(arguments.get("name", "")).strip()
+    eye_mode = _normalize_eye_mode(arguments.get("eye_mode") or arguments.get("mode"))
+    if not style_name and not eye_mode:
+        return {"status": "error", "error": "Missing required argument: name or eye_mode"}
+
+    _daemon, face = _build_daemon()
+    try:
+        result = face.style(style_name or None, eye_mode=eye_mode or None)
+    finally:
+        face.close()
+
+    payload: dict[str, object] = {"status": "ok", "tool": "set_eye_style", "face": result}
+    if style_name:
+        payload["style"] = style_name
+    if eye_mode:
+        payload["eye_mode"] = eye_mode
+    return payload
 
 
 def _set_eye_gaze(arguments: dict[str, object]) -> dict[str, object]:
@@ -1089,6 +1136,19 @@ def _float_argument(value: object, default: float) -> float:
         return default
 
 
+def _bool_argument(value: object, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    text = str(value or "").strip().lower()
+    if text in {"1", "true", "yes", "on", "enabled", "enable"}:
+        return True
+    if text in {"0", "false", "no", "off", "disabled", "disable"}:
+        return False
+    return default
+
+
 def _normalize_face_color(value: object) -> str | None:
     color = str(value or "").strip().lower()
     if not color:
@@ -1103,6 +1163,21 @@ def _normalize_face_color(value: object) -> str | None:
         return color
     if color in {"cyan", "white", "red", "green", "blue", "yellow", "pink", "orange", "purple"}:
         return color
+    return None
+
+
+def _normalize_eye_mode(value: object) -> str | None:
+    mode = str(value or "").strip().lower().replace(" ", "_").replace("-", "_")
+    if not mode:
+        return None
+    if mode in {"normal", "default", "auto", "clear", "straight"}:
+        return "normal"
+    if mode in {"crossed", "cross", "cross_eye", "cross_eyed", "crosseyed"}:
+        return "crossed"
+    if mode in {"swapped", "swap", "swap_eyes", "swapped_eyes"}:
+        return "swapped"
+    if mode in {"googly", "googly_eyes", "loose", "loose_eyes"}:
+        return "googly"
     return None
 
 

@@ -135,6 +135,10 @@
         <select id="style"></select>
       </div>
       <div class="row">
+        <label for="eyeMode">Eye Mode</label>
+        <select id="eyeMode"></select>
+      </div>
+      <div class="row">
         <label for="gazeX">Gaze X</label>
         <input id="gazeX" type="range" min="-1" max="1" step="0.01" value="0">
       </div>
@@ -161,6 +165,7 @@
     const moodSelect = document.querySelector("#mood");
     const mouthSelect = document.querySelector("#mouth");
     const styleSelect = document.querySelector("#style");
+    const eyeModeSelect = document.querySelector("#eyeMode");
     const gazeX = document.querySelector("#gazeX");
     const gazeY = document.querySelector("#gazeY");
     const talkingButton = document.querySelector("#talking");
@@ -169,6 +174,7 @@
     const moods = ["calm", "curious", "surprised", "suspicious", "afraid", "angry", "sleepy", "sleep", "goofy", "robotic", "wonder", "glitchy", "happy", "delighted", "bashful", "bored", "focused", "confused", "proud", "mischief", "affection"];
     const mouths = ["neutral", "smile", "smirk_left", "smirk_right", "open", "wide", "frown", "grimace", "sneer", "sleep"];
     const styles = ["friendly", "classic", "cartoony", "robot", "sinister", "sleepy"];
+    const eyeModes = ["normal", "crossed", "swapped", "googly"];
     let state = null;
     let lastStateAt = 0;
     let mouthTextKey = "";
@@ -225,7 +231,9 @@
       if (document.activeElement !== moodSelect) moodSelect.value = state.mood || "curious";
       if (document.activeElement !== mouthSelect) mouthSelect.value = state.mouth?.shape || "neutral";
       if (document.activeElement !== styleSelect) styleSelect.value = state.style || "robot";
-      summary.textContent = `${state.mood || "?"} / ${state.mouth?.shape || "?"} / ${state.autonomous ? "idle" : "manual"}`;
+      if (document.activeElement !== eyeModeSelect) eyeModeSelect.value = state.eye_mode || "normal";
+      const mode = state.eye_mode && state.eye_mode !== "normal" ? ` / ${state.eye_mode}` : "";
+      summary.textContent = `${state.mood || "?"} / ${state.mouth?.shape || "?"}${mode} / ${state.autonomous ? "idle" : "manual"}`;
       stateText.textContent = JSON.stringify(state, null, 2);
     }
 
@@ -349,6 +357,11 @@
       mouthH: 390,
       eyePadX: 18,
       mouthPadX: 18,
+      mouthOffsetX: -2,
+      mouthTextInsetX: 34,
+      mouthTextY: 694,
+      mouthTextH: 92,
+      mouthTextMarqueeMsPerPx: 10,
       eyeW: 336,
       eyeH: 336
     };
@@ -412,6 +425,30 @@
         x: Math.sin(t * 0.00052) * 24 + Math.sin(t * 0.00113 + 1.7) * 8,
         y: Math.sin(t * 0.00041 + 2.4) * 14 + Math.sin(t * 0.0017) * 3
       };
+    }
+
+    function eyeModeGaze(mode, gx, gy, left, t) {
+      if (mode === "crossed") {
+        const inward = left ? 1 : -1;
+        return {
+          x: clamp(gx + inward * 24, -firmwareEye.maxGazeX, firmwareEye.maxGazeX),
+          y: clamp(gy + 2, -firmwareEye.maxGazeY, firmwareEye.maxGazeY)
+        };
+      }
+      if (mode === "swapped") {
+        return {
+          x: clamp(-gx, -firmwareEye.maxGazeX, firmwareEye.maxGazeX),
+          y: clamp(gy, -firmwareEye.maxGazeY, firmwareEye.maxGazeY)
+        };
+      }
+      if (mode === "googly") {
+        const phase = left ? 0.35 : 2.7;
+        return {
+          x: clamp(Math.sin(t * 0.0041 + phase) * 25 + Math.sin(t * 0.0107 + phase * 1.9) * 8, -firmwareEye.maxGazeX, firmwareEye.maxGazeX),
+          y: clamp(Math.cos(t * 0.0037 + phase * 1.3) * 16 + Math.sin(t * 0.012 + phase) * 5, -firmwareEye.maxGazeY, firmwareEye.maxGazeY)
+        };
+      }
+      return { x: gx, y: gy };
     }
 
     function blinkAmount(t, left) {
@@ -536,6 +573,8 @@
     function drawEye(cx, cy, left, t, viewportScale = 1) {
       const mood = state?.eye_mood || state?.mood || "curious";
       if (mood === "sleep") return;
+      const eyeMode = state?.eye_mode || "normal";
+      const eyeballLeft = eyeMode === "swapped" ? !left : left;
       const gaze = state?.gaze?.now || { x: 0, y: 0 };
       const pose = lidPoseFor(mood, left);
       const palette = eyePalettes[state?.style || "robot"] || eyePalettes.robot;
@@ -548,23 +587,26 @@
       let gy = clamp(baseGazeY + idle.y * 0.58, -firmwareEye.maxGazeY, firmwareEye.maxGazeY);
 
       if (mood === "afraid") {
-        gx += Math.sin(t * 0.032 + (left ? 0 : 1.4)) * 1.4;
+        gx += Math.sin(t * 0.032 + (eyeballLeft ? 0 : 1.4)) * 1.4;
         gy += Math.sin(t * 0.027 + 2.1) * 0.8;
       } else if (mood === "goofy") {
-        gx += left ? 5.5 : -5.5;
-        gy += left ? -4.5 : 4.5;
+        gx += eyeballLeft ? 5.5 : -5.5;
+        gy += eyeballLeft ? -4.5 : 4.5;
       } else if (mood === "robotic") {
         gx = Math.round(gx / 8) * 8;
         gy = Math.round(gy / 6) * 6;
       } else if (mood === "sleepy" || mood === "bored") {
         gy += 8;
       } else if (mood === "glitchy") {
-        const tick = Math.trunc(t / 75 + (left ? 0 : 3));
+        const tick = Math.trunc(t / 75 + (eyeballLeft ? 0 : 3));
         gx += ((tick % 5) - 2) * 1.8;
         gy += (((Math.trunc(tick / 2)) % 3) - 1) * 1.6;
       } else if (mood === "proud") {
         gy -= 8;
       }
+      const posedGaze = eyeModeGaze(eyeMode, gx, gy, left, t);
+      gx = posedGaze.x;
+      gy = posedGaze.y;
 
       ctx.save();
       ctx.translate(cx - firmwareEye.cx * viewportScale, cy - firmwareEye.cy * viewportScale);
@@ -577,7 +619,7 @@
         drawEllipse(firmwareEye.cx, firmwareEye.cy, firmwareEye.scleraRx, firmwareEye.scleraRy, "#f0eee4");
         drawEllipse(firmwareEye.cx, firmwareEye.cy + 3, firmwareEye.scleraRx - 9, firmwareEye.scleraRy - 12, "#ffffff");
       }
-      drawIris(firmwareEye.cx + gx, firmwareEye.cy + gy, pose, palette, left);
+      drawIris(firmwareEye.cx + gx, firmwareEye.cy + gy, pose, palette, eyeballLeft);
       if (mood === "delighted" || mood === "affection") {
         drawSparkle(left ? firmwareEye.width - 54 : 52, 68, 4, "#f6f8dd");
       }
@@ -659,7 +701,7 @@
       }
 
       const scale = 1.92;
-      const cx0 = faceLayout.width / 2;
+      const cx0 = faceLayout.width / 2 + faceLayout.mouthOffsetX;
       const cy0 = faceLayout.mouthY + faceLayout.mouthH / 2;
       if (shape === "sleep" && talkLevel <= 0.01) {
         const sleepW = 214 * scale;
@@ -812,9 +854,9 @@
     }
 
     function drawRobotMouth(shape, pose, talkLevel, t) {
-      const panelX = faceLayout.mouthPadX;
+      const panelX = faceLayout.mouthPadX + faceLayout.mouthOffsetX;
       const panelY = faceLayout.mouthY + 18;
-      const panelW = faceLayout.width - panelX * 2;
+      const panelW = faceLayout.width - faceLayout.mouthPadX * 2;
       const panelH = faceLayout.mouthH - 30;
       const talkMix = clamp(talkLevel * 0.85, 0, 1);
       drawRoundRect(panelX, panelY, panelW, panelH, 24, "#000810");
@@ -825,7 +867,7 @@
       const gap = 8;
       const barW = Math.max(8, (panelW - 54 - gap * (barCount - 1)) / barCount);
       const barsW = barCount * barW + (barCount - 1) * gap;
-      const barsX = 360 - barsW / 2;
+      const barsX = faceLayout.width / 2 + faceLayout.mouthOffsetX - barsW / 2;
       const barsCy = panelY + panelH / 2;
       for (let i = 0; i < barCount; i += 1) {
         const x = barsX + i * (barW + gap);
@@ -884,13 +926,13 @@
       const text = String(mouth.text || "");
       if (!text) return;
 
-      const panelX = faceLayout.mouthPadX;
-      const panelY = faceLayout.mouthY + 34;
-      const panelW = faceLayout.width - panelX * 2;
-      const panelH = faceLayout.mouthH - 58;
+      const panelX = faceLayout.mouthTextInsetX + faceLayout.mouthOffsetX;
+      const panelY = faceLayout.mouthTextY;
+      const panelW = faceLayout.width - faceLayout.mouthTextInsetX * 2;
+      const panelH = faceLayout.mouthTextH;
       const padX = 18;
       const maxTextW = panelW - padX * 2;
-      const maxTextH = panelH - 42;
+      const maxTextH = panelH - 34;
       const mode = String(mouth.text_mode || "center").toLowerCase();
       const flashLit = mode !== "flash" || Math.floor((t - mouthTextStartedAt) / 120) % 2 === 0;
 
@@ -918,13 +960,13 @@
       const textW = ctx.measureText(text).width;
       const textY = panelY + panelH / 2;
       ctx.beginPath();
-      ctx.rect(panelX + padX, panelY + 24, maxTextW, panelH - 48);
+      ctx.rect(panelX + padX, panelY + 20, maxTextW, panelH - 40);
       ctx.clip();
 
       if ((mode === "marquee" || textW > maxTextW) && textW > 0) {
         const travel = textW + panelW + padX * 2;
         const elapsed = Math.max(0, t - mouthTextStartedAt);
-        const offset = (elapsed / 28) % travel;
+        const offset = (elapsed / faceLayout.mouthTextMarqueeMsPerPx) % travel;
         const textX = panelX + panelW - offset;
         ctx.textAlign = "left";
         if (flashLit || mode !== "flash") {
@@ -948,14 +990,13 @@
       const energy = Number(mouth.energy || 0.45);
       const talkLevel = talking ? clamp((0.72 + 0.28 * Math.sin(t * 0.026)) * energy, 0.08, 1) : 0;
       const pose = mouthPoseFor(shape);
-      if (mouth.text_active && mouth.text) {
-        drawMouthText(t);
-        return;
-      }
       if ((mouth.style || "human") === "robot") {
         drawRobotMouth(shape, pose, talkLevel, t);
       } else {
         drawHumanMouth(shape, pose, talkLevel, energy, t);
+      }
+      if (mouth.text_active && mouth.text) {
+        drawMouthText(t);
       }
     }
 
@@ -1008,7 +1049,7 @@
       ctx.fillText(state?.mouth?.shape || "neutral", cx, cy);
       ctx.fillStyle = "#6eb8c8";
       ctx.font = "26px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.fillText(state?.style || "robot", cx, cy + 44);
+      ctx.fillText(state?.director || "none", cx, cy + 44);
     }
 
     function draw() {
@@ -1026,8 +1067,8 @@
       const eyeScale = faceLayout.eyeW / firmwareEye.width;
       drawEye(faceLayout.eyePadX + faceLayout.eyeW / 2, faceLayout.eyeBandY + faceLayout.eyeH / 2, true, t, eyeScale);
       drawEye(faceLayout.width - faceLayout.eyePadX - faceLayout.eyeW / 2, faceLayout.eyeBandY + faceLayout.eyeH / 2, false, t, eyeScale);
-      drawNose(t);
       drawMouth(t);
+      drawNose(t);
       if (!state || performance.now() - lastStateAt > 1200) {
         ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
         ctx.font = "18px ui-monospace, SFMono-Regular, Consolas, monospace";
@@ -1040,6 +1081,7 @@
     moodSelect.addEventListener("change", () => post("/mood", { name: moodSelect.value }));
     mouthSelect.addEventListener("change", () => post("/mouth", { shape: mouthSelect.value }));
     styleSelect.addEventListener("change", () => post("/style", { name: styleSelect.value }));
+    eyeModeSelect.addEventListener("change", () => post("/style", { eye_mode: eyeModeSelect.value }));
     gazeX.addEventListener("input", () => post("/gaze", { x: Number(gazeX.value), y: Number(gazeY.value) }));
     gazeY.addEventListener("input", () => post("/gaze", { x: Number(gazeX.value), y: Number(gazeY.value) }));
     talkingButton.addEventListener("click", () => post("/mouth", { talking: !state?.mouth?.talking, shape: state?.mouth?.shape || "open" }));
@@ -1048,6 +1090,7 @@
     fillSelect(moodSelect, moods);
     fillSelect(mouthSelect, mouths);
     fillSelect(styleSelect, styles);
+    fillSelect(eyeModeSelect, eyeModes);
     pollState();
     draw();
   </script>

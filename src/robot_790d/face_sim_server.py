@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 WEB_ROOT = Path(__file__).resolve().parents[2] / "web" / "face-sim"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8791
+EYE_MODES = {"normal", "crossed", "swapped", "googly"}
 
 
 def _default_state() -> dict[str, Any]:
@@ -26,7 +27,7 @@ def _default_state() -> dict[str, Any]:
         "firmware": {
             "target": "browser-face-sim",
             "version": "0.1.0",
-            "features": "state,mood,gaze,mouth,nose_glow,idle_canvas,cors",
+            "features": "state,mood,gaze,eye_modes,mouth,nose_glow,idle_canvas,cors",
         },
         "uptime_ms": 0,
         "free_heap": 0,
@@ -43,11 +44,12 @@ def _default_state() -> dict[str, Any]:
         "mood": "curious",
         "eye_mood": "curious",
         "style": "robot",
+        "eye_mode": "normal",
         "mood_override": False,
         "gaze_override": False,
         "status_tint_override": False,
         "sleeping": False,
-        "director": "sim",
+        "director": "none",
         "touch": False,
         "imu": False,
         "sd": False,
@@ -114,7 +116,7 @@ class FaceSimState:
         self.state["mood_override"] = False
         self.state["gaze_override"] = False
         self.state["sleeping"] = False
-        self.state["director"] = "sim"
+        self.state["director"] = "none"
         self.state["mouth"]["manual"] = False
         self.state["mouth"]["talking"] = False
         self.state["mouth"]["shape"] = "neutral"
@@ -151,8 +153,11 @@ class FaceSimState:
         self._touch()
         return self.snapshot()
 
-    def set_style(self, name: str) -> dict[str, Any]:
-        self.state["style"] = _clean_token(name, fallback="robot")
+    def set_style(self, name: str = "", eye_mode: str = "") -> dict[str, Any]:
+        if name:
+            self.state["style"] = _clean_token(name, fallback="robot")
+        if eye_mode:
+            self.state["eye_mode"] = _clean_eye_mode(eye_mode)
         self._touch()
         return self.snapshot()
 
@@ -209,11 +214,25 @@ class FaceSimState:
             result = self.release()
         else:
             result = self.snapshot()
+        if "idle" in payload or "autonomous" in payload or "animate" in payload:
+            enabled = bool(payload.get("idle", payload.get("autonomous", payload.get("animate", True))))
+            self.state["idle"] = enabled
+            self.state["eyes_animate"] = enabled
+            self.state["autonomous"] = enabled
+            result = self.snapshot()
         mood = payload.get("emotion") or payload.get("expression") or payload.get("mood") or payload.get("name")
         if mood:
             result = self.set_mood(str(mood), color=str(payload.get("color") or ""))
         if isinstance(payload.get("gaze"), dict):
             result = self.set_gaze(payload["gaze"])
+        if "eye_mode" in payload or "mode" in payload:
+            result = self.set_style(eye_mode=str(payload.get("eye_mode") or payload.get("mode") or ""))
+        if isinstance(payload.get("eyes"), dict):
+            eyes = payload["eyes"]
+            result = self.set_style(
+                name=str(eyes.get("style") or eyes.get("name") or ""),
+                eye_mode=str(eyes.get("eye_mode") or eyes.get("mode") or ""),
+            )
         if isinstance(payload.get("mouth"), dict):
             result = self.set_mouth(payload["mouth"])
         if payload.get("color"):
@@ -261,6 +280,19 @@ def _clean_token(value: object, fallback: str) -> str:
     return text or fallback
 
 
+def _clean_eye_mode(value: object) -> str:
+    text = _clean_token(value, fallback="normal")
+    if text in {"default", "auto", "clear", "straight"}:
+        return "normal"
+    if text in {"cross", "cross_eye", "cross_eyed", "crosseyed"}:
+        return "crossed"
+    if text in {"swap", "swap_eyes", "swapped_eyes"}:
+        return "swapped"
+    if text in {"googly_eyes", "loose", "loose_eyes"}:
+        return "googly"
+    return text if text in EYE_MODES else "normal"
+
+
 def _clamp_float(value: object, low: float, high: float, fallback: float) -> float:
     try:
         number = float(value)
@@ -276,6 +308,9 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Cache-Control", "no-store, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
@@ -287,7 +322,7 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
         if parsed.path in {"/state", "/api/status", "/status"}:
             self._send_json(200, self.sim_state.snapshot())
             return
-        if parsed.path in {"/moods", "/mouth_shapes", "/mouth_styles", "/styles", "/beats"}:
+        if parsed.path in {"/moods", "/mouth_shapes", "/mouth_styles", "/styles", "/eye_modes", "/beats"}:
             self._send_json(200, _list_payload(parsed.path))
             return
         super().do_GET()
@@ -303,7 +338,13 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
             self._send_json(200, self.sim_state.set_mood(name, color=str(payload.get("color") or "")))
             return
         if parsed.path == "/style":
-            self._send_json(200, self.sim_state.set_style(str(payload.get("name") or payload.get("style") or "")))
+            self._send_json(
+                200,
+                self.sim_state.set_style(
+                    name=str(payload.get("name") or payload.get("style") or ""),
+                    eye_mode=str(payload.get("eye_mode") or payload.get("mode") or ""),
+                ),
+            )
             return
         if parsed.path == "/gaze":
             self._send_json(200, self.sim_state.set_gaze(payload))
@@ -382,6 +423,7 @@ def _list_payload(path: str) -> dict[str, Any]:
         "/mouth_shapes": ["neutral", "smile", "smirk_left", "smirk_right", "open", "wide", "frown", "grimace", "sneer", "sleep"],
         "/mouth_styles": ["human", "robot"],
         "/styles": ["friendly", "classic", "cartoony", "robot", "sinister", "sleepy"],
+        "/eye_modes": ["normal", "crossed", "swapped", "googly"],
         "/beats": [
             "slow_smile",
             "affection",
