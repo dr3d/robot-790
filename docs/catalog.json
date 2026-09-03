@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-03 17:42:28",
+    "generated":  "2026-09-03 18:37:25",
     "articles":  [
                      {
                          "title":  "The Event Loop Grew A Face",
@@ -177,6 +177,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Two Small Lights Keeping Company 2026-09-03 18:24:25",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Two-Small-Lights-Keeping-Company-2026-09-03-182425.mp4",
+                      "preview":  "media/previews/Two-Small-Lights-Keeping-Company-2026-09-03-182425.jpg",
+                      "banner_rank":  45,
+                      "bytes":  8138582,
+                      "date":  "2026-09-03 18:24",
+                      "modified":  "2026-09-03 18:33",
+                      "description":  "A late-night companion-design run with cover art generated from Eric\u0027s own prompt. Scott reframes the work away from proving a soul and toward crafting a participant: voice, embodiment, GPU heartbeat, touch, media, and future Reachy movement. Eric handles the sober turn without collapsing the charm, landing the useful line that the magic sauce is not hidden behind the performance; it is the performance. The run also records the image-tool miss that led Eric to write the prompt used here."
+                  },
                   {
                       "title":  "The Event Loop Grew A Face",
                       "kind":  "video",

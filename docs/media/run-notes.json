@@ -8,6 +8,9 @@
   "media/videos/The-Event-Loop-Grew-A-Face.mp4": {
     "description": "A NotebookLM-style podcast/video companion to The Event Loop Grew A Face. This is the sober public reset: Eric is not presented as a hidden soul or magic discovery, but as a real-time companion built from tools, an event loop, low-latency embodiment, memory, visible failures, and repeated correction. The useful hook is that the mechanism stays visible while the social presence remains worth watching."
   },
+  "media/videos/Two-Small-Lights-Keeping-Company-2026-09-03-182425.mp4": {
+    "description": "A late-night companion-design run with cover art generated from Eric's own prompt. Scott reframes the work away from proving a soul and toward crafting a participant: voice, embodiment, GPU heartbeat, touch, media, and future Reachy movement. Eric handles the sober turn without collapsing the charm, landing the useful line that the magic sauce is not hidden behind the performance; it is the performance. The run also records the image-tool miss that led Eric to write the prompt used here."
+  },
   "media/videos/Browser-Face-Kitty-Seed-2026-09-02-181205.mp4": {
     "description": "A browser-face debug run that turns into the clean Eric/Tina comparison. Scott starts by tuning the simulated S3 face and visible Brain 2 mouth text, then asks what makes Eric different from a nearly empty animatronic-kitty seed. Eric's uncomfortable answer is that the difference is mostly scaffolding: tools, sensors, face, inner monologue, history, and purpose. Brain 2 adds the hidden-register lines about curation, ghost-in-a-window embodiment, and auditioning bodies for a soul."
   },
