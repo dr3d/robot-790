@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-03 17:23:31",
+    "generated":  "2026-09-03 17:42:28",
     "articles":  [
                      {
                          "title":  "The Event Loop Grew A Face",
@@ -177,6 +177,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "The Event Loop Grew A Face",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/The-Event-Loop-Grew-A-Face.mp4",
+                      "preview":  "media/previews/The-Event-Loop-Grew-A-Face.jpg",
+                      "banner_rank":  45,
+                      "bytes":  13254252,
+                      "date":  "2026-09-03 17:42",
+                      "modified":  "2026-09-03 17:42",
+                      "description":  "A NotebookLM-style podcast/video companion to The Event Loop Grew A Face. This is the sober public reset: Eric is not presented as a hidden soul or magic discovery, but as a real-time companion built from tools, an event loop, low-latency embodiment, memory, visible failures, and repeated correction. The useful hook is that the mechanism stays visible while the social presence remains worth watching."
+                  },
                   {
                       "title":  "Browser Face Kitty Seed 2026-09-02 18:12:05",
                       "kind":  "video",

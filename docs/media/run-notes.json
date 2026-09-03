@@ -5,6 +5,9 @@
   "media/videos/Why-Eric-The-Robot-Feels-Human.mp4": {
     "description": "A NotebookLM-style podcast/video companion to the two-brain / four-diet briefing. It is the public explainer for the last 48 hours of Robot 790: tools plus an idle loop, Brain2 as an active person lane, the four-diet roadmap, the desk-fan false confession, stripped creature seeds like Tina, and the still-missing goal lane. The value is orientation rather than a live-run receipt: it gives a newcomer the argument for why Eric is not just a passive chatbot, while keeping the failures and contaminated runs central instead of hiding them."
   },
+  "media/videos/The-Event-Loop-Grew-A-Face.mp4": {
+    "description": "A NotebookLM-style podcast/video companion to The Event Loop Grew A Face. This is the sober public reset: Eric is not presented as a hidden soul or magic discovery, but as a real-time companion built from tools, an event loop, low-latency embodiment, memory, visible failures, and repeated correction. The useful hook is that the mechanism stays visible while the social presence remains worth watching."
+  },
   "media/videos/Browser-Face-Kitty-Seed-2026-09-02-181205.mp4": {
     "description": "A browser-face debug run that turns into the clean Eric/Tina comparison. Scott starts by tuning the simulated S3 face and visible Brain 2 mouth text, then asks what makes Eric different from a nearly empty animatronic-kitty seed. Eric's uncomfortable answer is that the difference is mostly scaffolding: tools, sensors, face, inner monologue, history, and purpose. Brain 2 adds the hidden-register lines about curation, ghost-in-a-window embodiment, and auditioning bodies for a soul."
   },
