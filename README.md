@@ -148,6 +148,8 @@ voices, third-party code, and media assets carry their own licenses.
   interactions, and evolving presets for repeatable experiments.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
   touch, camera, and possible tilt/rotate head direction.
+- [Eric On Reachy](docs/reachy_embodiment.md): plan for making Reachy Mini a
+  Robot 790 embodiment without replacing Eric's brain.
 - [Future Directions](docs/future_directions.md): public-safe notes on the
   desk-show idea, singing, associative drift, library files, world substrates,
   vision, and media.

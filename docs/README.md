@@ -30,6 +30,7 @@ opened directly as a `file://` URL.
   tests.
 - `experimental_controls.md`: STS run controls, known interactions, and
   evolving preset definitions.
+- `reachy_embodiment.md`: plan for making Reachy Mini another Eric embodiment.
 - `future_directions.md`: public-safe roadmap and experiment notes.
 - `embodied_sensor_head.md`: notes for the ESP32-S3 sensor/head direction.
 - `references.md`: research and project lineage shelf.
