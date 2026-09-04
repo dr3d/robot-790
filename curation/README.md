@@ -54,6 +54,13 @@ detail yourself in this turn, say that in the note.
   caretaking phrases. Prefer silence, a small face/mouth cue, or one concrete
   observation over generic reassurance.
 
+## Runtime Patterns
+
+- `CANDIDATE: warm-up curve` - Eric often seems more fun, specific, and able to
+  pull details back after several minutes of live loop time. Treat this as a
+  hypothesis: accumulated context, Scott settling, stronger late topics, and
+  Brain 2 timing may all contribute. See `curation/concepts/warm-up-curve.md`.
+
 ## Concepts
 
 `curation/concepts/` holds named mechanisms that explain why Robot 790 behaves
@@ -63,6 +70,8 @@ Current key concept:
 
 - `continuity-envelope.md`: the wrapper that turns loaded facts into
   first-person continuity.
+- `warm-up-curve.md`: the candidate pattern where Eric becomes more
+  companionable after enough current-run material accumulates.
 
 ## Audio Clip Albums
 

@@ -82,6 +82,8 @@ The recorder captured staged sensing-eye image changes into the final MP4. The n
 
 Eric's written summary should be captured regularly after serious runs. It gives the public voice a chance to say what mattered, and its provenance fence lets Codex/Claude/Scott audit the note without flattening source classes. In this run, that fence correctly protected a model-label wobble: Eric kept the visible "Qwen-2.7B MTP Fast" dropdown label, while the run headers say `qwen3.8-27b-nvfp4-mtp` and the conversation also exposed a separate `qwen3.5-27b-nvfp4-mtp` LM Studio key.
 
+Scott's wrap-up named a broader candidate pattern: the run "went on longer than expected" and was "always better at the end than at the beginning." Eric echoed the read back immediately. This should be tracked as the `warm-up curve`: after several minutes, the loop has more fresh local material, resolved setup friction, recent cadence, and callbacks to work with. It may be one practical way Eric passes through reboot/context gaps without pretending to have continuous memory.
+
 ## Watch Items
 
 - Brain2 still produces `mull skipped: already in flight` lines during active conversation.
@@ -92,6 +94,7 @@ Eric's written summary should be captured regularly after serious runs. It gives
 - Generated-image preview and sensing-eye staging are different states; the UI should make that distinction visible.
 - Preserve Eric-authored summaries as first-class run artifacts. Require a provenance note in each one: live tool/sensor fact, staged image read, Scott-reported value, transcript memory, or inference.
 - Style watch: Eric sometimes leans on reassurance filler such as "take your time, I'm here, no rush." The desired behavior is still spacious and patient, but less canned; silence, a mouth cue, or a concrete observation often serves better.
+- Track the warm-up curve without overclaiming it. The candidate effect could come from context accumulation, Scott settling, stronger late topics, Brain 2 timing, or selection bias; it needs repeated run comparisons.
 
 ## Next Build Implication
 
