@@ -6,6 +6,7 @@ import mimetypes
 import os
 import re
 import subprocess
+import threading
 import time
 from datetime import datetime
 from email import policy
@@ -49,14 +50,25 @@ DEFAULT_SESSION_BEHAVIOR_RULES = [
 RUNTIME_CONFIG_PATH = Path("config") / "runtime.json"
 BASE_SESSION_PROMPT_PATH = Path("prompts") / "robot-790-realtime-system.md"
 OPERATOR_COMMANDS_PATH = Path("logs") / "operator_commands.jsonl"
+SENSING_EYE_INBOX_LOCK = threading.Lock()
+SENSING_EYE_INBOX_LATEST: dict[str, object] | None = None
+MAX_SENSING_EYE_DATA_URL_CHARS = 8 * 1024 * 1024
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
     def end_headers(self) -> None:
         parsed = urlsplit(self.path)
+        if parsed.path.startswith("/api/sensing-eye/"):
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
         if parsed.path in {"", "/", "/index.html"} or parsed.path.endswith((".html", ".css", ".js")):
             self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        self.end_headers()
 
     def do_GET(self) -> None:
         parsed = urlsplit(self.path)
@@ -89,6 +101,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/operator/poll":
             self._handle_operator_poll(parsed.query)
+            return
+        if parsed.path == "/api/sensing-eye/inbox":
+            self._handle_sensing_eye_inbox_poll(parsed.query)
             return
         super().do_GET()
 
@@ -126,6 +141,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/operator/enqueue":
             self._handle_operator_enqueue()
+            return
+        if parsed.path == "/api/sensing-eye/inbox":
+            self._handle_sensing_eye_inbox_push()
             return
         self._send_json(404, {"status": "error", "error": "Unknown API endpoint."})
 
@@ -178,6 +196,20 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 source=str(payload.get("source") or "codex"),
             )
         except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_sensing_eye_inbox_poll(self, query_string: str) -> None:
+        params = parse_qs(query_string)
+        after = _int_param(params, "after", 0)
+        self._send_json(200, poll_sensing_eye_inbox(after=after))
+
+    def _handle_sensing_eye_inbox_push(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = push_sensing_eye_image(payload)
+        except ValueError as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         self._send_json(200, result)
@@ -813,6 +845,58 @@ def list_operator_commands(
         "after": safe_after,
         "commands": commands,
         "latest_seq": commands[-1]["seq"] if commands else safe_after,
+    }
+
+
+def push_sensing_eye_image(payload: dict[str, Any]) -> dict[str, object]:
+    global SENSING_EYE_INBOX_LATEST
+    if not isinstance(payload, dict):
+        raise ValueError("Sensing-eye push body must be an object.")
+    data_url = str(payload.get("image_data_url") or payload.get("data_url") or "").strip()
+    if not data_url:
+        raise ValueError("Missing sensing-eye image data.")
+    if len(data_url) > MAX_SENSING_EYE_DATA_URL_CHARS:
+        raise ValueError("Sensing-eye image is too large.")
+    if not re.match(r"^data:image/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=\s]+$", data_url, flags=re.IGNORECASE):
+        raise ValueError("Sensing-eye image must be a PNG, JPEG, or WebP data URL.")
+
+    source = re.sub(r"[^A-Za-z0-9_. -]+", " ", str(payload.get("source") or "browser_face")).strip()[:80] or "browser_face"
+    filename = _safe_media_filename(str(payload.get("filename") or "")) or f"{source.replace(' ', '-')}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.jpg"
+    state = payload.get("state") if isinstance(payload.get("state"), dict) else {}
+    item = {
+        "seq": time.time_ns(),
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "source": source,
+        "filename": filename,
+        "image_data_url": re.sub(r"\s+", "", data_url),
+        "reason": str(payload.get("reason") or "").strip()[:160],
+        "state": state,
+    }
+    with SENSING_EYE_INBOX_LOCK:
+        SENSING_EYE_INBOX_LATEST = item
+    return {
+        "status": "ok",
+        "tool": "push_sensing_eye_image",
+        "seq": item["seq"],
+        "source": source,
+        "filename": filename,
+    }
+
+
+def poll_sensing_eye_inbox(after: int = 0) -> dict[str, object]:
+    safe_after = max(0, int(after or 0))
+    with SENSING_EYE_INBOX_LOCK:
+        item = dict(SENSING_EYE_INBOX_LATEST or {})
+    if item and int(item.get("seq") or 0) > safe_after:
+        return {
+            "status": "ok",
+            "item": item,
+            "latest_seq": item["seq"],
+        }
+    return {
+        "status": "ok",
+        "item": None,
+        "latest_seq": int(item.get("seq") or safe_after) if item else safe_after,
     }
 
 

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 
 WEB_ROOT = Path(__file__).resolve().parents[2] / "web" / "face-sim"
@@ -97,6 +98,8 @@ def _default_state() -> dict[str, Any]:
 class FaceSimState:
     def __init__(self, host: str, port: int) -> None:
         self.started_at = time.time()
+        self.command_lock = threading.Lock()
+        self.commands: list[dict[str, Any]] = []
         self.state = _default_state()
         url = f"http://{host}:{port}/"
         self.state["mdns_url"] = url
@@ -108,6 +111,38 @@ class FaceSimState:
         state = json.loads(json.dumps(self.state))
         state["uptime_ms"] = int((time.time() - self.started_at) * 1000)
         return state
+
+    def queue_capture_to_eye(self, payload: dict[str, Any]) -> dict[str, Any]:
+        command = {
+            "seq": time.time_ns(),
+            "type": "capture_to_eye",
+            "created_at": time.time(),
+            "sts_url": str(payload.get("sts_url") or "http://127.0.0.1:8790/").strip(),
+            "reason": str(payload.get("reason") or "").strip()[:160],
+        }
+        with self.command_lock:
+            self.commands.append(command)
+            self.commands = self.commands[-50:]
+        self._touch()
+        return {
+            "ok": True,
+            "tool": "capture_browser_face_to_eye",
+            "queued": True,
+            "seq": command["seq"],
+            "message": "browser face capture queued",
+        }
+
+    def list_commands(self, after: int = 0, limit: int = 10) -> dict[str, Any]:
+        safe_after = max(0, int(after or 0))
+        safe_limit = max(1, min(50, int(limit or 10)))
+        with self.command_lock:
+            commands = [command for command in self.commands if int(command.get("seq") or 0) > safe_after][:safe_limit]
+            latest_seq = int(self.commands[-1]["seq"]) if self.commands else safe_after
+        return {
+            "ok": True,
+            "commands": commands,
+            "latest_seq": commands[-1]["seq"] if commands else latest_seq,
+        }
 
     def release(self) -> dict[str, Any]:
         self.state["idle"] = True
@@ -302,6 +337,13 @@ def _clamp_float(value: object, low: float, high: float, fallback: float) -> flo
     return max(low, min(high, number))
 
 
+def _int_param(params: dict[str, list[str]], name: str, default: int) -> int:
+    try:
+        return int((params.get(name) or [default])[0])
+    except (TypeError, ValueError):
+        return default
+
+
 class FaceSimHandler(SimpleHTTPRequestHandler):
     sim_state: FaceSimState
 
@@ -322,6 +364,12 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path in {"/state", "/api/status", "/status"}:
             self._send_json(200, self.sim_state.snapshot())
+            return
+        if parsed.path in {"/commands", "/api/commands"}:
+            params = parse_qs(parsed.query)
+            after = _int_param(params, "after", 0)
+            limit = _int_param(params, "limit", 10)
+            self._send_json(200, self.sim_state.list_commands(after=after, limit=limit))
             return
         if parsed.path in {"/moods", "/mouth_shapes", "/mouth_styles", "/styles", "/eye_modes", "/beats"}:
             self._send_json(200, _list_payload(parsed.path))
@@ -361,6 +409,9 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/beat":
             self._send_json(200, self.sim_state.beat(str(payload.get("name") or payload.get("beat") or "")))
+            return
+        if parsed.path in {"/capture_to_eye", "/api/capture_to_eye"}:
+            self._send_json(200, self.sim_state.queue_capture_to_eye(payload))
             return
         self._send_json(404, {"ok": False, "error": "unknown endpoint"})
 

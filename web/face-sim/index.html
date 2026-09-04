@@ -68,6 +68,13 @@
       letter-spacing: 0;
     }
     .subtle { color: var(--muted); font-size: 12px; }
+    .capture-status {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .capture-status.ok { color: #72f0b2; }
+    .capture-status.bad { color: #ff8a8a; }
     .row {
       display: grid;
       grid-template-columns: 92px 1fr;
@@ -154,6 +161,15 @@
         <label for="release">Idle</label>
         <button id="release">Release</button>
       </div>
+      <div class="row">
+        <label for="captureToEye">Self Eye</label>
+        <button id="captureToEye">Capture To Eye</button>
+      </div>
+      <div class="row">
+        <label for="stsUrl">STS</label>
+        <input id="stsUrl" value="http://127.0.0.1:8790/" spellcheck="false">
+      </div>
+      <div id="captureStatus" class="capture-status">ready to mirror</div>
       <pre id="stateText"></pre>
     </aside>
   </main>
@@ -170,6 +186,9 @@
     const gazeY = document.querySelector("#gazeY");
     const talkingButton = document.querySelector("#talking");
     const releaseButton = document.querySelector("#release");
+    const captureToEyeButton = document.querySelector("#captureToEye");
+    const stsUrlInput = document.querySelector("#stsUrl");
+    const captureStatus = document.querySelector("#captureStatus");
 
     const moods = ["neutral", "calm", "curious", "surprised", "suspicious", "afraid", "angry", "sad", "sleepy", "sleep", "goofy", "silly", "robotic", "calculating", "wonder", "glitchy", "happy", "excited", "delighted", "bashful", "bored", "focused", "confused", "helpful", "proud", "mischief", "affection"];
     const mouths = ["neutral", "smile", "big_smile", "smirk_left", "smirk_right", "open", "o", "wide", "tongue", "frown", "grimace", "sneer", "sleep"];
@@ -185,6 +204,10 @@
     let easedMouthTopology = "";
     let easedMouthTalkLevel = 0;
     let lastMouthEaseAt = 0;
+    let faceCommandLastSeq = 0;
+    let faceCommandPollInFlight = false;
+    const faceCommandPollMs = 500;
+    const stsUrlStorageKey = "robot790.faceSim.stsUrl.v1";
 
     function fillSelect(select, values) {
       select.replaceChildren(...values.map((value) => {
@@ -207,6 +230,45 @@
       syncControls();
     }
 
+    function normalizedStsUrl(value = stsUrlInput?.value) {
+      return String(value || "http://127.0.0.1:8790/").trim().replace(/\/?$/, "/");
+    }
+
+    function setCaptureStatus(text, kind = "") {
+      captureStatus.textContent = text;
+      captureStatus.classList.toggle("ok", kind === "ok");
+      captureStatus.classList.toggle("bad", kind === "bad");
+    }
+
+    function timestampLabel() {
+      return new Date().toISOString().replace(/[:.]/g, "-").replace("T", "-").replace("Z", "");
+    }
+
+    async function captureFaceToEye({ stsUrl = normalizedStsUrl(), reason = "" } = {}) {
+      const targetUrl = new URL("/api/sensing-eye/inbox", normalizedStsUrl(stsUrl));
+      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      const faceState = state ? JSON.parse(JSON.stringify(state)) : {};
+      const filename = `browser-face-${timestampLabel()}.jpg`;
+      setCaptureStatus("sending face to eye...");
+      const response = await fetch(targetUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "browser_face",
+          filename,
+          image_data_url: imageDataUrl,
+          reason,
+          state: faceState
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      setCaptureStatus(`mirrored ${filename}`, "ok");
+      return result;
+    }
+
     async function pollState() {
       try {
         const response = await fetch("/state", { cache: "no-store" });
@@ -218,6 +280,42 @@
         summary.textContent = error.message;
       } finally {
         setTimeout(pollState, 250);
+      }
+    }
+
+    function scheduleFaceCommandPoll() {
+      setTimeout(pollFaceCommands, faceCommandPollMs);
+    }
+
+    async function pollFaceCommands() {
+      if (faceCommandPollInFlight) {
+        scheduleFaceCommandPoll();
+        return;
+      }
+      faceCommandPollInFlight = true;
+      try {
+        const url = new URL("/commands", location.href);
+        url.searchParams.set("after", String(faceCommandLastSeq));
+        const response = await fetch(url, { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.ok === false) {
+          throw new Error(result.error || `${response.status} ${response.statusText}`);
+        }
+        for (const command of result.commands || []) {
+          const seq = Number(command.seq) || 0;
+          if (seq > faceCommandLastSeq) faceCommandLastSeq = seq;
+          if (command.type === "capture_to_eye") {
+            await captureFaceToEye({
+              stsUrl: command.sts_url || normalizedStsUrl(),
+              reason: command.reason || "browser face self-capture"
+            });
+          }
+        }
+      } catch (error) {
+        setCaptureStatus(`mirror failed: ${error.message}`, "bad");
+      } finally {
+        faceCommandPollInFlight = false;
+        scheduleFaceCommandPoll();
       }
     }
 
@@ -1314,12 +1412,21 @@
     gazeY.addEventListener("input", () => post("/gaze", { x: Number(gazeX.value), y: Number(gazeY.value) }));
     talkingButton.addEventListener("click", () => post("/mouth", { talking: !state?.mouth?.talking, shape: state?.mouth?.shape || "open" }));
     releaseButton.addEventListener("click", () => post("/release"));
+    captureToEyeButton.addEventListener("click", () => {
+      captureFaceToEye().catch((error) => setCaptureStatus(`mirror failed: ${error.message}`, "bad"));
+    });
+    stsUrlInput.addEventListener("change", () => {
+      stsUrlInput.value = normalizedStsUrl();
+      localStorage.setItem(stsUrlStorageKey, stsUrlInput.value);
+    });
 
     fillSelect(moodSelect, moods);
     fillSelect(mouthSelect, mouths);
     fillSelect(styleSelect, styles);
     fillSelect(eyeModeSelect, eyeModes);
+    stsUrlInput.value = normalizedStsUrl(localStorage.getItem(stsUrlStorageKey) || stsUrlInput.value);
     pollState();
+    scheduleFaceCommandPoll();
     draw();
   </script>
 </body>

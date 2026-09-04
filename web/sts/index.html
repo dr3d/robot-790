@@ -1519,6 +1519,9 @@
     let operatorCommandPollInFlight = false;
     let operatorBlockedSeq = 0;
     let operatorBlockedReason = "";
+    let sensingEyeInboxLastSeq = 0;
+    let sensingEyeInboxPollTimer = null;
+    let sensingEyeInboxPollInFlight = false;
     let lastUserText = "";
     let recentUserTexts = [];
     let lastAcceptedUserTranscript = "";
@@ -1697,6 +1700,7 @@
     const micFreshnessCheckMs = 60 * 1000;
     const logAutosaveMs = 2 * 60 * 1000;
     const operatorCommandPollMs = 1500;
+    const sensingEyeInboxPollMs = 600;
     const audioRecordRolloverMs = 12 * 60 * 1000;
     const lastAutosavedLogText = new Map();
     const startupNoteFilenames = ["core/erics_memories.txt"];
@@ -2591,6 +2595,29 @@
       }
     ];
 
+    const browserFaceSensingEyeTools = [
+      {
+        type: "function",
+        name: "capture_browser_face_to_eye",
+        description: (
+          "Ask the active browser face simulator to capture its rendered face canvas and place that still image into Robot 790's sensing eye. " +
+          "Use only when the user asks you to look at your own browser face, inspect your current expression, capture your face to your eye, or use the browser face as a mirror. " +
+          "This is not a hardware camera and only works when the active embodiment is the browser_face controller."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            reason: {
+              type: "string",
+              maxLength: 120,
+              description: "Short reason for taking the browser-face self-capture."
+            }
+          },
+          additionalProperties: false
+        }
+      }
+    ];
+
     const castMediaTools = [
       {
         type: "function",
@@ -2734,6 +2761,7 @@
       "Treat the browser live camera stream and the sensing eye as separate: the camera is the moving hardware feed; the sensing eye is a staged still image or text item in context.",
       "If the browser live camera stream is on and you need current visual context, call capture_sensing_eye to copy one frame into the sensing eye before describing the current view.",
       "Never claim you captured, saw, or inspected the current browser live camera frame unless capture_sensing_eye succeeded.",
+      "If you are in the browser_face embodiment and need to inspect your own rendered expression, call capture_browser_face_to_eye; treat the result as a mirror/self-image, not a hardware camera view.",
       "If a sensing-eye image is already staged, describe it as the staged sensing-eye image, not as live camera vision unless it was captured from the live camera.",
       "When the user asks what you know, what you can do, what state you are in, what sensors you have, or anything broad like 'tell me everything', include a brief visual-state report if a sensing-eye image/text is staged or the browser live camera stream is on.",
       "At startup or after a refresh, do not volunteer a long sensor inventory, but if you speak first and sensing input is present, you may mention it briefly.",
@@ -3401,6 +3429,18 @@
       const normalized = normalizeUrlString(faceBaseUrl);
       const matched = configuredEmbodiments().find((item) => normalizeUrlString(item.face_url) === normalized);
       return matched?.key || "";
+    }
+
+    function browserFaceControllerActive() {
+      const normalized = normalizeFaceBaseUrl();
+      const key = matchingConfiguredEmbodimentKey(normalized);
+      if (key === "browser_face") return true;
+      try {
+        const url = new URL(normalized);
+        return url.hostname === "127.0.0.1" && url.port === "8791";
+      } catch {
+        return /browser-face|8791/i.test(normalized);
+      }
     }
 
     function performancePrivacyInstructions() {
@@ -7867,6 +7907,61 @@
       scheduleOperatorCommandPoll();
     }
 
+    function scheduleSensingEyeInboxPoll() {
+      if (sensingEyeInboxPollTimer) clearTimeout(sensingEyeInboxPollTimer);
+      sensingEyeInboxPollTimer = setTimeout(pollSensingEyeInbox, sensingEyeInboxPollMs);
+    }
+
+    async function applySensingEyeInboxItem(item) {
+      const seq = Number(item?.seq) || 0;
+      const dataUrl = String(item?.image_data_url || "");
+      if (!seq || !dataUrl) return false;
+      const image = await loadImage(dataUrl);
+      const source = String(item.source || "browser_face").replace(/_/g, " ");
+      const filename = filenameFromPath(item.filename) || `browser-face-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}.jpg`;
+      setVisionImageFromDrawable(image, filename);
+      sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
+      const stateLabel = item.state && typeof item.state === "object"
+        ? `${item.state.mood || "?"}/${item.state.mouth?.shape || "?"}`
+        : "";
+      log(events, `sensing-eye image received from ${source}: ${filename}${stateLabel ? ` (${stateLabel})` : ""}`);
+      return true;
+    }
+
+    async function fetchSensingEyeInboxItem(after = sensingEyeInboxLastSeq) {
+      const url = new URL("/api/sensing-eye/inbox", location.href);
+      url.searchParams.set("after", String(after));
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result.item || null;
+    }
+
+    async function pollSensingEyeInbox() {
+      if (window.__robot790PageUnloading) return;
+      if (sensingEyeInboxPollInFlight) {
+        scheduleSensingEyeInboxPoll();
+        return;
+      }
+      sensingEyeInboxPollInFlight = true;
+      try {
+        const item = await fetchSensingEyeInboxItem();
+        if (item) await applySensingEyeInboxItem(item);
+      } catch (error) {
+        log(events, `sensing-eye inbox poll error: ${error.message}`);
+      } finally {
+        sensingEyeInboxPollInFlight = false;
+        scheduleSensingEyeInboxPoll();
+      }
+    }
+
+    function startSensingEyeInboxPolling() {
+      sensingEyeInboxLastSeq = 0;
+      scheduleSensingEyeInboxPoll();
+    }
+
     function normalizeFaceBaseUrl() {
       return normalizeUrlString(faceUrl.value);
     }
@@ -8092,6 +8187,42 @@
       const result = await postFace("gaze", payload);
       noteGazeHold(payload.duration, payload.move_ms);
       return result;
+    }
+
+    async function captureBrowserFaceToEye({ reason = "" } = {}) {
+      if (!browserFaceControllerActive()) {
+        throw new Error("Browser face is not the active face controller.");
+      }
+      const beforeSeq = sensingEyeInboxLastSeq;
+      const queueResult = await postFace("capture_to_eye", {
+        sts_url: location.origin,
+        reason: String(reason || "self-capture").slice(0, 120)
+      });
+      const deadline = Date.now() + 4000;
+      while (Date.now() < deadline) {
+        const item = await fetchSensingEyeInboxItem(beforeSeq);
+        if (item) {
+          await applySensingEyeInboxItem(item);
+          return {
+            status: "ok",
+            tool: "capture_browser_face_to_eye",
+            staged: true,
+            filename: item.filename || visionImageName,
+            source: item.source || "browser_face",
+            face_state: item.state || null,
+            queued_seq: queueResult.seq || null
+          };
+        }
+        await sleepMs(160);
+      }
+      return {
+        status: "ok",
+        tool: "capture_browser_face_to_eye",
+        queued: true,
+        staged: false,
+        message: "Capture queued, but the browser face page has not pushed the image back yet.",
+        face: queueResult
+      };
     }
 
     async function setMouth({ style, shape, talking, energy, duration, auto = false } = {}) {
@@ -9888,6 +10019,7 @@
       if (name === "set_eye_gaze") return setEyeGaze(args);
       if (name === "set_mouth") return setMouth(args);
       if (name === "set_mouth_text") return setMouthText(args);
+      if (name === "capture_browser_face_to_eye") return captureBrowserFaceToEye(args);
       if (name === "get_body_sensors") return getBodySensors(args);
       if (name === "set_chassis") return setChassis(args);
       if (name === "remember_fact") return rememberMemoryFact(args);
@@ -10075,6 +10207,17 @@
       );
     }
 
+    function browserFaceEyeFollowupInstructions(result) {
+      if (result?.status === "error") return exactSpeechInstruction("I could not capture my browser face.");
+      if (result?.staged === false) {
+        return exactSpeechInstruction("I asked my browser face to mirror itself, but the face tab has not handed back an image yet.");
+      }
+      return (
+        "Use the newly staged sensing-eye image captured from your browser face to answer in one compact spoken sentence. " +
+        "Treat it as a self-image of your rendered face, not as a hardware camera view, and separate visible pixels from guesses."
+      );
+    }
+
     function castMediaFollowupText(result) {
       if (result?.status === "error") return "I could not cast that.";
       const action = String(result?.action || "").toLowerCase();
@@ -10149,6 +10292,7 @@
         if (event.name === "show_web_page") toolFollowupExactText = webPageFollowupText(result);
         if (event.name === "generate_image") toolFollowupExactText = imageFollowupText(result);
         if (event.name === "capture_sensing_eye") toolFollowupInstructions = sensingEyeFollowupInstructions(result);
+        if (event.name === "capture_browser_face_to_eye") toolFollowupInstructions = browserFaceEyeFollowupInstructions(result);
         if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
         if (event.name === "set_smart_home_device") toolFollowupExactText = smartHomeFollowupText(result);
         log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
@@ -10183,6 +10327,7 @@
         if (event.name === "show_web_page") toolFollowupExactText = "I could not open that page.";
         if (event.name === "generate_image") toolFollowupExactText = "I could not make that image.";
         if (event.name === "capture_sensing_eye") toolFollowupExactText = "I could not capture the live camera frame.";
+        if (event.name === "capture_browser_face_to_eye") toolFollowupExactText = "I could not capture my browser face.";
         if (event.name === "cast_media") toolFollowupExactText = "I could not cast that.";
         if (event.name === "set_smart_home_device") toolFollowupExactText = "I could not control that.";
         log(events, `tool ${event.name} error: ${error.message}`);
@@ -10260,6 +10405,7 @@
         ...(llmWebPageTools?.checked ? webPageTools : []),
         ...(llmImageTools?.checked ? imageTools : []),
         ...(visionCameraActive() ? sensingEyeTools : []),
+        ...(browserFaceControllerActive() ? browserFaceSensingEyeTools : []),
         ...(llmCastMediaTools?.checked ? castMediaTools : []),
         ...(llmSmartHomeTools?.checked ? smartHomeTools : []),
         ...(llmNoteFileTools?.checked ? noteFileTools : [])
@@ -11692,6 +11838,7 @@
     scheduleLogPaneHeightUpdate();
     startGpuStatusPolling();
     startOperatorCommandPolling();
+    startSensingEyeInboxPolling();
     setInterval(() => autosaveSessionLogs(), logAutosaveMs);
     if (browserSpeechAvailable()) {
       window.speechSynthesis.onvoiceschanged = populateBrain2Voices;

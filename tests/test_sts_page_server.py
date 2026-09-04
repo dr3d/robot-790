@@ -265,6 +265,37 @@ def test_operator_command_queue_rejects_empty_and_unknown_kind(tmp_path) -> None
         raise AssertionError("Expected unsupported operator command kind to fail")
 
 
+def test_sensing_eye_inbox_push_and_poll() -> None:
+    pushed = sts_page_server.push_sensing_eye_image(
+        {
+            "source": "browser_face",
+            "filename": "face mirror.jpg",
+            "image_data_url": "data:image/jpeg;base64,ZmFrZSBqcGVn",
+            "reason": "self audit",
+            "state": {"mood": "suspicious", "mouth": {"shape": "sneer"}},
+        }
+    )
+
+    result = sts_page_server.poll_sensing_eye_inbox(after=0)
+
+    assert pushed["status"] == "ok"
+    assert result["status"] == "ok"
+    assert result["latest_seq"] == pushed["seq"]
+    assert result["item"]["source"] == "browser_face"
+    assert result["item"]["filename"] == "face-mirror.jpg"
+    assert result["item"]["state"]["mood"] == "suspicious"
+    assert sts_page_server.poll_sensing_eye_inbox(after=int(pushed["seq"]))["item"] is None
+
+
+def test_sensing_eye_inbox_rejects_non_image_data_url() -> None:
+    try:
+        sts_page_server.push_sensing_eye_image({"image_data_url": "data:text/plain;base64,aGVsbG8="})
+    except ValueError as exc:
+        assert "must be a PNG, JPEG, or WebP data URL" in str(exc)
+    else:
+        raise AssertionError("Expected non-image sensing-eye push to fail")
+
+
 def test_record_audio_snapshot_returns_picture_mp4(monkeypatch, tmp_path) -> None:
     image_path = tmp_path / "logs" / "generated-images" / "last-image.png"
     image_path.parent.mkdir(parents=True)
