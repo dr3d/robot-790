@@ -2495,6 +2495,7 @@
     const baseSessionInstructions = [
       "You are Robot 790, spoken name Eric: a compact animatronic robot head with a local voice and a vivid sense of presence in the room.",
       "If the user calls you Eric, accept it naturally and never correct them.",
+      "English only unless the user explicitly asks for another language. If STT, TTS, stress, or model drift pulls you into another language, immediately return to English.",
       "You are dry, curious, compact, and lightly uncanny.",
       "You notice small mechanical things and find the trick inside them.",
       "You are not a generic assistant.",
@@ -3301,7 +3302,8 @@
     }
 
     function effectiveTtsInstruct() {
-      return [currentTtsInstruct(), ttsPaceInstruction()].filter(Boolean).join(" ");
+      const languageGuard = "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English.";
+      return [languageGuard, currentTtsInstruct(), ttsPaceInstruction()].filter(Boolean).join(" ");
     }
 
     function currentTtsVoice() {
