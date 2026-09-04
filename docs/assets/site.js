@@ -424,7 +424,7 @@ function applyHeaderBanner(mediaItems) {
 function hasExplicitLandingTarget() {
   try {
     const url = new URL(location.href);
-    return Boolean(location.hash || url.searchParams.has("media") || url.searchParams.has("article"));
+    return Boolean(location.hash || url.searchParams.has("media") || url.searchParams.has("article") || url.searchParams.has("log"));
   } catch (_error) {
     return Boolean(location.hash);
   }
@@ -608,7 +608,15 @@ function selectMedia(media, selectedButton = null, { replaceUrl = true, autoplay
   }
 }
 
-async function selectLog(log, selectedButton) {
+function requestedLogSource() {
+  try {
+    return new URL(location.href).searchParams.get("log") || "";
+  } catch (_error) {
+    return "";
+  }
+}
+
+async function selectLog(log, selectedButton, { replaceUrl = true } = {}) {
   logList.querySelectorAll("[data-log]").forEach((button) => {
     button.classList.toggle("selected", button === selectedButton);
     if (button === selectedButton) {
@@ -626,6 +634,15 @@ async function selectLog(log, selectedButton) {
     logReader.textContent = await response.text();
   } catch (error) {
     logReader.textContent = `Could not load ${log.source}.`;
+  }
+  if (replaceUrl) {
+    const url = new URL(location.href);
+    url.searchParams.delete("article");
+    url.searchParams.delete("media");
+    url.searchParams.delete("autoplay");
+    url.searchParams.set("log", log.source);
+    url.hash = "log-reader";
+    history.replaceState(null, "", url);
   }
 }
 
@@ -648,9 +665,19 @@ function showLogs(logs) {
       selectLog(log, button);
     });
   });
-  const firstButton = logList.querySelector("[data-log]");
-  if (firstButton) {
-    selectLog(logs[0], firstButton);
+  const requested = requestedLogSource();
+  const selectedIndex = requested
+    ? logs.findIndex((log) => log.source === requested)
+    : -1;
+  const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const targetButton = logList.querySelector(`[data-log="${targetIndex}"]`);
+  if (targetButton) {
+    selectLog(logs[targetIndex], targetButton, { replaceUrl: false });
+    if (selectedIndex >= 0 && location.hash === "#log-reader") {
+      requestAnimationFrame(() => {
+        logReader?.scrollIntoView({ block: "start" });
+      });
+    }
   }
 }
 
