@@ -450,6 +450,46 @@ def test_finalize_audio_recording_session_sequences_chunk_videos(monkeypatch, tm
     assert (tmp_path / result["raw_latest"]).read_bytes() == b"raw together"
 
 
+def test_finalize_audio_recording_session_skips_short_chunks(monkeypatch, tmp_path) -> None:
+    audio_dir = tmp_path / "logs" / "audio"
+    audio_dir.mkdir(parents=True)
+    short_raw = audio_dir / "short-source.webm"
+    first_raw = audio_dir / "first-source.webm"
+    second_raw = audio_dir / "second-source.webm"
+    cover = audio_dir / "latest-sts-audio-cover.jpg"
+    for path in [short_raw, first_raw, second_raw, cover]:
+        path.write_bytes(path.name.encode("utf-8"))
+
+    def fake_concat_audio(paths, output_path, _repo_root):
+        assert paths == [first_raw, second_raw]
+        output_path.write_bytes(b"raw without false start")
+        return {"status": "ok"}
+
+    def fake_convert(audio_path, output_path, selected_image_path, _repo_root, **_kwargs):
+        assert audio_path.name.endswith("-sts-audio-session-source.webm")
+        assert selected_image_path == cover
+        output_path.write_bytes(b"video without false start")
+        return {"status": "ok", "duration_s": 65.0}
+
+    monkeypatch.setattr(sts_page_server, "_concat_audio_sources", fake_concat_audio)
+    monkeypatch.setattr(sts_page_server, "_make_picture_audio_mp4", fake_convert)
+
+    result = sts_page_server.finalize_audio_recording_session(
+        [
+            {"index": 0, "raw_filename": "logs/audio/short-source.webm", "duration_s": 12.0},
+            {"index": 1, "raw_filename": "logs/audio/first-source.webm", "duration_s": 31.0},
+            {"index": 2, "raw_filename": "logs/audio/second-source.webm", "duration_s": 34.0},
+        ],
+        repo_root=tmp_path,
+        image_filename="latest-sts-audio-cover.jpg",
+    )
+
+    assert result["status"] == "ok"
+    assert result["chunk_count"] == 2
+    assert result["skipped_short_chunks"] == 1
+    assert (tmp_path / result["raw_latest"]).read_bytes() == b"raw without false start"
+
+
 def test_finalize_audio_recording_session_sorts_chunks_by_index(monkeypatch, tmp_path) -> None:
     audio_dir = tmp_path / "logs" / "audio"
     audio_dir.mkdir(parents=True)

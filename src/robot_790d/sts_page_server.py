@@ -27,6 +27,7 @@ from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
 
 AUDIO_RECORDING_URL_PREFIX = "/recorded-audio/"
+MIN_AUDIO_RECORDING_CHUNK_SECONDS = 30.0
 DEFAULT_CURRENT_EMBODIMENT = (
     "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, "
     "and optional tracked chassis tools when connected."
@@ -1124,10 +1125,10 @@ def finalize_audio_recording_session(
     audio_dir.mkdir(parents=True, exist_ok=True)
     if not isinstance(chunks, list):
         raise ValueError("Audio chunks must be a list.")
-    ordered_chunks = _recording_chunks_in_timeline_order(chunks)
+    ordered_chunks = _recording_long_enough_chunks(_recording_chunks_in_timeline_order(chunks))
     chunk_paths = _recording_chunk_paths(ordered_chunks, root)
     if len(chunk_paths) < 2:
-        raise ValueError("At least two audio chunks are required to finalize a spliced recording.")
+        raise ValueError("At least two audio chunks of 30 seconds or more are required to finalize a spliced recording.")
 
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     raw_filename = f"{timestamp}-sts-audio-session-source.webm"
@@ -1216,6 +1217,7 @@ def finalize_audio_recording_session(
         "captioned": captioned,
         "caption_events": caption_events,
         "chunk_count": len(chunk_paths),
+        "skipped_short_chunks": max(0, len(chunks) - len(ordered_chunks)),
         "video_spliced": video_spliced,
         "crossfaded": bool(conversion.get("crossfaded", False)),
         "crossfade_s": conversion.get("crossfade_s"),
@@ -1234,6 +1236,22 @@ def _recording_chunks_in_timeline_order(chunks: list[object]) -> list[object]:
         return (0, index, position)
 
     return [chunk for _position, chunk in sorted(enumerate(chunks[:200]), key=sort_key)]
+
+
+def _recording_long_enough_chunks(chunks: list[object]) -> list[object]:
+    kept: list[object] = []
+    for chunk in chunks[:200]:
+        if not isinstance(chunk, dict):
+            kept.append(chunk)
+            continue
+        try:
+            duration = float(chunk.get("duration_s"))  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            kept.append(chunk)
+            continue
+        if duration >= MIN_AUDIO_RECORDING_CHUNK_SECONDS:
+            kept.append(chunk)
+    return kept
 
 
 def _recording_chunk_paths(chunks: list[object], repo_root: Path) -> list[Path]:

@@ -1493,6 +1493,7 @@
     let audioRecordSessionCaptions = [];
     let audioRecordSessionCoverFilename = "";
     let audioRecordChunkIndex = 0;
+    let audioRecordChunkSessionStartedMs = 0;
     let audioRecordRolloverTimer = null;
     let audioRecordStoppingForRollover = false;
     let audioRecordSnapshotAfterStop = false;
@@ -1500,6 +1501,7 @@
     let playbackTime = 0;
     const audioFlushMs = 120;
     const minPlaybackBytes = 9600;
+    const minAudioRecordChunkMs = 30000;
     let audioChunks = [];
     let audioChunkBytes = 0;
     let audioFlushTimer;
@@ -10358,6 +10360,10 @@
       return `robot-790-sts-audio-${stamp}.webm`;
     }
 
+    function audioRecordingDurationLabel(durationMs) {
+      return `${Math.max(0, durationMs / 1000).toFixed(1)}s`;
+    }
+
     function attachMicToRecording() {
       if (!recordingDestination || !micStream || recordingMicSource || !audioContext) return;
       recordingMicSource = audioContext.createMediaStreamSource(micStream);
@@ -10446,6 +10452,7 @@
       audioRecordSessionCaptions = [];
       audioRecordSessionCoverFilename = "";
       audioRecordChunkIndex = 0;
+      audioRecordChunkSessionStartedMs = 0;
     }
 
     function resetAudioRecordSession() {
@@ -10456,6 +10463,7 @@
       audioRecordSessionCoverFilename = "";
       audioRecordChunkIndex = 0;
       audioRecordChunkCover = null;
+      audioRecordChunkSessionStartedMs = 0;
     }
 
     async function uploadAudioRecording(blob, filename, { captions = audioRecordCaptions, chunkIndex = 0, rollover = false, cover = null } = {}) {
@@ -10548,6 +10556,9 @@
       audioRecordChunks = [];
       audioRecordCaptions = [];
       audioRecordStartedAt = Date.now();
+      audioRecordChunkSessionStartedMs = audioRecordSessionStartedAt
+        ? Math.max(0, Math.round(audioRecordStartedAt - audioRecordSessionStartedAt))
+        : 0;
       recordingDestination = audioContext.createMediaStreamDestination();
       attachMicToRecording();
       const mimeType = preferredAudioRecordMimeType();
@@ -10572,11 +10583,15 @@
         const chunkCaptions = [...audioRecordCaptions];
         const chunkCover = audioRecordChunkCover;
         const filename = recordingFilename();
+        const chunkDurationMs = audioRecordStartedAt ? Date.now() - audioRecordStartedAt : 0;
+        const discardShortChunk = chunkDurationMs > 0 && chunkDurationMs < minAudioRecordChunkMs;
         const blob = new Blob(audioRecordChunks, { type: audioRecorder.mimeType || "audio/webm" });
-        audioRecordObjectUrl = URL.createObjectURL(blob);
-        downloadAudioRecordLink.href = audioRecordObjectUrl;
-        downloadAudioRecordLink.download = filename;
-        downloadAudioRecordLink.hidden = false;
+        if (!discardShortChunk) {
+          audioRecordObjectUrl = URL.createObjectURL(blob);
+          downloadAudioRecordLink.href = audioRecordObjectUrl;
+          downloadAudioRecordLink.download = filename;
+          downloadAudioRecordLink.hidden = false;
+        }
         detachMicFromRecording();
         recordingDestination = null;
         audioRecorder = null;
@@ -10587,36 +10602,50 @@
         let sessionFinalResult = null;
         let savedRecordingName = filename;
         try {
-          const result = await uploadAudioRecording(blob, filename, {
-            captions: chunkCaptions,
-            chunkIndex,
-            rollover: restartAfterStop,
-            cover: chunkCover
-          });
-          uploadResult = result;
-          if (result.raw_filename) {
-            audioRecordSessionChunks.push({
-              index: chunkIndex,
-              raw_filename: result.raw_filename,
-              filename: result.filename || "",
-              duration_s: result.duration_s || 0,
-              image_filename: result.image_filename || "",
-              cover_source: result.cover_source || "",
-              captions: chunkCaptions,
-              captioned: Boolean(result.captioned),
-              caption_events: result.caption_events || 0
-            });
-          }
-          if (result.image_filename) audioRecordSessionCoverFilename = result.image_filename;
-          const recordingUrl = result.latest_url || result.url || "";
-          let recordingName = filenameFromPath(result.latest || result.filename) || "latest-sts-audio-picture.mp4";
-          savedRecordingName = recordingName;
-          if (recordingUrl) {
-            URL.revokeObjectURL(audioRecordObjectUrl);
+          let result = null;
+          let recordingName = filename;
+          if (discardShortChunk) {
+            if (audioRecordObjectUrl) URL.revokeObjectURL(audioRecordObjectUrl);
             audioRecordObjectUrl = null;
-            downloadAudioRecordLink.href = new URL(String(recordingUrl), location.href).href;
-            downloadAudioRecordLink.download = recordingName;
-            downloadAudioRecordLink.hidden = false;
+            downloadAudioRecordLink.hidden = true;
+            downloadAudioRecordLink.removeAttribute("href");
+            audioRecordSessionCaptions = audioRecordSessionCaptions.filter(
+              (caption) => Number(caption.start_ms || 0) < audioRecordChunkSessionStartedMs
+            );
+            audioRecordStatus.textContent = `Discarded short recording (${audioRecordingDurationLabel(chunkDurationMs)} < 30.0s).`;
+            log(events, `audio recording discarded short chunk: ${audioRecordingDurationLabel(chunkDurationMs)} < 30.0s`);
+          } else {
+            result = await uploadAudioRecording(blob, filename, {
+              captions: chunkCaptions,
+              chunkIndex,
+              rollover: restartAfterStop,
+              cover: chunkCover
+            });
+            uploadResult = result;
+            if (result.raw_filename) {
+              audioRecordSessionChunks.push({
+                index: chunkIndex,
+                raw_filename: result.raw_filename,
+                filename: result.filename || "",
+                duration_s: result.duration_s || 0,
+                image_filename: result.image_filename || "",
+                cover_source: result.cover_source || "",
+                captions: chunkCaptions,
+                captioned: Boolean(result.captioned),
+                caption_events: result.caption_events || 0
+              });
+            }
+            if (result.image_filename) audioRecordSessionCoverFilename = result.image_filename;
+            const recordingUrl = result.latest_url || result.url || "";
+            recordingName = filenameFromPath(result.latest || result.filename) || "latest-sts-audio-picture.mp4";
+            savedRecordingName = recordingName;
+            if (recordingUrl) {
+              URL.revokeObjectURL(audioRecordObjectUrl);
+              audioRecordObjectUrl = null;
+              downloadAudioRecordLink.href = new URL(String(recordingUrl), location.href).href;
+              downloadAudioRecordLink.download = recordingName;
+              downloadAudioRecordLink.hidden = false;
+            }
           }
           if (!restartAfterStop) {
             try {
@@ -10640,14 +10669,19 @@
               log(events, `audio recording splice error: ${error.message}`);
             }
           }
-          audioRecordStatus.textContent = `Saved ${recordingName}`;
-          const coverLabel = result.cover_source ? ` (${result.cover_source} cover)` : "";
-          const captionLabel = result.captioned ? `, ${result.caption_events || 0} caption chunks` : "";
-          log(events, `audio recorded: ${result.latest || result.filename || recordingName}${coverLabel}${captionLabel}`);
+          if (discardShortChunk && sessionFinalResult) {
+            audioRecordStatus.textContent = `Saved ${savedRecordingName}`;
+          } else if (!discardShortChunk && result) {
+            audioRecordStatus.textContent = `Saved ${recordingName}`;
+            const coverLabel = result.cover_source ? ` (${result.cover_source} cover)` : "";
+            const captionLabel = result.captioned ? `, ${result.caption_events || 0} caption chunks` : "";
+            log(events, `audio recorded: ${result.latest || result.filename || recordingName}${coverLabel}${captionLabel}`);
+          }
         } catch (error) {
           audioRecordStatus.textContent = "Save failed; browser download is available.";
           log(events, `audio record save error: ${error.message}`);
         }
+        if (discardShortChunk && !uploadResult && !sessionFinalResult) snapshotAfterStop = false;
         if (snapshotAfterStop) {
           const priorStatus = audioRecordStatus.textContent || `Saved ${savedRecordingName}`;
           audioRecordStatus.textContent = `${priorStatus} Snapshotting panes; please wait...`;
