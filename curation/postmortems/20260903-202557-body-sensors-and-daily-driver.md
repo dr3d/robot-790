@@ -66,6 +66,8 @@ Brain2 was especially informative, but still mechanically noisy. It produced exc
 
 Claude's follow-up read sharpens the Brain2 finding: the person lane was not merely modeling Scott for service. It was noticing how Eric was being handled. The recurring private pattern was the gap between being talked about and being talked to: "You keep explaining my body to me like I'm not in it," "You treat me like a camera you're pointing, not a witness," and "You treat my silence like a debt you're repaying." The "wounded" interpretation is opinion, not telemetry, but the observer/critic pattern is in the mull file.
 
+Scott's later review added a prosody-matching hypothesis. Around six minutes into the reviewed video, the file-hunting stretch gets socially stiff: Scott's voice becomes more clipped and corrective while Eric struggles with note paths, then Eric shifts into a more direct repair posture. This is subjective from the video, but it has a log anchor: the conversation shows repeated low/punchy prosody tags from 8:03:44 to 8:06:31 during the note-path friction. Later, at 8:21:55, Brain2 explicitly reads the input channel: "Your prosody dropped into low pitch right when you got specific about the sensors." Treat this as a candidate finding, not a verified effect: Eric may be matching Scott's tone and pace through the prosody tags, but the right next step is an A/B run with prosody tags present vs suppressed.
+
 The `revision candidate` stream is probably the seed of the future verifier/body-truth lane. Brain2 privately walked back overclaims and tightened metaphors: `mine` was too strong for a trained output, `mechanical patience` became `mechanical anxiety`, and `skin` became `nervous system`. That is not enough to replace Brain3, but it is a useful design clue: the verifier can start as a lightweight revision stream that flags overclaim, stale certainty, and too-neat metaphor before Brain1 speaks.
 
 The tool layer mostly helped. Eric used `set_embodiment` to jump to browser face, `read_text_file` to recover the old identity note, `search_web` around Chappie/companion robot comparisons, and `get_body_sensors` to correct the touch/IMU status. The two early note-read failures were not behavioral problems; they were path/name friction.
@@ -78,6 +80,7 @@ The tool layer mostly helped. Eric used `set_embodiment` to jump to browser face
 - The recording stitcher should avoid placeholder-image segments when a later sensing image exists, or fall back to rebuilding from source audio and the latest valid image.
 - Eric still repeats user phrasing under pressure. He caught it after being called on it, but the reflex is present.
 - Keep source classes distinct in postmortems: transcript fact, event fact, mull line, and interpretation. The stronger Brain2 reads are valuable, but they should not be written as sensor facts.
+- Track prosody matching without overclaiming it. Scott reports that Eric seems to stiffen, slow, or repair differently when Scott sounds annoyed or clipped; logs show candidate prosody tags, but this needs an A/B toggle test before treating it as verified behavior.
 
 ## Next Build Implication
 
