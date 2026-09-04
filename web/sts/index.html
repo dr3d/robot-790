@@ -55,10 +55,12 @@
     }
     .header-actions {
       display: inline-flex;
+      flex: 1 1 auto;
       align-items: center;
       justify-content: flex-end;
       gap: 12px;
       flex-wrap: wrap;
+      min-width: 0;
     }
     h1 {
       margin: 0;
@@ -74,10 +76,12 @@
       white-space: nowrap;
     }
     .gpu-status {
-      width: 226px;
+      flex: 1 1 720px;
+      min-width: min(100%, 520px);
+      max-width: calc(100vw - 96px);
       height: 56px;
       display: grid;
-      grid-template-columns: 46px 1fr 1fr;
+      grid-template-columns: 52px minmax(0, 1fr) minmax(96px, auto);
       align-items: stretch;
       gap: 6px;
       padding: 5px 6px;
@@ -104,6 +108,11 @@
       grid-template-rows: 13px 1fr;
       gap: 2px;
     }
+    .gpu-meter.gpu-meter-vram {
+      min-width: 96px;
+      place-content: center stretch;
+      grid-template-rows: 1fr;
+    }
     .gpu-line {
       display: flex;
       align-items: center;
@@ -119,6 +128,15 @@
       color: #f8eaff;
       text-overflow: clip;
       text-align: right;
+    }
+    .gpu-meter-vram .gpu-line {
+      display: grid;
+      gap: 5px;
+      justify-items: end;
+    }
+    .gpu-meter-vram .gpu-value {
+      color: #d9fff0;
+      font-weight: 700;
     }
     .gpu-bars {
       position: relative;
@@ -722,6 +740,11 @@
       .header-actions {
         justify-content: flex-start;
       }
+      .gpu-status {
+        flex-basis: 100%;
+        min-width: 0;
+        max-width: none;
+      }
       .status { white-space: normal; }
       .settings-panel > summary {
         align-items: flex-start;
@@ -765,9 +788,8 @@
             <span class="gpu-line"><span class="gpu-key">LOAD</span><span id="gpuUtil" class="gpu-value">--%</span></span>
             <span id="gpuUtilBars" class="gpu-bars" aria-hidden="true"></span>
           </span>
-          <span class="gpu-meter">
+          <span class="gpu-meter gpu-meter-vram">
             <span class="gpu-line"><span class="gpu-key">VRAM</span><span id="gpuVram" class="gpu-value">--</span></span>
-            <span id="gpuVramBars" class="gpu-bars" aria-hidden="true"></span>
           </span>
         </div>
         <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
@@ -1303,7 +1325,6 @@
     const gpuUtil = document.querySelector("#gpuUtil");
     const gpuVram = document.querySelector("#gpuVram");
     const gpuUtilBars = document.querySelector("#gpuUtilBars");
-    const gpuVramBars = document.querySelector("#gpuVramBars");
     const level = document.querySelector("#level");
     const micDeviceSelect = document.querySelector("#micDevice");
     const refreshMicDevicesButton = document.querySelector("#refreshMicDevices");
@@ -1460,9 +1481,8 @@
     let lastInputVoiceShape = "";
     let latestBrainStatus = null;
     let gpuStatusPollTimer = null;
-    const gpuHistoryLimit = 28;
+    const gpuHistoryLimit = 240;
     const gpuUtilHistory = [];
-    const gpuVramHistory = [];
     let conversationPopoutWindow = null;
 
     function updateLogPaneHeight() {
@@ -8391,9 +8411,8 @@
       `;
     }
 
-    function renderGpuHistories() {
+    function renderGpuHistory() {
       renderGpuBars(gpuUtilBars, gpuUtilHistory);
-      renderGpuBars(gpuVramBars, gpuVramHistory);
     }
 
     function updateGpuStatus(payload) {
@@ -8405,7 +8424,7 @@
         gpuStatus.title = gpu?.error ? `GPU telemetry unavailable: ${gpu.error}` : "GPU telemetry unavailable";
         gpuUtil.textContent = "--%";
         gpuVram.textContent = "--";
-        renderGpuHistories();
+        renderGpuHistory();
         return;
       }
       const util = formatGpuNumber(primary.utilization_percent, 0);
@@ -8414,8 +8433,7 @@
       const memoryPct = Number(primary.memory_usage_percent);
       const tempC = Number(primary.temperature_c);
       pushGpuHistory(gpuUtilHistory, primary.utilization_percent);
-      pushGpuHistory(gpuVramHistory, primary.memory_usage_percent);
-      renderGpuHistories();
+      renderGpuHistory();
       gpuUtil.textContent = util ? `${util}%` : "--%";
       gpuVram.textContent = usedGb && totalGb ? `${usedGb}/${totalGb}` : "--";
       gpuStatus.dataset.state = memoryPct >= 97 || tempC >= 82 ? "hot" : memoryPct >= 92 || Number(util) >= 85 ? "busy" : "ok";
