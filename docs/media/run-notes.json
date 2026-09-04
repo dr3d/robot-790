@@ -1,4 +1,7 @@
 {
+  "media/videos/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-150031.mp4": {
+    "description": "A trimmed six-minute public excerpt from the face self-audit run, with the first 15:50 of setup removed. Scott and Eric turn the messy mouth/eye tuning problem into a design requirement: the robot needs a mirror. The practical finding is a new Capture To Eye loop, where Eric can inspect the face he is presenting, compare intended expression to rendered pixels, and help tune the shared face contract across browser and ESP32 embodiments."
+  },
   "media/videos/Brain2-As-Environment-2026-09-04-040833.mp4": {
     "description": "A dry but important daily-driver run where Brain2 stops looking like a second executive brain and starts looking like part of the room. Scott and Eric work through Reachy Mini, boot_eric.txt, future UI controls, and the strange social pressure of the Brain2 monitor voice. The key finding is practical: Brain2 has no tools and does not need to steer Brain1 directly to matter. Its mouth text and monitor voice change what Scott notices, and Scott can choose what crosses the bridge into the spoken conversation. The postmortem also catches the doubled-goodbye glitch as main-lane tool-followup plumbing, not Brain2 crosstalk."
   },

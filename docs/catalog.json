@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-04 14:36:13",
+    "generated":  "2026-09-04 15:23:14",
     "articles":  [
                      {
                          "title":  "The Ledger-Keeper\u0027s View",
@@ -221,6 +221,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Robot 790 Teaching Eric To See His Own Face 2026-09-04 15:00:31",
+                      "kind":  "video",
+                      "role":  "embodiment",
+                      "source":  "media/videos/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-150031.mp4",
+                      "preview":  "media/previews/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-150031.jpg",
+                      "banner_rank":  45,
+                      "bytes":  5882513,
+                      "date":  "2026-09-04 15:00",
+                      "modified":  "2026-09-04 15:22",
+                      "description":  "A trimmed six-minute public excerpt from the face self-audit run, with the first 15:50 of setup removed. Scott and Eric turn the messy mouth/eye tuning problem into a design requirement: the robot needs a mirror. The practical finding is a new Capture To Eye loop, where Eric can inspect the face he is presenting, compare intended expression to rendered pixels, and help tune the shared face contract across browser and ESP32 embodiments."
+                  },
                   {
                       "title":  "Uh Emerence Not",
                       "kind":  "image",
