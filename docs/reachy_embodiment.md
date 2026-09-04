@@ -5,16 +5,46 @@ conversation app. It should mean keeping Eric's existing brain, voice practice,
 notes, curation, and tool contract, then adding Reachy Mini as another
 embodiment.
 
+In project terms, Reachy belongs in the firmware tier even though it is not
+ESP32 firmware. It is an embodiment controller: a small local service that
+presents the same semantic face/body API as the S3 face, mask face, and browser
+face, then translates those calls into Reachy Mini daemon calls.
+
+Call it firmware-like adapter code: not the personality, not the conversation
+app, not a second mind, but the body contract Eric can inhabit.
+
 The clean architecture:
 
 ```text
 Robot 790 STS loop
   -> existing Eric prompt, voice, notes, idle loop, tools
   -> set_embodiment("reachy_mini")
-  -> local Reachy adapter
+  -> local Reachy embodiment adapter
   -> Reachy Mini SDK / robot app
   -> motion, gaze, expressions, sensors
 ```
+
+The first adapter entry point is:
+
+```powershell
+.\scripts\start_reachy_adapter.ps1
+```
+
+By default this starts in motion-gated mode. It answers `/state` and accepts the
+same high-level routes as the face controllers, but it will not physically move
+Reachy unless started with:
+
+```powershell
+.\scripts\start_reachy_adapter.ps1 -AllowMotion
+```
+
+That keeps embodiment selection safe: Eric can discover and report the body
+before the body is allowed to act.
+
+Motion-gated mode means the adapter will not send movement requests. Allowing
+motion means it may send bounded Reachy daemon movement requests; it still does
+not silently enable motors. Motor mode remains an operator-level decision for
+bring-up.
 
 ## Principle
 
@@ -47,6 +77,17 @@ The adapter can translate these calls into whatever the Reachy Mini SDK exposes.
 The important part is that Eric keeps speaking in semantic body verbs; the
 adapter owns the hardware details.
 
+Current daemon facts observed on 2026-09-03:
+
+- `reachy-mini.local` resolves on the LAN as `192.168.0.236`.
+- Reachy Mini Wireless daemon answers at `http://reachy-mini.local:8000/`.
+- API docs are available at `http://reachy-mini.local:8000/docs`.
+- The daemon reported version `1.10.0`.
+- `/api/daemon/status`, `/api/state/full`, `/api/motors/status`,
+  `/api/media/status`, and camera specs are readable.
+- Motors were `disabled` during inspection, which is the right default for
+  adapter bring-up.
+
 ## Bring-Up Order
 
 1. Install and verify the official Reachy Mini SDK outside Eric.
@@ -55,7 +96,7 @@ adapter owns the hardware details.
 3. Build a small local HTTP adapter, probably on the workstation first, that
    converts Robot 790 face/body calls into Reachy SDK calls.
 4. Add `reachy_mini` to `config/runtime.json` only after the adapter answers
-   `/state` reliably.
+   `/state` reliably. This is now staged as `http://127.0.0.1:8792/`.
 5. Test manual UI switching with `set_embodiment`, still no autonomous idle.
 6. Enable normal conversation face/body lifecycle cues.
 7. Only then allow Eric to request Reachy gestures through tools.

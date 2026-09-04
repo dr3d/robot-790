@@ -103,6 +103,10 @@ that assembly when the machinery is kept visible.
 - `firmware/esp32-s3-face-brain`: parked ESP32-S3 external-eye experiment.
 - `firmware/esp32-chassis`: tracked chassis controller.
 - `firmware/esp32-cam`: ESP32 camera controller experiments.
+- `src/robot_790d/reachy_embodiment_server.py`: firmware-like Reachy Mini
+  embodiment adapter. It presents the Robot 790 face/body HTTP contract while
+  proxying to the Reachy daemon, so Reachy can become a body without becoming a
+  second Eric.
 - `presets/robot-790-gold.json`: the current Qwen 27B / Eric voice baseline.
 
 Some names still say `eyes` or `Reachy` in older firmware/UI paths. That is
@@ -243,6 +247,17 @@ Start the browser page:
 ```powershell
 .\scripts\start_sts_page.ps1
 ```
+
+Optional Reachy Mini body adapter:
+
+```powershell
+.\scripts\start_reachy_adapter.ps1
+```
+
+The Reachy adapter defaults to motion-gated mode. It can be selected as the
+`reachy_mini` embodiment and will report live daemon/body state, but it will not
+send movement requests unless started with `-AllowMotion`. Enabling the adapter
+to request motion is still separate from enabling the Reachy motors themselves.
 
 Open:
 

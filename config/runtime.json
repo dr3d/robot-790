@@ -21,6 +21,12 @@
       "label": "Browser face simulator",
       "face_url": "http://127.0.0.1:8791/",
       "description": "A local browser-window embodiment that renders Robot 790's face from the same semantic face API as the ESP32-S3 face."
+    },
+    {
+      "key": "reachy_mini",
+      "label": "Reachy Mini body",
+      "face_url": "http://127.0.0.1:8792/",
+      "description": "A local firmware-like adapter for Reachy Mini Wireless. Eric remains the personage; this controller maps semantic Robot 790 face/body verbs onto bounded Reachy motion and live state."
     }
   ],
   "session_behavior_rules": [
