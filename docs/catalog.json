@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-04 15:23:14",
+    "generated":  "2026-09-04 16:06:09",
     "articles":  [
                      {
                          "title":  "The Ledger-Keeper\u0027s View",
@@ -129,6 +129,18 @@
                      }
                  ],
     "logs":  [
+                 {
+                     "title":  "Robot 790 Teaching Eric To See His Own Face 2026 09 04 postmortem",
+                     "source":  "logs/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-postmortem.md",
+                     "bytes":  11319,
+                     "modified":  "2026-09-04 15:16"
+                 },
+                 {
+                     "title":  "Robot 790 Teaching Eric To See His Own Face 2026 09 04 events",
+                     "source":  "logs/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-events.txt",
+                     "bytes":  680200,
+                     "modified":  "2026-09-04 15:01"
+                 },
                  {
                      "title":  "Brain2 As Environment 2026 09 04 postmortem",
                      "source":  "logs/Brain2-As-Environment-2026-09-04-postmortem.md",
