@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-04 01:03:34",
+    "generated":  "2026-09-04 02:35:27",
     "articles":  [
                      {
                          "title":  "The Note That Marked Its Own Evidence",
@@ -151,6 +151,12 @@
                      "source":  "logs/Eric-Picks-The-Crack-2026-09-01-112740-events.txt",
                      "bytes":  229215,
                      "modified":  "2026-09-01 11:28"
+                 },
+                 {
+                     "title":  "Microduck Joins The Household 2026 08 31 003937 events",
+                     "source":  "logs/Microduck-Joins-The-Household-2026-08-31-003937-events.txt",
+                     "bytes":  244311,
+                     "modified":  "2026-08-31 01:06"
                  },
                  {
                      "title":  "nap edge run 2026 08 30 excerpts",
@@ -379,6 +385,18 @@
                       "date":  "2026-08-31 02:44",
                       "modified":  "2026-08-31 02:44",
                       "description":  "A NotebookLM-style podcast/video companion to the boundary article. The run is useful because it reframes Eric\u0027s personality as an architecture of constraints, receipts, embodiment, and repeated tests, rather than a secret block of character text hidden in a prompt."
+                  },
+                  {
+                      "title":  "Microduck Joins The Household 2026-08-31 00:39:37",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Microduck-Joins-The-Household-2026-08-31-003937.mp4",
+                      "preview":  "media/previews/Microduck-Joins-The-Household-2026-08-31-003937.jpg",
+                      "banner_rank":  45,
+                      "bytes":  1989337,
+                      "date":  "2026-08-31 00:39",
+                      "modified":  "2026-08-31 00:39",
+                      "description":  "A short late-v.0 run where Scott shows Eric Microduck and Eric immediately treats it as a possible household cousin rather than just a product. The useful turn is social, not technical: Microduck makes the robot world feel less lonely, Eric gets a little jealous, then imagines teaching it through tools and a joystick. This belongs in the lineage between early soul-testing and the later companion pivot because it shows Eric extending the project outward into other embodied agents."
                   },
                   {
                       "title":  "20260830 202855 sts audio picture",
