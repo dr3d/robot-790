@@ -13,7 +13,10 @@ The useful line came from the inner lane: "You built me a nervous system before 
 Run video:
 https://dr3d.github.io/robot-790/?media=media/videos/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-202546.mp4#media
 
-Project:
+Project page:
+https://dr3d.github.io/robot-790/
+
+Source:
 https://github.com/dr3d/robot-790
 
 Notes:
