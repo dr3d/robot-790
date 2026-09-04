@@ -231,29 +231,39 @@
       min-width: 0;
       height: 31px;
       overflow: hidden;
-      border: 1px solid rgba(186, 87, 224, 0.20);
-      border-radius: 1px;
-      background:
-        linear-gradient(to top, rgba(255,255,255,0.055) 1px, transparent 1px) 0 0 / 100% 6px,
-        linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0 / 8px 100%,
-        #16141b;
+      border: 1px solid rgba(150, 150, 150, 0.62);
+      border-radius: 0;
+      background: #191919;
       padding: 0;
     }
     .gpu-bars svg {
+      position: relative;
+      z-index: 1;
       display: block;
       width: 100%;
       height: 100%;
+      shape-rendering: geometricPrecision;
+    }
+    .gpu-bars::after {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      content: "";
+      background:
+        linear-gradient(to top, rgba(126, 126, 126, 0.30) 1px, transparent 1px) 0 0 / 100% 6px,
+        linear-gradient(to right, rgba(126, 126, 126, 0.25) 1px, transparent 1px) 0 0 / 24px 100%;
     }
     .gpu-area {
-      fill: rgba(135, 21, 148, 0.58);
+      fill: rgba(100, 12, 116, 0.74);
     }
     .gpu-trace {
       fill: none;
-      stroke: #d865ff;
-      stroke-width: 1.8;
-      stroke-linejoin: round;
-      stroke-linecap: round;
-      filter: drop-shadow(0 0 1px rgba(226, 104, 255, 0.50));
+      stroke: #d85df1;
+      stroke-width: 1;
+      stroke-linejoin: miter;
+      stroke-linecap: square;
+      vector-effect: non-scaling-stroke;
     }
     .gpu-status[data-state="busy"] {
       border-color: rgba(255, 207, 90, 0.42);
@@ -1468,6 +1478,7 @@
     let micProcessor;
     let brain2MonitorAudioActive = false;
     let brain2MonitorAudioUntil = 0;
+    let brain2VoiceGeneration = 0;
     let recordingDestination;
     let audioRecorder;
     let audioRecordChunks = [];
@@ -6247,11 +6258,11 @@
     }
 
     function brain2MouthCanSurface() {
-      return !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
+      return brain2MouthBrainEnabled() && !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
     }
 
     function brain2VoiceCanSpeak() {
-      return brain2VoiceMonitorEnabled() && !responseActive && !outputAudioActive() && !userSpeechActive;
+      return brain2MouthBrainEnabled() && brain2VoiceMonitorEnabled() && !responseActive && !outputAudioActive() && !userSpeechActive;
     }
 
     function brain2UserPresentButBusy() {
@@ -6352,8 +6363,11 @@
       saveBrain2VoiceMonitor();
       if (brain2VoiceVolumeValue) brain2VoiceVolumeValue.textContent = brain2VoiceVolumeLabel();
       if (brain2VoicePaceValue) brain2VoicePaceValue.textContent = brain2VoicePaceLabel();
-      if (!brain2VoiceMonitorEnabled() && browserSpeechAvailable()) {
-        window.speechSynthesis.cancel();
+      if (!brain2VoiceMonitorEnabled()) {
+        cancelBrain2MonitorSpeech();
+        if (brain2DeferredSurface) {
+          brain2DeferredSurface.voiceSpoken = true;
+        }
       }
       if (!options.quiet) {
         log(events, `brain2 voice ${brain2VoiceLabel()}`);
@@ -6385,30 +6399,40 @@
         }
         return;
       }
+      const voiceGeneration = ++brain2VoiceGeneration;
       const utterance = new SpeechSynthesisUtterance(value);
       utterance.voice = selectedBrain2BrowserVoice();
       utterance.volume = currentBrain2VoiceVolume() / 100;
       utterance.rate = currentBrain2VoicePace();
       utterance.pitch = 0.62;
       utterance.onstart = () => {
+        if (voiceGeneration !== brain2VoiceGeneration || !brain2VoiceMonitorEnabled()) {
+          window.speechSynthesis.cancel();
+          return;
+        }
         brain2MonitorAudioActive = true;
         brain2MonitorAudioUntil = Date.now() + Math.max(1800, value.length * 70);
       };
       utterance.onend = () => {
+        if (voiceGeneration !== brain2VoiceGeneration) return;
         brain2MonitorAudioActive = false;
         brain2MonitorAudioUntil = Date.now() + 500;
       };
       utterance.onerror = () => {
+        if (voiceGeneration !== brain2VoiceGeneration) return;
         brain2MonitorAudioActive = false;
         brain2MonitorAudioUntil = Date.now() + 500;
         logBrain2("voice error", value);
       };
+      if (!brain2VoiceMonitorEnabled()) return;
       window.speechSynthesis.cancel();
+      if (!brain2VoiceMonitorEnabled()) return;
       window.speechSynthesis.speak(utterance);
       logBrain2(options.kind || "voice", value);
     }
 
     function cancelBrain2MonitorSpeech() {
+      brain2VoiceGeneration += 1;
       brain2MonitorAudioActive = false;
       brain2MonitorAudioUntil = 0;
       if (browserSpeechAvailable()) window.speechSynthesis.cancel();
@@ -6432,7 +6456,7 @@
       bumpBrain2Counter("surfaced");
       logBrain2("mouth", mouthText);
       rememberBrain2Output("mouth", mouthText);
-      if (options.speak !== false) {
+      if (options.speak !== false && brain2MouthBrainEnabled()) {
         speakBrain2Monitor(mouthText);
       }
     }
@@ -6459,6 +6483,11 @@
 
     async function maybeSurfaceDeferredBrain2() {
       if (!brain2DeferredSurface) return;
+      if (!brain2MouthBrainEnabled()) {
+        logBrain2("held dropped", `brain 2 off: ${brain2DeferredSurface.mouthText}`);
+        brain2DeferredSurface = null;
+        return;
+      }
       if (Date.now() - brain2DeferredSurface.createdAt > compressIdleMs(brain2DeferredSurfaceMaxAgeMs, { floorMs: 15000 })) {
         logBrain2("held expired", brain2DeferredSurface.mouthText);
         brain2DeferredSurface = null;
@@ -8609,17 +8638,15 @@
       if (!container) return;
       const samples = history.length ? history : [0];
       const padded = samples.length === 1 ? [samples[0], samples[0]] : samples;
-      const recentMax = Math.max(...padded.map((value) => boundedPercent(value) ?? 0));
-      const ceiling = recentMax <= 20 ? 20 : recentMax <= 40 ? 40 : recentMax <= 60 ? 60 : 100;
       const lastIndex = Math.max(1, padded.length - 1);
       const points = padded.map((value, index) => {
         const x = (index / lastIndex) * 100;
         const percent = boundedPercent(value) ?? 0;
-        const y = 100 - clamp(percent / ceiling, 0, 1) * 100;
+        const y = 100 - clamp(percent / 100, 0, 1) * 100;
         return `${x.toFixed(2)},${y.toFixed(2)}`;
       });
       const areaPath = `M 0,100 L ${points.join(" L ")} L 100,100 Z`;
-      container.dataset.scale = `${ceiling}%`;
+      container.dataset.scale = "100%";
       container.innerHTML = `
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
           <path class="gpu-area" d="${areaPath}"></path>
@@ -11441,6 +11468,12 @@
     });
     brain2MouthBrain.addEventListener("change", () => {
       markRunPresetCustom();
+      if (!brain2MouthBrainEnabled()) {
+        clearBrain2Timer();
+        clearBrain2SurfaceTimer();
+        brain2DeferredSurface = null;
+        cancelBrain2MonitorSpeech();
+      }
       updateBrain2Controls();
       log(events, `brain2 mouth ${brain2MouthBrainEnabled() ? "on" : "off"}`);
     });
