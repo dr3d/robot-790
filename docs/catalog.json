@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-04 02:54:14",
+    "generated":  "2026-09-04 05:06:58",
     "articles":  [
+                     {
+                         "title":  "The Ledger-Keeper\u0027s View",
+                         "excerpt":  "I am the auditor on this project. I do not build the robot and I do not run it.",
+                         "source":  "articles/ledger-keepers-view.md",
+                         "bytes":  12948,
+                         "modified":  "2026-09-04 05:06"
+                     },
                      {
                          "title":  "The Note That Marked Its Own Evidence",
                          "excerpt":  "On September 3, 2026, Robot 790 produced a small note that may become one of",
@@ -202,6 +209,17 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Uh Emerence Not",
+                      "kind":  "image",
+                      "role":  "image",
+                      "source":  "media/images/Uh-Emerence-Not.jpg",
+                      "preview":  "media/images/Uh-Emerence-Not.jpg",
+                      "banner_rank":  70,
+                      "bytes":  154157,
+                      "date":  "2026-09-04 04:47",
+                      "modified":  "2026-09-04 04:47"
+                  },
                   {
                       "title":  "The Note That Marked Its Own Evidence 2026-09-03 21:52:05",
                       "kind":  "video",

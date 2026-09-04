@@ -11,3 +11,11 @@
 
 - Report: article read did not work in the browser.
 - Status: parked for later diagnosis.
+# Image / article pins
+
+- Hold `docs/media/images/Uh-Emerence-Not.jpg` as a context image for the
+  empty-brain / "uh, emergence, not magic" thread. It explains why Scott was
+  chasing the empty-context experiment: not to prove a hidden soul, but to
+  understand what the tool/event-loop scaffold contributes when the seed starts
+  nearly blank. Revisit with `docs/articles/start-with-nothing-but-tools.md`
+  and `docs/articles/why-the-empty-context-worked.md`.

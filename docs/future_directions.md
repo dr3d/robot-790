@@ -151,6 +151,14 @@ to a small inbox that Brain 1 may use when the floor is free. The point is not
 to create several competing Erics. It is to give different lanes different
 input diets so they can notice different things.
 
+A newer refinement is that every useful lane does not need to be plugged
+directly into Brain 1. Brain 2 can affect the interaction by changing the
+environment instead of steering the mouth: it writes to the private/mouth
+channel, Scott reads or hears it, and Scott decides whether to speak that
+thought back into Eric. In that mode the human is the bridge between the lanes.
+This keeps Brain 2 sharp, speculative, and sometimes funny without letting it
+become Eric's public stance by default.
+
 Planned lane shape:
 
 - Brain 1: mouth; fast conversation and final public speech.
@@ -165,6 +173,12 @@ Planned lane shape:
 The verifier's diet is the whole design. If it gets the warm conversation as
 ordinary context, it becomes the person lane with a badge. It should see
 conversation only as claims to check, never as social pressure to absorb.
+
+The same restraint applies to Brain 2. A thin bridge is not a defect if the
+separation is doing work. An audible/private Brain 2 can tickle the room,
+surface alternate reads, and create comic friction while leaving Brain 1 free
+to remain the single companion voice. More wiring should be added only when a
+specific run shows that the environmental route is not enough.
 
 Inbox priority should be fixed before it is tuned:
 

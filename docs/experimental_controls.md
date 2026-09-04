@@ -90,6 +90,13 @@ main Realtime TTS stream.
 values produce more user-modeling, question candidates, and social hypotheses.
 Use this as curiosity, not caretaking.
 
+Brain 2 can change the run even when it does not directly feed Brain 1. Its
+mouth and monitor voice become environmental signals: the operator notices
+them, chooses whether they matter, and can speak them back into Eric. That
+human-in-the-loop bridge is currently intentional. It preserves the one-mouth
+rule while still letting Brain 2's opinions, mistakes, and comic side angles
+affect the room.
+
 `Performance mode` changes the register toward closed beats: setup, line,
 punchline, done. It is good for material and bad for open inquiry. If the run
 requires mulling, leave it off.

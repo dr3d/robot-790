@@ -11,6 +11,13 @@ if the inbox is empty, silence is an allowed result, not a failure to perform.
 The older blackboard/global-workspace analogy is useful, but the practical rule
 is simpler: different diets, one public mouth.
 
+Recent Brain 2 runs add a second rule: a lane can affect the interaction by
+entering the environment instead of entering Brain 1. Brain 2 mouth and monitor
+voice lines change what Scott notices, what gets said next, and how Eric is
+handled, without making Brain 2 an executive controller. Scott can choose to
+carry a Brain 2 thought across the bridge by speaking it to Eric. For now, that
+thin, human-mediated bridge may be a feature rather than a missing integration.
+
 Safety follows the same architectural rule. The project acknowledges Asimov's
 robot-law tradition as lineage, but does not put "the laws" inside Eric's charm
 or identity prompt. Brain 1 may request and explain actions. Brain 3 is the
