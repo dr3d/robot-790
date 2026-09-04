@@ -1056,8 +1056,8 @@
             </select>
           </label>
           <label>
-            B2 volume <span id="brain2VoiceVolumeValue">18%</span>
-            <input id="brain2VoiceVolume" type="range" min="0" max="60" step="1" value="18">
+            B2 volume <span id="brain2VoiceVolumeValue">100%</span>
+            <input id="brain2VoiceVolume" type="range" min="0" max="100" step="1" value="100">
           </label>
           <button id="brain2VoiceTest" type="button">Test</button>
           <label>
@@ -1501,7 +1501,7 @@
     const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
     const brain2VoiceMonitorStorageKey = "robot790.brain2VoiceMonitor.v1";
     const brain2VoiceNameStorageKey = "robot790.brain2VoiceName.v1";
-    const brain2VoiceVolumeStorageKey = "robot790.brain2VoiceVolume.v1";
+    const brain2VoiceVolumeStorageKey = "robot790.brain2VoiceVolume.v2";
     const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
     const transcriptProsodyModeStorageKey = "robot790.transcriptProsodyMode.v1";
     const eventLogFilterStorageKey = "robot790.eventLogFilter.v1";
@@ -1590,7 +1590,7 @@
           idleFastClockSpeed: 8,
           brain2MouthBrain: true,
           brain2VoiceMonitor: true,
-          brain2VoiceVolume: 12,
+          brain2VoiceVolume: 100,
           brain2PersonFocus: 4,
           performanceMode: false,
           idleSubstrateTest: false,
@@ -3649,7 +3649,7 @@
         brain2VoiceMonitor.checked = settings.brain2VoiceMonitor;
       }
       if (Number.isFinite(Number(settings.brain2VoiceVolume))) {
-        brain2VoiceVolume.value = String(Math.max(0, Math.min(60, Number(settings.brain2VoiceVolume))));
+        brain2VoiceVolume.value = String(Math.max(0, Math.min(100, Number(settings.brain2VoiceVolume))));
       }
       brain2PersonFocus.value = String(settings.brain2PersonFocus);
       performanceMode.checked = Boolean(settings.performanceMode);
@@ -6085,8 +6085,8 @@
 
     function currentBrain2VoiceVolume() {
       const value = Number(brain2VoiceVolume?.value);
-      if (!Number.isFinite(value)) return 18;
-      return Math.max(0, Math.min(60, value));
+      if (!Number.isFinite(value)) return 100;
+      return Math.max(0, Math.min(100, value));
     }
 
     function brain2VoiceVolumeLabel() {
@@ -6120,7 +6120,7 @@
       if (brain2VoiceMonitor) brain2VoiceMonitor.checked = localStorage.getItem(brain2VoiceMonitorStorageKey) === "true";
       if (brain2VoiceVolume) {
         const savedVolume = Number(localStorage.getItem(brain2VoiceVolumeStorageKey));
-        brain2VoiceVolume.value = String(Number.isFinite(savedVolume) ? Math.max(0, Math.min(60, savedVolume)) : 18);
+        brain2VoiceVolume.value = String(Number.isFinite(savedVolume) ? Math.max(0, Math.min(100, savedVolume)) : 100);
       }
       populateBrain2Voices();
       if (brain2VoiceVolumeValue) brain2VoiceVolumeValue.textContent = brain2VoiceVolumeLabel();
