@@ -52,6 +52,7 @@ future reading.
 - [Reachy Mini Conversation App](https://github.com/pollen-robotics/reachy_mini_conversation_app) from Pollen Robotics is a direct practical ancestor: realtime voice, vision, tools, expressive movement, and a local robot conversation app.
 - [Reachy Mini goes fully local](https://huggingface.co/blog/local-reachy-mini-conversation) documents the local-first direction Robot 790 also follows: run the voice engine nearby, keep the robot interface alive, and route tools through a local controller.
 - [NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) is relevant to the speech recognition side: fast local ASR is one of the pieces that makes the live loop possible.
+- [Butter-Bench](https://arxiv.org/abs/2510.21860v1), from Andon Labs, is a useful practical-intelligence benchmark for LLM-controlled robots: high-level tools, real-world messiness, spatial planning, social confirmation, and the gap between fluent reasoning and embodied competence.
 
 ## What Robot 790 Adds
 

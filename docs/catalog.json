@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-04 16:06:09",
+    "generated":  "2026-09-04 16:33:05",
     "articles":  [
+                     {
+                         "title":  "Passing Butter, Keeping Company",
+                         "excerpt":  "Butter-Bench arrived at a useful moment for Robot 790.",
+                         "source":  "articles/passing-butter-keeping-company.md",
+                         "bytes":  12772,
+                         "modified":  "2026-09-04 16:32"
+                     },
                      {
                          "title":  "The Ledger-Keeper\u0027s View",
                          "excerpt":  "I am the auditor on this project. I do not build the robot and I do not run it.",
