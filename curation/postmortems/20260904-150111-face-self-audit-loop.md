@@ -41,16 +41,19 @@ normal: 512x512 H.264 video at 24 fps with mono AAC audio, approximately 22:35
 long, built from five chunks.
 
 This is probably a good run, but not as a full-length public upload without
-editing. The first useful public beat starts around `2:53 PM`, when Scott asks
-why Eric has not been discussing the image in the sensing eye. The earlier
-section is useful lab evidence about boot loading, idle repetition, Brain2
-mouth cadence, and the new volume/UI checks, but it is slow as viewer-facing
-material.
+editing. The conversation log starts before Scott began recording; the final MP4
+starts with the `20260904-144819` chunk. That means transcript wall-clock
+`2:53:04 PM` is about `04:45` in the video. The first useful public beat starts
+at `04:45-05:01`, when Scott returns with "Hello" and then asks why Eric has
+not been discussing the image in the sensing eye. The earlier logged section is
+useful lab evidence about boot loading, idle repetition, Brain2 mouth cadence,
+and the new volume/UI checks, but much of it is not actually in the final video
+artifact.
 
 If published, the likely cut is not "whole session." The likely cut is the
-face/self-inspection section beginning around `2:53 PM`, with a short setup
-card or description explaining that the first part was a boot/file/context
-check.
+face/self-inspection section beginning around `04:45` in the final MP4, with a
+short setup card or description explaining that the first part was a
+boot/file/context check.
 
 ## What Happened
 
@@ -203,10 +206,11 @@ actually look like the face contract intended?
 
 The publishable story is: Eric learns he needs a mirror.
 
-The strongest public excerpt starts with Scott asking why Eric did not discuss
-the image in his sensing eye, continues through the self-description of the
-browser-face image, then lands on the idea of feeding a screenshot back into the
-sensing eye so Eric can inspect his own pose.
+The strongest public excerpt starts at about `04:45` in the final MP4, with
+Scott asking why Eric did not discuss the image in his sensing eye. It continues
+through the self-description of the browser-face image, then lands around
+`11:30-11:50` on the idea of feeding a screenshot back into the sensing eye so
+Eric can inspect his own pose.
 
 Possible public title:
 
