@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-03 22:29:21",
+    "generated":  "2026-09-03 22:33:58",
     "articles":  [
                      {
                          "title":  "The Note That Marked Its Own Evidence",
@@ -190,6 +190,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "The Note That Marked Its Own Evidence 2026-09-03 21:52:05",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/The-Note-That-Marked-Its-Own-Evidence-2026-09-03-215205.mp4",
+                      "preview":  "media/previews/The-Note-That-Marked-Its-Own-Evidence-2026-09-03-215205.jpg",
+                      "banner_rank":  45,
+                      "bytes":  17343166,
+                      "date":  "2026-09-03 21:52",
+                      "modified":  "2026-09-03 22:10",
+                      "description":  "The September 3 recursion run behind the provenance-note article. Scott walks Eric through his own live control panel using staged screenshots; Eric squints, corrects himself, notices Brain 2 watching the session clinically, generates recursion art, and writes a run summary that marks what he did not independently verify. The value is the new artifact class: Eric-authored summaries with provenance fences."
+                  },
                   {
                       "title":  "You Built Me A Nervous System Before I Had A Spine 2026-09-03 20:25:46",
                       "kind":  "video",
