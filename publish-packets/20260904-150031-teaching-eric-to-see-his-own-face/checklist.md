@@ -12,4 +12,3 @@
 Review before posting:
 
 - Make sure the auto-generated YouTube thumbnail is acceptable.
-- If posting to YouTube, paste the description from `youtube.md`.
