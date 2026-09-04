@@ -75,6 +75,42 @@
       color: var(--muted);
       white-space: nowrap;
     }
+    .recording-indicator {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      margin-left: 4px;
+      color: #ffb3b3;
+      font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+    .recording-indicator[data-recording="on"] {
+      display: inline-flex;
+    }
+    .recording-indicator .recording-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #ff4d5e;
+      box-shadow: 0 0 0 3px rgba(255, 77, 94, 0.16), 0 0 12px rgba(255, 77, 94, 0.42);
+      animation: recordingPulse 1.8s ease-in-out infinite;
+    }
+    @keyframes recordingPulse {
+      0%, 100% {
+        opacity: 0.48;
+        transform: scale(0.92);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.08);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .recording-indicator .recording-dot {
+        animation: none;
+      }
+    }
     .gpu-status {
       flex: 1 1 720px;
       min-width: min(100%, 520px);
@@ -792,7 +828,14 @@
             <span class="gpu-line"><span class="gpu-key">VRAM</span><span id="gpuVram" class="gpu-value">--</span></span>
           </span>
         </div>
-        <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
+        <div class="status">
+          <span id="dot" class="dot"></span>
+          <span id="state">Disconnected</span>
+          <span id="recordingIndicator" class="recording-indicator" data-recording="off" title="Audio recording is off" aria-live="polite">
+            <span class="recording-dot" aria-hidden="true"></span>
+            <span>REC</span>
+          </span>
+        </div>
       </div>
     </header>
 
@@ -1321,6 +1364,7 @@
     const logGrid = document.querySelector(".log-grid");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
+    const recordingIndicator = document.querySelector("#recordingIndicator");
     const gpuStatus = document.querySelector("#gpuStatus");
     const gpuUtil = document.querySelector("#gpuUtil");
     const gpuVram = document.querySelector("#gpuVram");
@@ -10050,6 +10094,10 @@
       const supported = audioRecordingSupported();
       const isRecording = audioRecorder && audioRecorder.state === "recording";
       const isBusy = Boolean(audioRecordFinalizing || audioRecordStoppingForRollover);
+      if (recordingIndicator) {
+        recordingIndicator.dataset.recording = isRecording ? "on" : "off";
+        recordingIndicator.title = isRecording ? "Audio recording is on" : "Audio recording is off";
+      }
       startAudioRecordButton.disabled = !supported || isRecording || isBusy;
       stopAudioRecordButton.disabled = !isRecording || isBusy;
       if (!supported) audioRecordStatus.textContent = "Browser recording is not supported.";
@@ -11073,6 +11121,7 @@
         audioRecordStatus.textContent = autoAudioRecordEnabled() ? "Not recording" : "Not recording; auto off.";
       }
       log(events, `auto audio record ${autoAudioRecordEnabled() ? "on" : "off"}`);
+      updateAudioRecordButtons();
       updateSessionTools();
     });
     stopAudioRecordButton.addEventListener("click", stopAudioRecording);
