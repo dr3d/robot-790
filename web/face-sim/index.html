@@ -439,7 +439,7 @@
     function trackMouthTextState() {
       const mouth = state?.mouth || {};
       const key = mouth.text_active && mouth.text
-        ? `${mouth.text_mode || "center"}\n${mouth.text}`
+        ? `${mouth.text_source || "eric"}\n${mouth.text_mode || "center"}\n${mouth.text}`
         : "";
       if (key !== mouthTextKey) {
         mouthTextKey = key;
@@ -579,13 +579,15 @@
       statusY: 330,
       statusH: 280,
       mouthY: 555,
-      mouthH: 390,
+      mouthH: 320,
       eyePadX: 18,
       mouthPadX: 18,
       mouthOffsetX: -2,
-      mouthTextInsetX: 54,
-      mouthTextY: 878,
-      mouthTextH: 58,
+      captionInsetX: 44,
+      ericCaptionY: 888,
+      ericCaptionH: 54,
+      brain2CaptionY: 18,
+      brain2CaptionH: 46,
       mouthTextMarqueeMsPerPx: 10,
       eyeW: 336,
       eyeH: 336
@@ -1360,14 +1362,14 @@
       }
     }
 
-    function mouthTextFontSize(text, maxWidth, maxHeight) {
-      let size = 36;
-      while (size > 14) {
-        ctx.font = `${size}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+    function mouthTextFontSize(text, maxWidth, maxHeight, startSize = 36, minSize = 14, fontPrefix = "") {
+      let size = startSize;
+      while (size > minSize) {
+        ctx.font = `${fontPrefix}${size}px ui-monospace, SFMono-Regular, Consolas, monospace`;
         if (ctx.measureText(text).width <= maxWidth && size * 1.25 <= maxHeight) return size;
         size -= 2;
       }
-      return 14;
+      return minSize;
     }
 
     function drawMouthText(t) {
@@ -1375,24 +1377,31 @@
       const text = String(mouth.text || "");
       if (!text) return;
 
-      const panelX = faceLayout.mouthTextInsetX + faceLayout.mouthOffsetX;
-      const panelY = faceLayout.mouthTextY;
-      const panelW = faceLayout.width - faceLayout.mouthTextInsetX * 2;
-      const panelH = faceLayout.mouthTextH;
-      const padX = 18;
+      const source = String(mouth.text_source || "eric").toLowerCase();
+      const isBrain2 = source === "brain2" || source === "brain_2" || source === "b2";
+      const panelX = faceLayout.captionInsetX + faceLayout.mouthOffsetX;
+      const panelY = isBrain2 ? faceLayout.brain2CaptionY : faceLayout.ericCaptionY;
+      const panelW = faceLayout.width - faceLayout.captionInsetX * 2;
+      const panelH = isBrain2 ? faceLayout.brain2CaptionH : faceLayout.ericCaptionH;
+      const padX = isBrain2 ? 24 : 18;
       const maxTextW = panelW - padX * 2;
       const maxTextH = panelH - 18;
       const mode = String(mouth.text_mode || "center").toLowerCase();
       const flashLit = mode !== "flash" || Math.floor((t - mouthTextStartedAt) / 120) % 2 === 0;
 
       ctx.save();
-      drawRoundRect(panelX, panelY, panelW, panelH, 13, "rgba(0, 5, 10, 0.90)");
-      drawRoundRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2, 12, "", "#164b59", 2);
+      const panelFill = isBrain2 ? "rgba(4, 7, 18, 0.60)" : "rgba(0, 5, 10, 0.90)";
+      const panelStroke = isBrain2 ? "rgba(174, 146, 255, 0.54)" : "#164b59";
+      drawRoundRect(panelX, panelY, panelW, panelH, isBrain2 ? 18 : 13, panelFill);
+      drawRoundRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2, isBrain2 ? 17 : 12, "", panelStroke, isBrain2 ? 1.4 : 2);
 
-      const fontSize = mode === "marquee" ? 27 : mouthTextFontSize(text, maxTextW, maxTextH);
-      ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+      const fontPrefix = isBrain2 ? "italic " : "";
+      const fontSize = mode === "marquee"
+        ? (isBrain2 ? 22 : 27)
+        : mouthTextFontSize(text, maxTextW, maxTextH, isBrain2 ? 24 : 34, isBrain2 ? 13 : 14, fontPrefix);
+      ctx.font = `${fontPrefix}${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
       ctx.textBaseline = "middle";
-      ctx.fillStyle = flashLit ? mouth.text_color || "#dffcff" : "#263c40";
+      ctx.fillStyle = flashLit ? mouth.text_color || (isBrain2 ? "#d8cfff" : "#dffcff") : "#263c40";
 
       const textW = ctx.measureText(text).width;
       const textY = panelY + panelH / 2;

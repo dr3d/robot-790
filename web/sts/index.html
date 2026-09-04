@@ -1140,7 +1140,7 @@
             <strong>Brain 2</strong>
             <span>Monitor lane</span>
           </div>
-          <label class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Mouth</label>
+          <label class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Caption</label>
           <label class="toggle-row"><input id="brain2VoiceMonitor" type="checkbox"> Voice</label>
           <label>
             Browser voice
@@ -2088,7 +2088,7 @@
       {
         type: "function",
         name: "set_mouth",
-        description: "Set Robot 790's expressive mouth style or shape when the user asks for a human mouth, robot mouth, smile, big smile, smirk, O mouth, tongue, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth. Use set_mouth_text instead when the user wants words, captions, or hidden thought text on the mouth display.",
+        description: "Set Robot 790's expressive mouth style or shape when the user asks for a human mouth, robot mouth, smile, big smile, smirk, O mouth, tongue, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth. Use set_mouth_text instead when the user wants words, captions, or hidden thought text.",
         parameters: {
           type: "object",
           properties: {
@@ -2129,7 +2129,7 @@
       {
         type: "function",
         name: "set_mouth_text",
-        description: "Put words on Robot 790's mouth display as its own caption/text mode. Use this when the user asks to put a word or phrase in the mouth, show words, caption the mouth, transcribe, or display a hidden thought aside.",
+        description: "Put words on Robot 790's face as a caption/text mode. In browser-face, Eric captions render below the face and Brain2/person-lane captions render over the head, so labels do not cover the mouth pose.",
         parameters: {
           type: "object",
           properties: {
@@ -2147,6 +2147,11 @@
             color: {
               type: "string",
               description: "Optional text color as a simple name (cyan, white, red, green, blue, yellow, pink, orange, purple) or #RRGGBB."
+            },
+            source: {
+              type: "string",
+              enum: ["eric", "brain2"],
+              description: "Caption source. Use eric for Robot 790's own visible captions; use brain2 only for Brain 2/person-lane side-channel text."
             },
             emoji: {
               type: "string",
@@ -2733,8 +2738,8 @@
       "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes, or an eye mode such as crossed/cross-eye, swapped/swap eyes, googly eyes, or normal eyes.",
       "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
       "Use set_mouth when the user asks for a mouth style or shape such as human, robot, smile, big smile, smirk, O mouth, tongue, frown, grimace, sneer, open, talking, sleep, or auto mouth.",
-      "Use set_mouth_text when the user asks you to put words, a caption, a transcript, or a hidden aside on your mouth display.",
-      "For mouth text, use mode flash for quick stings, mode marquee for long phrases, and optional color or emoji aliases when the user asks for a colored or symbolic mouth.",
+      "Use set_mouth_text when the user asks you to put words, a caption, a transcript, or a hidden aside on your face display.",
+      "For face text, use mode flash for quick stings, mode marquee for long phrases, and optional color or emoji aliases when the user asks for colored or symbolic text. In browser_face, source eric renders below the face and source brain2 renders over the head.",
       "Use set_chassis only for explicit drive-base, wheel, track, move, turn, stop, or e-stop requests.",
       "For chassis movement, prefer slow values around 0.2 to 0.35 and one short timed segment; never queue a route, dance, or multi-step movement.",
       "If the user asks for full speed or maximum speed in a short explicit movement, use set_chassis speed 1.0 for that segment, matching the chassis web UI MAX SPEED setting.",
@@ -6490,6 +6495,7 @@
           text: mouthText,
           mode: mouthText.length > 32 ? "marquee" : "center",
           color: "cyan",
+          source: "brain2",
           duration: 7
         });
       } catch (error) {
@@ -8366,7 +8372,12 @@
       return allowed.has(color) ? color : "";
     }
 
-    async function setMouthText({ text = "", mode = "center", color = "", emoji = "", duration = 5, duration_ms, clear = false } = {}) {
+    function normalizeMouthTextSource(value = "eric") {
+      const source = String(value || "eric").trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+      return ["brain2", "brain_2", "b2", "person_lane", "monitor"].includes(source) ? "brain2" : "eric";
+    }
+
+    async function setMouthText({ text = "", mode = "center", color = "", emoji = "", source = "eric", duration = 5, duration_ms, clear = false } = {}) {
       const payload = {};
       if (clear) {
         payload.auto = true;
@@ -8379,6 +8390,7 @@
         payload.mode = normalizeMouthTextMode(mode);
         const safeColor = normalizeMouthTextColor(color);
         if (safeColor) payload.color = safeColor;
+        payload.source = normalizeMouthTextSource(source);
         const preciseMs = Number(duration_ms);
         if (Number.isFinite(preciseMs) && preciseMs > 0) {
           payload.duration_ms = Math.max(50, Math.min(30000, preciseMs));

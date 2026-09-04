@@ -75,6 +75,7 @@ def _default_state() -> dict[str, Any]:
             "text": "",
             "text_mode": "",
             "text_color": "",
+            "text_source": "",
         },
         "wifi": {
             "mode": "simulated",
@@ -162,6 +163,7 @@ class FaceSimState:
         self.state["mouth"]["energy"] = 0.45
         self.state["mouth"]["text_active"] = False
         self.state["mouth"]["text"] = ""
+        self.state["mouth"]["text_source"] = ""
         target = {"x": 0.0, "y": 0.0, "z": 420.0}
         self.state["gaze"]["manual"] = False
         self.state["gaze"]["now"] = target
@@ -223,6 +225,7 @@ class FaceSimState:
             mouth["talking"] = False
             mouth["text_active"] = False
             mouth["text"] = ""
+            mouth["text_source"] = ""
             self._touch()
             return self.snapshot()
         if "style" in payload and payload["style"]:
@@ -239,9 +242,11 @@ class FaceSimState:
             mouth["text_active"] = bool(text)
             mouth["text_mode"] = str(payload.get("mode") or payload.get("text_mode") or "center")
             mouth["text_color"] = str(payload.get("color") or payload.get("text_color") or "")
+            mouth["text_source"] = _clean_text_source(payload.get("source") or payload.get("text_source") or "eric")
         if payload.get("clear") is True:
             mouth["text"] = ""
             mouth["text_active"] = False
+            mouth["text_source"] = ""
         mouth["manual"] = True
         self._touch()
         return self.snapshot()
@@ -331,6 +336,13 @@ def _clean_eye_mode(value: object) -> str:
     if text in {"googly_eyes", "loose", "loose_eyes"}:
         return "googly"
     return text if text in EYE_MODES else "normal"
+
+
+def _clean_text_source(value: object) -> str:
+    text = _clean_token(value, fallback="eric")
+    if text in {"brain2", "brain_2", "b2", "person_lane", "monitor"}:
+        return "brain2"
+    return "eric"
 
 
 def _clamp_float(value: object, low: float, high: float, fallback: float) -> float:
