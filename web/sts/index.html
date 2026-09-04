@@ -112,8 +112,8 @@
       }
     }
     .gpu-status {
-      flex: 1 1 720px;
-      min-width: min(100%, 520px);
+      flex: 1 1 1440px;
+      min-width: min(100%, 720px);
       max-width: calc(100vw - 96px);
       height: 56px;
       display: grid;
@@ -1525,7 +1525,7 @@
     let lastInputVoiceShape = "";
     let latestBrainStatus = null;
     let gpuStatusPollTimer = null;
-    const gpuHistoryLimit = 240;
+    const gpuHistoryLimit = 480;
     const gpuUtilHistory = [];
     let conversationPopoutWindow = null;
 
