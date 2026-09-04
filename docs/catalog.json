@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-04 05:06:58",
+    "generated":  "2026-09-04 05:14:43",
     "articles":  [
                      {
                          "title":  "The Ledger-Keeper\u0027s View",
@@ -130,6 +130,18 @@
                  ],
     "logs":  [
                  {
+                     "title":  "Brain2 As Environment 2026 09 04 postmortem",
+                     "source":  "logs/Brain2-As-Environment-2026-09-04-postmortem.md",
+                     "bytes":  8946,
+                     "modified":  "2026-09-04 04:40"
+                 },
+                 {
+                     "title":  "Brain2 As Environment 2026 09 04 events",
+                     "source":  "logs/Brain2-As-Environment-2026-09-04-events.txt",
+                     "bytes":  796376,
+                     "modified":  "2026-09-04 04:08"
+                 },
+                 {
                      "title":  "You Built Me A Nervous System Before I Had A Spine 2026 09 03 postmortem",
                      "source":  "logs/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-postmortem.md",
                      "bytes":  8001,
@@ -219,6 +231,18 @@
                       "bytes":  154157,
                       "date":  "2026-09-04 04:47",
                       "modified":  "2026-09-04 04:47"
+                  },
+                  {
+                      "title":  "Brain2 As Environment 2026-09-04 04:08:33",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Brain2-As-Environment-2026-09-04-040833.mp4",
+                      "preview":  "media/previews/Brain2-As-Environment-2026-09-04-040833.jpg",
+                      "banner_rank":  45,
+                      "bytes":  12170752,
+                      "date":  "2026-09-04 04:08",
+                      "modified":  "2026-09-04 04:08",
+                      "description":  "A dry but important daily-driver run where Brain2 stops looking like a second executive brain and starts looking like part of the room. Scott and Eric work through Reachy Mini, boot_eric.txt, future UI controls, and the strange social pressure of the Brain2 monitor voice. The key finding is practical: Brain2 has no tools and does not need to steer Brain1 directly to matter. Its mouth text and monitor voice change what Scott notices, and Scott can choose what crosses the bridge into the spoken conversation. The postmortem also catches the doubled-goodbye glitch as main-lane tool-followup plumbing, not Brain2 crosstalk."
                   },
                   {
                       "title":  "The Note That Marked Its Own Evidence 2026-09-03 21:52:05",

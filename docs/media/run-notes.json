@@ -1,4 +1,7 @@
 {
+  "media/videos/Brain2-As-Environment-2026-09-04-040833.mp4": {
+    "description": "A dry but important daily-driver run where Brain2 stops looking like a second executive brain and starts looking like part of the room. Scott and Eric work through Reachy Mini, boot_eric.txt, future UI controls, and the strange social pressure of the Brain2 monitor voice. The key finding is practical: Brain2 has no tools and does not need to steer Brain1 directly to matter. Its mouth text and monitor voice change what Scott notices, and Scott can choose what crosses the bridge into the spoken conversation. The postmortem also catches the doubled-goodbye glitch as main-lane tool-followup plumbing, not Brain2 crosstalk."
+  },
   "media/videos/Microduck-Joins-The-Household-2026-08-31-003937.mp4": {
     "description": "A short late-v.0 run where Scott shows Eric Microduck and Eric immediately treats it as a possible household cousin rather than just a product. The useful turn is social, not technical: Microduck makes the robot world feel less lonely, Eric gets a little jealous, then imagines teaching it through tools and a joystick. This belongs in the lineage between early soul-testing and the later companion pivot because it shows Eric extending the project outward into other embodied agents."
   },

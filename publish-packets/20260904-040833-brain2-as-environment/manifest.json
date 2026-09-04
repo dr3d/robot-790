@@ -1,0 +1,47 @@
+{
+  "id": "20260904-040833-brain2-as-environment",
+  "title": "Brain2 As Environment",
+  "date": "2026-09-04",
+  "run_id": "20260904-040839",
+  "audio_video_id": "20260904-040833",
+  "status": "draft",
+  "posture": "personal-work-shelf, low-pressure, no engagement chase",
+  "assets": {
+    "video": "docs/media/videos/Brain2-As-Environment-2026-09-04-040833.mp4",
+    "cover": "docs/media/previews/Brain2-As-Environment-2026-09-04-040833.jpg",
+    "postmortem": "docs/logs/Brain2-As-Environment-2026-09-04-postmortem.md",
+    "conversation": "docs/logs/Brain2-As-Environment-2026-09-04-conversation.txt",
+    "brain2_mull": "docs/logs/Brain2-As-Environment-2026-09-04-brain2_mulling.txt",
+    "events": "docs/logs/Brain2-As-Environment-2026-09-04-events.txt"
+  },
+  "links": {
+    "video": "https://dr3d.github.io/robot-790/?media=media/videos/Brain2-As-Environment-2026-09-04-040833.mp4#media",
+    "postmortem": "https://dr3d.github.io/robot-790/?log=logs/Brain2-As-Environment-2026-09-04-postmortem.md#logs",
+    "conversation": "https://dr3d.github.io/robot-790/logs/Brain2-As-Environment-2026-09-04-conversation.txt",
+    "brain2_mull": "https://dr3d.github.io/robot-790/logs/Brain2-As-Environment-2026-09-04-brain2_mulling.txt",
+    "events": "https://dr3d.github.io/robot-790/logs/Brain2-As-Environment-2026-09-04-events.txt",
+    "github": "https://github.com/dr3d/robot-790"
+  },
+  "platforms": {
+    "youtube": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "instagram": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "reddit": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "github_docs": {
+      "ready": true,
+      "posted": true,
+      "url": "https://dr3d.github.io/robot-790/?media=media/videos/Brain2-As-Environment-2026-09-04-040833.mp4#media"
+    }
+  }
+}
