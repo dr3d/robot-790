@@ -358,9 +358,9 @@
       eyePadX: 18,
       mouthPadX: 18,
       mouthOffsetX: -2,
-      mouthTextInsetX: 34,
-      mouthTextY: 694,
-      mouthTextH: 92,
+      mouthTextInsetX: 54,
+      mouthTextY: 878,
+      mouthTextH: 58,
       mouthTextMarqueeMsPerPx: 10,
       eyeW: 336,
       eyeH: 336
@@ -932,27 +932,15 @@
       const panelH = faceLayout.mouthTextH;
       const padX = 18;
       const maxTextW = panelW - padX * 2;
-      const maxTextH = panelH - 34;
+      const maxTextH = panelH - 18;
       const mode = String(mouth.text_mode || "center").toLowerCase();
       const flashLit = mode !== "flash" || Math.floor((t - mouthTextStartedAt) / 120) % 2 === 0;
 
       ctx.save();
-      drawRoundRect(panelX, panelY, panelW, panelH, 18, "#00050a");
-      drawRoundRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2, 17, "", "#164b59", 2);
-      drawRoundRect(panelX + 8, panelY + 8, panelW - 16, panelH - 16, 13, "", "#082f3a", 2);
-      ctx.strokeStyle = mode === "flash" && flashLit ? mouth.text_color || "#e8faf6" : "#36d2e6";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(panelX + padX, panelY + 18);
-      ctx.lineTo(panelX + panelW - padX, panelY + 18);
-      ctx.stroke();
-      ctx.strokeStyle = "#084856";
-      ctx.beginPath();
-      ctx.moveTo(panelX + padX, panelY + panelH - 19);
-      ctx.lineTo(panelX + panelW - padX, panelY + panelH - 19);
-      ctx.stroke();
+      drawRoundRect(panelX, panelY, panelW, panelH, 13, "rgba(0, 5, 10, 0.90)");
+      drawRoundRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2, 12, "", "#164b59", 2);
 
-      const fontSize = mode === "marquee" ? 30 : mouthTextFontSize(text, maxTextW, maxTextH);
+      const fontSize = mode === "marquee" ? 27 : mouthTextFontSize(text, maxTextW, maxTextH);
       ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
       ctx.textBaseline = "middle";
       ctx.fillStyle = flashLit ? mouth.text_color || "#dffcff" : "#263c40";
@@ -960,7 +948,7 @@
       const textW = ctx.measureText(text).width;
       const textY = panelY + panelH / 2;
       ctx.beginPath();
-      ctx.rect(panelX + padX, panelY + 20, maxTextW, panelH - 40);
+      ctx.rect(panelX + padX, panelY + 8, maxTextW, panelH - 16);
       ctx.clip();
 
       if ((mode === "marquee" || textW > maxTextW) && textW > 0) {

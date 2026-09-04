@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 import httpx
 
-from robot_790d.brain_status import get_brain_status
+from robot_790d.brain_status import get_brain_status, get_gpu_status
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
@@ -69,6 +69,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/brain/status":
             self._handle_brain_status()
+            return
+        if parsed.path == "/api/gpu/status":
+            self._handle_gpu_status()
             return
         if parsed.path == "/api/notes/read":
             self._handle_note_read(parsed.query)
@@ -140,6 +143,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
 
     def _handle_brain_status(self) -> None:
         self._send_json(200, get_brain_status())
+
+    def _handle_gpu_status(self) -> None:
+        self._send_json(200, get_gpu_status())
 
     def _handle_runtime_config(self) -> None:
         self._send_json(200, runtime_config())

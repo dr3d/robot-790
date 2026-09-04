@@ -57,6 +57,7 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
         "latest_response": latest_response,
         "performance": performance,
         "context": context,
+        "gpu": get_gpu_status(),
         "log_files": {
             "realtime_err": _file_info(err_path),
             "realtime_out": _file_info(out_path),
@@ -64,6 +65,70 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
             "latest_conversation": _file_info(conversation_path),
         },
         "notes": _build_notes(model, latest_response, performance, context),
+    }
+
+
+def get_gpu_status() -> dict[str, Any]:
+    """Read compact GPU telemetry for the local STS dashboard."""
+    try:
+        completed = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            check=False,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "status": "unavailable",
+            "source": "nvidia-smi",
+            "sampled_at": datetime.now().isoformat(timespec="seconds"),
+            "error": str(exc) or "nvidia-smi unavailable",
+        }
+
+    if completed.returncode != 0:
+        error = ((completed.stderr or completed.stdout or "").strip().splitlines() or ["nvidia-smi unavailable"])[-1]
+        return {
+            "status": "unavailable",
+            "source": "nvidia-smi",
+            "sampled_at": datetime.now().isoformat(timespec="seconds"),
+            "error": error,
+        }
+
+    gpus = [_parse_nvidia_smi_gpu_line(line) for line in (completed.stdout or "").splitlines() if line.strip()]
+    gpus = [gpu for gpu in gpus if gpu]
+    return {
+        "status": "ok" if gpus else "unavailable",
+        "source": "nvidia-smi",
+        "sampled_at": datetime.now().isoformat(timespec="seconds"),
+        "primary": gpus[0] if gpus else None,
+        "gpus": gpus,
+    }
+
+
+def _parse_nvidia_smi_gpu_line(line: str) -> dict[str, Any] | None:
+    parts = [part.strip() for part in line.split(",")]
+    if len(parts) < 5:
+        return None
+    used_mb = _float_or_none(parts[2])
+    total_mb = _float_or_none(parts[3])
+    memory_usage_percent = None
+    if isinstance(used_mb, float) and isinstance(total_mb, float) and total_mb > 0:
+        memory_usage_percent = round(used_mb / total_mb * 100, 1)
+    return {
+        "name": parts[0],
+        "utilization_percent": _float_or_none(parts[1]),
+        "memory_used_mb": used_mb,
+        "memory_total_mb": total_mb,
+        "memory_used_gb": round(used_mb / 1024, 1) if isinstance(used_mb, float) else None,
+        "memory_total_gb": round(total_mb / 1024, 1) if isinstance(total_mb, float) else None,
+        "memory_usage_percent": memory_usage_percent,
+        "temperature_c": _float_or_none(parts[4]),
     }
 
 

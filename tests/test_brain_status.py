@@ -1,4 +1,4 @@
-from robot_790d.brain_status import _parse_lms_ps, get_brain_status
+from robot_790d.brain_status import _parse_lms_ps, get_brain_status, get_gpu_status
 
 
 def log_line(source: str, message: str) -> str:
@@ -147,3 +147,35 @@ def test_brain_status_parses_lm_studio_status() -> None:
             "ttl": "60m / 1h",
         }
     ]
+
+
+def test_gpu_status_parses_nvidia_smi(monkeypatch) -> None:
+    class Completed:
+        returncode = 0
+        stdout = "NVIDIA GeForce RTX 5090, 55, 31949, 32256, 46\n"
+        stderr = ""
+
+    monkeypatch.setattr("robot_790d.brain_status.subprocess.run", lambda *_args, **_kwargs: Completed())
+
+    result = get_gpu_status()
+
+    assert result["status"] == "ok"
+    assert result["source"] == "nvidia-smi"
+    assert result["primary"]["name"] == "NVIDIA GeForce RTX 5090"
+    assert result["primary"]["utilization_percent"] == 55.0
+    assert result["primary"]["memory_used_gb"] == 31.2
+    assert result["primary"]["memory_total_gb"] == 31.5
+    assert result["primary"]["memory_usage_percent"] == 99.0
+    assert result["primary"]["temperature_c"] == 46.0
+
+
+def test_gpu_status_tolerates_missing_nvidia_smi(monkeypatch) -> None:
+    def fail_run(*_args, **_kwargs):
+        raise FileNotFoundError("nvidia-smi")
+
+    monkeypatch.setattr("robot_790d.brain_status.subprocess.run", fail_run)
+
+    result = get_gpu_status()
+
+    assert result["status"] == "unavailable"
+    assert result["source"] == "nvidia-smi"

@@ -73,6 +73,54 @@
       color: var(--muted);
       white-space: nowrap;
     }
+    .gpu-status {
+      min-width: 150px;
+      display: grid;
+      grid-template-columns: auto auto;
+      align-items: center;
+      column-gap: 10px;
+      row-gap: 2px;
+      padding: 5px 8px;
+      border: 1px solid rgba(96, 211, 148, 0.26);
+      border-radius: 7px;
+      background: rgba(11, 15, 18, 0.72);
+      color: #a8f6cf;
+      font: 12px/1.08 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      white-space: nowrap;
+      box-shadow: 0 0 12px rgba(96, 211, 148, 0.08);
+    }
+    .gpu-status .gpu-label {
+      grid-row: 1 / span 2;
+      color: #d9fff0;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+    .gpu-status .gpu-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 7px;
+      min-width: 92px;
+    }
+    .gpu-status .gpu-key {
+      color: var(--muted);
+    }
+    .gpu-status[data-state="busy"] {
+      border-color: rgba(255, 207, 90, 0.42);
+      color: #ffe69a;
+      box-shadow: 0 0 14px rgba(255, 207, 90, 0.12);
+    }
+    .gpu-status[data-state="hot"] {
+      border-color: rgba(255, 107, 107, 0.48);
+      color: #ffc4c4;
+      box-shadow: 0 0 14px rgba(255, 107, 107, 0.16);
+    }
+    .gpu-status[data-state="offline"] {
+      border-color: rgba(174, 182, 194, 0.2);
+      color: var(--muted);
+      box-shadow: none;
+      opacity: 0.75;
+    }
     .dot {
       width: 10px;
       height: 10px;
@@ -663,6 +711,11 @@
         <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
         <button id="showEssentials" class="panel-link" type="button">Essentials</button>
         <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
+        <div id="gpuStatus" class="gpu-status" data-state="offline" title="GPU telemetry not sampled yet">
+          <span class="gpu-label">Nerves</span>
+          <span class="gpu-line"><span class="gpu-key">GPU</span><span id="gpuUtil">--%</span></span>
+          <span class="gpu-line"><span class="gpu-key">VRAM</span><span id="gpuVram">--/-- GB</span></span>
+        </div>
         <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
       </div>
     </header>
@@ -1190,6 +1243,9 @@
     const logGrid = document.querySelector(".log-grid");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
+    const gpuStatus = document.querySelector("#gpuStatus");
+    const gpuUtil = document.querySelector("#gpuUtil");
+    const gpuVram = document.querySelector("#gpuVram");
     const level = document.querySelector("#level");
     const micDeviceSelect = document.querySelector("#micDevice");
     const refreshMicDevicesButton = document.querySelector("#refreshMicDevices");
@@ -1345,6 +1401,7 @@
     let performancePrompt = "";
     let lastInputVoiceShape = "";
     let latestBrainStatus = null;
+    let gpuStatusPollTimer = null;
     let conversationPopoutWindow = null;
 
     function updateLogPaneHeight() {
@@ -4257,6 +4314,7 @@
 
     function showGeneratedImage(result) {
       const previousCover = audioRecordingActive() ? audioRecordingCurrentVisualCover({ includePlaceholder: true }) : null;
+      const generatedPreviewCanBecomeCover = !visionImageUrl;
       const url = new URL(String(result?.url || ""), location.href).href;
       generatedImageUrl = url;
       generatedImageName = String(result?.filename || result?.title || "generated image");
@@ -4266,7 +4324,9 @@
       const model = [result?.provider, result?.model].filter(Boolean).join(" / ");
       generatedImageHint.textContent = model ? `${generatedImageName} - ${model}` : generatedImageName;
       updateGeneratedImageButtons();
-      rolloverAudioRecordingForVisualChange("generated image changed", { cover: previousCover });
+      if (generatedPreviewCanBecomeCover) {
+        rolloverAudioRecordingForVisualChange("generated image changed", { cover: previousCover });
+      }
     }
 
     function clearGeneratedImage() {
@@ -8171,11 +8231,13 @@
         }
         enrichBrainStatusWithBrowserContext(result);
         latestBrainStatus = result;
+        updateGpuStatus(result.gpu);
         log(events, `brain status result: ${result?.model?.llm_model || "unknown model"}`);
         return result;
       } catch (error) {
         const result = getBrainStatusFromBrowser(error);
         latestBrainStatus = result;
+        updateGpuStatus(result.gpu);
         log(events, `brain status page-api fallback: ${error.message}`);
         return result;
       }
@@ -8188,11 +8250,70 @@
         if (!response.ok || result.status === "error") return null;
         enrichBrainStatusWithBrowserContext(result);
         latestBrainStatus = result;
+        updateGpuStatus(result.gpu);
         renderConversationPopout();
         return result;
       } catch {
         return null;
       }
+    }
+
+    function formatGpuNumber(value, fractionDigits = 0) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return null;
+      return number.toFixed(fractionDigits);
+    }
+
+    function updateGpuStatus(payload) {
+      if (!gpuStatus || !gpuUtil || !gpuVram) return;
+      const gpu = payload?.gpu || payload || {};
+      const primary = gpu?.primary || (Array.isArray(gpu?.gpus) ? gpu.gpus[0] : null);
+      if (!primary || gpu.status !== "ok") {
+        gpuStatus.dataset.state = "offline";
+        gpuStatus.title = gpu?.error ? `GPU telemetry unavailable: ${gpu.error}` : "GPU telemetry unavailable";
+        gpuUtil.textContent = "--%";
+        gpuVram.textContent = "--/-- GB";
+        return;
+      }
+      const util = formatGpuNumber(primary.utilization_percent, 0);
+      const usedGb = formatGpuNumber(primary.memory_used_gb, 1);
+      const totalGb = formatGpuNumber(primary.memory_total_gb, 1);
+      const memoryPct = Number(primary.memory_usage_percent);
+      const tempC = Number(primary.temperature_c);
+      gpuUtil.textContent = util ? `${util}%` : "--%";
+      gpuVram.textContent = usedGb && totalGb ? `${usedGb}/${totalGb} GB` : "--/-- GB";
+      gpuStatus.dataset.state = memoryPct >= 97 || tempC >= 82 ? "hot" : memoryPct >= 92 || Number(util) >= 85 ? "busy" : "ok";
+      gpuStatus.title = [
+        primary.name || "GPU",
+        Number.isFinite(tempC) ? `${Math.round(tempC)} C` : "",
+        Number.isFinite(memoryPct) ? `${memoryPct.toFixed(1)}% VRAM` : "",
+        gpu.sampled_at ? `sampled ${gpu.sampled_at}` : ""
+      ].filter(Boolean).join(" · ");
+    }
+
+    async function refreshGpuStatusQuietly() {
+      try {
+        const response = await fetch(new URL("/api/gpu/status", window.location.href), { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          updateGpuStatus({ status: "unavailable", error: result.error || `${response.status} ${response.statusText}` });
+          return null;
+        }
+        updateGpuStatus(result);
+        return result;
+      } catch (error) {
+        updateGpuStatus({ status: "unavailable", error: error.message });
+        return null;
+      }
+    }
+
+    function startGpuStatusPolling() {
+      const tick = async () => {
+        await refreshGpuStatusQuietly();
+        gpuStatusPollTimer = window.setTimeout(tick, 1000);
+      };
+      if (gpuStatusPollTimer) window.clearTimeout(gpuStatusPollTimer);
+      tick();
     }
 
     function getBrainStatusFromBrowser(error) {
@@ -11107,6 +11228,7 @@
     loadStartupNotes();
     if (contextPanel.open) renderContextMap();
     scheduleLogPaneHeightUpdate();
+    startGpuStatusPolling();
     startOperatorCommandPolling();
     setInterval(() => autosaveSessionLogs(), logAutosaveMs);
     if (browserSpeechAvailable()) {
