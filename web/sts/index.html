@@ -1059,6 +1059,7 @@
             B2 volume <span id="brain2VoiceVolumeValue">18%</span>
             <input id="brain2VoiceVolume" type="range" min="0" max="60" step="1" value="18">
           </label>
+          <button id="brain2VoiceTest" type="button">Test</button>
           <label>
             Person lane <span id="brain2PersonFocusValue">5/10</span>
             <input id="brain2PersonFocus" type="range" min="0" max="10" step="1" value="5">
@@ -1230,6 +1231,7 @@
     const brain2VoiceSelect = document.querySelector("#brain2VoiceSelect");
     const brain2VoiceVolume = document.querySelector("#brain2VoiceVolume");
     const brain2VoiceVolumeValue = document.querySelector("#brain2VoiceVolumeValue");
+    const brain2VoiceTestButton = document.querySelector("#brain2VoiceTest");
     const brain2PersonFocus = document.querySelector("#brain2PersonFocus");
     const brain2PersonFocusValue = document.querySelector("#brain2PersonFocusValue");
     const brain2MullNowButton = document.querySelector("#brain2MullNow");
@@ -6047,6 +6049,10 @@
       return !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
     }
 
+    function brain2VoiceCanSpeak() {
+      return brain2VoiceMonitorEnabled() && !responseActive && !outputAudioActive() && !userSpeechActive;
+    }
+
     function brain2UserPresentButBusy() {
       return Boolean(
         userSpeechActive
@@ -6131,13 +6137,22 @@
       }
     }
 
+    function testBrain2MonitorVoice() {
+      if (!brain2VoiceMonitorEnabled() && brain2VoiceMonitor) {
+        brain2VoiceMonitor.checked = true;
+      }
+      populateBrain2Voices();
+      updateBrain2VoiceMonitorUi({ quiet: true });
+      speakBrain2Monitor("Brain two monitor is awake.", { kind: "voice test" });
+    }
+
     function selectedBrain2BrowserVoice() {
       const name = currentBrain2VoiceName();
       if (!name) return null;
       return brain2BrowserVoices.find((voice) => voice.name === name) || null;
     }
 
-    function speakBrain2Monitor(text) {
+    function speakBrain2Monitor(text, options = {}) {
       const value = String(text || "").replace(/\s+/g, " ").trim();
       if (!value || !brain2VoiceMonitorEnabled()) return;
       if (!browserSpeechAvailable()) {
@@ -6163,10 +6178,11 @@
       utterance.onerror = () => {
         brain2MonitorAudioActive = false;
         brain2MonitorAudioUntil = Date.now() + 500;
+        logBrain2("voice error", value);
       };
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
-      logBrain2("voice", value);
+      logBrain2(options.kind || "voice", value);
     }
 
     function cancelBrain2MonitorSpeech() {
@@ -6179,7 +6195,7 @@
       return brain2MonitorAudioActive || Date.now() < brain2MonitorAudioUntil;
     }
 
-    async function surfaceBrain2MouthText(mouthText) {
+    async function surfaceBrain2MouthText(mouthText, options = {}) {
       try {
         await setMouthText({
           text: mouthText,
@@ -6193,14 +6209,17 @@
       bumpBrain2Counter("surfaced");
       logBrain2("mouth", mouthText);
       rememberBrain2Output("mouth", mouthText);
-      speakBrain2Monitor(mouthText);
+      if (options.speak !== false) {
+        speakBrain2Monitor(mouthText);
+      }
     }
 
     function deferBrain2Surface(mouthText, reason) {
       brain2DeferredSurface = {
         mouthText,
         reason,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        voiceSpoken: false
       };
       bumpBrain2Counter("held");
       logBrain2("held", `${reason}: ${mouthText}`);
@@ -6222,13 +6241,17 @@
         brain2DeferredSurface = null;
         return;
       }
+      if (!brain2DeferredSurface.voiceSpoken && brain2VoiceCanSpeak()) {
+        speakBrain2Monitor(brain2DeferredSurface.mouthText);
+        brain2DeferredSurface.voiceSpoken = true;
+      }
       if (!brain2MouthCanSurface()) {
         scheduleBrain2Surface();
         return;
       }
-      const { mouthText } = brain2DeferredSurface;
+      const { mouthText, voiceSpoken } = brain2DeferredSurface;
       brain2DeferredSurface = null;
-      await surfaceBrain2MouthText(mouthText);
+      await surfaceBrain2MouthText(mouthText, { speak: !voiceSpoken });
     }
 
     async function requestBrain2Mull({ manual = false } = {}) {
@@ -10898,6 +10921,7 @@
       brain2VoiceMonitor: "Read Brain 2 surfaced asides through a quiet browser voice for monitoring.",
       brain2VoiceSelect: "Browser speech-synthesis voice used only for the Brain 2 monitor.",
       brain2VoiceVolume: "Volume for the Brain 2 monitor voice.",
+      brain2VoiceTest: "Play a short Brain 2 monitor test line and unlock browser speech.",
       brain2PersonFocus: "How strongly Brain 2 studies the user/person lane.",
       brain2MullNow: "Trigger Brain 2 private mulling; it does not get Eric's speaking voice.",
       firstContactMode: "Use stripped startup conditions for thin creature/seed tests.",
@@ -11170,6 +11194,7 @@
     brain2VoiceSelect.addEventListener("change", updateBrain2VoiceMonitorUi);
     brain2VoiceVolume.addEventListener("input", () => updateBrain2VoiceMonitorUi({ quiet: true }));
     brain2VoiceVolume.addEventListener("change", updateBrain2VoiceMonitorUi);
+    brain2VoiceTestButton?.addEventListener("click", testBrain2MonitorVoice);
     brain2PersonFocus.addEventListener("input", () => {
       markRunPresetCustom();
       updateBrain2Controls();
