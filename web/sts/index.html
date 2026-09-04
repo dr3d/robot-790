@@ -348,8 +348,24 @@
     .url-controls .toggle-row {
       justify-self: start;
     }
-    .voice-controls {
-      grid-template-columns: minmax(110px, 140px) minmax(110px, 150px) minmax(260px, 1fr) minmax(140px, 180px) auto auto auto;
+    .brain-control-title {
+      display: grid;
+      gap: 3px;
+      min-width: 82px;
+      color: var(--text);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .brain-control-title span {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: none;
+    }
+    .brain1-controls {
+      grid-template-columns: minmax(82px, 110px) minmax(100px, 130px) minmax(110px, 145px) minmax(260px, 1fr) minmax(130px, 170px) minmax(120px, 150px) auto auto;
+    }
+    .brain2-controls {
+      grid-template-columns: minmax(82px, 110px) auto auto minmax(180px, 1fr) minmax(120px, 150px) minmax(120px, 150px) auto minmax(120px, 160px) auto;
     }
     .idle-controls {
       grid-template-columns: repeat(6, minmax(110px, 1fr)) auto auto auto;
@@ -804,7 +820,7 @@
         height: auto;
         min-height: 100vh;
       }
-      header, .controls, .url-controls, .voice-controls, .mic-vision-controls, .audio-record-controls, .generated-image-controls, .grid {
+      header, .controls, .url-controls, .brain1-controls, .brain2-controls, .mic-vision-controls, .audio-record-controls, .generated-image-controls, .grid {
         grid-template-columns: 1fr;
         align-items: stretch;
       }
@@ -1047,7 +1063,7 @@
     <details id="settingsPanel" class="settings-panel">
       <summary>
         <span class="settings-title">Robot Controls</span>
-        <span class="settings-hint">Face, body sensors, chassis, voice, memory, and LLM tool switches</span>
+        <span class="settings-hint">Face, bodies, Brain1, Brain2, memory, and LLM tool switches</span>
       </summary>
       <div class="settings-body">
         <section class="controls url-controls">
@@ -1071,7 +1087,11 @@
           <button id="chassisStop" class="danger">Stop</button>
         </section>
 
-        <section class="controls voice-controls">
+        <section class="controls brain1-controls">
+          <div class="brain-control-title">
+            <strong>Brain 1</strong>
+            <span>Eric voice</span>
+          </div>
           <label>
             Voice
             <select id="ttsVoice" aria-label="Qwen3-TTS voice"></select>
@@ -1088,8 +1108,8 @@
             <input id="ttsInstruct" class="compact-text" spellcheck="false">
           </label>
           <label>
-            Pace <span id="ttsPaceValue">1.00x</span>
-            <input id="ttsPace" type="range" min="0.85" max="1.25" step="0.05" value="1">
+            Output <span id="ericAudioVolumeValue">100%</span>
+            <input id="ericAudioVolume" type="range" min="0" max="100" step="1" value="100">
           </label>
           <select id="ttsPreset" aria-label="Voice style preset">
             <option value="neutral">Neutral</option>
@@ -1103,6 +1123,35 @@
           </select>
           <button id="ttsApply">Apply</button>
           <button id="clearLog">Clear</button>
+        </section>
+
+        <section class="controls brain2-controls">
+          <div class="brain-control-title">
+            <strong>Brain 2</strong>
+            <span>Monitor lane</span>
+          </div>
+          <label class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Mouth</label>
+          <label class="toggle-row"><input id="brain2VoiceMonitor" type="checkbox"> Voice</label>
+          <label>
+            Browser voice
+            <select id="brain2VoiceSelect" aria-label="Brain 2 browser voice">
+              <option value="">Browser default</option>
+            </select>
+          </label>
+          <label>
+            Volume <span id="brain2VoiceVolumeValue">100%</span>
+            <input id="brain2VoiceVolume" type="range" min="0" max="100" step="1" value="100">
+          </label>
+          <label>
+            Pace <span id="brain2VoicePaceValue">1.12x</span>
+            <input id="brain2VoicePace" type="range" min="0.85" max="1.35" step="0.05" value="1.12">
+          </label>
+          <button id="brain2VoiceTest" type="button">Test</button>
+          <label>
+            Person lane <span id="brain2PersonFocusValue">5/10</span>
+            <input id="brain2PersonFocus" type="range" min="0" max="10" step="1" value="5">
+          </label>
+          <button id="brain2MullNow" type="button">Mull</button>
         </section>
 
         <section class="controls idle-controls">
@@ -1157,24 +1206,6 @@
           <span id="idleSchedulerStatus" class="subtle idle-scheduler-status">Idle: disconnected</span>
           <label class="toggle-row"><input id="performanceMode" type="checkbox"> Performance mode</label>
           <label class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</label>
-          <label class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Brain 2 mouth</label>
-          <label class="toggle-row"><input id="brain2VoiceMonitor" type="checkbox"> Brain 2 voice</label>
-          <label>
-            B2 voice
-            <select id="brain2VoiceSelect" aria-label="Brain 2 browser voice">
-              <option value="">Browser default</option>
-            </select>
-          </label>
-          <label>
-            B2 volume <span id="brain2VoiceVolumeValue">100%</span>
-            <input id="brain2VoiceVolume" type="range" min="0" max="100" step="1" value="100">
-          </label>
-          <button id="brain2VoiceTest" type="button">Test</button>
-          <label>
-            Person lane <span id="brain2PersonFocusValue">5/10</span>
-            <input id="brain2PersonFocus" type="range" min="0" max="10" step="1" value="5">
-          </label>
-          <button id="brain2MullNow" type="button">Mull</button>
           <label class="toggle-row"><input id="firstContactMode" type="checkbox"> First contact</label>
           <button id="firstContactArm" type="button">Arm Contact</button>
           <button id="firstContactReport" type="button">Report</button>
@@ -1313,8 +1344,8 @@
     const ttsVoice = document.querySelector("#ttsVoice");
     const ttsPrecision = document.querySelector("#ttsPrecision");
     const ttsInstruct = document.querySelector("#ttsInstruct");
-    const ttsPace = document.querySelector("#ttsPace");
-    const ttsPaceValue = document.querySelector("#ttsPaceValue");
+    const ericAudioVolume = document.querySelector("#ericAudioVolume");
+    const ericAudioVolumeValue = document.querySelector("#ericAudioVolumeValue");
     const ttsPreset = document.querySelector("#ttsPreset");
     const ttsApplyButton = document.querySelector("#ttsApply");
     const labGoal = document.querySelector("#labGoal");
@@ -1341,6 +1372,8 @@
     const brain2VoiceSelect = document.querySelector("#brain2VoiceSelect");
     const brain2VoiceVolume = document.querySelector("#brain2VoiceVolume");
     const brain2VoiceVolumeValue = document.querySelector("#brain2VoiceVolumeValue");
+    const brain2VoicePace = document.querySelector("#brain2VoicePace");
+    const brain2VoicePaceValue = document.querySelector("#brain2VoicePaceValue");
     const brain2VoiceTestButton = document.querySelector("#brain2VoiceTest");
     const brain2PersonFocus = document.querySelector("#brain2PersonFocus");
     const brain2PersonFocusValue = document.querySelector("#brain2PersonFocusValue");
@@ -1607,7 +1640,6 @@
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
     const ttsPrecisionStorageKey = "robot790.ttsPrecision.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
-    const ttsPaceStorageKey = "robot790.ttsPace.v1";
     const idleDriftStorageKey = "robot790.idleDrift.v1";
     const idleWonderStorageKey = "robot790.idleWonder.v1";
     const idleSelfFocusStorageKey = "robot790.idleSelfFocus.v1";
@@ -1616,6 +1648,7 @@
     const brain2VoiceMonitorStorageKey = "robot790.brain2VoiceMonitor.v1";
     const brain2VoiceNameStorageKey = "robot790.brain2VoiceName.v2";
     const brain2VoiceVolumeStorageKey = "robot790.brain2VoiceVolume.v2";
+    const brain2VoicePaceStorageKey = "robot790.brain2VoicePace.v1";
     const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
     const transcriptProsodyModeStorageKey = "robot790.transcriptProsodyMode.v1";
     const eventLogFilterStorageKey = "robot790.eventLogFilter.v1";
@@ -1623,6 +1656,7 @@
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
     const autoAudioRecordStorageKey = "robot790.autoAudioRecord.v1";
     const ericAudioMutedStorageKey = "robot790.ericAudioMuted.v1";
+    const ericAudioVolumeStorageKey = "robot790.ericAudioVolume.v1";
     const micDeviceStorageKey = "robot790.micDevice.v1";
     const modelPresetStorageKey = "robot790.modelPreset.v2";
     const customModelKeyStorageKey = "robot790.customModelKey.v1";
@@ -1705,6 +1739,7 @@
           brain2MouthBrain: true,
           brain2VoiceMonitor: true,
           brain2VoiceVolume: 100,
+          brain2VoicePace: 1.12,
           brain2PersonFocus: 4,
           performanceMode: false,
           idleSubstrateTest: false,
@@ -1719,6 +1754,9 @@
           idleSelfFocus: 1,
           idleNotesFocus: 10,
           brain2MouthBrain: true,
+          brain2VoiceMonitor: true,
+          brain2VoiceVolume: 100,
+          brain2VoicePace: 1.12,
           brain2PersonFocus: 6,
           performanceMode: false,
           idleSubstrateTest: false,
@@ -1733,6 +1771,9 @@
           idleSelfFocus: 3,
           idleNotesFocus: 8,
           brain2MouthBrain: false,
+          brain2VoiceMonitor: false,
+          brain2VoiceVolume: 100,
+          brain2VoicePace: 1.0,
           brain2PersonFocus: 2,
           performanceMode: false,
           idleSubstrateTest: false,
@@ -1747,6 +1788,9 @@
           idleSelfFocus: 2,
           idleNotesFocus: 5,
           brain2MouthBrain: true,
+          brain2VoiceMonitor: true,
+          brain2VoiceVolume: 100,
+          brain2VoicePace: 1.12,
           brain2PersonFocus: 8,
           performanceMode: false,
           idleSubstrateTest: false,
@@ -1761,6 +1805,9 @@
           idleSelfFocus: 3,
           idleNotesFocus: 0,
           brain2MouthBrain: false,
+          brain2VoiceMonitor: false,
+          brain2VoiceVolume: 100,
+          brain2VoicePace: 1.0,
           brain2PersonFocus: 0,
           performanceMode: false,
           idleSubstrateTest: false,
@@ -1775,6 +1822,9 @@
           idleSelfFocus: 4,
           idleNotesFocus: 4,
           brain2MouthBrain: true,
+          brain2VoiceMonitor: true,
+          brain2VoiceVolume: 80,
+          brain2VoicePace: 1.15,
           brain2PersonFocus: 3,
           performanceMode: true,
           idleSubstrateTest: false,
@@ -3422,27 +3472,9 @@
       return String(ttsInstruct.value || "").trim();
     }
 
-    function currentTtsPace() {
-      const value = Number(ttsPace?.value);
-      if (!Number.isFinite(value)) return 1;
-      return Math.max(0.85, Math.min(1.25, Math.round(value * 20) / 20));
-    }
-
-    function ttsPaceLabel() {
-      return `${currentTtsPace().toFixed(2)}x`;
-    }
-
-    function ttsPaceInstruction() {
-      const pace = currentTtsPace();
-      if (pace >= 1.18) return "For this technical run, speak noticeably faster than usual while keeping articulation crisp; do not rush or swallow words.";
-      if (pace >= 1.08) return "For this technical run, speak a little faster than usual while keeping articulation crisp.";
-      if (pace <= 0.92) return "Speak a little slower than usual, with relaxed spacing.";
-      return "";
-    }
-
     function effectiveTtsInstruct() {
       const languageGuard = "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English.";
-      return [languageGuard, currentTtsInstruct(), ttsPaceInstruction()].filter(Boolean).join(" ");
+      return [languageGuard, currentTtsInstruct()].filter(Boolean).join(" ");
     }
 
     function currentTtsVoice() {
@@ -3499,21 +3531,6 @@
 
     function saveTtsStyle() {
       localStorage.setItem(ttsStyleStorageKey, currentTtsInstruct());
-    }
-
-    function loadTtsPace() {
-      const saved = Number(localStorage.getItem(ttsPaceStorageKey));
-      if (ttsPace) ttsPace.value = Number.isFinite(saved) ? String(Math.max(0.85, Math.min(1.25, saved))) : "1";
-      updateTtsPaceUi({ persist: false });
-    }
-
-    function saveTtsPace() {
-      localStorage.setItem(ttsPaceStorageKey, String(currentTtsPace()));
-    }
-
-    function updateTtsPaceUi({ persist = true } = {}) {
-      if (ttsPaceValue) ttsPaceValue.textContent = ttsPaceLabel();
-      if (persist) saveTtsPace();
     }
 
     function matchingTtsPresetName(instruct = currentTtsInstruct()) {
@@ -3791,6 +3808,9 @@
       }
       if (Number.isFinite(Number(settings.brain2VoiceVolume))) {
         brain2VoiceVolume.value = String(Math.max(0, Math.min(100, Number(settings.brain2VoiceVolume))));
+      }
+      if (Number.isFinite(Number(settings.brain2VoicePace))) {
+        brain2VoicePace.value = String(Math.max(0.85, Math.min(1.35, Number(settings.brain2VoicePace))));
       }
       brain2PersonFocus.value = String(settings.brain2PersonFocus);
       performanceMode.checked = Boolean(settings.performanceMode);
@@ -4426,12 +4446,34 @@
     }
 
     function ericAudioRuntimeLabel() {
-      return ericAudioMuted ? "muted" : "audible";
+      return ericAudioMuted ? "muted" : `audible at ${ericAudioVolumeLabel()}`;
+    }
+
+    function currentEricAudioVolume() {
+      const value = Number(ericAudioVolume?.value);
+      if (!Number.isFinite(value)) return 100;
+      return Math.max(0, Math.min(100, Math.round(value)));
+    }
+
+    function ericAudioVolumeLabel() {
+      return `${currentEricAudioVolume()}%`;
+    }
+
+    function saveEricAudioVolume() {
+      localStorage.setItem(ericAudioVolumeStorageKey, String(currentEricAudioVolume()));
+    }
+
+    function updateEricAudioVolumeUi({ quiet = false, persist = true } = {}) {
+      if (ericAudioVolumeValue) ericAudioVolumeValue.textContent = ericAudioVolumeLabel();
+      if (persist) saveEricAudioVolume();
+      updateEricAudioGain();
+      updateSessionTools({ quiet: true });
+      if (!quiet) log(events, `Eric volume ${ericAudioVolumeLabel()}`);
     }
 
     function updateEricAudioGain() {
       if (!ericPlaybackGain) return;
-      ericPlaybackGain.gain.setTargetAtTime(ericAudioMuted ? 0 : 1, audioContext?.currentTime || 0, 0.015);
+      ericPlaybackGain.gain.setTargetAtTime(ericAudioMuted ? 0 : currentEricAudioVolume() / 100, audioContext?.currentTime || 0, 0.015);
     }
 
     function ensureEricPlaybackGain() {
@@ -4440,7 +4482,7 @@
         ericPlaybackGain = audioContext.createGain();
         ericPlaybackGain.connect(audioContext.destination);
       }
-      ericPlaybackGain.gain.value = ericAudioMuted ? 0 : 1;
+      ericPlaybackGain.gain.value = ericAudioMuted ? 0 : currentEricAudioVolume() / 100;
       return ericPlaybackGain;
     }
 
@@ -4463,6 +4505,14 @@
     function loadEricAudioMutePref() {
       ericAudioMuted = localStorage.getItem(ericAudioMutedStorageKey) === "true";
       updateEricMuteButton();
+    }
+
+    function loadEricAudioVolumePref() {
+      const savedVolume = Number(localStorage.getItem(ericAudioVolumeStorageKey));
+      if (ericAudioVolume) {
+        ericAudioVolume.value = String(Number.isFinite(savedVolume) ? Math.max(0, Math.min(100, savedVolume)) : 100);
+      }
+      updateEricAudioVolumeUi({ quiet: true, persist: false });
     }
 
     function updateMicMuteButton() {
@@ -4607,8 +4657,8 @@
       });
       if (announce) {
         log(events, effectiveTtsInstruct()
-          ? `voice ${currentTtsVoice()} style applied; pace ${ttsPaceLabel()}`
-          : `voice ${currentTtsVoice()} neutral; pace ${ttsPaceLabel()}`);
+          ? `voice ${currentTtsVoice()} style applied`
+          : `voice ${currentTtsVoice()} neutral`);
       }
     }
 
@@ -5088,7 +5138,7 @@
         `Run preset: ${runPresetLabel()}`,
         `Creature seed: ${currentCreatureProfile().label}`,
         `Lab voice: ${currentTtsVoice()} / ${matchingTtsPresetName()}`,
-        `Speech pace: ${ttsPaceLabel()}`,
+        `Eric speaker audio: ${ericAudioRuntimeLabel()}`,
         `Idle clock: ${idleClockLabel()}`,
         `First contact mode: ${firstContactModeEnabled() ? "on" : "off"}`,
         `Sensing input: ${sensingInputLabel()}`,
@@ -6238,9 +6288,19 @@
       return `${Math.round(currentBrain2VoiceVolume())}%`;
     }
 
+    function currentBrain2VoicePace() {
+      const value = Number(brain2VoicePace?.value);
+      if (!Number.isFinite(value)) return 1.12;
+      return Math.max(0.85, Math.min(1.35, Math.round(value * 20) / 20));
+    }
+
+    function brain2VoicePaceLabel() {
+      return `${currentBrain2VoicePace().toFixed(2)}x`;
+    }
+
     function brain2VoiceLabel() {
       if (!brain2VoiceMonitorEnabled()) return "off";
-      return `${currentBrain2VoiceName() || "browser default"} at ${brain2VoiceVolumeLabel()}`;
+      return `${currentBrain2VoiceName() || "browser default"} at ${brain2VoiceVolumeLabel()}, ${brain2VoicePaceLabel()}`;
     }
 
     function populateBrain2Voices() {
@@ -6272,19 +6332,26 @@
         const savedVolume = Number(localStorage.getItem(brain2VoiceVolumeStorageKey));
         brain2VoiceVolume.value = String(Number.isFinite(savedVolume) ? Math.max(0, Math.min(100, savedVolume)) : 100);
       }
+      if (brain2VoicePace) {
+        const savedPace = Number(localStorage.getItem(brain2VoicePaceStorageKey));
+        brain2VoicePace.value = String(Number.isFinite(savedPace) ? Math.max(0.85, Math.min(1.35, savedPace)) : 1.12);
+      }
       populateBrain2Voices();
       if (brain2VoiceVolumeValue) brain2VoiceVolumeValue.textContent = brain2VoiceVolumeLabel();
+      if (brain2VoicePaceValue) brain2VoicePaceValue.textContent = brain2VoicePaceLabel();
     }
 
     function saveBrain2VoiceMonitor() {
       localStorage.setItem(brain2VoiceMonitorStorageKey, String(brain2VoiceMonitorEnabled()));
       localStorage.setItem(brain2VoiceNameStorageKey, currentBrain2VoiceName());
       localStorage.setItem(brain2VoiceVolumeStorageKey, String(currentBrain2VoiceVolume()));
+      localStorage.setItem(brain2VoicePaceStorageKey, String(currentBrain2VoicePace()));
     }
 
     function updateBrain2VoiceMonitorUi(options = {}) {
       saveBrain2VoiceMonitor();
       if (brain2VoiceVolumeValue) brain2VoiceVolumeValue.textContent = brain2VoiceVolumeLabel();
+      if (brain2VoicePaceValue) brain2VoicePaceValue.textContent = brain2VoicePaceLabel();
       if (!brain2VoiceMonitorEnabled() && browserSpeechAvailable()) {
         window.speechSynthesis.cancel();
       }
@@ -6321,7 +6388,7 @@
       const utterance = new SpeechSynthesisUtterance(value);
       utterance.voice = selectedBrain2BrowserVoice();
       utterance.volume = currentBrain2VoiceVolume() / 100;
-      utterance.rate = 1.12;
+      utterance.rate = currentBrain2VoicePace();
       utterance.pitch = 0.62;
       utterance.onstart = () => {
         brain2MonitorAudioActive = true;
@@ -8793,7 +8860,7 @@
       const idleSettingsText = [
         `Run preset: ${runPresetLabel()}`,
         `Creature seed: ${currentCreatureProfile().label}`,
-        `Speech pace: ${ttsPaceLabel()}`,
+        `Eric speaker audio: ${ericAudioRuntimeLabel()}`,
         `Idle clock: ${idleClockLabel()}`,
         `Idle drift: ${idleDriftLabel()}`,
         `Wonder: ${idleWonderLabel()}`,
@@ -8857,7 +8924,7 @@
             `Tool definitions available: ${enabledTools.length}`,
             `Voice: ${currentTtsVoice()}`,
             `Voice style chars: ${currentTtsInstruct().length}`,
-            `Speech pace: ${ttsPaceLabel()}`
+            `Eric speaker audio: ${ericAudioRuntimeLabel()}`
           ]
         },
         {
@@ -11090,7 +11157,7 @@
       ttsVoice: "Main Qwen3-TTS speaker voice.",
       ttsPrecision: "Qwen3-TTS precision; bfloat16 is the usual stable default.",
       ttsInstruct: "Operator-side TTS delivery instruction.",
-      ttsPace: "Instruction-level speech pace for Eric. Default is 1.00x; higher values ask for brisker technical delivery.",
+      ericAudioVolume: "Real browser playback volume for Eric's main voice.",
       ttsPreset: "Apply a saved voice-style instruction.",
       ttsApply: "Apply the selected voice, precision, and delivery instruction.",
       labGoal: "Session-only directed question/job that idle should keep returning to.",
@@ -11110,6 +11177,7 @@
       brain2VoiceMonitor: "Read Brain 2 surfaced asides through a quiet browser voice for monitoring.",
       brain2VoiceSelect: "Browser speech-synthesis voice used only for the Brain 2 monitor.",
       brain2VoiceVolume: "Volume for the Brain 2 monitor voice.",
+      brain2VoicePace: "Real browser speech rate for the Brain 2 monitor voice.",
       brain2VoiceTest: "Play a short Brain 2 monitor test line and unlock browser speech.",
       brain2PersonFocus: "How strongly Brain 2 studies the user/person lane.",
       brain2MullNow: "Trigger Brain 2 private mulling; it does not get Eric's speaking voice.",
@@ -11342,12 +11410,8 @@
         .find(([, value]) => value === currentTtsInstruct())?.[0] || "custom";
       saveTtsStyle();
     });
-    ttsPace?.addEventListener("input", () => {
-      updateTtsPaceUi();
-    });
-    ttsPace?.addEventListener("change", () => {
-      updateSessionTtsStyle();
-    });
+    ericAudioVolume?.addEventListener("input", () => updateEricAudioVolumeUi({ quiet: true }));
+    ericAudioVolume?.addEventListener("change", () => updateEricAudioVolumeUi());
     interruptSensitivity.addEventListener("input", updateInterruptSensitivityUi);
     runPreset.addEventListener("change", () => applyRunPreset(currentRunPreset()));
     creatureProfile.addEventListener("change", () => {
@@ -11384,6 +11448,8 @@
     brain2VoiceSelect.addEventListener("change", updateBrain2VoiceMonitorUi);
     brain2VoiceVolume.addEventListener("input", () => updateBrain2VoiceMonitorUi({ quiet: true }));
     brain2VoiceVolume.addEventListener("change", updateBrain2VoiceMonitorUi);
+    brain2VoicePace?.addEventListener("input", () => updateBrain2VoiceMonitorUi({ quiet: true }));
+    brain2VoicePace?.addEventListener("change", updateBrain2VoiceMonitorUi);
     brain2VoiceTestButton?.addEventListener("click", testBrain2MonitorVoice);
     brain2PersonFocus.addEventListener("input", () => {
       markRunPresetCustom();
@@ -11525,10 +11591,10 @@
     loadTtsVoice();
     loadTtsPrecision();
     loadTtsStyle();
-    loadTtsPace();
     resetCreatureProfileForReload();
     loadAutoAudioRecordPref();
     loadEricAudioMutePref();
+    loadEricAudioVolumePref();
     loadMicDevicePref();
     refreshMicDevices({ quiet: true }).catch(() => {});
     loadInterruptSensitivity();

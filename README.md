@@ -353,6 +353,9 @@ The browser page is the main live control surface. It includes:
   is saying aloud.
 - Face, chassis, voice, memory, web, weather, Cast, image, smart-home, and
   note tool switches.
+- Separate Brain1 and Brain2 control rows: Brain1 owns Eric's public voice and
+  real output volume; Brain2 owns the observer monitor mouth/voice, monitor
+  volume, monitor pace, person-lane intensity, and manual mulling.
 - Idle controls for drift, wonder, self-focus, notes-focus, and substrate tests.
 - Conversation and event panes with copy and record buttons.
 - Context Map for a rough view of what Eric can draw from, including the active
