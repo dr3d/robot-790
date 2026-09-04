@@ -30,6 +30,7 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 
 - [Eric Wakes Up New Every Time](articles/eric_wakes_up_new_every_time.md)
 - [The Event Loop Grew A Face](articles/the-event-loop-grew-a-face.md)
+- [The Note That Marked Its Own Evidence](articles/the-note-that-marked-its-own-evidence.md)
 - [Receipts And Open Questions](evidence_map.md)
 - [The Landscape Around Eric](articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](articles/what-eric-has-taught-us.md)

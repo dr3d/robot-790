@@ -14,10 +14,38 @@ The usual workflow:
    - `PERSONA`: lines that reveal Eric's stable voice or self-model.
    - `WEB`: material that appears search-fed or lookup-aware.
    - `FAILURE`: confabulation, repetition, parsing trouble, tool trouble, or useful mistakes.
-4. Promote only the strong pieces into `docs/articles`, `docs/logs`, or `docs/media`.
+4. Ask Eric for his own short run summary before reload when the run is
+   important. Capture it under `curation/eric-summaries/` if it is worth keeping.
+5. Audit source classes before promoting anything:
+   - live tool or sensor fact
+   - event log fact
+   - conversation transcript
+   - Brain 2 mull line
+   - staged screenshot or image read
+   - Scott-reported value
+   - Codex/Claude/Scott interpretation
+6. Require durable summaries to include a provenance note when any settings,
+   sensor states, model names, visual reads, or UI dials were not independently
+   verified in the same turn.
+7. Promote only the strong pieces into `docs/articles`, `docs/logs`, or `docs/media`.
 
 The miner is intentionally a first pass. It is meant to reduce TLDR pain, not
 replace judgment.
+
+Eric-authored summaries are different from mined transcripts. They are useful
+because they show what the public voice thinks the run meant, but they still
+need provenance fences. The strongest form is: "here is what happened, here is
+what I think mattered, and here is what I did not verify myself."
+
+Reusable Eric prompt:
+
+```text
+Eric, write a short run summary note. Include what happened, what you think
+mattered, what settings or artifacts you noticed, and what should be checked
+next. Mark provenance clearly: live tool/sensor fact, staged image read,
+Scott-reported value, transcript memory, or inference. If you did not verify a
+detail yourself in this turn, say that in the note.
+```
 
 ## Concepts
 

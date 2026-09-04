@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-03 20:54:45",
+    "generated":  "2026-09-03 22:29:21",
     "articles":  [
+                     {
+                         "title":  "The Note That Marked Its Own Evidence",
+                         "excerpt":  "On September 3, 2026, Robot 790 produced a small note that may become one of",
+                         "source":  "articles/the-note-that-marked-its-own-evidence.md",
+                         "bytes":  8307,
+                         "modified":  "2026-09-03 22:29"
+                     },
                      {
                          "title":  "The Event Loop Grew A Face",
                          "excerpt":  "Robot 790 began as a practical build: speech in, language model, voice out,",
