@@ -40,6 +40,7 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 ## Project Notes
 
 - [Receipts And Open Questions](evidence_map.md)
+- [Face Contract](face_contract.md)
 - [Future Directions](future_directions.md)
 - [Embodied Sensor Head](embodied_sensor_head.md)
 - [Reference Shelf](references.md)

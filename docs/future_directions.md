@@ -219,6 +219,33 @@ The next levels are:
 For now, selected frames and short descriptions are preferable to continuous raw
 video in the model context.
 
+## Face Inheritance
+
+The face should become shared machinery without becoming mysterious machinery.
+Eric's expressions are part of who he is in practice: eyes, mouth, captions,
+timing, palette, and renderer limits all shape the personage that appears in
+the room.
+
+The working direction is a plain face contract:
+
+- shared vocabulary: `smirk_left`, `sneer`, `o`, `tongue`, `crying`, and future
+  expressions
+- shared pose intent: mouth width, openness, curve, skew, tension, teeth, and
+  later eye/brow controls
+- skins: Eric, browser face, ESP32-S3 face, external eyes, Reachy Mini, and
+  future cousins
+- native renderers: each body draws the same intent in the way its hardware can
+  express
+
+This is inheritance in the practical old sense. A new face should inherit the
+common vocabulary and then override only what makes it itself: palette,
+proportions, lip thickness, idle habits, servo limits, or caption behavior.
+
+The first migration step is `config/face/robot-790-face.json`, plus generated
+contract artifacts under `config/face/generated/`. Mouths are the first target
+because they currently drift fastest. Eyes and brows should follow once the
+mouth contract proves useful.
+
 ## Portable Singular Embodiment
 
 The Waveshare-style ESP32-S3 face is becoming more than a cheaper display

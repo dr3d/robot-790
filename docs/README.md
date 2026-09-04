@@ -28,6 +28,7 @@ opened directly as a `file://` URL.
 - `media/`: compressed public images, audio, and video.
 - `evidence_map.md`: working map of project observations, receipts, and open
   tests.
+- `face_contract.md`: face vocabulary, skin inheritance, and renderer contract.
 - `experimental_controls.md`: STS run controls, known interactions, and
   evolving preset definitions.
 - `reachy_embodiment.md`: plan for making Reachy Mini another Eric embodiment.

@@ -43,6 +43,7 @@ Start with the public story, receipts, and open questions:
 - [The Event Loop Grew A Face](docs/articles/the-event-loop-grew-a-face.md)
 - [The Ledger-Keeper's View](docs/articles/ledger-keepers-view.md)
 - [Receipts And Open Questions](docs/evidence_map.md)
+- [Face Contract](docs/face_contract.md)
 - [The Landscape Around Eric](docs/articles/artificial-human-landscape.md)
 - [What Eric Has Taught Us So Far](docs/articles/what-eric-has-taught-us.md)
 - [Why The Empty Context Worked](docs/articles/why-the-empty-context-worked.md)
@@ -109,6 +110,9 @@ that assembly when the machinery is kept visible.
   proxying to the Reachy daemon, so Reachy can become a body without becoming a
   second Eric.
 - `presets/robot-790-gold.json`: the current Qwen 27B / Eric voice baseline.
+- `config/face/robot-790-face.json`: canonical face vocabulary, mouth pose
+  data, skin inheritance, and generated contract artifacts for keeping browser
+  and hardware embodiments aligned.
 
 Some names still say `eyes` or `Reachy` in older firmware/UI paths. That is
 intentional for now: preserve working hardware behavior first, rename only when
@@ -133,6 +137,9 @@ voices, third-party code, and media assets carry their own licenses.
 
 - `docs/`: public GitHub Pages shelf for articles, curated transcripts, and
   publishable media. This is the public memory palace.
+- `config/face/`: editable face contract data. This is where shared expression
+  vocabulary, pose constants, aliases, mood mappings, and skin inheritance
+  should live before being generated into browser or firmware code.
 - `prompts/`: editable realtime seed prompts that define Eric's base operating
   posture before notes, memories, runtime state, or tools are added.
 - `notes/`: private local working notes, identity files, library books, world

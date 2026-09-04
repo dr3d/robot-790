@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "name": "robot-790-face",
+  "description": "Canonical face vocabulary and tuning data for Robot 790 embodiments. Renderers stay native; names and pose intent live here.",
+  "mouth": {
+    "poseFields": [
+      "open",
+      "width",
+      "curve",
+      "skew",
+      "teeth",
+      "tension",
+      "slant",
+      "upperLift"
+    ],
+    "shapeOrder": [
+      "neutral",
+      "smile",
+      "big_smile",
+      "smirk_left",
+      "smirk_right",
+      "open",
+      "o",
+      "wide",
+      "tongue",
+      "frown",
+      "grimace",
+      "sneer",
+      "sleep"
+    ],
+    "shapes": {
+      "neutral": {
+        "cppName": "Neutral",
+        "aliases": ["flat", "line"],
+        "pose": { "open": 0.07, "width": 0.54, "curve": 0.02, "skew": -0.03, "teeth": 0, "tension": 0.16, "slant": 0.02, "upperLift": 0 },
+        "topology": "mouth"
+      },
+      "smile": {
+        "cppName": "Smile",
+        "aliases": ["happy"],
+        "pose": { "open": 0.18, "width": 0.88, "curve": 0.98, "skew": 0, "teeth": 0.08, "tension": 0.06, "slant": 0, "upperLift": 0 },
+        "topology": "mouth"
+      },
+      "big_smile": {
+        "cppName": "BigSmile",
+        "aliases": ["big-smile", "grin", "delighted"],
+        "pose": { "open": 0.44, "width": 0.96, "curve": 1.05, "skew": 0, "teeth": 0.3, "tension": 0.05, "slant": 0, "upperLift": 0 },
+        "topology": "mouth"
+      },
+      "smirk_left": {
+        "cppName": "SmirkLeft",
+        "aliases": ["left_smirk"],
+        "pose": { "open": 0.13, "width": 0.72, "curve": 0.88, "skew": -0.46, "teeth": 0.02, "tension": 0.48, "slant": -0.36, "upperLift": -0.42 },
+        "topology": "mouth",
+        "renderHints": { "sideCompressed": true }
+      },
+      "smirk_right": {
+        "cppName": "SmirkRight",
+        "aliases": ["smirk", "right_smirk"],
+        "pose": { "open": 0.13, "width": 0.72, "curve": 0.88, "skew": 0.46, "teeth": 0.02, "tension": 0.48, "slant": 0.36, "upperLift": 0.42 },
+        "topology": "mouth",
+        "renderHints": { "sideCompressed": true }
+      },
+      "open": {
+        "cppName": "Open",
+        "aliases": ["talk", "speaking"],
+        "pose": { "open": 0.66, "width": 0.5, "curve": -0.04, "skew": -0.04, "teeth": 0, "tension": 0.14, "slant": -0.05, "upperLift": 0 },
+        "topology": "mouth"
+      },
+      "o": {
+        "cppName": "O",
+        "aliases": ["oh", "surprise_o"],
+        "pose": { "open": 0.82, "width": 0.2, "curve": -0.08, "skew": 0, "teeth": 0, "tension": 0.02, "slant": 0, "upperLift": 0 },
+        "topology": "o"
+      },
+      "wide": {
+        "cppName": "Wide",
+        "aliases": ["surprised", "shout"],
+        "pose": { "open": 0.94, "width": 0.7, "curve": 0.1, "skew": 0.04, "teeth": 0.18, "tension": 0.2, "slant": 0.06, "upperLift": 0 },
+        "topology": "mouth"
+      },
+      "tongue": {
+        "cppName": "Tongue",
+        "aliases": ["silly"],
+        "pose": { "open": 0.78, "width": 0.82, "curve": 0.84, "skew": 0.05, "teeth": 0.04, "tension": 0.04, "slant": 0.02, "upperLift": 0 },
+        "topology": "mouth",
+        "renderHints": { "tongue": true }
+      },
+      "frown": {
+        "cppName": "Frown",
+        "aliases": ["sad"],
+        "pose": { "open": 0.08, "width": 0.62, "curve": -1.1, "skew": -0.04, "teeth": 0, "tension": 0.42, "slant": -0.08, "upperLift": 0 },
+        "topology": "mouth"
+      },
+      "grimace": {
+        "cppName": "Grimace",
+        "aliases": ["teeth", "tense"],
+        "pose": { "open": 0.24, "width": 0.84, "curve": -0.18, "skew": 0.03, "teeth": 1, "tension": 0.98, "slant": 0.03, "upperLift": 0 },
+        "topology": "mouth",
+        "renderHints": { "teethGrid": true }
+      },
+      "sneer": {
+        "cppName": "Sneer",
+        "aliases": ["sinister"],
+        "pose": { "open": 0.2, "width": 0.72, "curve": -0.2, "skew": 0.42, "teeth": 0.32, "tension": 0.62, "slant": 0.34, "upperLift": 0.52 },
+        "topology": "mouth",
+        "renderHints": { "sideCompressed": true, "fang": true }
+      },
+      "sleep": {
+        "cppName": "Sleep",
+        "aliases": ["blank"],
+        "pose": { "open": 0.03, "width": 0.42, "curve": -0.12, "skew": 0, "teeth": 0, "tension": 0.08, "slant": 0, "upperLift": 0 },
+        "topology": "sleep"
+      }
+    },
+    "moodMap": {
+      "happy": "smile",
+      "delighted": "big_smile",
+      "affection": "smile",
+      "proud": "smile",
+      "bashful": "smile",
+      "suspicious": "smirk_right",
+      "mischief": "smirk_right",
+      "angry": "sneer",
+      "afraid": "o",
+      "surprised": "o",
+      "wonder": "o",
+      "silly": "tongue",
+      "confused": "smirk_left",
+      "goofy": "smirk_left",
+      "sleepy": "frown",
+      "sad": "frown",
+      "sleep": "sleep",
+      "focused": "grimace",
+      "robotic": "grimace",
+      "calculating": "grimace",
+      "glitchy": "wide"
+    }
+  },
+  "skins": {
+    "base": {
+      "description": "Neutral face skin inherited by named embodiments.",
+      "mouth": {
+        "lipThickness": 1,
+        "mouthWidth": 1,
+        "cavityHeight": 1,
+        "cornerRoundness": 1,
+        "textAsCaption": true
+      },
+      "eyes": {
+        "scale": 1,
+        "spacing": 1,
+        "blinkEase": 1
+      }
+    },
+    "eric": {
+      "inherits": "base",
+      "description": "Current Eric face: green status glow, pink mechanical lips, suspicious smirks.",
+      "mouth": {
+        "lipThickness": 1,
+        "mouthWidth": 1,
+        "cavityHeight": 1
+      },
+      "colors": {
+        "glow": "#7dffbf",
+        "lip": "#c85572",
+        "lipHighlight": "#f690a4",
+        "cavity": "#090005"
+      }
+    },
+    "browser_face": {
+      "inherits": "eric",
+      "description": "High resolution browser face with captions and richer drawing affordances."
+    },
+    "esp32_s3_face": {
+      "inherits": "eric",
+      "description": "ESP32-S3-Touch-LCD-2 portrait face renderer."
+    },
+    "esp32_eyes": {
+      "inherits": "eric",
+      "description": "External ESP32 eye/mouth lineage at esp32-eyes.local."
+    },
+    "reachy_mini": {
+      "inherits": "eric",
+      "description": "Future Reachy Mini embodiment; maps the same face intent to a different body."
+    }
+  }
+}
