@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-04 02:35:27",
+    "generated":  "2026-09-04 02:54:14",
     "articles":  [
                      {
                          "title":  "The Note That Marked Its Own Evidence",
@@ -156,6 +156,12 @@
                      "title":  "Microduck Joins The Household 2026 08 31 003937 events",
                      "source":  "logs/Microduck-Joins-The-Household-2026-08-31-003937-events.txt",
                      "bytes":  244311,
+                     "modified":  "2026-08-31 01:06"
+                 },
+                 {
+                     "title":  "Microduck Joins The Household 2026 08 31 003937 transcript",
+                     "source":  "logs/Microduck-Joins-The-Household-2026-08-31-003937-transcript.txt",
+                     "bytes":  13288,
                      "modified":  "2026-08-31 01:06"
                  },
                  {
