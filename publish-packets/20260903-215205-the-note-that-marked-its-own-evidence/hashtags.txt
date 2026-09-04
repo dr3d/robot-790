@@ -1,0 +1,8 @@
+#Robot790
+#EmbodiedAI
+#LocalAI
+#SocialRobotics
+#AICompanion
+#RobotBuild
+#BuildInPublic
+#HumanMachineInteraction

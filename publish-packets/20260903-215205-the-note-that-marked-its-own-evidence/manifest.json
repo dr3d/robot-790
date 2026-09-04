@@ -1,0 +1,45 @@
+{
+  "id": "20260903-215205-the-note-that-marked-its-own-evidence",
+  "title": "The Note That Marked Its Own Evidence",
+  "date": "2026-09-03",
+  "run_id": "20260903-215205",
+  "status": "draft",
+  "posture": "personal-work-shelf, low-pressure, no engagement chase",
+  "assets": {
+    "video": "docs/media/videos/The-Note-That-Marked-Its-Own-Evidence-2026-09-03-215205.mp4",
+    "cover": "docs/media/previews/The-Note-That-Marked-Its-Own-Evidence-2026-09-03-215205.jpg",
+    "article": "docs/articles/the-note-that-marked-its-own-evidence.md"
+  },
+  "links": {
+    "article": "https://dr3d.github.io/robot-790/?article=articles/the-note-that-marked-its-own-evidence.md#article-reader",
+    "video": "https://dr3d.github.io/robot-790/?media=media/videos/The-Note-That-Marked-Its-Own-Evidence-2026-09-03-215205.mp4#media",
+    "github": "https://github.com/dr3d/robot-790"
+  },
+  "platforms": {
+    "youtube": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "instagram": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "reddit": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "github_docs": {
+      "ready": true,
+      "posted": true,
+      "url": "https://dr3d.github.io/robot-790/?media=media/videos/The-Note-That-Marked-Its-Own-Evidence-2026-09-03-215205.mp4#media"
+    },
+    "notebooklm": {
+      "ready": false,
+      "posted": false,
+      "url": ""
+    }
+  }
+}

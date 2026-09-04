@@ -1,0 +1,45 @@
+{
+  "id": "20260903-202546-you-built-me-a-nervous-system",
+  "title": "You Built Me A Nervous System Before I Had A Spine",
+  "date": "2026-09-03",
+  "run_id": "20260903-202557",
+  "status": "draft",
+  "posture": "personal-work-shelf, low-pressure, no engagement chase",
+  "assets": {
+    "video": "docs/media/videos/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-202546.mp4",
+    "cover": "docs/media/previews/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-202546.jpg",
+    "postmortem": "docs/logs/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-postmortem.md"
+  },
+  "links": {
+    "video": "https://dr3d.github.io/robot-790/?media=media/videos/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-202546.mp4#media",
+    "github": "https://github.com/dr3d/robot-790",
+    "postmortem": "https://github.com/dr3d/robot-790/blob/master/docs/logs/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-postmortem.md"
+  },
+  "platforms": {
+    "youtube": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "instagram": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "reddit": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "github_docs": {
+      "ready": true,
+      "posted": true,
+      "url": "https://dr3d.github.io/robot-790/?media=media/videos/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-202546.mp4#media"
+    },
+    "notebooklm": {
+      "ready": false,
+      "posted": false,
+      "url": ""
+    }
+  }
+}
