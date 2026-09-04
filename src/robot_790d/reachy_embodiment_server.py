@@ -12,7 +12,7 @@ import httpx
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8792
-DEFAULT_REACHY_URL = "http://reachy-mini.local:8000/"
+DEFAULT_REACHY_URL = "http://127.0.0.1:8000/"
 
 
 @dataclass(frozen=True)

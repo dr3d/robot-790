@@ -87,6 +87,7 @@ def test_realtime_tool_catalog_exposes_robot_actions() -> None:
         "set_eye_style",
         "set_eye_gaze",
         "set_mouth",
+        "set_face_animation",
         "set_chassis",
         "remember_fact",
         "forget_fact",

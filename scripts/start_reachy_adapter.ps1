@@ -1,7 +1,7 @@
 param(
     [string] $HostAddress = "127.0.0.1",
     [int] $Port = 8792,
-    [string] $DaemonUrl = "http://reachy-mini.local:8000/",
+    [string] $DaemonUrl = "http://127.0.0.1:8000/",
     [switch] $AllowMotion
 )
 

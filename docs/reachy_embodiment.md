@@ -30,9 +30,12 @@ The first adapter entry point is:
 .\scripts\start_reachy_adapter.ps1
 ```
 
-By default this starts in motion-gated mode. It answers `/state` and accepts the
-same high-level routes as the face controllers, but it will not physically move
-Reachy unless started with:
+By default this talks to the local Reachy Control app bridge at
+`http://127.0.0.1:8000/` and starts in motion-gated mode. If the local bridge is
+not running and Reachy is only reachable over LAN/mDNS, pass
+`-DaemonUrl http://reachy-mini.local:8000/`. The adapter answers `/state` and
+accepts the same high-level routes as the face controllers, but it will not
+physically move Reachy unless started with:
 
 ```powershell
 .\scripts\start_reachy_adapter.ps1 -AllowMotion
@@ -81,6 +84,9 @@ Current daemon facts observed on 2026-09-03:
 
 - `reachy-mini.local` resolves on the LAN as `192.168.0.236`.
 - Reachy Mini Wireless daemon answers at `http://reachy-mini.local:8000/`.
+- The local Reachy Control app can expose the same daemon at
+  `http://127.0.0.1:8000/`, which is the preferred daily-driver adapter target
+  on the Windows lab machine.
 - API docs are available at `http://reachy-mini.local:8000/docs`.
 - The daemon reported version `1.10.0`.
 - `/api/daemon/status`, `/api/state/full`, `/api/motors/status`,

@@ -255,10 +255,12 @@ Optional Reachy Mini body adapter:
 .\scripts\start_reachy_adapter.ps1
 ```
 
-The Reachy adapter defaults to motion-gated mode. It can be selected as the
-`reachy_mini` embodiment and will report live daemon/body state, but it will not
-send movement requests unless started with `-AllowMotion`. Enabling the adapter
-to request motion is still separate from enabling the Reachy motors themselves.
+The Reachy adapter defaults to the local Reachy Control app bridge at
+`http://127.0.0.1:8000/` and runs in motion-gated mode. It can be selected as
+the `reachy_mini` embodiment and will report live daemon/body state, but it will
+not send movement requests unless started with `-AllowMotion`. Enabling the
+adapter to request motion is still separate from enabling the Reachy motors
+themselves.
 
 Open:
 
