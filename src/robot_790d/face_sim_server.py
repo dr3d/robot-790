@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import shutil
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -14,6 +16,8 @@ WEB_ROOT = Path(__file__).resolve().parents[2] / "web" / "face-sim"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8791
 EYE_MODES = {"normal", "crossed", "swapped", "googly"}
+BROWSER_FACE_RECORDING_URL_PREFIX = "/recorded-face/"
+MAX_BROWSER_FACE_RECORDING_BYTES = 250 * 1024 * 1024
 
 
 def _default_state() -> dict[str, Any]:
@@ -362,6 +366,9 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlsplit(self.path)
+        if parsed.path.startswith(BROWSER_FACE_RECORDING_URL_PREFIX):
+            self._handle_face_recording(parsed.path)
+            return
         if parsed.path in {"/state", "/api/status", "/status"}:
             self._send_json(200, self.sim_state.snapshot())
             return
@@ -378,6 +385,9 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlsplit(self.path)
+        if parsed.path in {"/recording", "/api/recording"}:
+            self._handle_face_recording_upload()
+            return
         payload = self._read_json()
         if parsed.path in {"/control", "/api/control"}:
             self._send_json(200, self.sim_state.control(payload))
@@ -415,6 +425,33 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(404, {"ok": False, "error": "unknown endpoint"})
 
+    def _handle_face_recording_upload(self) -> None:
+        try:
+            data = self._read_raw_body(MAX_BROWSER_FACE_RECORDING_BYTES)
+            filename = self.headers.get("X-Robot790-Filename") or self.headers.get("X-Face-Recording-Name") or ""
+            result = save_browser_face_recording(data, filename)
+        except ValueError as exc:
+            self._send_json(400, {"ok": False, "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_face_recording(self, path: str) -> None:
+        filename = path[len(BROWSER_FACE_RECORDING_URL_PREFIX) :]
+        try:
+            recording_path = browser_face_recording_path(filename)
+        except ValueError:
+            self.send_error(404, "Browser face recording not found.")
+            return
+        if not recording_path.exists() or not recording_path.is_file():
+            self.send_error(404, "Browser face recording not found.")
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "video/webm")
+        self.send_header("Content-Length", str(recording_path.stat().st_size))
+        self.end_headers()
+        with recording_path.open("rb") as handle:
+            shutil.copyfileobj(handle, self.wfile)
+
     def translate_path(self, path: str) -> str:
         parsed = urlsplit(path)
         relative = parsed.path.lstrip("/") or "index.html"
@@ -437,6 +474,20 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             return {}
         return data if isinstance(data, dict) else {}
+
+    def _read_raw_body(self, max_bytes: int) -> bytes:
+        try:
+            length = int(self.headers.get("Content-Length") or "0")
+        except ValueError:
+            raise ValueError("Invalid recording upload length.")
+        if length <= 0:
+            raise ValueError("Nothing to record.")
+        if length > max_bytes:
+            raise ValueError("Browser face recording is too large.")
+        data = self.rfile.read(length)
+        if not data:
+            raise ValueError("Nothing to record.")
+        return data
 
     def _send_json(self, status: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -516,6 +567,50 @@ def _list_payload(path: str) -> dict[str, Any]:
     }.get(path, [])
     key = path.strip("/") or "values"
     return {"ok": True, key: values}
+
+
+def _safe_recording_filename(value: str) -> str:
+    name = Path(str(value or "")).name.strip()
+    if not name:
+        name = f"browser-face-{time.strftime('%Y%m%d-%H%M%S')}.webm"
+    stem = Path(name).stem
+    suffix = Path(name).suffix.lower()
+    stem = re.sub(r"[^A-Za-z0-9_. -]+", "-", stem).strip(" .-_")
+    stem = re.sub(r"[-\s]+", "-", stem) or "browser-face"
+    if suffix not in {".webm", ".mp4"}:
+        suffix = ".webm"
+    return f"{stem}{suffix}"
+
+
+def browser_face_recording_path(filename: str, repo_root: Path | None = None) -> Path:
+    root = repo_root or Path(__file__).resolve().parents[2]
+    recording_dir = (root / "logs" / "browser-face").resolve()
+    recording_dir.mkdir(parents=True, exist_ok=True)
+    path = (recording_dir / _safe_recording_filename(filename)).resolve()
+    if recording_dir != path.parent:
+        raise ValueError("Browser face recording path escaped the recording directory.")
+    return path
+
+
+def save_browser_face_recording(data: bytes, filename: str = "", repo_root: Path | None = None) -> dict[str, object]:
+    if not data:
+        raise ValueError("Nothing to record.")
+    if len(data) > MAX_BROWSER_FACE_RECORDING_BYTES:
+        raise ValueError("Browser face recording is too large.")
+    path = browser_face_recording_path(filename, repo_root)
+    path.write_bytes(data)
+    latest = browser_face_recording_path("latest-browser-face.webm", repo_root)
+    shutil.copyfile(path, latest)
+    return {
+        "ok": True,
+        "tool": "save_browser_face_recording",
+        "filename": path.name,
+        "path": str(path),
+        "url": f"{BROWSER_FACE_RECORDING_URL_PREFIX}{path.name}",
+        "latest": latest.name,
+        "latest_url": f"{BROWSER_FACE_RECORDING_URL_PREFIX}{latest.name}",
+        "bytes": len(data),
+    }
 
 
 def main() -> None:

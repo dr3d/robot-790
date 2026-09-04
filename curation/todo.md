@@ -11,6 +11,18 @@
 
 - Report: article read did not work in the browser.
 - Status: parked for later diagnosis.
+
+## Browser Face Replay Renderer
+
+- Goal: post-run artifacts should be able to recreate the browser face video
+  from event logs instead of relying only on live screen capture.
+- Requirement: replay through the same centralized face rendering code used by
+  the browser face, including pupil easing, mouth easing, mood poses, and the
+  mouth-text / word-portal layer.
+- Design rule: this should not be magic. Face state events, timestamps, renderer
+  version, and selected embodiment should be enough to reproduce what Eric's
+  face showed during a run.
+- Status: parked after adding the immediate browser-face canvas recorder.
 # Image / article pins
 
 - Hold `docs/media/images/Uh-Emerence-Not.jpg` as a context image for the

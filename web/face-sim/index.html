@@ -75,6 +75,12 @@
     }
     .capture-status.ok { color: #72f0b2; }
     .capture-status.bad { color: #ff8a8a; }
+    .download-link {
+      color: var(--accent);
+      font-size: 12px;
+      text-decoration: none;
+    }
+    .download-link:hover { text-decoration: underline; }
     .row {
       display: grid;
       grid-template-columns: 92px 1fr;
@@ -162,6 +168,12 @@
         <button id="release">Release</button>
       </div>
       <div class="row">
+        <label for="recordFace">Record</label>
+        <button id="recordFace">Record Face</button>
+      </div>
+      <div id="recordStatus" class="capture-status">face recorder ready</div>
+      <a id="downloadFaceRecord" class="download-link" href="#" download hidden>Download last face recording</a>
+      <div class="row">
         <label for="captureToEye">Self Eye</label>
         <button id="captureToEye">Capture To Eye</button>
       </div>
@@ -186,6 +198,9 @@
     const gazeY = document.querySelector("#gazeY");
     const talkingButton = document.querySelector("#talking");
     const releaseButton = document.querySelector("#release");
+    const recordFaceButton = document.querySelector("#recordFace");
+    const recordStatus = document.querySelector("#recordStatus");
+    const downloadFaceRecordLink = document.querySelector("#downloadFaceRecord");
     const captureToEyeButton = document.querySelector("#captureToEye");
     const stsUrlInput = document.querySelector("#stsUrl");
     const captureStatus = document.querySelector("#captureStatus");
@@ -206,6 +221,11 @@
     let lastMouthEaseAt = 0;
     let faceCommandLastSeq = 0;
     let faceCommandPollInFlight = false;
+    let faceRecorder = null;
+    let faceRecordChunks = [];
+    let faceRecordStartedAt = 0;
+    let faceRecordObjectUrl = "";
+    let faceRecordFilename = "";
     const faceCommandPollMs = 500;
     const stsUrlStorageKey = "robot790.faceSim.stsUrl.v1";
 
@@ -240,8 +260,105 @@
       captureStatus.classList.toggle("bad", kind === "bad");
     }
 
+    function setRecordStatus(text, kind = "") {
+      recordStatus.textContent = text;
+      recordStatus.classList.toggle("ok", kind === "ok");
+      recordStatus.classList.toggle("bad", kind === "bad");
+    }
+
     function timestampLabel() {
       return new Date().toISOString().replace(/[:.]/g, "-").replace("T", "-").replace("Z", "");
+    }
+
+    function browserFaceRecordingSupported() {
+      return Boolean(canvas.captureStream && window.MediaRecorder);
+    }
+
+    function supportedFaceRecordingMime() {
+      const candidates = [
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8",
+        "video/webm"
+      ];
+      return candidates.find((type) => MediaRecorder.isTypeSupported?.(type)) || "";
+    }
+
+    function updateRecordFaceButton() {
+      const recording = faceRecorder && faceRecorder.state === "recording";
+      recordFaceButton.textContent = recording ? "Stop Face Recording" : "Record Face";
+      recordFaceButton.disabled = !browserFaceRecordingSupported();
+      if (!browserFaceRecordingSupported()) setRecordStatus("face recording unsupported", "bad");
+    }
+
+    async function saveFaceRecording(blob, filename) {
+      const response = await fetch("/api/recording", {
+        method: "POST",
+        headers: {
+          "Content-Type": blob.type || "video/webm",
+          "X-Robot790-Filename": filename
+        },
+        body: blob
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
+    async function finishFaceRecording() {
+      const duration = Math.max(0, (Date.now() - faceRecordStartedAt) / 1000);
+      const blob = new Blob(faceRecordChunks, { type: faceRecordChunks[0]?.type || "video/webm" });
+      faceRecordChunks = [];
+      if (faceRecordObjectUrl) URL.revokeObjectURL(faceRecordObjectUrl);
+      faceRecordObjectUrl = URL.createObjectURL(blob);
+      downloadFaceRecordLink.href = faceRecordObjectUrl;
+      downloadFaceRecordLink.download = faceRecordFilename;
+      downloadFaceRecordLink.hidden = false;
+      setRecordStatus(`saving ${duration.toFixed(1)}s face recording...`);
+      try {
+        const result = await saveFaceRecording(blob, faceRecordFilename);
+        const href = new URL(result.latest_url || result.url || "", location.href).href;
+        downloadFaceRecordLink.href = href;
+        downloadFaceRecordLink.download = result.filename || faceRecordFilename;
+        setRecordStatus(`saved ${result.filename || faceRecordFilename}`, "ok");
+      } catch (error) {
+        setRecordStatus(`save failed; browser copy ready (${error.message})`, "bad");
+      }
+    }
+
+    function startFaceRecording() {
+      if (!browserFaceRecordingSupported()) {
+        setRecordStatus("face recording unsupported", "bad");
+        updateRecordFaceButton();
+        return;
+      }
+      if (faceRecorder && faceRecorder.state === "recording") return;
+      const stream = canvas.captureStream(24);
+      const mimeType = supportedFaceRecordingMime();
+      faceRecordChunks = [];
+      faceRecordStartedAt = Date.now();
+      faceRecordFilename = `browser-face-${timestampLabel()}.webm`;
+      const options = mimeType ? { mimeType } : {};
+      faceRecorder = new MediaRecorder(stream, options);
+      faceRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) faceRecordChunks.push(event.data);
+      };
+      faceRecorder.onerror = (event) => setRecordStatus(`record error: ${event.error?.message || "unknown"}`, "bad");
+      faceRecorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        finishFaceRecording().finally(updateRecordFaceButton);
+      };
+      faceRecorder.start(1000);
+      setRecordStatus("recording browser face...");
+      updateRecordFaceButton();
+    }
+
+    function stopFaceRecording() {
+      if (!faceRecorder || faceRecorder.state !== "recording") return;
+      setRecordStatus("finalizing face recording...");
+      faceRecorder.stop();
+      updateRecordFaceButton();
     }
 
     async function captureFaceToEye({ stsUrl = normalizedStsUrl(), reason = "" } = {}) {
@@ -1412,6 +1529,10 @@
     gazeY.addEventListener("input", () => post("/gaze", { x: Number(gazeX.value), y: Number(gazeY.value) }));
     talkingButton.addEventListener("click", () => post("/mouth", { talking: !state?.mouth?.talking, shape: state?.mouth?.shape || "open" }));
     releaseButton.addEventListener("click", () => post("/release"));
+    recordFaceButton.addEventListener("click", () => {
+      if (faceRecorder && faceRecorder.state === "recording") stopFaceRecording();
+      else startFaceRecording();
+    });
     captureToEyeButton.addEventListener("click", () => {
       captureFaceToEye().catch((error) => setCaptureStatus(`mirror failed: ${error.message}`, "bad"));
     });
@@ -1425,6 +1546,7 @@
     fillSelect(styleSelect, styles);
     fillSelect(eyeModeSelect, eyeModes);
     stsUrlInput.value = normalizedStsUrl(localStorage.getItem(stsUrlStorageKey) || stsUrlInput.value);
+    updateRecordFaceButton();
     pollState();
     scheduleFaceCommandPoll();
     draw();
