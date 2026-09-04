@@ -74,36 +74,76 @@
       white-space: nowrap;
     }
     .gpu-status {
-      min-width: 150px;
+      width: 184px;
+      height: 48px;
       display: grid;
-      grid-template-columns: auto auto;
-      align-items: center;
-      column-gap: 10px;
-      row-gap: 2px;
-      padding: 5px 8px;
-      border: 1px solid rgba(96, 211, 148, 0.26);
+      grid-template-columns: 42px 1fr 1fr;
+      align-items: stretch;
+      gap: 5px;
+      padding: 4px 5px;
+      border: 1px solid rgba(186, 87, 224, 0.36);
       border-radius: 7px;
-      background: rgba(11, 15, 18, 0.72);
-      color: #a8f6cf;
-      font: 12px/1.08 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      background: rgba(11, 10, 15, 0.82);
+      color: #f0d6ff;
+      font: 10px/1.05 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       white-space: nowrap;
-      box-shadow: 0 0 12px rgba(96, 211, 148, 0.08);
+      box-shadow: 0 0 12px rgba(186, 87, 224, 0.12);
     }
     .gpu-status .gpu-label {
-      grid-row: 1 / span 2;
+      display: grid;
+      place-items: center;
       color: #d9fff0;
       font-weight: 700;
       letter-spacing: 0;
       text-transform: uppercase;
+      border-right: 1px solid rgba(186, 87, 224, 0.22);
     }
-    .gpu-status .gpu-line {
+    .gpu-meter {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: 13px 1fr;
+      gap: 2px;
+    }
+    .gpu-line {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      gap: 7px;
-      min-width: 92px;
+      gap: 3px;
+      min-width: 0;
     }
-    .gpu-status .gpu-key {
-      color: var(--muted);
+    .gpu-key {
+      color: #b9a3c9;
+    }
+    .gpu-value {
+      overflow: hidden;
+      color: #f8eaff;
+      text-overflow: clip;
+      text-align: right;
+    }
+    .gpu-bars {
+      position: relative;
+      display: flex;
+      align-items: end;
+      gap: 1px;
+      min-width: 0;
+      height: 25px;
+      overflow: hidden;
+      border: 1px solid rgba(186, 87, 224, 0.28);
+      border-radius: 3px;
+      background:
+        linear-gradient(to top, rgba(255,255,255,0.07) 1px, transparent 1px) 0 0 / 100% 6px,
+        linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 8px 100%,
+        #16141b;
+      padding: 2px;
+    }
+    .gpu-bars span {
+      flex: 1 1 0;
+      min-width: 1px;
+      height: 0%;
+      border-top: 1px solid rgba(255, 198, 255, 0.9);
+      background: linear-gradient(to top, #75147e, #ba57e0);
+      box-shadow: 0 0 5px rgba(211, 83, 255, 0.38);
+      transition: height 160ms linear;
     }
     .gpu-status[data-state="busy"] {
       border-color: rgba(255, 207, 90, 0.42);
@@ -120,6 +160,11 @@
       color: var(--muted);
       box-shadow: none;
       opacity: 0.75;
+    }
+    .gpu-status[data-state="offline"] .gpu-bars span {
+      height: 2px;
+      opacity: 0.25;
+      box-shadow: none;
     }
     .dot {
       width: 10px;
@@ -713,8 +758,14 @@
         <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
         <div id="gpuStatus" class="gpu-status" data-state="offline" title="GPU telemetry not sampled yet">
           <span class="gpu-label">Nerves</span>
-          <span class="gpu-line"><span class="gpu-key">GPU</span><span id="gpuUtil">--%</span></span>
-          <span class="gpu-line"><span class="gpu-key">VRAM</span><span id="gpuVram">--/-- GB</span></span>
+          <span class="gpu-meter">
+            <span class="gpu-line"><span class="gpu-key">LOAD</span><span id="gpuUtil" class="gpu-value">--%</span></span>
+            <span id="gpuUtilBars" class="gpu-bars" aria-hidden="true"></span>
+          </span>
+          <span class="gpu-meter">
+            <span class="gpu-line"><span class="gpu-key">VRAM</span><span id="gpuVram" class="gpu-value">--</span></span>
+            <span id="gpuVramBars" class="gpu-bars" aria-hidden="true"></span>
+          </span>
         </div>
         <div class="status"><span id="dot" class="dot"></span><span id="state">Disconnected</span></div>
       </div>
@@ -1246,6 +1297,8 @@
     const gpuStatus = document.querySelector("#gpuStatus");
     const gpuUtil = document.querySelector("#gpuUtil");
     const gpuVram = document.querySelector("#gpuVram");
+    const gpuUtilBars = document.querySelector("#gpuUtilBars");
+    const gpuVramBars = document.querySelector("#gpuVramBars");
     const level = document.querySelector("#level");
     const micDeviceSelect = document.querySelector("#micDevice");
     const refreshMicDevicesButton = document.querySelector("#refreshMicDevices");
@@ -1402,6 +1455,9 @@
     let lastInputVoiceShape = "";
     let latestBrainStatus = null;
     let gpuStatusPollTimer = null;
+    const gpuHistoryLimit = 28;
+    const gpuUtilHistory = [];
+    const gpuVramHistory = [];
     let conversationPopoutWindow = null;
 
     function updateLogPaneHeight() {
@@ -3723,7 +3779,7 @@
         .replace(/\bNew York\b/g, "a city")
         .replace(/\bMIT\b/g, "a school")
         .replace(/\bHarvard\b/g, "a school")
-        .replace(/\b(?:wife|brother|sister|mother|father|granddaughter|cousin|family|fianc[eé]|friend)\b/gi, "person")
+        .replace(/\b(?:wife|brother|sister|mother|father|granddaughter|cousin|family|fianc[e\u00e9]|friend)\b/gi, "person")
         .replace(/\b(?:birthplace|born in|home address|address|private memory|saved memory)\b/gi, "private detail");
     }
 
@@ -5607,10 +5663,10 @@
 
     function compactSearchQuery(text) {
       return String(text || "")
-        .replace(/^\s*[-*•–—]+\s*/, "")
-        .replace(/[\"'“”‘’]/g, "")
+        .replace(/^\s*[-*\u2022\u2013\u2014]+\s*/, "")
+        .replace(/[\"'\u201c\u201d\u2018\u2019]/g, "")
         .replace(/\b(I|me|my|myself|we|us|our|Maren says|Maren told me|the ferry man says|I want to know|I need to know|I want|I don't know|I didn't catch|whether|why|what|where|who|if|is|are|was|were|that|this|it)\b/gi, " ")
-        .replace(/(^|\s)[-*•–—]+(?=\s|$)/g, " ")
+        .replace(/(^|\s)[-*\u2022\u2013\u2014]+(?=\s|$)/g, " ")
         .replace(/[^a-z0-9.\-\s]/gi, " ")
         .replace(/\s+/g, " ")
         .trim()
@@ -5761,7 +5817,7 @@
       const addCue = (raw) => {
         const cue = String(raw || "")
           .replace(/^things\s+i\s+mean\s+to\s+find\s+out:\s*/i, "")
-          .replace(/^\s*[-*•–—]+\s*/, "")
+          .replace(/^\s*[-*\u2022\u2013\u2014]+\s*/, "")
           .replace(/\s+/g, " ")
           .trim();
         const key = normalizeIdleTopicKey(cue);
@@ -8264,6 +8320,32 @@
       return number.toFixed(fractionDigits);
     }
 
+    function boundedPercent(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return null;
+      return Math.max(0, Math.min(100, number));
+    }
+
+    function pushGpuHistory(history, value) {
+      const percent = boundedPercent(value);
+      if (percent === null) return;
+      history.push(percent);
+      while (history.length > gpuHistoryLimit) history.shift();
+    }
+
+    function renderGpuBars(container, history) {
+      if (!container) return;
+      const padded = Array.from({ length: Math.max(0, gpuHistoryLimit - history.length) }, () => 0).concat(history);
+      container.innerHTML = padded
+        .map((value) => `<span style="height:${Math.max(4, Math.round(value))}%"></span>`)
+        .join("");
+    }
+
+    function renderGpuHistories() {
+      renderGpuBars(gpuUtilBars, gpuUtilHistory);
+      renderGpuBars(gpuVramBars, gpuVramHistory);
+    }
+
     function updateGpuStatus(payload) {
       if (!gpuStatus || !gpuUtil || !gpuVram) return;
       const gpu = payload?.gpu || payload || {};
@@ -8272,7 +8354,8 @@
         gpuStatus.dataset.state = "offline";
         gpuStatus.title = gpu?.error ? `GPU telemetry unavailable: ${gpu.error}` : "GPU telemetry unavailable";
         gpuUtil.textContent = "--%";
-        gpuVram.textContent = "--/-- GB";
+        gpuVram.textContent = "--";
+        renderGpuHistories();
         return;
       }
       const util = formatGpuNumber(primary.utilization_percent, 0);
@@ -8280,15 +8363,30 @@
       const totalGb = formatGpuNumber(primary.memory_total_gb, 1);
       const memoryPct = Number(primary.memory_usage_percent);
       const tempC = Number(primary.temperature_c);
+      pushGpuHistory(gpuUtilHistory, primary.utilization_percent);
+      pushGpuHistory(gpuVramHistory, primary.memory_usage_percent);
+      renderGpuHistories();
       gpuUtil.textContent = util ? `${util}%` : "--%";
-      gpuVram.textContent = usedGb && totalGb ? `${usedGb}/${totalGb} GB` : "--/-- GB";
+      gpuVram.textContent = usedGb && totalGb ? `${usedGb}/${totalGb}` : "--";
       gpuStatus.dataset.state = memoryPct >= 97 || tempC >= 82 ? "hot" : memoryPct >= 92 || Number(util) >= 85 ? "busy" : "ok";
       gpuStatus.title = [
         primary.name || "GPU",
         Number.isFinite(tempC) ? `${Math.round(tempC)} C` : "",
         Number.isFinite(memoryPct) ? `${memoryPct.toFixed(1)}% VRAM` : "",
         gpu.sampled_at ? `sampled ${gpu.sampled_at}` : ""
-      ].filter(Boolean).join(" · ");
+      ].filter(Boolean).join(" | ");
+    }
+
+    async function fetchGpuStatusFromBrainStatus() {
+      const response = await fetch(new URL("/api/brain/status", window.location.href), { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        return { status: "unavailable", error: result.error || `${response.status} ${response.statusText}` };
+      }
+      enrichBrainStatusWithBrowserContext(result);
+      latestBrainStatus = result;
+      renderConversationPopout();
+      return result.gpu || { status: "unavailable", error: "Brain status did not include GPU telemetry." };
     }
 
     async function refreshGpuStatusQuietly() {
@@ -8296,7 +8394,10 @@
         const response = await fetch(new URL("/api/gpu/status", window.location.href), { cache: "no-store" });
         const result = await response.json().catch(() => ({}));
         if (!response.ok || result.status === "error") {
-          updateGpuStatus({ status: "unavailable", error: result.error || `${response.status} ${response.statusText}` });
+          const fallback = response.status === 404
+            ? await fetchGpuStatusFromBrainStatus()
+            : { status: "unavailable", error: result.error || `${response.status} ${response.statusText}` };
+          updateGpuStatus(fallback);
           return null;
         }
         updateGpuStatus(result);

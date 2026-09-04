@@ -338,6 +338,7 @@ should not silently clip chat text unless `-TextMaxTokens` is explicitly used.
 The browser page is the main live control surface. It includes:
 
 - Realtime server connection and model restart controls.
+- A compact `Nerves` meter for GPU load and VRAM pressure while Eric is running.
 - Sensing Eye drop target for images or text files.
 - Mic start/stop, audio meter, and interruption sensitivity.
 - Audio recording to trimmed local MP4 with the latest generated image as
