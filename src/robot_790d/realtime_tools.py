@@ -91,6 +91,7 @@ TOOLS: list[dict[str, object]] = [
                         "focus_lock",
                         "double_take",
                         "goofy",
+                        "silly",
                         "drowsy",
                         "robot_scan",
                         "wary",
@@ -116,29 +117,35 @@ TOOLS: list[dict[str, object]] = [
                 "name": {
                     "type": "string",
                     "enum": [
+                        "neutral",
                         "calm",
                         "curious",
                         "surprised",
                         "suspicious",
                         "afraid",
                         "angry",
+                        "sad",
                         "sleepy",
                         "sleep",
                         "goofy",
+                        "silly",
                         "robotic",
+                        "calculating",
                         "wonder",
                         "glitchy",
                         "happy",
+                        "excited",
                         "delighted",
                         "bashful",
                         "bored",
                         "focused",
                         "confused",
+                        "helpful",
                         "proud",
                         "mischief",
                         "affection",
                     ],
-                    "description": "Mood name supported by the ESP32 face firmware.",
+                    "description": "Mood name supported by the active face embodiment.",
                 },
                 "duration": {
                     "type": "number",
@@ -250,7 +257,8 @@ TOOLS: list[dict[str, object]] = [
         "name": "set_mouth",
         "description": (
             "Set Robot 790's mouth style or shape when the user asks for a human mouth, robot mouth, "
-            "smile, smirk, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth."
+            "smile, big smile, smirk, O mouth, tongue, frown, grimace, sneer, open mouth, "
+            "talking mouth, sleeping mouth, or auto mouth."
         ),
         "parameters": {
             "type": "object",
@@ -265,10 +273,13 @@ TOOLS: list[dict[str, object]] = [
                     "enum": [
                         "neutral",
                         "smile",
+                        "big_smile",
                         "smirk_left",
                         "smirk_right",
                         "open",
+                        "o",
                         "wide",
+                        "tongue",
                         "frown",
                         "grimace",
                         "sneer",

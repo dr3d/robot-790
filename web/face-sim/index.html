@@ -171,14 +171,20 @@
     const talkingButton = document.querySelector("#talking");
     const releaseButton = document.querySelector("#release");
 
-    const moods = ["calm", "curious", "surprised", "suspicious", "afraid", "angry", "sleepy", "sleep", "goofy", "robotic", "wonder", "glitchy", "happy", "delighted", "bashful", "bored", "focused", "confused", "proud", "mischief", "affection"];
-    const mouths = ["neutral", "smile", "smirk_left", "smirk_right", "open", "wide", "frown", "grimace", "sneer", "sleep"];
+    const moods = ["neutral", "calm", "curious", "surprised", "suspicious", "afraid", "angry", "sad", "sleepy", "sleep", "goofy", "silly", "robotic", "calculating", "wonder", "glitchy", "happy", "excited", "delighted", "bashful", "bored", "focused", "confused", "helpful", "proud", "mischief", "affection"];
+    const mouths = ["neutral", "smile", "big_smile", "smirk_left", "smirk_right", "open", "o", "wide", "tongue", "frown", "grimace", "sneer", "sleep"];
     const styles = ["friendly", "classic", "cartoony", "robot", "sinister", "sleepy"];
     const eyeModes = ["normal", "crossed", "swapped", "googly"];
     let state = null;
     let lastStateAt = 0;
     let mouthTextKey = "";
     let mouthTextStartedAt = 0;
+    const mouthPoseKeys = ["open", "width", "curve", "skew", "teeth", "tension", "slant", "upperLift"];
+    let easedMouthPose = null;
+    let easedMouthShape = "";
+    let easedMouthTopology = "";
+    let easedMouthTalkLevel = 0;
+    let lastMouthEaseAt = 0;
 
     function fillSelect(select, values) {
       select.replaceChildren(...values.map((value) => {
@@ -269,6 +275,10 @@
 
     function mix(a, b, t) {
       return a + (b - a) * clamp(t, 0, 1);
+    }
+
+    function easeToward(current, target, amount) {
+      return current + (target - current) * clamp(amount, 0, 1);
     }
 
     function hexToRgb(hex) {
@@ -371,27 +381,33 @@
       const poses = {
         curious: [53, 201, 25, 17, -5 * inward, 2 * inward, 16.5, 0.8],
         surprised: [31, 217, 18, 12, 0, 0, 18.5, 1.2],
-        suspicious: [88, 179, 20, 14, -12 * inward, 4 * inward, 13.5, 0.35],
+        neutral: [70, 190, 20, 14, 0, 0, 14.8, 0.20],
+        suspicious: [98, 169, 15, 12, -22 * inward, 7 * inward, 12.7, 0.30],
         afraid: [35, 214, 21, 12, 4 * inward, 0, 18.5, 1.8],
-        angry: [82, 184, 18, 15, 23 * inward, -2 * inward, 14.5, 0.45],
-        sleepy: [103, 169, 13, 10, -3 * inward, 0, 13, 0.12],
+        angry: [91, 176, 14, 12, 31 * inward, -5 * inward, 13.2, 0.35],
+        sad: [92, 184, 34, 18, 8 * inward, 5 * inward, 14.0, 0.18],
+        sleepy: [111, 162, 11, 8, -3 * inward, 0, 12.4, 0.10],
         sleep: [126, 126, 0, 0, 0, 0, 13, 0],
-        goofy: [52, 204, 31, 18, 12 * inward, -8 * inward, 16, 1.15],
+        goofy: [48, 207, 33, 19, 16 * inward, -10 * inward, 16, 1.15],
+        silly: [40, 212, 38, 20, 18 * inward, -13 * inward, 17.2, 1.20],
         robotic: [58, 198, 9, 8, 0, 0, 14.5, 0],
-        wonder: [37, 212, 27, 15, -2 * inward, 1 * inward, 17.5, 0.55],
+        calculating: [68, 190, 10, 8, 0, 0, 13.8, 0.04],
+        wonder: [30, 219, 31, 17, -2 * inward, 1 * inward, 18.2, 0.55],
         glitchy: [63, 190, 8, 8, 18 * inward, -16 * inward, 15, 2.2],
-        happy: [82, 187, 36, 25, -4 * inward, -3 * inward, 16.8, 0.25],
+        happy: [76, 192, 40, 26, -4 * inward, -3 * inward, 16.8, 0.25],
+        excited: [35, 221, 39, 22, -8 * inward, 5 * inward, 18.8, 1.05],
         delighted: [42, 214, 35, 19, -7 * inward, 4 * inward, 18.8, 1.05],
         bashful: [76, 188, 32, 24, -10 * inward, 7 * inward, 16, 0.18],
-        bored: [101, 171, 19, 11, -1 * inward, 0, 12.4, 0.05],
+        bored: [114, 159, 13, 8, -1 * inward, 0, 11.8, 0.04],
         focused: [72, 190, 15, 11, 4 * inward, -2 * inward, 13.2, 0.08],
+        helpful: [76, 191, 32, 20, -3 * inward, 0, 15.4, 0.12],
         proud: [86, 184, 28, 18, 7 * inward, -4 * inward, 15.2, 0.12],
-        mischief: [89, 181, 22, 15, -18 * inward, 8 * inward, 14.1, 0.22],
+        mischief: [96, 172, 18, 12, -25 * inward, 10 * inward, 13.6, 0.22],
         affection: [70, 195, 42, 26, -3 * inward, 2 * inward, 17.9, 0.16],
         calm: [64, 194, 27, 18, 0, 0, 15.5, 0.45]
       };
       const v = mood === "confused"
-        ? (left ? [50, 201, 25, 17, -12, 4, 16.4, 0.65] : [82, 184, 21, 14, -6, 2, 15.2, 0.45])
+        ? (left ? [42, 207, 32, 18, -14, 5, 17.2, 0.72] : [98, 172, 12, 10, -8, 2, 12.6, 0.38])
         : (poses[mood] || poses.calm);
       return {
         topY: v[0], bottomY: v[1], topCurve: v[2], bottomCurve: v[3],
@@ -570,6 +586,31 @@
       });
     }
 
+    function drawTear(x, y, scale = 1) {
+      ctx.save();
+      ctx.fillStyle = "#67d7ff";
+      ctx.strokeStyle = "#c7f6ff";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 12 * scale);
+      ctx.bezierCurveTo(x + 13 * scale, y + 4 * scale, x + 9 * scale, y + 22 * scale, x, y + 23 * scale);
+      ctx.bezierCurveTo(x - 9 * scale, y + 22 * scale, x - 13 * scale, y + 4 * scale, x, y - 12 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSleepMark(x, y, scale = 1) {
+      ctx.save();
+      ctx.fillStyle = "#88eaff";
+      ctx.font = `${Math.round(20 * scale)}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("z", x, y);
+      ctx.restore();
+    }
+
     function drawEye(cx, cy, left, t, viewportScale = 1) {
       const mood = state?.eye_mood || state?.mood || "curious";
       if (mood === "sleep") return;
@@ -620,40 +661,85 @@
         drawEllipse(firmwareEye.cx, firmwareEye.cy + 3, firmwareEye.scleraRx - 9, firmwareEye.scleraRy - 12, "#ffffff");
       }
       drawIris(firmwareEye.cx + gx, firmwareEye.cy + gy, pose, palette, eyeballLeft);
-      if (mood === "delighted" || mood === "affection") {
+      if (mood === "delighted" || mood === "affection" || mood === "excited") {
         drawSparkle(left ? firmwareEye.width - 54 : 52, 68, 4, "#f6f8dd");
       }
+      if (mood === "sad") {
+        drawTear(left ? firmwareEye.width - 52 : 52, 174, 0.82);
+      }
       drawLids(pose, blinkAmount(t, left), "rgba(5, 12, 15, 0.96)");
+      if ((mood === "sleepy" || mood === "bored") && !left) {
+        drawSleepMark(firmwareEye.width - 36, 55, 0.9);
+        drawSleepMark(firmwareEye.width - 18, 38, 0.7);
+      }
       ctx.restore();
       ctx.restore();
     }
 
     function mouthShapeForMood(mood) {
-      if (["happy", "delighted", "affection", "proud", "bashful"].includes(mood)) return "smile";
+      if (["excited", "delighted"].includes(mood)) return "big_smile";
+      if (["happy", "affection", "proud", "bashful", "helpful"].includes(mood)) return "smile";
       if (["suspicious", "mischief"].includes(mood)) return "smirk_right";
       if (mood === "angry") return "sneer";
-      if (["afraid", "surprised", "wonder"].includes(mood)) return "open";
+      if (["afraid", "surprised", "wonder"].includes(mood)) return "o";
+      if (mood === "silly") return "tongue";
       if (["confused", "goofy"].includes(mood)) return "smirk_left";
-      if (mood === "sleepy") return "frown";
+      if (["sleepy", "sad"].includes(mood)) return "frown";
       if (mood === "sleep") return "sleep";
-      if (["focused", "robotic"].includes(mood)) return "grimace";
+      if (["focused", "robotic", "calculating"].includes(mood)) return "grimace";
       if (mood === "glitchy") return "wide";
       return "neutral";
     }
 
     function mouthPoseFor(shape) {
       return {
-        smile: { open: 0.16, width: 0.82, curve: 0.86, skew: 0, teeth: 0.10, tension: 0.07, slant: 0, upperLift: 0 },
-        smirk_left: { open: 0.14, width: 0.66, curve: 0.82, skew: -0.98, teeth: 0.05, tension: 0.52, slant: -0.70, upperLift: -0.28 },
-        smirk_right: { open: 0.14, width: 0.66, curve: 0.82, skew: 0.98, teeth: 0.05, tension: 0.52, slant: 0.70, upperLift: 0.28 },
-        open: { open: 0.62, width: 0.48, curve: -0.04, skew: -0.04, teeth: 0, tension: 0.14, slant: -0.05, upperLift: 0 },
-        wide: { open: 0.92, width: 0.58, curve: 0.08, skew: 0.04, teeth: 0.16, tension: 0.24, slant: 0.06, upperLift: 0 },
-        frown: { open: 0.10, width: 0.56, curve: -0.88, skew: -0.04, teeth: 0, tension: 0.36, slant: -0.08, upperLift: 0 },
+        smile: { open: 0.18, width: 0.88, curve: 0.98, skew: 0, teeth: 0.08, tension: 0.06, slant: 0, upperLift: 0 },
+        big_smile: { open: 0.44, width: 0.96, curve: 1.05, skew: 0, teeth: 0.30, tension: 0.05, slant: 0, upperLift: 0 },
+        smirk_left: { open: 0.13, width: 0.72, curve: 0.88, skew: -0.46, teeth: 0.02, tension: 0.48, slant: -0.36, upperLift: -0.42 },
+        smirk_right: { open: 0.13, width: 0.72, curve: 0.88, skew: 0.46, teeth: 0.02, tension: 0.48, slant: 0.36, upperLift: 0.42 },
+        open: { open: 0.66, width: 0.50, curve: -0.04, skew: -0.04, teeth: 0, tension: 0.14, slant: -0.05, upperLift: 0 },
+        o: { open: 0.82, width: 0.20, curve: -0.08, skew: 0, teeth: 0, tension: 0.02, slant: 0, upperLift: 0 },
+        wide: { open: 0.94, width: 0.70, curve: 0.10, skew: 0.04, teeth: 0.18, tension: 0.20, slant: 0.06, upperLift: 0 },
+        tongue: { open: 0.78, width: 0.82, curve: 0.84, skew: 0.05, teeth: 0.04, tension: 0.04, slant: 0.02, upperLift: 0 },
+        frown: { open: 0.08, width: 0.62, curve: -1.10, skew: -0.04, teeth: 0, tension: 0.42, slant: -0.08, upperLift: 0 },
         grimace: { open: 0.24, width: 0.84, curve: -0.18, skew: 0.03, teeth: 1, tension: 0.98, slant: 0.03, upperLift: 0 },
-        sneer: { open: 0.18, width: 0.62, curve: -0.30, skew: 0.66, teeth: 0.72, tension: 0.78, slant: 0.72, upperLift: 0.92 },
+        sneer: { open: 0.20, width: 0.72, curve: -0.20, skew: 0.42, teeth: 0.32, tension: 0.62, slant: 0.34, upperLift: 0.52 },
         sleep: { open: 0.03, width: 0.42, curve: -0.12, skew: 0, teeth: 0, tension: 0.08, slant: 0, upperLift: 0 },
         neutral: { open: 0.07, width: 0.54, curve: 0.02, skew: -0.03, teeth: 0, tension: 0.16, slant: 0.02, upperLift: 0 }
       }[shape] || mouthPoseFor("neutral");
+    }
+
+    function mouthTopologyFor(shape) {
+      if (shape === "sleep") return "sleep";
+      if (shape === "o") return "o";
+      return "mouth";
+    }
+
+    function copyMouthPose(pose) {
+      return Object.fromEntries(mouthPoseKeys.map((key) => [key, Number(pose[key] || 0)]));
+    }
+
+    function easedPoseForMouth(shape, targetPose, targetTalkLevel, t) {
+      const topology = mouthTopologyFor(shape);
+      if (!easedMouthPose || !lastMouthEaseAt || easedMouthTopology !== topology) {
+        easedMouthPose = copyMouthPose(targetPose);
+        easedMouthTalkLevel = targetTalkLevel;
+        easedMouthTopology = topology;
+        easedMouthShape = shape;
+        lastMouthEaseAt = t;
+        return { pose: copyMouthPose(easedMouthPose), talkLevel: easedMouthTalkLevel };
+      }
+
+      const dt = clamp(t - lastMouthEaseAt, 0, 120);
+      lastMouthEaseAt = t;
+      const poseAmount = 1 - Math.exp(-dt / 105);
+      const talkAmount = 1 - Math.exp(-dt / 70);
+      for (const key of mouthPoseKeys) {
+        easedMouthPose[key] = easeToward(easedMouthPose[key], Number(targetPose[key] || 0), poseAmount);
+      }
+      easedMouthTalkLevel = easeToward(easedMouthTalkLevel, targetTalkLevel, talkAmount);
+      easedMouthShape = shape;
+      return { pose: copyMouthPose(easedMouthPose), talkLevel: easedMouthTalkLevel };
     }
 
     function drawRoundRect(x, y, w, h, r, fill, stroke = "", width = 1) {
@@ -763,6 +849,144 @@
       const cavity = "#15070d";
       const enamel = "#eee4c6";
 
+      if ((isSmirk || shape === "sneer") && talkLevel <= 0.01) {
+        const dir = pose.skew >= 0 ? 1 : -1;
+        const wobble = isSmirk ? Math.sin(t * 0.0023 + (dir > 0 ? 0.4 : 2.1)) * 4 : 0;
+        const ripple = isSmirk ? Math.sin(t * 0.0037 + (dir > 0 ? 1.6 : 3.0)) * 3 : 0;
+        const rigW = mouthW * (shape === "sneer" ? 0.84 : 0.64);
+        const rigH = shape === "sneer" ? 82 : 68;
+        const lift = shape === "sneer" ? 28 : 30;
+        const drop = shape === "sneer" ? 12 : 9;
+        const rigCx = cx0 + (shape === "sneer" ? pose.skew * 28 : dir * 58 + wobble);
+        const rigCy = cy0 + (shape === "sneer" ? 12 : 0) + ripple * 0.35;
+        const leftX = rigCx - rigW / 2;
+        const rightX = rigCx + rigW / 2;
+        const upperLeftY = rigCy - rigH / 2 + (dir > 0 ? drop : -lift - ripple);
+        const upperRightY = rigCy - rigH / 2 + (dir > 0 ? -lift - ripple : drop);
+        const lowerLeftY = rigCy + rigH / 2 + (dir > 0 ? 14 + ripple : -5);
+        const lowerRightY = rigCy + rigH / 2 + (dir > 0 ? -5 : 14 + ripple);
+        const upperMidY = rigCy - rigH * (shape === "sneer" ? 0.16 : 0.08);
+        const lowerMidY = rigCy + rigH * (shape === "sneer" ? 0.34 : 0.38);
+        const slitTopMidY = rigCy + (shape === "sneer" ? -4 : 1);
+        const slitBottomMidY = rigCy + (shape === "sneer" ? 22 : 20);
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        ctx.beginPath();
+        ctx.moveTo(leftX + 34, upperLeftY + 8);
+        ctx.bezierCurveTo(rigCx - rigW * 0.30, upperMidY - 12, rigCx + rigW * 0.30, upperMidY - 12, rightX - 34, upperRightY + 8);
+        ctx.bezierCurveTo(rightX + 2, upperRightY + 22, rightX - 12, lowerRightY + 16, rightX - 44, lowerRightY + 9);
+        ctx.bezierCurveTo(rigCx + rigW * 0.26, lowerMidY + 24, rigCx - rigW * 0.30, lowerMidY + 24, leftX + 44, lowerLeftY + 9);
+        ctx.bezierCurveTo(leftX + 10, lowerLeftY + 16, leftX - 2, upperLeftY + 22, leftX + 34, upperLeftY + 8);
+        ctx.closePath();
+        ctx.fillStyle = shadow;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(leftX + 38, upperLeftY + 3);
+        ctx.bezierCurveTo(rigCx - rigW * 0.29, upperMidY - 20, rigCx + rigW * 0.31, upperMidY - 20, rightX - 38, upperRightY + 3);
+        ctx.bezierCurveTo(rightX - 8, upperRightY + 17, rightX - 20, lowerRightY + 10, rightX - 50, lowerRightY + 5);
+        ctx.bezierCurveTo(rigCx + rigW * 0.24, lowerMidY + 22, rigCx - rigW * 0.27, lowerMidY + 22, leftX + 50, lowerLeftY + 5);
+        ctx.bezierCurveTo(leftX + 18, lowerLeftY + 10, leftX + 8, upperLeftY + 17, leftX + 38, upperLeftY + 3);
+        ctx.closePath();
+        ctx.fillStyle = lipLo;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(leftX + 46, upperLeftY + 9);
+        ctx.bezierCurveTo(rigCx - rigW * 0.22, upperMidY - 8, rigCx + rigW * 0.25, upperMidY - 8, rightX - 46, upperRightY + 9);
+        ctx.bezierCurveTo(rightX - 28, upperRightY + 18, rightX - 46, lowerRightY - 2, rightX - 70, lowerRightY - 1);
+        ctx.bezierCurveTo(rigCx + rigW * 0.16, lowerMidY + 15, rigCx - rigW * 0.19, lowerMidY + 15, leftX + 70, lowerLeftY - 1);
+        ctx.bezierCurveTo(leftX + 44, lowerLeftY - 2, leftX + 28, upperLeftY + 18, leftX + 46, upperLeftY + 9);
+        ctx.closePath();
+        ctx.fillStyle = lip;
+        ctx.fill();
+
+        if (shape === "sneer") {
+          ctx.beginPath();
+          ctx.moveTo(leftX + 52, rigCy + (dir > 0 ? 6 : -7));
+          ctx.bezierCurveTo(rigCx - rigW * 0.22, slitTopMidY, rigCx + rigW * 0.20, slitTopMidY, rightX - 52, rigCy + (dir > 0 ? -7 : 6));
+          ctx.bezierCurveTo(rigCx + rigW * 0.18, slitBottomMidY, rigCx - rigW * 0.20, slitBottomMidY, leftX + 52, rigCy + (dir > 0 ? 22 : 12));
+          ctx.closePath();
+          ctx.fillStyle = cavity;
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = cavity;
+          ctx.lineWidth = 7;
+          ctx.beginPath();
+          ctx.moveTo(leftX + 56, rigCy + (dir > 0 ? 13 : 4));
+          ctx.bezierCurveTo(rigCx - rigW * 0.24, rigCy + 17 + ripple, rigCx + rigW * 0.24, rigCy + 17 - ripple, rightX - 56, rigCy + (dir > 0 ? 4 : 13));
+          ctx.stroke();
+        }
+
+        if (shape === "sneer") {
+          const highlightStartX = dir > 0 ? rigCx - rigW * 0.08 : rigCx + rigW * 0.08;
+          const highlightEndX = dir > 0 ? rightX - rigW * 0.16 : leftX + rigW * 0.16;
+          const highlightY = dir > 0 ? upperRightY + 9 : upperLeftY + 9;
+          ctx.strokeStyle = lipHi;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(highlightStartX, upperMidY - 3);
+          ctx.quadraticCurveTo((highlightStartX + highlightEndX) / 2, highlightY - 10, highlightEndX, highlightY);
+          ctx.stroke();
+
+          const teethW = rigW * 0.28;
+          const teethX = dir > 0 ? rigCx + rigW * 0.04 : rigCx - rigW * 0.32;
+          const teethY = rigCy - 2;
+          drawMouthTeeth(teethX, teethY, teethW, 30, 0.45);
+          const fangX = dir > 0 ? rigCx + rigW * 0.16 : rigCx - rigW * 0.16;
+          ctx.fillStyle = enamel;
+          ctx.beginPath();
+          ctx.moveTo(fangX - 9, teethY + 2);
+          ctx.lineTo(fangX + 9, teethY + 2);
+          ctx.lineTo(fangX + dir * 5, teethY + 21);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          const liftedStartX = dir > 0 ? rigCx + rigW * 0.06 : rigCx - rigW * 0.06;
+          const liftedEndX = dir > 0 ? rightX - rigW * 0.14 : leftX + rigW * 0.14;
+          const liftedY = dir > 0 ? upperRightY + 10 : upperLeftY + 10;
+          ctx.strokeStyle = lipHi;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(liftedStartX, liftedY + 6);
+          ctx.quadraticCurveTo((liftedStartX + liftedEndX) / 2, liftedY - 7, liftedEndX, liftedY + 4);
+          ctx.stroke();
+
+          ctx.strokeStyle = mixColor(lip, lipHi, 0.35);
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(rigCx - rigW * 0.22, lowerMidY + 2);
+          ctx.quadraticCurveTo(rigCx, lowerMidY + 8, rigCx + rigW * 0.22, lowerMidY + 2);
+          ctx.stroke();
+
+          const creaseX = dir > 0 ? rightX - 26 : leftX + 26;
+          const creaseY = dir > 0 ? upperRightY + 12 : upperLeftY + 12;
+          ctx.strokeStyle = lipHi;
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(creaseX, creaseY);
+          ctx.lineTo(creaseX - dir * 30, creaseY - 11);
+          ctx.stroke();
+        }
+
+        drawEllipse(leftX + 31, (upperLeftY + lowerLeftY) / 2 + 7, 18, 15, mixColor(lipLo, lip, 0.42));
+        drawEllipse(rightX - 31, (upperRightY + lowerRightY) / 2 + 7, 18, 15, mixColor(lipLo, lip, 0.48));
+        ctx.restore();
+        return;
+      }
+
+      if (shape === "o" && talkLevel <= 0.01) {
+        drawEllipse(cx, cy, mouthW / 2 + 22, openH / 2 + lipH / 2 + 18, shadow);
+        drawEllipse(cx, cy, mouthW / 2 + 8, openH / 2 + lipH / 2 + 8, lipLo);
+        drawEllipse(cx, cy, mouthW / 2 - 8, openH / 2 + lipH / 2 - 4, lip);
+        drawEllipse(cx, cy, mouthW / 2 - 28, openH / 2 - 8, cavity);
+        drawEllipse(cx - mouthW / 7, cy - openH / 4, Math.max(8, mouthW / 8), 5, lipHi);
+        return;
+      }
+
       drawEllipse(cx + asym / 4, cy, mouthW / 2 + 20, cavityH / 2 + lipH + 16, shadow);
       drawEllipse(cx + asym / 5, lowerCenterCy + 2, mouthW / 2 + 16, Math.max(18, lipH / 2 + 10), lipLo);
       drawEllipse(cx - mouthW / 5 + asym / 4, leftBottomCy, mouthW / 3 + 12, Math.max(15, lipH / 2 + 4), lip);
@@ -777,7 +1001,17 @@
       drawEllipse(cx + mouthW / 10 + asym / 4, lowerCenterCy - lipH / 5, mouthW / 3 + 6, Math.max(5, lipH / 7), mixColor(lip, lipHi, 0.50));
 
       drawEllipse(cx + asym / 3, cy + asym / 12, cavityW / 2, Math.max(3, cavityH / 2), cavity);
-      if (cavityH > 16) {
+      if (shape === "tongue") {
+        const tongueY = cy + cavityH / 2 + lipH / 5;
+        drawEllipse(cx + asym / 5, tongueY, cavityW / 4.8, Math.max(18, cavityH / 3.2), "#c94f68");
+        drawEllipse(cx + asym / 5, tongueY + 14, cavityW / 5.8, Math.max(12, cavityH / 4), "#e07586");
+        ctx.strokeStyle = "#9d3048";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx + asym / 5, tongueY - Math.max(5, cavityH / 8));
+        ctx.lineTo(cx + asym / 5, tongueY + Math.max(14, cavityH / 4));
+        ctx.stroke();
+      } else if (cavityH > 16) {
         drawMouthTongue(cx + asym / 4, cy + cavityH / 3 + asym / 12, cavityW / 4, Math.max(5, cavityH / 5));
       } else {
         ctx.strokeStyle = "#1c020c";
@@ -790,7 +1024,7 @@
 
       const teethAmount = Math.max(pose.teeth, pose.open > 0.34 ? clamp((pose.open - 0.30) * 1.2, 0, 0.42) : 0);
       drawMouthTeeth(cx + asym / 3 - cavityW / 2 + 18, cy + asym / 12 - cavityH / 2 + 2, cavityW - 36, cavityH, teethAmount);
-      if (shape === "grimace" && cavityW > 92) {
+      if ((shape === "grimace" || shape === "big_smile") && cavityW > 92) {
         const gumY = cy + asym / 12 + Math.max(4, cavityH / 7);
         ctx.strokeStyle = "#ccbeaa";
         ctx.lineWidth = 2;
@@ -977,11 +1211,13 @@
       const talking = Boolean(mouth.talking);
       const energy = Number(mouth.energy || 0.45);
       const talkLevel = talking ? clamp((0.72 + 0.28 * Math.sin(t * 0.026)) * energy, 0.08, 1) : 0;
-      const pose = mouthPoseFor(shape);
+      const targetPose = mouthPoseFor(shape);
+      const eased = easedPoseForMouth(shape, targetPose, talkLevel, t);
+      const pose = eased.pose;
       if ((mouth.style || "human") === "robot") {
-        drawRobotMouth(shape, pose, talkLevel, t);
+        drawRobotMouth(shape, pose, eased.talkLevel, t);
       } else {
-        drawHumanMouth(shape, pose, talkLevel, energy, t);
+        drawHumanMouth(shape, pose, eased.talkLevel, energy, t);
       }
       if (mouth.text_active && mouth.text) {
         drawMouthText(t);

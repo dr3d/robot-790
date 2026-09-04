@@ -43,10 +43,13 @@
       position: sticky;
       top: 0;
       z-index: 20;
-      display: flex;
+      display: grid;
+      grid-template-columns: auto minmax(280px, 1fr) auto;
+      grid-template-areas:
+        "title nerves buttons"
+        "title nerves status";
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      gap: 6px 16px;
       margin-bottom: 20px;
       padding: 8px 0;
       background: rgba(16, 17, 20, 0.96);
@@ -54,44 +57,89 @@
       backdrop-filter: blur(10px);
     }
     .header-actions {
+      display: contents;
+    }
+    .header-buttons {
+      grid-area: buttons;
       display: inline-flex;
-      flex: 1 1 auto;
       align-items: center;
       justify-content: flex-end;
       gap: 12px;
       flex-wrap: wrap;
-      min-width: 0;
     }
     h1 {
+      grid-area: title;
       margin: 0;
       font-size: 24px;
       font-weight: 700;
       letter-spacing: 0;
-    }
-    .status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
       white-space: nowrap;
     }
-    .recording-indicator {
-      display: none;
+    .status {
+      grid-area: status;
+      justify-self: end;
+      display: inline-flex;
       align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       gap: 5px;
-      margin-left: 4px;
-      color: #ffb3b3;
+      min-width: 96px;
+      min-height: 22px;
+      padding: 3px 7px;
+      border: 1px solid rgba(174, 182, 194, 0.14);
+      border-radius: 999px;
+      background: rgba(25, 27, 32, 0.52);
+      color: var(--muted);
       font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       letter-spacing: 0;
       text-transform: uppercase;
     }
-    .recording-indicator[data-recording="on"] {
-      display: inline-flex;
+    .status-pill[data-state="ok"] {
+      border-color: rgba(96, 211, 148, 0.30);
+      color: #c8f6df;
+      background: rgba(38, 80, 58, 0.24);
     }
+    .status-pill[data-state="warn"] {
+      border-color: rgba(255, 207, 90, 0.30);
+      color: #ffe8a8;
+      background: rgba(82, 67, 30, 0.24);
+    }
+    .status-pill[data-state="bad"] {
+      border-color: rgba(255, 107, 107, 0.30);
+      color: #ffb3b3;
+      background: rgba(80, 38, 44, 0.24);
+    }
+    .recording-indicator[data-recording="off"] {
+      opacity: 0.78;
+    }
+    .dot,
     .recording-indicator .recording-dot {
       width: 8px;
       height: 8px;
       border-radius: 999px;
+      background: #59606b;
+      box-shadow: 0 0 0 3px rgba(89, 96, 107, 0.12);
+    }
+    .dot.ok {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(96, 211, 148, 0.16);
+    }
+    .dot.warn {
+      background: var(--warn);
+      box-shadow: 0 0 0 3px rgba(255, 207, 90, 0.16);
+    }
+    .status-pill[data-state="bad"] .dot {
+      background: var(--bad);
+      box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.16);
+    }
+    .recording-indicator[data-recording="on"] .recording-dot {
       background: #ff4d5e;
       box-shadow: 0 0 0 3px rgba(255, 77, 94, 0.16), 0 0 12px rgba(255, 77, 94, 0.42);
       animation: recordingPulse 1.8s ease-in-out infinite;
@@ -112,12 +160,13 @@
       }
     }
     .gpu-status {
-      flex: 1 1 560px;
-      min-width: min(100%, 360px);
-      max-width: 760px;
+      grid-area: nerves;
+      width: 100%;
+      min-width: 0;
+      max-width: none;
       height: 56px;
       display: grid;
-      grid-template-columns: 52px minmax(0, 1fr) minmax(96px, auto);
+      grid-template-columns: 52px minmax(0, 1fr) 128px;
       align-items: stretch;
       gap: 6px;
       padding: 5px 6px;
@@ -145,8 +194,8 @@
       gap: 2px;
     }
     .gpu-meter.gpu-meter-vram {
-      min-width: 96px;
-      place-content: center stretch;
+      min-width: 118px;
+      place-content: center;
       grid-template-rows: 1fr;
     }
     .gpu-line {
@@ -167,11 +216,13 @@
     }
     .gpu-meter-vram .gpu-line {
       display: grid;
-      gap: 5px;
-      justify-items: end;
+      gap: 4px;
+      justify-items: center;
+      text-align: center;
     }
     .gpu-meter-vram .gpu-value {
       color: #d9fff0;
+      font-size: 13px;
       font-weight: 700;
     }
     .gpu-bars {
@@ -180,11 +231,11 @@
       min-width: 0;
       height: 31px;
       overflow: hidden;
-      border: 1px solid rgba(186, 87, 224, 0.28);
-      border-radius: 3px;
+      border: 1px solid rgba(186, 87, 224, 0.20);
+      border-radius: 1px;
       background:
-        linear-gradient(to top, rgba(255,255,255,0.07) 1px, transparent 1px) 0 0 / 100% 6px,
-        linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 8px 100%,
+        linear-gradient(to top, rgba(255,255,255,0.055) 1px, transparent 1px) 0 0 / 100% 6px,
+        linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0 / 8px 100%,
         #16141b;
       padding: 0;
     }
@@ -194,15 +245,15 @@
       height: 100%;
     }
     .gpu-area {
-      fill: rgba(135, 21, 148, 0.72);
+      fill: rgba(135, 21, 148, 0.58);
     }
     .gpu-trace {
       fill: none;
       stroke: #d865ff;
-      stroke-width: 3;
+      stroke-width: 1.8;
       stroke-linejoin: round;
       stroke-linecap: round;
-      filter: drop-shadow(0 0 2px rgba(226, 104, 255, 0.65));
+      filter: drop-shadow(0 0 1px rgba(226, 104, 255, 0.50));
     }
     .gpu-status[data-state="busy"] {
       border-color: rgba(255, 207, 90, 0.42);
@@ -222,21 +273,6 @@
     }
     .gpu-status[data-state="offline"] .gpu-bars svg {
       opacity: 0.25;
-    }
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: var(--bad);
-      box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.16);
-    }
-    .dot.ok {
-      background: var(--accent);
-      box-shadow: 0 0 0 3px rgba(96, 211, 148, 0.16);
-    }
-    .dot.warn {
-      background: var(--warn);
-      box-shadow: 0 0 0 3px rgba(255, 207, 90, 0.16);
     }
     section {
       border-top: 1px solid var(--line);
@@ -772,12 +808,17 @@
         grid-template-columns: 1fr;
         align-items: stretch;
       }
-      header { display: grid; }
-      .header-actions {
+      header {
+        grid-template-areas:
+          "title"
+          "buttons"
+          "nerves"
+          "status";
+      }
+      .header-buttons {
         justify-content: flex-start;
       }
       .gpu-status {
-        flex-basis: 100%;
         min-width: 0;
         max-width: none;
       }
@@ -815,9 +856,11 @@
     <header>
       <h1>Robot 790 STS</h1>
       <div class="header-actions">
-        <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
-        <button id="showEssentials" class="panel-link" type="button">Essentials</button>
-        <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
+        <div class="header-buttons">
+          <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
+          <button id="showEssentials" class="panel-link" type="button">Essentials</button>
+          <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
+        </div>
         <div id="gpuStatus" class="gpu-status" data-state="offline" title="GPU telemetry not sampled yet">
           <span class="gpu-label">Nerves</span>
           <span class="gpu-meter">
@@ -829,11 +872,13 @@
           </span>
         </div>
         <div class="status">
-          <span id="dot" class="dot"></span>
-          <span id="state">Disconnected</span>
-          <span id="recordingIndicator" class="recording-indicator" data-recording="off" title="Audio recording is off" aria-live="polite">
-            <span class="recording-dot" aria-hidden="true"></span>
-            <span>REC</span>
+          <span id="connectionIndicator" class="status-pill" data-state="bad" title="Realtime disconnected">
+            <span id="dot" class="dot"></span>
+            <span id="state">Disconnected</span>
+          </span>
+          <span id="recordingIndicator" class="recording-indicator status-pill" data-state="off" data-recording="off" title="Audio recording is off" aria-live="polite">
+            <span class="dot recording-dot" aria-hidden="true"></span>
+            <span id="recordingIndicatorLabel">RECORD OFF</span>
           </span>
         </div>
       </div>
@@ -1364,7 +1409,9 @@
     const logGrid = document.querySelector(".log-grid");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
+    const connectionIndicator = document.querySelector("#connectionIndicator");
     const recordingIndicator = document.querySelector("#recordingIndicator");
+    const recordingIndicatorLabel = document.querySelector("#recordingIndicatorLabel");
     const gpuStatus = document.querySelector("#gpuStatus");
     const gpuUtil = document.querySelector("#gpuUtil");
     const gpuVram = document.querySelector("#gpuVram");
@@ -1526,7 +1573,8 @@
     let latestBrainStatus = null;
     let gpuStatusPollTimer = null;
     const gpuHistoryLimit = 480;
-    const gpuUtilHistory = [];
+    const gpuHistoryStorageKey = "robot790GpuUtilHistory";
+    const gpuUtilHistory = loadGpuHistory();
     let conversationPopoutWindow = null;
 
     function updateLogPaneHeight() {
@@ -1853,7 +1901,7 @@
               type: "string",
               enum: [
                 "slow_smile", "affection", "inspect", "thoughtful", "daydream",
-                "mischief", "confused", "focus_lock", "double_take", "goofy",
+                "mischief", "confused", "focus_lock", "double_take", "goofy", "silly",
                 "drowsy", "robot_scan", "wary", "startle"
               ],
               description: "Beat name supported by the ESP32 face firmware."
@@ -1873,12 +1921,12 @@
             name: {
               type: "string",
               enum: [
-                "calm", "curious", "surprised", "suspicious", "afraid", "angry",
-                "sleepy", "sleep", "goofy", "robotic", "wonder", "glitchy",
-                "happy", "delighted", "bashful", "bored", "focused", "confused",
-                "proud", "mischief", "affection"
+                "neutral", "calm", "curious", "surprised", "suspicious", "afraid", "angry",
+                "sad", "sleepy", "sleep", "goofy", "silly", "robotic", "calculating", "wonder",
+                "glitchy", "happy", "excited", "delighted", "bashful", "bored", "focused",
+                "confused", "helpful", "proud", "mischief", "affection"
               ],
-              description: "Mood name supported by the ESP32 face firmware."
+              description: "Mood name supported by the active face embodiment."
             },
             duration: {
               type: "number",
@@ -1971,7 +2019,7 @@
       {
         type: "function",
         name: "set_mouth",
-        description: "Set Robot 790's expressive mouth style or shape when the user asks for a human mouth, robot mouth, smile, smirk, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth. Use set_mouth_text instead when the user wants words, captions, or hidden thought text on the mouth display.",
+        description: "Set Robot 790's expressive mouth style or shape when the user asks for a human mouth, robot mouth, smile, big smile, smirk, O mouth, tongue, frown, grimace, sneer, open mouth, talking mouth, sleeping mouth, or auto mouth. Use set_mouth_text instead when the user wants words, captions, or hidden thought text on the mouth display.",
         parameters: {
           type: "object",
           properties: {
@@ -1982,7 +2030,7 @@
             },
             shape: {
               type: "string",
-              enum: ["neutral", "smile", "smirk_left", "smirk_right", "open", "wide", "frown", "grimace", "sneer", "sleep"],
+              enum: ["neutral", "smile", "big_smile", "smirk_left", "smirk_right", "open", "o", "wide", "tongue", "frown", "grimace", "sneer", "sleep"],
               description: "Optional mouth shape."
             },
             talking: {
@@ -2587,12 +2635,12 @@
       "For go to sleep, close your eyes, shut your eyes, or sleep mode, call set_robot_mode with mode sleeping before answering; do not merely describe the action.",
       "For wake up or open your eyes, call set_robot_mode with mode idle before answering.",
       "Never say you set, moved, closed, opened, or changed your eyes unless an eye or face tool was actually called successfully.",
-      "Use set_face_mood for named moods such as glitchy, goofy, happy, curious, confused, focused, suspicious, or mischief. Include color only when the user asks for a face glow, face tint, nose color, or mood-ring color.",
+      "Use set_face_mood for named moods such as happy, excited, sad, silly, helpful, calculating, wonder, glitchy, goofy, curious, confused, focused, suspicious, or mischief. Include color only when the user asks for a face glow, face tint, nose color, or mood-ring color.",
       "Use set_face_animation when the user asks you to hold still, stop idling, stop the idle face animation, freeze your face, stop wandering your face, or turn idle face animation back on.",
       "Use play_face_beat for animated beats such as funny face, silly face, scan, double take, startle, mischief, thoughtful, or slow smile.",
       "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes, or an eye mode such as crossed/cross-eye, swapped/swap eyes, googly eyes, or normal eyes.",
       "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
-      "Use set_mouth when the user asks for a mouth style or shape such as human, robot, smile, smirk, frown, grimace, sneer, open, talking, sleep, or auto mouth.",
+      "Use set_mouth when the user asks for a mouth style or shape such as human, robot, smile, big smile, smirk, O mouth, tongue, frown, grimace, sneer, open, talking, sleep, or auto mouth.",
       "Use set_mouth_text when the user asks you to put words, a caption, a transcript, or a hidden aside on your mouth display.",
       "For mouth text, use mode flash for quick stings, mode marquee for long phrases, and optional color or emoji aliases when the user asks for a colored or symbolic mouth.",
       "Use set_chassis only for explicit drive-base, wheel, track, move, turn, stop, or e-stop requests.",
@@ -4712,6 +4760,10 @@
     function setState(text, kind = "bad") {
       state.textContent = text;
       dot.className = `dot ${kind === "ok" ? "ok" : kind === "warn" ? "warn" : ""}`;
+      if (connectionIndicator) {
+        connectionIndicator.dataset.state = kind === "ok" ? "ok" : kind === "warn" ? "warn" : "bad";
+        connectionIndicator.title = `Realtime ${String(text || "").toLowerCase()}`;
+      }
     }
 
     function currentTranscriptProsodyMode() {
@@ -8435,18 +8487,45 @@
       if (percent === null) return;
       history.push(percent);
       while (history.length > gpuHistoryLimit) history.shift();
+      saveGpuHistory(history);
+    }
+
+    function loadGpuHistory() {
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem(gpuHistoryStorageKey) || "[]");
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .map((value) => boundedPercent(value))
+          .filter((value) => value !== null)
+          .slice(-gpuHistoryLimit);
+      } catch {
+        return [];
+      }
+    }
+
+    function saveGpuHistory(history) {
+      try {
+        sessionStorage.setItem(gpuHistoryStorageKey, JSON.stringify(history.slice(-gpuHistoryLimit)));
+      } catch {
+        return;
+      }
     }
 
     function renderGpuBars(container, history) {
       if (!container) return;
-      const padded = Array.from({ length: Math.max(0, gpuHistoryLimit - history.length) }, () => 0).concat(history);
+      const samples = history.length ? history : [0];
+      const padded = samples.length === 1 ? [samples[0], samples[0]] : samples;
+      const recentMax = Math.max(...padded.map((value) => boundedPercent(value) ?? 0));
+      const ceiling = recentMax <= 20 ? 20 : recentMax <= 40 ? 40 : recentMax <= 60 ? 60 : 100;
       const lastIndex = Math.max(1, padded.length - 1);
       const points = padded.map((value, index) => {
         const x = (index / lastIndex) * 100;
-        const y = 100 - boundedPercent(value);
+        const percent = boundedPercent(value) ?? 0;
+        const y = 100 - clamp(percent / ceiling, 0, 1) * 100;
         return `${x.toFixed(2)},${y.toFixed(2)}`;
       });
       const areaPath = `M 0,100 L ${points.join(" L ")} L 100,100 Z`;
+      container.dataset.scale = `${ceiling}%`;
       container.innerHTML = `
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
           <path class="gpu-area" d="${areaPath}"></path>
@@ -10096,8 +10175,10 @@
       const isBusy = Boolean(audioRecordFinalizing || audioRecordStoppingForRollover);
       if (recordingIndicator) {
         recordingIndicator.dataset.recording = isRecording ? "on" : "off";
+        recordingIndicator.dataset.state = isRecording ? "bad" : "off";
         recordingIndicator.title = isRecording ? "Audio recording is on" : "Audio recording is off";
       }
+      if (recordingIndicatorLabel) recordingIndicatorLabel.textContent = isRecording ? "RECORDING" : "RECORD OFF";
       startAudioRecordButton.disabled = !supported || isRecording || isBusy;
       stopAudioRecordButton.disabled = !isRecording || isBusy;
       if (!supported) audioRecordStatus.textContent = "Browser recording is not supported.";

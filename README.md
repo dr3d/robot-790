@@ -428,12 +428,15 @@ The realtime page can expose these tools to the LLM:
 
 - `set_robot_mode`: `idle`, `listening`, `thinking`, `speaking`, or `sleeping`.
 - `play_face_beat`: named face animation beats.
-- `set_face_mood`: named face mood for a short visual hold.
+- `set_face_mood`: named face mood for a short visual hold, including the
+  browser-face cartoon set such as `silly`, `excited`, `sad`, `helpful`, and
+  `calculating`.
 - `set_eye_style`: eye renderer style such as `robot`, `friendly`, `classic`,
   `cartoony`, `sinister`, or `sleepy`.
 - `set_eye_gaze`: normalized gaze target.
 - `set_mouth`: mouth style, shape, talking state, text display, energy, or
-  release back to autonomous control.
+  release back to autonomous control; browser face supports cartoon shapes such
+  as `big_smile`, `o`, and `tongue`.
 - `set_chassis`: one explicit status, stop, e-stop, clear, tank, or twist
   command for the tracked chassis.
 - `remember_fact` / `forget_fact`: explicit named browser memory facts.
