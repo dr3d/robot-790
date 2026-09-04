@@ -1497,6 +1497,8 @@
       body_trajectory: defaultBodyTrajectory,
       idle_level12_cooldown_s: 12,
       session_behavior_rules: defaultSessionBehaviorRules,
+      base_session_prompt: "",
+      base_session_prompt_source: "",
       default_embodiment: "",
       embodiments: []
     };
@@ -3301,6 +3303,8 @@
           body_trajectory: String(result.body_trajectory || defaultBodyTrajectory),
           idle_level12_cooldown_s: Number(result.idle_level12_cooldown_s) || 12,
           session_behavior_rules: Array.isArray(result.session_behavior_rules) ? result.session_behavior_rules : defaultSessionBehaviorRules,
+          base_session_prompt: String(result.base_session_prompt || ""),
+          base_session_prompt_source: String(result.base_session_prompt_source || ""),
           default_embodiment: String(result.default_embodiment || ""),
           embodiments: Array.isArray(result.embodiments) ? result.embodiments : []
         };
@@ -3314,6 +3318,8 @@
           body_trajectory: defaultBodyTrajectory,
           idle_level12_cooldown_s: 12,
           session_behavior_rules: defaultSessionBehaviorRules,
+          base_session_prompt: "",
+          base_session_prompt_source: "",
           default_embodiment: "",
           embodiments: []
         };
@@ -3360,6 +3366,27 @@
       ].filter(Boolean).join("\n");
     }
 
+    function baseSessionInstructionsText() {
+      const filePrompt = String(runtimeConfig.base_session_prompt || "").trim();
+      return filePrompt || baseSessionInstructions.join(" ");
+    }
+
+    function baseSessionInstructionCount() {
+      const filePrompt = String(runtimeConfig.base_session_prompt || "").trim();
+      if (!filePrompt) return baseSessionInstructions.length;
+      return filePrompt
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .length;
+    }
+
+    function baseSessionInstructionSource() {
+      return runtimeConfig.base_session_prompt
+        ? runtimeConfig.base_session_prompt_source || "prompts/robot-790-realtime-system.md"
+        : "web fallback";
+    }
+
     function buildSessionInstructions() {
       if (firstContactModeEnabled()) {
         return firstContactSessionInstructions();
@@ -3375,7 +3402,7 @@
         wonderSearchPolicyText(),
         performancePrivacy ? "" : formatBrain2ForInstructions(),
         performancePrivacy ? performancePrivacyInstructions() : "",
-        baseSessionInstructions.join(" ")
+        baseSessionInstructionsText()
       ]
         .filter(Boolean)
         .join("\n\n");
@@ -8755,7 +8782,7 @@
       const loadedNotesText = formatLoadedNotesForInstructions();
       const sensingText = formatSensingTextForInstructions();
       const memoryText = formatMemoryForInstructions();
-      const systemText = firstContactModeEnabled() ? firstContactSessionInstructions() : baseSessionInstructions.join(" ");
+      const systemText = firstContactModeEnabled() ? firstContactSessionInstructions() : baseSessionInstructionsText();
       const embodimentText = formatEmbodimentForInstructions();
       const conversationText = conversationLines.length
         ? conversationLines.join("\n")
@@ -8825,7 +8852,8 @@
           role: "Injected into conversation on session updates",
           text: systemText,
           details: [
-            `Prompt rules: ${baseSessionInstructions.length}`,
+            `Source: ${firstContactModeEnabled() ? "first contact mode" : baseSessionInstructionSource()}`,
+            `Prompt rules: ${baseSessionInstructionCount()}`,
             `Tool definitions available: ${enabledTools.length}`,
             `Voice: ${currentTtsVoice()}`,
             `Voice style chars: ${currentTtsInstruct().length}`,

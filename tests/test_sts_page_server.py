@@ -35,6 +35,8 @@ def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
     assert result["current_embodiment"] == "Current test body."
     assert result["body_trajectory"] == "Bodies are test fixtures."
     assert result["idle_level12_cooldown_s"] == 3.5
+    assert result["base_session_prompt"] == ""
+    assert result["base_session_prompt_source"] == "prompts/robot-790-realtime-system.md"
     assert result["default_embodiment"] == "mask"
     assert result["session_behavior_rules"] == ["Advance, do not echo."]
     assert result["embodiments"] == [
@@ -45,6 +47,21 @@ def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
             "description": "External mask rig.",
         }
     ]
+
+
+def test_runtime_config_reads_base_session_prompt(tmp_path) -> None:
+    prompt_dir = tmp_path / "prompts"
+    prompt_dir.mkdir()
+    (prompt_dir / "robot-790-realtime-system.md").write_text(
+        "You are Robot 790.\nDo not parrot the last phrase.",
+        encoding="utf-8",
+    )
+
+    result = sts_page_server.runtime_config(repo_root=tmp_path)
+
+    assert result["status"] == "ok"
+    assert result["base_session_prompt"] == "You are Robot 790.\nDo not parrot the last phrase."
+    assert result["base_session_prompt_source"] == "prompts/robot-790-realtime-system.md"
 
 
 def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:

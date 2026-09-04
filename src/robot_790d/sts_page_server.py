@@ -46,6 +46,7 @@ DEFAULT_SESSION_BEHAVIOR_RULES = [
     ),
 ]
 RUNTIME_CONFIG_PATH = Path("config") / "runtime.json"
+BASE_SESSION_PROMPT_PATH = Path("prompts") / "robot-790-realtime-system.md"
 OPERATOR_COMMANDS_PATH = Path("logs") / "operator_commands.jsonl"
 
 
@@ -644,6 +645,8 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "current_embodiment": current_embodiment,
         "body_trajectory": body_trajectory,
         "idle_level12_cooldown_s": idle_level12_cooldown_s,
+        "base_session_prompt": _load_base_session_prompt(root),
+        "base_session_prompt_source": str(BASE_SESSION_PROMPT_PATH).replace("\\", "/"),
         "session_behavior_rules": _runtime_string_list(
             payload,
             "session_behavior_rules",
@@ -666,6 +669,16 @@ def _load_runtime_config_file(repo_root: Path) -> dict[str, object]:
     except (OSError, json.JSONDecodeError) as exc:
         return {"_error": f"Could not load {RUNTIME_CONFIG_PATH}: {exc}"}
     return parsed if isinstance(parsed, dict) else {"_error": f"{RUNTIME_CONFIG_PATH} must contain a JSON object."}
+
+
+def _load_base_session_prompt(repo_root: Path) -> str:
+    path = repo_root / BASE_SESSION_PROMPT_PATH
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return ""
+    except OSError:
+        return ""
 
 
 def _runtime_string(payload: dict[str, object], key: str, default: str) -> str:

@@ -133,6 +133,8 @@ voices, third-party code, and media assets carry their own licenses.
 
 - `docs/`: public GitHub Pages shelf for articles, curated transcripts, and
   publishable media. This is the public memory palace.
+- `prompts/`: editable realtime seed prompts that define Eric's base operating
+  posture before notes, memories, runtime state, or tools are added.
 - `notes/`: private local working notes, identity files, library books, world
   substrates, and experiment scratch. This folder is ignored by git by default.
 - `logs/`: local live captures, event logs, generated images, and audio/video
@@ -353,10 +355,15 @@ The browser page is the main live control surface. It includes:
   note tool switches.
 - Idle controls for drift, wonder, self-focus, notes-focus, and substrate tests.
 - Conversation and event panes with copy and record buttons.
-- Context Map for a rough view of what Eric can draw from.
+- Context Map for a rough view of what Eric can draw from, including the active
+  base prompt source, runtime state, loaded notes, memory, enabled tools, and
+  recent context.
 
-The page sends a compact Robot 790/Eric identity prompt with `session.update`
-when it connects. It also drives deterministic face lifecycle cues:
+The page sends the Robot 790/Eric realtime seed prompt with `session.update`
+when it connects. The editable source is
+`prompts/robot-790-realtime-system.md`; the page keeps only a fallback copy so
+the UI can still start if the page server cannot load the file. It also drives
+deterministic face lifecycle cues:
 
 ```text
 conversation UI / voice client
