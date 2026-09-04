@@ -1500,7 +1500,7 @@
     const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
     const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
     const brain2VoiceMonitorStorageKey = "robot790.brain2VoiceMonitor.v1";
-    const brain2VoiceNameStorageKey = "robot790.brain2VoiceName.v1";
+    const brain2VoiceNameStorageKey = "robot790.brain2VoiceName.v2";
     const brain2VoiceVolumeStorageKey = "robot790.brain2VoiceVolume.v2";
     const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
     const transcriptProsodyModeStorageKey = "robot790.transcriptProsodyMode.v1";
@@ -6100,6 +6100,7 @@
 
     function populateBrain2Voices() {
       if (!brain2VoiceSelect) return;
+      const preferredName = "Google US English";
       const saved = localStorage.getItem(brain2VoiceNameStorageKey) || currentBrain2VoiceName();
       brain2BrowserVoices = browserSpeechAvailable() ? window.speechSynthesis.getVoices() : [];
       const usable = brain2BrowserVoices
@@ -6112,7 +6113,11 @@
           textContent: voice.lang ? `${voice.name} (${voice.lang})` : voice.name
         }))
       );
-      brain2VoiceSelect.value = usable.some((voice) => voice.name === saved) ? saved : "";
+      brain2VoiceSelect.value = usable.some((voice) => voice.name === saved)
+        ? saved
+        : usable.some((voice) => voice.name === preferredName)
+        ? preferredName
+        : "";
       brain2VoiceSelect.disabled = !browserSpeechAvailable();
     }
 
