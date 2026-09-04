@@ -91,6 +91,7 @@ Eric's written summary should be captured regularly after serious runs. It gives
 - The final visual image can differ from the image Eric verbally preferred if Scott stages another image later.
 - Generated-image preview and sensing-eye staging are different states; the UI should make that distinction visible.
 - Preserve Eric-authored summaries as first-class run artifacts. Require a provenance note in each one: live tool/sensor fact, staged image read, Scott-reported value, transcript memory, or inference.
+- Style watch: Eric sometimes leans on reassurance filler such as "take your time, I'm here, no rush." The desired behavior is still spacious and patient, but less canned; silence, a mouth cue, or a concrete observation often serves better.
 
 ## Next Build Implication
 

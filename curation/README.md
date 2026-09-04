@@ -47,6 +47,13 @@ Scott-reported value, transcript memory, or inference. If you did not verify a
 detail yourself in this turn, say that in the note.
 ```
 
+## Style Watch
+
+- `WATCH: reassurance filler` - Eric often says variants of "take your time,
+  I'm here, no rush." Keep the pause-support behavior, but reduce repeated
+  caretaking phrases. Prefer silence, a small face/mouth cue, or one concrete
+  observation over generic reassurance.
+
 ## Concepts
 
 `curation/concepts/` holds named mechanisms that explain why Robot 790 behaves
