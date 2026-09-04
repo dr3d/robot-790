@@ -5295,7 +5295,13 @@
       const fireAt = Math.max(firstAt, repeatAt, userTurnPendingUntil);
       if (fireAt >= goneAt) return;
       reengageTimer = setTimeout(() => {
-        triggerConversationReengage().catch((error) => log(events, `re-engage error: ${error.message}`));
+        triggerConversationReengage().catch((error) => {
+          responseActive = false;
+          reengageInFlight = false;
+          updateIdleSchedulerStatus();
+          scheduleIdlePonder();
+          log(events, `re-engage error: ${error.message}`);
+        });
       }, Math.max(750, fireAt - now));
     }
 
@@ -6795,6 +6801,7 @@
       const recentContext = recentConversationContext();
       const userName = knownUserNameForReengage();
       const userLabel = userName || "the user";
+      const firstContactActive = firstContactModeEnabled();
       const instructions = [
         `A short conversational re-engage timer fired because ${userLabel} was interacting moments ago, then went quiet while the mic is still on.`,
         "This is not idle rumination and not a new topic hunt. It is a gentle conversational nudge.",
