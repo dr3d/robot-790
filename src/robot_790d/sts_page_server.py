@@ -50,6 +50,12 @@ OPERATOR_COMMANDS_PATH = Path("logs") / "operator_commands.jsonl"
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
+    def end_headers(self) -> None:
+        parsed = urlsplit(self.path)
+        if parsed.path in {"", "/", "/index.html"} or parsed.path.endswith((".html", ".css", ".js")):
+            self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def do_GET(self) -> None:
         parsed = urlsplit(self.path)
         if parsed.path.startswith(GENERATED_IMAGE_URL_PREFIX):

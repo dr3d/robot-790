@@ -74,13 +74,13 @@
       white-space: nowrap;
     }
     .gpu-status {
-      width: 184px;
-      height: 48px;
+      width: 226px;
+      height: 56px;
       display: grid;
-      grid-template-columns: 42px 1fr 1fr;
+      grid-template-columns: 46px 1fr 1fr;
       align-items: stretch;
-      gap: 5px;
-      padding: 4px 5px;
+      gap: 6px;
+      padding: 5px 6px;
       border: 1px solid rgba(186, 87, 224, 0.36);
       border-radius: 7px;
       background: rgba(11, 10, 15, 0.82);
@@ -122,11 +122,9 @@
     }
     .gpu-bars {
       position: relative;
-      display: flex;
-      align-items: end;
-      gap: 1px;
+      display: block;
       min-width: 0;
-      height: 25px;
+      height: 31px;
       overflow: hidden;
       border: 1px solid rgba(186, 87, 224, 0.28);
       border-radius: 3px;
@@ -134,16 +132,23 @@
         linear-gradient(to top, rgba(255,255,255,0.07) 1px, transparent 1px) 0 0 / 100% 6px,
         linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px) 0 0 / 8px 100%,
         #16141b;
-      padding: 2px;
+      padding: 0;
     }
-    .gpu-bars span {
-      flex: 1 1 0;
-      min-width: 1px;
-      height: 0%;
-      border-top: 1px solid rgba(255, 198, 255, 0.9);
-      background: linear-gradient(to top, #75147e, #ba57e0);
-      box-shadow: 0 0 5px rgba(211, 83, 255, 0.38);
-      transition: height 160ms linear;
+    .gpu-bars svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .gpu-area {
+      fill: rgba(135, 21, 148, 0.72);
+    }
+    .gpu-trace {
+      fill: none;
+      stroke: #d865ff;
+      stroke-width: 3;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 2px rgba(226, 104, 255, 0.65));
     }
     .gpu-status[data-state="busy"] {
       border-color: rgba(255, 207, 90, 0.42);
@@ -161,10 +166,8 @@
       box-shadow: none;
       opacity: 0.75;
     }
-    .gpu-status[data-state="offline"] .gpu-bars span {
-      height: 2px;
+    .gpu-status[data-state="offline"] .gpu-bars svg {
       opacity: 0.25;
-      box-shadow: none;
     }
     .dot {
       width: 10px;
@@ -8336,9 +8339,19 @@
     function renderGpuBars(container, history) {
       if (!container) return;
       const padded = Array.from({ length: Math.max(0, gpuHistoryLimit - history.length) }, () => 0).concat(history);
-      container.innerHTML = padded
-        .map((value) => `<span style="height:${Math.max(4, Math.round(value))}%"></span>`)
-        .join("");
+      const lastIndex = Math.max(1, padded.length - 1);
+      const points = padded.map((value, index) => {
+        const x = (index / lastIndex) * 100;
+        const y = 100 - boundedPercent(value);
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      });
+      const areaPath = `M 0,100 L ${points.join(" L ")} L 100,100 Z`;
+      container.innerHTML = `
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+          <path class="gpu-area" d="${areaPath}"></path>
+          <polyline class="gpu-trace" points="${points.join(" ")}"></polyline>
+        </svg>
+      `;
     }
 
     function renderGpuHistories() {
