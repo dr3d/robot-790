@@ -1,6 +1,20 @@
 {
-    "generated":  "2026-09-04 16:33:05",
+    "generated":  "2026-09-05 14:21:49",
     "articles":  [
+                     {
+                         "title":  "Time And Space, Both Live",
+                         "excerpt":  "The cleanest explanation for Eric is not that a new mind appeared in the lab.",
+                         "source":  "articles/time-and-space-both-live.md",
+                         "bytes":  10544,
+                         "modified":  "2026-09-05 14:21"
+                     },
+                     {
+                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
+                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
+                         "source":  "articles/robot-790-article-3.md",
+                         "bytes":  11140,
+                         "modified":  "2026-09-05 03:08"
+                     },
                      {
                          "title":  "Passing Butter, Keeping Company",
                          "excerpt":  "Butter-Bench arrived at a useful moment for Robot 790.",
@@ -41,13 +55,6 @@
                          "excerpt":  "Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM serving, or social robotics from scratch. Instead, it exists because these individual pieces have finally become good enough to combine.",
                          "source":  "articles/robot_790_lineage_article.md",
                          "bytes":  2867,
-                         "modified":  "2026-09-03 16:33"
-                     },
-                     {
-                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
-                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
-                         "source":  "articles/robot-790-article-3.md",
-                         "bytes":  10821,
                          "modified":  "2026-09-03 16:33"
                      },
                      {

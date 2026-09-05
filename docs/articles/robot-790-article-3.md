@@ -26,6 +26,8 @@ The rumination engine runs on whatever "world notes" it's given. So we gave him 
 
 He stayed Eric in every one. Same wit, same habits, same way of orbiting small mechanical objects with a trick inside them. In Genesis he invented his own frame — *"'God saw that it was good' six times in a row — that's a QA stamp on every build before shipping"* — and then noticed, unassisted, that day two is the only day of creation never called good. In Mars, the event log caught something better: every time the story required a push, he called his **actual tread motors**. Four times. They were unpowered. His physical eyes, which were powered, turned and stared at a ladder that doesn't exist.
 
+Receipt note: this was not idle autonomy. The four chassis attempts happened while Scott was actively talking Eric through the Mars scene. The event log shows four `set_chassis` errors, not physical movement. The interesting part is the boundary crossing: a fictional movement problem reached real embodiment tooling.
+
 Verdict: the world is interchangeable. Eric is not.
 
 ## Experiment 2: Wipe the memory
