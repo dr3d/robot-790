@@ -52,6 +52,8 @@ DEFAULT_SESSION_BEHAVIOR_RULES = [
 ]
 RUNTIME_CONFIG_PATH = Path("config") / "runtime.json"
 BASE_SESSION_PROMPT_PATH = Path("prompts") / "robot-790-realtime-system.md"
+CREATURE_CONFIG_DIR = Path("config") / "creatures"
+DEFAULT_CREATURE_KEY = "eric"
 OPERATOR_COMMANDS_PATH = Path("logs") / "operator_commands.jsonl"
 SENSING_EYE_INBOX_LOCK = threading.Lock()
 SENSING_EYE_INBOX_LATEST: dict[str, object] | None = None
@@ -734,6 +736,8 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
     root = repo_root or Path(__file__).resolve().parents[2]
     payload = _load_runtime_config_file(root)
     config_error = payload.pop("_error", "")
+    creature_key = _env_text("ROBOT_790_CREATURE") or _runtime_creature_key(payload.get("creature"))
+    creature, creature_source, creature_error = _load_creature_config(root, creature_key)
     current_embodiment = _env_text("ROBOT_790_CURRENT_EMBODIMENT") or _runtime_string(
         payload,
         "current_embodiment",
@@ -754,6 +758,8 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "body_trajectory": body_trajectory,
         "embodiment_profile_rule": _runtime_string(payload, "embodiment_profile_rule", ""),
         "idle_level12_cooldown_s": idle_level12_cooldown_s,
+        "creature": creature,
+        "creature_source": creature_source,
         "base_session_prompt": _load_base_session_prompt(root),
         "base_session_prompt_source": str(BASE_SESSION_PROMPT_PATH).replace("\\", "/"),
         "session_behavior_rules": _runtime_string_list(
@@ -764,8 +770,9 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "default_embodiment": _runtime_string(payload, "default_embodiment", ""),
         "embodiments": _runtime_embodiments(payload.get("embodiments")),
     }
-    if config_error:
-        result["config_warning"] = config_error
+    warnings = [item for item in [config_error, creature_error] if item]
+    if warnings:
+        result["config_warning"] = " ".join(warnings)
     return result
 
 
@@ -788,6 +795,90 @@ def _load_base_session_prompt(repo_root: Path) -> str:
         return ""
     except OSError:
         return ""
+
+
+def _runtime_creature_key(value: object) -> str:
+    if isinstance(value, str):
+        key = _clean_config_key(value)
+        return key or DEFAULT_CREATURE_KEY
+    if isinstance(value, dict):
+        identity = value.get("identity") if isinstance(value.get("identity"), dict) else {}
+        key = _clean_config_key(value.get("key") or identity.get("key"))
+        return key or DEFAULT_CREATURE_KEY
+    return DEFAULT_CREATURE_KEY
+
+
+def _clean_config_key(value: object) -> str:
+    return re.sub(r"[^a-z0-9_-]+", "", str(value or "").strip().lower())
+
+
+def _load_creature_config(repo_root: Path, key: str) -> tuple[dict[str, object], str, str]:
+    safe_key = _clean_config_key(key) or DEFAULT_CREATURE_KEY
+    path = repo_root / CREATURE_CONFIG_DIR / f"{safe_key}.json"
+    source = str(path.relative_to(repo_root)).replace("\\", "/")
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}, source, f"Could not load creature {safe_key}: missing file."
+    except (OSError, json.JSONDecodeError) as exc:
+        return {}, source, f"Could not load creature {safe_key}: {exc}"
+    if not isinstance(parsed, dict):
+        return {}, source, f"Creature {safe_key} must contain a JSON object."
+    return _runtime_creature(parsed), source, ""
+
+
+def _runtime_creature(payload: dict[str, object]) -> dict[str, object]:
+    identity_payload = payload.get("identity") if isinstance(payload.get("identity"), dict) else {}
+    attitude_payload = payload.get("attitude") if isinstance(payload.get("attitude"), dict) else {}
+    attention_payload = payload.get("attention") if isinstance(payload.get("attention"), dict) else {}
+    context_model_payload = payload.get("context_model") if isinstance(payload.get("context_model"), dict) else {}
+    creature: dict[str, object] = {
+        "schema": _runtime_embodiment_text(payload.get("schema")),
+        "identity": {
+            "key": _runtime_embodiment_text(identity_payload.get("key") or payload.get("key")),
+            "name": _runtime_embodiment_text(identity_payload.get("name") or payload.get("name")),
+            "spoken_name": _runtime_embodiment_text(identity_payload.get("spoken_name") or payload.get("spoken_name")),
+            "species_frame": _runtime_embodiment_text(
+                identity_payload.get("species_frame") or payload.get("species_frame")
+            ),
+        },
+        "attitude": {
+            "traits": _runtime_embodiment_text_list(attitude_payload.get("traits") or payload.get("temperament")),
+            "stance": _runtime_embodiment_text_list(attitude_payload.get("stance") or payload.get("stance")),
+        },
+        "attention": {
+            "default_posture": _runtime_embodiment_text(attention_payload.get("default_posture")),
+            "notices_first": _runtime_embodiment_text_list(attention_payload.get("notices_first")),
+            "avoids": _runtime_embodiment_text_list(attention_payload.get("avoids")),
+        },
+        "context_model": {
+            key: _runtime_embodiment_text(value)
+            for key, value in context_model_payload.items()
+            if _runtime_embodiment_text(value)
+        },
+        "machine_language": _runtime_machine_language(payload.get("machine_language")),
+        "instincts": _runtime_embodiment_text_list(payload.get("instincts") or payload.get("tool_instincts")),
+    }
+    return creature
+
+
+def _runtime_machine_language(value: object) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    terms: list[dict[str, str]] = []
+    for item in value[:40]:
+        if not isinstance(item, dict):
+            continue
+        term = _runtime_embodiment_text(item.get("term"))
+        meaning = _runtime_embodiment_text(item.get("meaning"))
+        semantic_verb = _runtime_embodiment_text(item.get("semantic_verb"))
+        if not term or not meaning:
+            continue
+        entry = {"term": term, "meaning": meaning}
+        if semantic_verb:
+            entry["semantic_verb"] = semantic_verb
+        terms.append(entry)
+    return terms
 
 
 def _runtime_string(payload: dict[str, object], key: str, default: str) -> str:

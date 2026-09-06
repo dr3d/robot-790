@@ -2041,6 +2041,8 @@
       body_trajectory: defaultBodyTrajectory,
       embodiment_profile_rule: "",
       idle_level12_cooldown_s: 12,
+      creature: null,
+      creature_source: "",
       session_behavior_rules: defaultSessionBehaviorRules,
       base_session_prompt: "",
       base_session_prompt_source: "",
@@ -4505,6 +4507,8 @@
           body_trajectory: String(result.body_trajectory || defaultBodyTrajectory),
           embodiment_profile_rule: String(result.embodiment_profile_rule || ""),
           idle_level12_cooldown_s: Number(result.idle_level12_cooldown_s) || 12,
+          creature: result.creature && typeof result.creature === "object" ? result.creature : null,
+          creature_source: String(result.creature_source || ""),
           session_behavior_rules: Array.isArray(result.session_behavior_rules) ? result.session_behavior_rules : defaultSessionBehaviorRules,
           base_session_prompt: String(result.base_session_prompt || ""),
           base_session_prompt_source: String(result.base_session_prompt_source || ""),
@@ -4521,6 +4525,8 @@
           body_trajectory: defaultBodyTrajectory,
           embodiment_profile_rule: "",
           idle_level12_cooldown_s: 12,
+          creature: null,
+          creature_source: "",
           session_behavior_rules: defaultSessionBehaviorRules,
           base_session_prompt: "",
           base_session_prompt_source: "",
@@ -4615,6 +4621,48 @@
         : "web fallback";
     }
 
+    function formatCreatureForInstructions() {
+      const creature = runtimeConfig.creature && typeof runtimeConfig.creature === "object" ? runtimeConfig.creature : null;
+      if (!creature) return "";
+      const identity = creature.identity && typeof creature.identity === "object" ? creature.identity : {};
+      const attitude = creature.attitude && typeof creature.attitude === "object" ? creature.attitude : {};
+      const attention = creature.attention && typeof creature.attention === "object" ? creature.attention : {};
+      const contextModel = creature.context_model && typeof creature.context_model === "object" ? creature.context_model : {};
+      const machineLanguage = Array.isArray(creature.machine_language) ? creature.machine_language : [];
+      const instincts = Array.isArray(creature.instincts) ? creature.instincts : [];
+      const lines = [
+        "Creature specimen:",
+        identity.key ? `- key: ${identity.key}` : "",
+        identity.name ? `- name: ${identity.name}` : "",
+        identity.spoken_name ? `- spoken name: ${identity.spoken_name}` : "",
+        identity.species_frame ? `- species/frame: ${identity.species_frame}` : "",
+        Array.isArray(attitude.traits) && attitude.traits.length ? `- attitude traits: ${attitude.traits.join(", ")}` : "",
+        Array.isArray(attitude.stance) && attitude.stance.length
+          ? `Creature stance:\n${attitude.stance.map((item) => `- ${item}`).join("\n")}`
+          : "",
+        attention.default_posture ? `Attention posture: ${attention.default_posture}` : "",
+        Array.isArray(attention.notices_first) && attention.notices_first.length
+          ? `Notices first:\n${attention.notices_first.map((item) => `- ${item}`).join("\n")}`
+          : "",
+        Array.isArray(attention.avoids) && attention.avoids.length
+          ? `Avoids:\n${attention.avoids.map((item) => `- ${item}`).join("\n")}`
+          : "",
+        Object.keys(contextModel).length
+          ? `Context model:\n${Object.entries(contextModel).map(([key, value]) => `- ${key}: ${value}`).join("\n")}`
+          : "",
+        machineLanguage.length
+          ? `Machine language:\n${machineLanguage.map((item) => {
+              const verb = item.semantic_verb ? ` -> ${item.semantic_verb}` : "";
+              return `- ${item.term}${verb}: ${item.meaning}`;
+            }).join("\n")}`
+          : "",
+        instincts.length
+          ? `Creature instincts:\n${instincts.map((item) => `- ${item}`).join("\n")}`
+          : ""
+      ].filter(Boolean);
+      return lines.join("\n");
+    }
+
     function buildSessionInstructions() {
       if (firstContactModeEnabled()) {
         return firstContactSessionInstructions();
@@ -4626,6 +4674,7 @@
         formatSensingTextForInstructions(),
         formatRecentSearchContextForInstructions(),
         formatAloneStateForInstructions(),
+        formatCreatureForInstructions(),
         formatEmbodimentForInstructions(),
         formatRuntimeStateForInstructions(),
         formatRuntimeBehaviorRulesForInstructions(),
@@ -6509,9 +6558,13 @@
       const brain2RevisionCount = brain2RevisionCandidates.length;
       const brain2NoteCount = brain2NoteCandidates.length;
       const goal = currentLabGoal();
+      const creature = runtimeConfig.creature && typeof runtimeConfig.creature === "object" ? runtimeConfig.creature : null;
+      const creatureIdentity = creature?.identity && typeof creature.identity === "object" ? creature.identity : {};
+      const creatureMachineLanguage = Array.isArray(creature?.machine_language) ? creature.machine_language : [];
       return [
         `B1 system prompt source: ${firstContactModeEnabled() ? "first contact mode" : baseSessionInstructionSource()} / ${baseSessionInstructionCount()} base rules`,
-        `B1 prompt assembly: memory, loaded notes, sensing text, search receipts, alone-state ledger, embodiment/runtime state, runtime behavior rules, wonder policy, Brain2 advisory notes, base system prompt`,
+        `B1 creature specimen: ${creatureIdentity.key || "inline"}${runtimeConfig.creature_source ? ` from ${runtimeConfig.creature_source}` : ""} / machine language ${creatureMachineLanguage.length}`,
+        `B1 prompt assembly: memory, loaded notes, sensing text, search receipts, alone-state ledger, creature specimen, embodiment/runtime state, runtime behavior rules, wonder policy, Brain2 advisory notes, base system prompt`,
         `B1 active context buckets: memory ${context.browser_memory.approximate_tokens} tok / loaded notes ${context.loaded_notes.approximate_tokens} tok / sensing text ${context.sensing_eye_text.approximate_tokens} tok / search receipts ${context.search_receipts.approximate_tokens} tok / alone state ${context.alone_state.approximate_tokens} tok`,
         `B1 loaded notes: ${loadedNotes.length ? loadedNotes.slice(0, 8).join(" | ") : "none"}`,
         `B1 browser memory facts: ${facts.length}`,
@@ -15113,6 +15166,8 @@
         model_stamp: currentModelStamp(),
         runtime_prompt: {
           source: runtimeConfig.base_session_prompt_source || "inline",
+          creature_source: runtimeConfig.creature_source || "",
+          creature: runtimeConfig.creature || null,
           session_behavior_rules: runtimeConfig.session_behavior_rules || [],
           current_embodiment: runtimeConfig.current_embodiment || "",
           body_trajectory: runtimeConfig.body_trajectory || "",

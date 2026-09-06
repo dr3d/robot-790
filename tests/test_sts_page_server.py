@@ -70,6 +70,53 @@ def test_runtime_config_reads_base_session_prompt(tmp_path) -> None:
     assert result["base_session_prompt_source"] == "prompts/robot-790-realtime-system.md"
 
 
+def test_runtime_config_loads_creature_specimen(tmp_path) -> None:
+    config_dir = tmp_path / "config"
+    creature_dir = config_dir / "creatures"
+    creature_dir.mkdir(parents=True)
+    (config_dir / "runtime.json").write_text('{"creature":"test_creature"}', encoding="utf-8")
+    (creature_dir / "test_creature.json").write_text(
+        """
+        {
+          "schema": "robot790.creature.v1",
+          "identity": {
+            "key": "test_creature",
+            "name": "Test Creature",
+            "spoken_name": "Testy",
+            "species_frame": "small test presence"
+          },
+          "attitude": {
+            "traits": ["plain", "watchful"],
+            "stance": ["Use receipts."]
+          },
+          "context_model": {
+            "latest": "Active notebook."
+          },
+          "machine_language": [
+            {
+              "term": "paint face",
+              "semantic_verb": "paint_face_from_sensing_eye",
+              "meaning": "Display the staged image."
+            }
+          ],
+          "instincts": ["Act, then answer."]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    result = sts_page_server.runtime_config(repo_root=tmp_path)
+
+    assert result["status"] == "ok"
+    assert result["creature_source"] == "config/creatures/test_creature.json"
+    creature = result["creature"]
+    assert creature["identity"]["spoken_name"] == "Testy"
+    assert creature["attitude"]["traits"] == ["plain", "watchful"]
+    assert creature["context_model"]["latest"] == "Active notebook."
+    assert creature["machine_language"][0]["semantic_verb"] == "paint_face_from_sensing_eye"
+    assert creature["instincts"] == ["Act, then answer."]
+
+
 def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
     calls = []
 
