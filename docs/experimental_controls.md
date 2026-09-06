@@ -127,6 +127,35 @@ for Eric to interpret instead of letting the language model invent telemetry.
 When the face firmware reports a `firmware` stamp, this tool carries it through
 as a receipt for the body build Eric is actually running.
 
+## Exit Controls
+
+`Passivate` is Scott's deliberate save/resume path. It writes the compact
+passivated state note plus the full audit packet, halts idle/Brain2/re-engage
+activity, closes realtime, saves active audio, and snapshots the conversation,
+events, and Brain2 panes. Use it when Eric should wake later with continuity
+from the latest run. It is a Robot 790 operator word, not a promise that every
+live state survived or that Eric can verify old sensor truth without a fresh
+receipt.
+
+`Disconnect` is a hard stop. It does not overwrite the passivated state. It
+halts the live loop, closes realtime, saves active audio if recording is on, and
+snapshots the panes for review.
+
+`Halt` is the emergency runtime stop. It first tries the same local cleanup as a
+disconnect, then calls the page server to stop only the realtime backend. STS,
+browser-face, and LM Studio stay loaded. Use it when the visible tab no longer
+seems to own the session or Eric keeps talking after Disconnect.
+
+`Restart` and `Unload` are server exits. They save active audio, stop the mic,
+snapshot panes, then perform the backend action.
+
+`Stop Recording` finalizes the audio/video artifact and snapshots panes. It
+does not disconnect Eric.
+
+The intended invariant is simple: exits should leave logs, and any active
+recording should be saved when it is turned off. Passivation is special because
+it also writes the latest continuity checkpoint.
+
 `First contact` switches to stripped startup instructions. The selected
 creature seed plus the current conversation is the intended seed; optional
 dropped image or text is treated only as temporary input. Startup notes, lore,

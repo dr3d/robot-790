@@ -1,4 +1,7 @@
 {
+  "media/videos/Anatomy_of_a_Mind__Robot_790.mp4": {
+    "description": "A NotebookLM-style companion video made from the What Robot 790 Is Becoming paper. It serves as the outside-world orientation pass: Robot 790 as the platform, Eric as the robot personage emerging from body, loop, tools, notes, receipts, voice, and correction rather than from a hidden soul claim or a cute prompt alone."
+  },
   "media/videos/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-150031.mp4": {
     "description": "A trimmed six-minute public excerpt from the face self-audit run, with the first 15:50 of setup removed. Scott and Eric turn the messy mouth/eye tuning problem into a design requirement: the robot needs a mirror. The practical finding is a new Capture To Eye loop, where Eric can inspect the face he is presenting, compare intended expression to rendered pixels, and help tune the shared face contract across browser and ESP32 embodiments."
   },

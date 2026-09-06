@@ -10,7 +10,6 @@ const articlePause = document.querySelector("#article-pause");
 const articleStop = document.querySelector("#article-stop");
 const articleShare = document.querySelector("#article-share");
 const articleClose = document.querySelector("#article-close");
-const featuredArticleLink = document.querySelector("#featured-article-link");
 const mediaFeature = document.querySelector("#media-feature");
 const mediaCaption = document.querySelector("#media-caption");
 const mediaList = document.querySelector("#media-list");
@@ -356,9 +355,9 @@ function showArticles(articles) {
     }
   }
 
-  if (featuredArticleLink) {
-    featuredArticleLink.addEventListener("click", (event) => {
-      const featureSource = featuredArticleLink.dataset.featureSource;
+  document.querySelectorAll("[data-feature-source]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const featureSource = link.dataset.featureSource;
       const featureIndex = featureSource
         ? articles.findIndex((article) => article.source === featureSource)
         : -1;
@@ -370,7 +369,7 @@ function showArticles(articles) {
       event.preventDefault();
       openArticle(articles[targetIndex], { replaceUrl: true });
     });
-  }
+  });
 }
 
 function mediaButton(media, index) {

@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-05 14:21:49",
+    "generated":  "2026-09-06 09:52:41",
     "articles":  [
+                     {
+                         "title":  "What Robot 790 Is Becoming",
+                         "excerpt":  "Robot 790 is the platform. Eric is the personage that shows up inside it.",
+                         "source":  "articles/what-robot-790-is-becoming.md",
+                         "bytes":  10785,
+                         "modified":  "2026-09-06 09:51"
+                     },
                      {
                          "title":  "Time And Space, Both Live",
                          "excerpt":  "The cleanest explanation for Eric is not that a new mind appeared in the lab.",
@@ -247,6 +254,29 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Anatomy of a Mind Robot 790",
+                      "kind":  "video",
+                      "role":  "embodiment",
+                      "source":  "media/videos/Anatomy_of_a_Mind__Robot_790.mp4",
+                      "preview":  "media/previews/Anatomy_of_a_Mind__Robot_790.jpg",
+                      "banner_rank":  45,
+                      "bytes":  43517398,
+                      "date":  "2026-09-06 09:48",
+                      "modified":  "2026-09-06 09:48",
+                      "description":  "A NotebookLM-style companion video made from the What Robot 790 Is Becoming paper. It serves as the outside-world orientation pass: Robot 790 as the platform, Eric as the robot personage emerging from body, loop, tools, notes, receipts, voice, and correction rather than from a hidden soul claim or a cute prompt alone."
+                  },
+                  {
+                      "title":  "Eric Genius",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Eric-Genius.mp4",
+                      "preview":  "media/previews/Eric-Genius.jpg",
+                      "banner_rank":  45,
+                      "bytes":  28822341,
+                      "date":  "2026-09-05 23:49",
+                      "modified":  "2026-09-05 23:49"
+                  },
                   {
                       "title":  "Robot 790 Teaching Eric To See His Own Face 2026-09-04 15:00:31",
                       "kind":  "video",
