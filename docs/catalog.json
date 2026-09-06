@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-06 10:54:18",
+    "generated":  "2026-09-06 12:23:03",
     "articles":  [
                      {
                          "title":  "What Robot 790 Is Becoming",
@@ -151,6 +151,12 @@
                  ],
     "logs":  [
                  {
+                     "title":  "Hermes Mapping Notetaking 2026 09 06 postmortem",
+                     "source":  "logs/Hermes-Mapping-Notetaking-2026-09-06-postmortem.md",
+                     "bytes":  11237,
+                     "modified":  "2026-09-06 11:46"
+                 },
+                 {
                      "title":  "Robot 790 Teaching Eric To See His Own Face 2026 09 04 postmortem",
                      "source":  "logs/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-postmortem.md",
                      "bytes":  11319,
@@ -277,6 +283,18 @@
                       "date":  "2026-09-06 09:48",
                       "modified":  "2026-09-06 09:48",
                       "description":  "A NotebookLM-style companion video made from the What Robot 790 Is Becoming paper. It serves as the outside-world orientation pass: Robot 790 as the platform, Eric as the robot personage emerging from body, loop, tools, notes, receipts, voice, and correction rather than from a hidden soul claim or a cute prompt alone."
+                  },
+                  {
+                      "title":  "eric occupied workspace memory architecture 2026-09-06",
+                      "kind":  "image",
+                      "role":  "generated-image",
+                      "source":  "media/generated-images/eric-occupied-workspace-memory-architecture-2026-09-06.png",
+                      "preview":  "media/generated-images/eric-occupied-workspace-memory-architecture-2026-09-06.png",
+                      "banner_rank":  60,
+                      "bytes":  2590393,
+                      "date":  "2026-09-06 00:00",
+                      "modified":  "2026-09-06 12:11",
+                      "description":  "A generated concept image for the current Robot 790 memory model: Eric occupies a workspace rather than idles in a void. Pinned notes sit open beside him, shelf notes remain visible but inactive until deliberately reached for, web search returns receipt cards, tools and sensors surround the bench, Brain2 appears as a private advisory display, and the open notebook labeled latest is where the living thread gets written forward."
                   },
                   {
                       "title":  "Eric Genius",

@@ -31,15 +31,35 @@
       color: var(--text);
       font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+    body.resizing-sidebar {
+      cursor: col-resize;
+      user-select: none;
+    }
     main {
-      width: min(1380px, calc(100vw - 32px));
+      width: min(1500px, calc(100vw - 32px));
       min-height: 100vh;
       margin: 0 auto;
       padding: 28px 0 36px;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      --control-sidebar-width: 360px;
+      grid-template-columns: minmax(0, 1fr) 10px minmax(300px, var(--control-sidebar-width));
+      grid-template-areas:
+        "header header header"
+        "logs sidebar-resize interaction"
+        "logs sidebar-resize server"
+        "logs sidebar-resize controls"
+        "logs sidebar-resize context";
+      align-content: start;
+      gap: 14px 8px;
+    }
+    main.sidebar-collapsed {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "header"
+        "logs";
     }
     header {
+      grid-area: header;
       position: sticky;
       top: 0;
       z-index: 20;
@@ -693,8 +713,83 @@
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
+    #micPanel {
+      grid-area: interaction;
+    }
+    #serverPanel {
+      grid-area: server;
+    }
+    #settingsPanel {
+      grid-area: controls;
+    }
+    #contextPanel {
+      grid-area: context;
+    }
+    #controlSidebarResize {
+      grid-area: sidebar-resize;
+      align-self: stretch;
+      min-height: 12rem;
+      border: 0;
+      border-radius: 5px;
+      background: linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.18), transparent);
+      cursor: col-resize;
+      opacity: 0.42;
+    }
+    #controlSidebarResize:hover,
+    body.resizing-sidebar #controlSidebarResize {
+      opacity: 0.85;
+      background: linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.45), transparent);
+    }
+    #serverPanel,
+    #micPanel,
+    #settingsPanel,
+    #contextPanel {
+      align-self: start;
+    }
+    main.sidebar-collapsed #serverPanel,
+    main.sidebar-collapsed #micPanel,
+    main.sidebar-collapsed #settingsPanel,
+    main.sidebar-collapsed #contextPanel,
+    main.sidebar-collapsed #controlSidebarResize {
+      display: none;
+    }
+    #micPanel .settings-body,
+    #serverPanel .settings-body,
+    #settingsPanel .settings-body,
+    #contextPanel .settings-body {
+      max-height: min(68vh, 760px);
+      overflow: auto;
+    }
+    #micPanel .controls,
+    #serverPanel .controls,
+    #settingsPanel .controls,
+    #contextPanel .controls,
+    #serverPanel .custom-model-controls {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+    #micPanel .vision-drop,
+    #micPanel .camera-card {
+      width: 100%;
+      height: auto;
+      min-height: 132px;
+    }
+    #micPanel .vision-preview,
+    #micPanel .camera-preview {
+      height: 72px;
+    }
+    #settingsPanel .lab-goal-control,
+    #settingsPanel .thread-note-control {
+      grid-column: auto;
+    }
+    #settingsPanel .thread-reset-option,
+    #settingsPanel .url-controls .toggle-row {
+      justify-self: stretch;
+    }
     .log-grid {
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(260px, 0.8fr);
+      grid-area: logs;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: minmax(240px, 1.25fr) minmax(200px, 0.75fr);
     }
     .log-grid {
       flex: 0 0 auto;
@@ -709,6 +804,9 @@
       overflow: hidden;
       display: grid;
       grid-template-rows: auto minmax(0, 1fr);
+    }
+    .log-grid > div:first-child {
+      grid-column: 1 / -1;
     }
     .log-header {
       display: flex;
@@ -747,6 +845,30 @@
       padding: 1px 6px;
       border: 1px solid rgba(96, 211, 148, 0.55);
       border-radius: 5px;
+    }
+    .sidebar-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #c8f6df;
+    }
+    .sidebar-toggle-icon {
+      width: 18px;
+      height: 15px;
+      display: inline-grid;
+      grid-template-columns: 6px 1fr;
+      gap: 3px;
+      padding: 2px;
+      border: 1px solid rgba(200, 246, 223, 0.55);
+      border-radius: 3px;
+    }
+    .sidebar-toggle-icon span {
+      min-width: 0;
+      border-radius: 1px;
+      background: rgba(200, 246, 223, 0.48);
+    }
+    .sidebar-toggle[aria-pressed="false"] .sidebar-toggle-icon {
+      grid-template-columns: 1fr 6px;
     }
     .log-actions {
       display: inline-flex;
@@ -909,6 +1031,24 @@
       display: none;
     }
     @media (max-width: 980px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "header"
+          "logs"
+          "interaction"
+          "server"
+          "controls"
+          "context";
+      }
+      main.sidebar-collapsed {
+        grid-template-areas:
+          "header"
+          "logs";
+      }
+      #controlSidebarResize {
+        display: none;
+      }
       header {
         grid-template-columns: 1fr auto;
         grid-template-areas:
@@ -963,6 +1103,22 @@
       .settings-hint {
         white-space: normal;
       }
+      #micPanel .settings-body {
+        display: block;
+      }
+      #micPanel .settings-body > section {
+        padding: 18px 0;
+      }
+      #micPanel .vision-drop,
+      #micPanel .camera-card {
+        width: 100%;
+        height: auto;
+        min-height: 152px;
+      }
+      #micPanel .vision-preview,
+      #micPanel .camera-preview {
+        height: 88px;
+      }
       .vision-drop {
         width: 100%;
         height: auto;
@@ -973,6 +1129,7 @@
       }
       .log-grid {
         flex: none;
+        grid-template-columns: 1fr;
       }
       .log-header {
         display: grid;
@@ -993,6 +1150,10 @@
           <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
           <button id="topHaltRuntime" class="panel-link danger" type="button">Halt</button>
           <button id="stopCast" class="panel-link warn" type="button" hidden disabled>Stop Cast</button>
+          <button id="sidebarToggle" class="panel-link sidebar-toggle" type="button" aria-pressed="true">
+            <span class="sidebar-toggle-icon" aria-hidden="true"><span></span><span></span></span>
+            <span>Panel</span>
+          </button>
           <button id="showEssentials" class="panel-link" type="button">Essentials</button>
           <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
         </div>
@@ -1192,6 +1353,8 @@
         </section>
       </div>
     </details>
+
+    <div id="controlSidebarResize" role="separator" aria-orientation="vertical" aria-label="Resize control sidebar" title="Drag to resize control sidebar"></div>
 
     <details id="settingsPanel" class="settings-panel">
       <summary>
@@ -1606,10 +1769,12 @@
     const contextMapStatus = document.querySelector("#contextMapStatus");
     const quickRecordConversationButton = document.querySelector("#quickRecordConversation");
     const stopCastButton = document.querySelector("#stopCast");
+    const sidebarToggleButton = document.querySelector("#sidebarToggle");
     const showEssentialsButton = document.querySelector("#showEssentials");
     const collapsePanelsButton = document.querySelector("#collapsePanels");
     const serverPanel = document.querySelector("#serverPanel");
     const micPanel = document.querySelector("#micPanel");
+    const controlSidebarResize = document.querySelector("#controlSidebarResize");
     const logGrid = document.querySelector(".log-grid");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
@@ -1893,6 +2058,8 @@
     const customModelReasoningStorageKey = "robot790.customModelReasoning.v1";
     const customModelContextStorageKey = "robot790.customModelContext.v1";
     const customModelParallelStorageKey = "robot790.customModelParallel.v1";
+    const controlSidebarStorageKey = "robot790.controlSidebar.open.v1";
+    const controlSidebarWidthStorageKey = "robot790.controlSidebar.width.v1";
     const micPanelStorageKey = "robot790.micPanel.open.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const loadEricMemoriesStorageKey = "robot790.loadEricMemories.v1";
@@ -5178,11 +5345,79 @@
     }
 
     function loadMicPanelState() {
-      micPanel.open = !micStream;
+      micPanel.open = true;
     }
 
     function saveMicPanelState() {
       scheduleLogPaneHeightUpdate();
+    }
+
+    function setControlSidebarOpen(open, { persist = false, quiet = true } = {}) {
+      const nextOpen = Boolean(open);
+      document.querySelector("main")?.classList.toggle("sidebar-collapsed", !nextOpen);
+      if (sidebarToggleButton) {
+        sidebarToggleButton.setAttribute("aria-pressed", String(nextOpen));
+        sidebarToggleButton.title = nextOpen ? "Hide control sidebar" : "Show control sidebar";
+        sidebarToggleButton.setAttribute("aria-label", sidebarToggleButton.title);
+      }
+      if (persist) localStorage.setItem(controlSidebarStorageKey, nextOpen ? "true" : "false");
+      if (!quiet) recordUiEvent("control sidebar", nextOpen ? "open" : "closed");
+      scheduleLogPaneHeightUpdate();
+    }
+
+    function controlSidebarWidthBounds() {
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1200;
+      return {
+        min: 280,
+        max: Math.max(320, Math.min(620, Math.round(viewportWidth * 0.48)))
+      };
+    }
+
+    function setControlSidebarWidth(width, { persist = false } = {}) {
+      const bounds = controlSidebarWidthBounds();
+      const nextWidth = Math.max(bounds.min, Math.min(bounds.max, Math.round(Number(width) || 360)));
+      document.querySelector("main")?.style.setProperty("--control-sidebar-width", `${nextWidth}px`);
+      controlSidebarResize?.setAttribute("aria-valuemin", String(bounds.min));
+      controlSidebarResize?.setAttribute("aria-valuemax", String(bounds.max));
+      controlSidebarResize?.setAttribute("aria-valuenow", String(nextWidth));
+      if (persist) localStorage.setItem(controlSidebarWidthStorageKey, String(nextWidth));
+      scheduleLogPaneHeightUpdate();
+      return nextWidth;
+    }
+
+    function loadControlSidebarWidth() {
+      setControlSidebarWidth(Number(localStorage.getItem(controlSidebarWidthStorageKey)) || 360);
+    }
+
+    function loadControlSidebarState() {
+      setControlSidebarOpen(localStorage.getItem(controlSidebarStorageKey) !== "false");
+    }
+
+    function toggleControlSidebar() {
+      const isOpen = !document.querySelector("main")?.classList.contains("sidebar-collapsed");
+      setControlSidebarOpen(!isOpen, { persist: true, quiet: false });
+    }
+
+    function beginControlSidebarResize(event) {
+      if (!controlSidebarResize || event.button !== 0) return;
+      event.preventDefault();
+      setControlSidebarOpen(true, { persist: true });
+      document.body.classList.add("resizing-sidebar");
+      controlSidebarResize.setPointerCapture?.(event.pointerId);
+      const onPointerMove = (moveEvent) => {
+        const mainRect = document.querySelector("main")?.getBoundingClientRect();
+        if (!mainRect) return;
+        setControlSidebarWidth(mainRect.right - moveEvent.clientX, { persist: true });
+      };
+      const onPointerUp = (upEvent) => {
+        document.body.classList.remove("resizing-sidebar");
+        controlSidebarResize.releasePointerCapture?.(upEvent.pointerId);
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        recordUiEvent("control sidebar width", controlSidebarResize.getAttribute("aria-valuenow") || "");
+      };
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
     }
 
     function allSettingsPanels() {
@@ -5212,6 +5447,7 @@
     }
 
     function showEssentialPanels() {
+      setControlSidebarOpen(true, { persist: true });
       setPanelOpen(serverPanel, true);
       setPanelOpen(micPanel, true);
       setPanelOpen(settingsPanel, false);
@@ -14419,6 +14655,8 @@
 
     const controlTooltips = {
       quickRecordConversation: "Snapshot conversation, events, and Brain 2 panes without opening the lower pane controls.",
+      sidebarToggle: "Show or hide the control sidebar so the live conversation area can use more width.",
+      controlSidebarResize: "Drag to resize the control sidebar; double-click to reset its width.",
       showEssentials: "Open the panels most useful during live testing.",
       collapsePanels: "Collapse optional control panels to give the logs more room.",
       serverUrl: "WebSocket endpoint for the local speech-to-speech realtime server.",
@@ -15303,7 +15541,16 @@
       recordUiEvent("collapse panels", "requested", { open_panels: [...document.querySelectorAll("details[open]")].map((item) => item.id || item.querySelector("summary")?.textContent?.trim() || "details") });
       collapseAllPanels();
     });
-    window.addEventListener("resize", scheduleLogPaneHeightUpdate);
+    sidebarToggleButton?.addEventListener("click", toggleControlSidebar);
+    controlSidebarResize?.addEventListener("pointerdown", beginControlSidebarResize);
+    controlSidebarResize?.addEventListener("dblclick", () => {
+      setControlSidebarWidth(360, { persist: true });
+      recordUiEvent("control sidebar width", "reset");
+    });
+    window.addEventListener("resize", () => {
+      setControlSidebarWidth(controlSidebarResize?.getAttribute("aria-valuenow") || 360);
+      scheduleLogPaneHeightUpdate();
+    });
     window.addEventListener("beforeunload", (event) => {
       if (!recordingUnloadWarningActive()) return undefined;
       beaconAllLogSnapshots();
@@ -15338,6 +15585,8 @@
     applyControlTooltips();
     populateTtsVoices();
     loadModelPreset();
+    loadControlSidebarWidth();
+    loadControlSidebarState();
     loadSettingsPanelState();
     loadMicPanelState();
     syncServerPanelToConnection();

@@ -292,14 +292,16 @@ async function copyArticleShareUrl(article, button) {
   }
 }
 
-async function openArticle(article, { replaceUrl = false } = {}) {
+async function openArticle(article, { replaceUrl = false, scroll = true } = {}) {
   stopArticleSpeech();
   currentArticle = article;
   articleReaderTitle.textContent = article.title;
   articleReaderBody.innerHTML = "<p>Loading...</p>";
   updateArticleSpeechButtons();
   articleReader.hidden = false;
-  articleReader.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (scroll) {
+    articleReader.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   if (replaceUrl) {
     const url = new URL(location.href);
     if (url.searchParams.has("article")) {
@@ -318,6 +320,23 @@ async function openArticle(article, { replaceUrl = false } = {}) {
     articleReaderBody.innerHTML = `<p>Could not load ${escapeHtml(article.source)}.</p>`;
     updateArticleSpeechButtons();
   }
+}
+
+function articleTimestamp(article) {
+  return Date.parse(article?.modified || 0) || 0;
+}
+
+function defaultArticleIndex(articles) {
+  let newestIndex = 0;
+  let newestTime = Number.NEGATIVE_INFINITY;
+  articles.forEach((article, index) => {
+    const time = articleTimestamp(article);
+    if (time > newestTime) {
+      newestIndex = index;
+      newestTime = time;
+    }
+  });
+  return newestIndex;
 }
 
 function showArticles(articles) {
@@ -347,14 +366,6 @@ function showArticles(articles) {
     });
   });
 
-  const requested = requestedArticleSource();
-  if (requested) {
-    const selectedIndex = articles.findIndex((article) => article.source === requested);
-    if (selectedIndex >= 0) {
-      openArticle(articles[selectedIndex], { replaceUrl: false });
-    }
-  }
-
   document.querySelectorAll("[data-feature-source]").forEach((link) => {
     link.addEventListener("click", (event) => {
       const featureSource = link.dataset.featureSource;
@@ -369,6 +380,16 @@ function showArticles(articles) {
       event.preventDefault();
       openArticle(articles[targetIndex], { replaceUrl: true });
     });
+  });
+
+  const requested = requestedArticleSource();
+  const selectedIndex = requested
+    ? articles.findIndex((article) => article.source === requested)
+    : -1;
+  const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultArticleIndex(articles);
+  openArticle(articles[targetIndex], {
+    replaceUrl: false,
+    scroll: location.hash === "#article-reader"
   });
 }
 

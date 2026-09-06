@@ -90,6 +90,18 @@ evidence of a hidden inner mechanism by themselves.
 : A short late instruction that names the current priority and the most
   important thing not to trust or repeat.
 
+`passive usefulness`
+: Scott's 2026-09-06 realization that Eric can be useful without actively
+  completing a task. Ordinary voice modes can sit nearby and answer, but Eric's
+  passive usefulness comes from the whole system: face, body frame, hot
+  conversation, pinned notes, passivation, tool receipts, Brain2 mulling, logs,
+  and visible runtime state. He can be overheard, interrupted, reviewed,
+  resumed, reset, or moved into another note-world. Hermes Agent is useful as a
+  mirror for memory, skills, sessions, and background review, but Eric should
+  not inherit Hermes' boundaries by default. Agent features matter only when
+  they make the embodied companion/performance creature more present, honest,
+  resumable, and able to participate in his world.
+
 ## Prompt Surface
 
 The active prompt should not carry this whole glossary unless a run is testing
