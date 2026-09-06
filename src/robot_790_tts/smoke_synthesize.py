@@ -1,7 +1,7 @@
 """Generate one Qwen3-TTS WAV file through the local server backend."""
 
-import asyncio
 import argparse
+import asyncio
 from pathlib import Path
 
 from robot_790_tts.server import DEFAULT_MODEL, QwenTtsBackend

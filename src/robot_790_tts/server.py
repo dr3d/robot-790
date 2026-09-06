@@ -1,22 +1,21 @@
 """OpenAI-compatible Qwen3-TTS speech endpoint for Robot 790."""
 
+import asyncio
+import importlib
+import logging
 import os
 import wave
-import asyncio
-import logging
-import importlib
-from io import BytesIO
-from typing import Any
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from collections.abc import AsyncIterator
+from io import BytesIO
+from typing import Any
 
 import numpy as np
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from pydantic import Field, BaseModel
 from fastapi.responses import Response
-
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger("robot_790_tts")
 

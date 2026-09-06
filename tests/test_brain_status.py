@@ -1,4 +1,4 @@
-from robot_790d.brain_status import _parse_lms_ps, get_brain_status, get_gpu_status
+from robot_790d.brain_status import _parse_lms_ps, _summarize_pdh_gpu_engine_values, get_brain_status, get_gpu_status
 
 
 def log_line(source: str, message: str) -> str:
@@ -156,6 +156,7 @@ def test_gpu_status_parses_nvidia_smi(monkeypatch) -> None:
         stderr = ""
 
     monkeypatch.setattr("robot_790d.brain_status.subprocess.run", lambda *_args, **_kwargs: Completed())
+    monkeypatch.setattr("robot_790d.brain_status._read_windows_gpu_engine_utilization", lambda: None)
 
     result = get_gpu_status()
 
@@ -169,11 +170,57 @@ def test_gpu_status_parses_nvidia_smi(monkeypatch) -> None:
     assert result["primary"]["temperature_c"] == 46.0
 
 
+def test_gpu_status_prefers_windows_task_manager_style_utilization(monkeypatch) -> None:
+    class Completed:
+        returncode = 0
+        stdout = "NVIDIA GeForce RTX 5090, 6, 31949, 32256, 46\n"
+        stderr = ""
+
+    monkeypatch.setattr("robot_790d.brain_status.subprocess.run", lambda *_args, **_kwargs: Completed())
+    monkeypatch.setattr(
+        "robot_790d.brain_status._read_windows_gpu_engine_utilization",
+        lambda: {
+            "source": "windows-pdh",
+            "sampled_at": "2026-09-04T17:20:00",
+            "three_d_percent": 43.0,
+            "all_percent": 45.0,
+            "by_luid": {"0x0_0x1": {"3D": 43.0}},
+        },
+    )
+
+    result = get_gpu_status()
+
+    assert result["status"] == "ok"
+    assert result["source"] == "windows-pdh+nvidia-smi"
+    assert result["utilization_source"] == "windows-pdh GPU Engine engtype_3D"
+    assert result["primary"]["utilization_percent"] == 43.0
+    assert result["primary"]["nvidia_utilization_percent"] == 6.0
+    assert result["primary"]["memory_used_gb"] == 31.2
+
+
+def test_summarize_pdh_gpu_engine_values_groups_3d_by_luid() -> None:
+    result = _summarize_pdh_gpu_engine_values(
+        {
+            "pid_1_luid_0x00000000_0x000151B5_phys_0_eng_0_engtype_3D": 12.25,
+            "pid_2_luid_0x00000000_0x000151B5_phys_0_eng_1_engtype_3D": 4.05,
+            "pid_3_luid_0x00000000_0x000151B5_phys_0_eng_2_engtype_Copy": 2,
+            "pid_4_luid_0x00000000_0x00016A21_phys_0_eng_0_engtype_Compute": 3,
+        }
+    )
+
+    assert result is not None
+    assert result["three_d_percent"] == 16.3
+    assert result["all_percent"] == 21.3
+    assert result["by_luid"]["0x00000000_0x000151B5"]["3D"] == 16.3
+    assert result["by_luid"]["0x00000000_0x000151B5"]["Copy"] == 2.0
+
+
 def test_gpu_status_tolerates_missing_nvidia_smi(monkeypatch) -> None:
     def fail_run(*_args, **_kwargs):
         raise FileNotFoundError("nvidia-smi")
 
     monkeypatch.setattr("robot_790d.brain_status.subprocess.run", fail_run)
+    monkeypatch.setattr("robot_790d.brain_status._read_windows_gpu_engine_utilization", lambda: None)
 
     result = get_gpu_status()
 

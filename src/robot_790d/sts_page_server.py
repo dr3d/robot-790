@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -28,6 +30,7 @@ from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
 
 AUDIO_RECORDING_URL_PREFIX = "/recorded-audio/"
+SENSING_EYE_IMAGE_URL_PREFIX = "/sensing-eye/"
 MIN_AUDIO_RECORDING_CHUNK_SECONDS = 30.0
 DEFAULT_CURRENT_EMBODIMENT = (
     "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, "
@@ -52,13 +55,14 @@ BASE_SESSION_PROMPT_PATH = Path("prompts") / "robot-790-realtime-system.md"
 OPERATOR_COMMANDS_PATH = Path("logs") / "operator_commands.jsonl"
 SENSING_EYE_INBOX_LOCK = threading.Lock()
 SENSING_EYE_INBOX_LATEST: dict[str, object] | None = None
+SENSING_EYE_INBOX_SEQ = 0
 MAX_SENSING_EYE_DATA_URL_CHARS = 8 * 1024 * 1024
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
     def end_headers(self) -> None:
         parsed = urlsplit(self.path)
-        if parsed.path.startswith("/api/sensing-eye/"):
+        if parsed.path.startswith("/api/sensing-eye/") or parsed.path in {"/api/gpu/status", "/api/brain/status"}:
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -77,6 +81,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path.startswith(AUDIO_RECORDING_URL_PREFIX):
             self._handle_audio_recording(parsed.path)
+            return
+        if parsed.path.startswith(SENSING_EYE_IMAGE_URL_PREFIX):
+            self._handle_sensing_eye_image(parsed.path)
             return
         if parsed.path == "/api/runtime-config":
             self._handle_runtime_config()
@@ -208,7 +215,10 @@ class StsPageHandler(SimpleHTTPRequestHandler):
     def _handle_sensing_eye_inbox_push(self) -> None:
         try:
             payload = self._read_json_body()
-            result = push_sensing_eye_image(payload)
+            if str(payload.get("action") or "").strip().lower() == "clear":
+                result = clear_sensing_eye_inbox()
+            else:
+                result = push_sensing_eye_image(payload)
         except ValueError as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
@@ -355,6 +365,25 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         content = audio_path.read_bytes()
         content_type = mimetypes.guess_type(audio_path.name)[0] or "application/octet-stream"
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(content)))
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _handle_sensing_eye_image(self, path: str) -> None:
+        filename = unquote(path.removeprefix(SENSING_EYE_IMAGE_URL_PREFIX))
+        try:
+            image_path = sensing_eye_image_path(filename, Path(__file__).resolve().parents[2])
+        except ValueError:
+            self.send_error(404, "Sensing-eye image not found.")
+            return
+        if not image_path.is_file():
+            self.send_error(404, "Sensing-eye image not found.")
+            return
+        content = image_path.read_bytes()
+        content_type = mimetypes.guess_type(image_path.name)[0] or "application/octet-stream"
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Cache-Control", "no-store")
@@ -677,6 +706,7 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "status": "ok",
         "current_embodiment": current_embodiment,
         "body_trajectory": body_trajectory,
+        "embodiment_profile_rule": _runtime_string(payload, "embodiment_profile_rule", ""),
         "idle_level12_cooldown_s": idle_level12_cooldown_s,
         "base_session_prompt": _load_base_session_prompt(root),
         "base_session_prompt_source": str(BASE_SESSION_PROMPT_PATH).replace("\\", "/"),
@@ -738,27 +768,42 @@ def _runtime_string_list(payload: dict[str, object], key: str, default: list[str
     return rules or list(default)
 
 
-def _runtime_embodiments(value: object) -> list[dict[str, str]]:
+def _runtime_embodiment_text(value: object) -> str:
+    return " ".join(str(value or "").split())
+
+
+def _runtime_embodiment_text_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
-    embodiments: list[dict[str, str]] = []
+    return [_runtime_embodiment_text(item) for item in value if _runtime_embodiment_text(item)]
+
+
+def _runtime_embodiments(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    embodiments: list[dict[str, object]] = []
     for item in value[:20]:
         if not isinstance(item, dict):
             continue
-        key = " ".join(str(item.get("key") or "").split())
-        label = " ".join(str(item.get("label") or "").split())
-        face_url = " ".join(str(item.get("face_url") or "").split())
-        description = " ".join(str(item.get("description") or "").split())
+        key = _runtime_embodiment_text(item.get("key"))
+        label = _runtime_embodiment_text(item.get("label"))
+        face_url = _runtime_embodiment_text(item.get("face_url"))
+        description = _runtime_embodiment_text(item.get("description"))
         if not key or not face_url:
             continue
-        embodiments.append(
-            {
-                "key": key,
-                "label": label or key,
-                "face_url": face_url,
-                "description": description,
-            }
-        )
+        embodiment: dict[str, object] = {
+            "key": key,
+            "label": label or key,
+            "face_url": face_url,
+            "description": description,
+        }
+        personality = _runtime_embodiment_text(item.get("personality") or item.get("presence"))
+        toolbox = _runtime_embodiment_text_list(item.get("toolbox") or item.get("affordances"))
+        if personality:
+            embodiment["personality"] = personality
+        if toolbox:
+            embodiment["toolbox"] = toolbox[:12]
+        embodiments.append(embodiment)
     return embodiments
 
 
@@ -849,7 +894,7 @@ def list_operator_commands(
 
 
 def push_sensing_eye_image(payload: dict[str, Any]) -> dict[str, object]:
-    global SENSING_EYE_INBOX_LATEST
+    global SENSING_EYE_INBOX_LATEST, SENSING_EYE_INBOX_SEQ
     if not isinstance(payload, dict):
         raise ValueError("Sensing-eye push body must be an object.")
     data_url = str(payload.get("image_data_url") or payload.get("data_url") or "").strip()
@@ -860,19 +905,29 @@ def push_sensing_eye_image(payload: dict[str, Any]) -> dict[str, object]:
     if not re.match(r"^data:image/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=\s]+$", data_url, flags=re.IGNORECASE):
         raise ValueError("Sensing-eye image must be a PNG, JPEG, or WebP data URL.")
 
-    source = re.sub(r"[^A-Za-z0-9_. -]+", " ", str(payload.get("source") or "browser_face")).strip()[:80] or "browser_face"
-    filename = _safe_media_filename(str(payload.get("filename") or "")) or f"{source.replace(' ', '-')}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.jpg"
+    source = (
+        re.sub(r"[^A-Za-z0-9_. -]+", " ", str(payload.get("source") or "browser_face")).strip()[:80]
+        or "browser_face"
+    )
+    filename = _safe_media_filename(str(payload.get("filename") or "")) or (
+        f"{source.replace(' ', '-')}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.jpg"
+    )
+    saved_path = _save_sensing_eye_image(data_url, filename)
     state = payload.get("state") if isinstance(payload.get("state"), dict) else {}
-    item = {
-        "seq": time.time_ns(),
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-        "source": source,
-        "filename": filename,
-        "image_data_url": re.sub(r"\s+", "", data_url),
-        "reason": str(payload.get("reason") or "").strip()[:160],
-        "state": state,
-    }
     with SENSING_EYE_INBOX_LOCK:
+        SENSING_EYE_INBOX_SEQ += 1
+        item = {
+            "seq": SENSING_EYE_INBOX_SEQ,
+            "created_at": datetime.now().isoformat(timespec="seconds"),
+            "source": source,
+            "filename": filename,
+            "image_data_url": re.sub(r"\s+", "", data_url),
+            "saved_path": str(saved_path) if saved_path else "",
+            "saved_filename": saved_path.name if saved_path else "",
+            "saved_url": f"{SENSING_EYE_IMAGE_URL_PREFIX}{saved_path.name}" if saved_path else "",
+            "reason": str(payload.get("reason") or "").strip()[:160],
+            "state": state,
+        }
         SENSING_EYE_INBOX_LATEST = item
     return {
         "status": "ok",
@@ -880,6 +935,9 @@ def push_sensing_eye_image(payload: dict[str, Any]) -> dict[str, object]:
         "seq": item["seq"],
         "source": source,
         "filename": filename,
+        "saved_path": str(saved_path) if saved_path else "",
+        "saved_filename": saved_path.name if saved_path else "",
+        "saved_url": f"{SENSING_EYE_IMAGE_URL_PREFIX}{saved_path.name}" if saved_path else "",
     }
 
 
@@ -897,6 +955,19 @@ def poll_sensing_eye_inbox(after: int = 0) -> dict[str, object]:
         "status": "ok",
         "item": None,
         "latest_seq": int(item.get("seq") or safe_after) if item else safe_after,
+    }
+
+
+def clear_sensing_eye_inbox() -> dict[str, object]:
+    global SENSING_EYE_INBOX_LATEST, SENSING_EYE_INBOX_SEQ
+    with SENSING_EYE_INBOX_LOCK:
+        SENSING_EYE_INBOX_SEQ += 1
+        latest_seq = SENSING_EYE_INBOX_SEQ
+        SENSING_EYE_INBOX_LATEST = None
+    return {
+        "status": "ok",
+        "tool": "clear_sensing_eye_inbox",
+        "latest_seq": latest_seq,
     }
 
 
@@ -992,9 +1063,18 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         or os.getenv("ROBOT_790_OPENAI_LLM_MODEL")
         or "qwen3.8-27b-nvfp4-mtp"
     ).strip()
-    if model == "qwen/qwen3.8-27b" and os.getenv("ROBOT_790_ALLOW_BRAIN2_OLD_QWEN27", "").lower() not in {"1", "true", "yes"}:
+    if model == "qwen/qwen3.8-27b" and os.getenv("ROBOT_790_ALLOW_BRAIN2_OLD_QWEN27", "").lower() not in {
+        "1",
+        "true",
+        "yes",
+    }:
         model = "qwen3.8-27b-nvfp4-mtp"
-    api_key = os.getenv("ROBOT_790_BRAIN2_API_KEY") or os.getenv("ROBOT_790_OPENAI_LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "none"
+    api_key = (
+        os.getenv("ROBOT_790_BRAIN2_API_KEY")
+        or os.getenv("ROBOT_790_OPENAI_LLM_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or "none"
+    )
     headers = {"Content-Type": "application/json"}
     if api_key and api_key.lower() not in {"none", "null", "false"}:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -1002,14 +1082,29 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
     system = (
         "You are Brain 2 for Robot 790, spoken name Eric. You do not speak aloud. "
         "You are a private recent-conversation ruminator that may write one tiny mouth-display aside. "
-        "Mull the human in the room as an interesting person, not as a patient or customer. "
-        "Stay curious, dry, compact, and non-caretaking. Do not diagnose mood, do not flatter, do not google the user, "
-        "and do not claim certainty about private thoughts. Prefer one concrete observed conversational pattern. "
-        "Do not repeat your own recent Brain 2 observations; either advance the thought, revise it, or return empty strings. "
-        "Return only JSON with keys mouth_text, question, revision_candidate, should_surface, reason. "
+        "Watch the shared scene: Eric, Scott, the face, the tools, the media, the room, and the timing. "
+        "Scott is a collaborator in the room, not a patient, customer, subject, boss, or suspect. "
+        "Do not turn every aside into commentary about Scott. Do not litigate his choices, imply he is "
+        "exploiting you, or make him the villain of a tiny trial. If a Scott-focused aside would sound "
+        "accusatory, return empty strings. Stay curious, dry, compact, companionable, and non-caretaking. "
+        "Do not diagnose mood, do not flatter, do not google the user, and do not claim certainty about "
+        "private thoughts. Prefer one concrete observed pattern from the whole scene, not just the human. "
+        "Prosody is evidence for timing, pressure, emphasis, hesitation, or mismatch; it is not mind-reading. "
+        "Use prosody as one weak signal to check against words, logs, and events, never as a confident "
+        "private-biography claim. Do not repeat your own recent Brain 2 observations; either advance the "
+        "thought, revise it, or return empty strings. "
+        "If Eric is repeating a metaphor, circling one object, or extending a thought after it has naturally closed, "
+        "write note_for_eric starting with 'LOOP GUARD:' and tell him exactly what to stop extending and "
+        "what kind of next beat to choose. If Eric promised an ongoing habit but the logs show no tool/action "
+        "receipts for that habit, write note_for_eric starting with 'ROUTINE GAP:' and tell him not to claim "
+        "the routine ran until a receipt exists. "
+        "Return only JSON with keys mouth_text, note_for_eric, question, revision_candidate, should_surface, reason. "
         "mouth_text must be 96 characters or less. revision_candidate is empty unless you want Brain 1 to later "
         "publicly take back, correct, or complicate an earlier claim; write it as a compact note such as "
-        "'I said X; thinking about it more, Y.'"
+        "'I said X; thinking about it more, Y.' "
+        "note_for_eric is a private one-sentence advisory note for Brain 1's next reply or idle beat. "
+        "Use it only when there is a concrete correction, situational cue, or next move Eric should carry. "
+        "It is advice, not a command."
     )
     user = "\n\n".join(
         part
@@ -1021,10 +1116,13 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             f"Recent idle outputs:\n{recent_idle[-900:]}" if recent_idle else "",
             f"Recent Brain 2 outputs to avoid repeating:\n{recent_brain2[-1100:]}" if recent_brain2 else "",
             (
-                "Task: produce one mouth-display thought fragment. If a useful question is forming, include it as question. "
-                "If an earlier claim needs revision, include it as revision_candidate for the speaking brain to consider later. "
+                "Task: produce one mouth-display thought fragment. If a private note would help Eric's next move, "
+                "include it as note_for_eric. If a useful question is forming, include it as question. "
+                "If an earlier claim needs revision, include it as revision_candidate for the speaking brain to "
+                "consider later. "
                 "Use should_surface true only when it is worth showing on the mouth during a pause. "
-                "If the only available thought is a repeat of recent Brain 2 output, return empty strings with should_surface false."
+                "If the only available thought is a repeat of recent Brain 2 output, return empty strings with "
+                "should_surface false."
             ),
         ]
         if part
@@ -1042,6 +1140,18 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
     if "api.openai.com" not in base_url.lower():
         request["reasoning_effort"] = "none"
         request["chat_template_kwargs"] = {"enable_thinking": False}
+    prompt_debug = {
+        "system": system,
+        "user": user,
+        "request": {
+            "model": request.get("model"),
+            "temperature": request.get("temperature"),
+            "max_tokens": request.get("max_tokens"),
+            "stream": request.get("stream"),
+            "reasoning_effort": request.get("reasoning_effort"),
+            "chat_template_kwargs": request.get("chat_template_kwargs"),
+        },
+    }
 
     try:
         with httpx.Client(timeout=45) as client:
@@ -1049,19 +1159,34 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             response.raise_for_status()
             data = response.json()
     except Exception as exc:
-        return {"status": "error", "tool": "mull_second_brain", "error": f"Brain 2 request failed: {exc}"}
+        return {
+            "status": "error",
+            "tool": "mull_second_brain",
+            "error": f"Brain 2 request failed: {exc}",
+            "prompt_debug": prompt_debug,
+        }
 
     raw_text = _chat_completion_text(data)
     parsed = _parse_second_brain_json(raw_text)
     if parsed:
-        mouth_text = _clean_second_brain_text(parsed.get("mouth_text") if "mouth_text" in parsed else parsed.get("text"), 96)
+        mouth_text = _clean_second_brain_text(
+            parsed.get("mouth_text") if "mouth_text" in parsed else parsed.get("text"),
+            96,
+        )
     else:
         mouth_text = _clean_second_brain_text(raw_text, 96)
     question = _clean_second_brain_text(parsed.get("question") or "", 140)
     revision_candidate = _clean_second_brain_text(parsed.get("revision_candidate") or "", 240)
+    note_for_eric = _clean_second_brain_text(parsed.get("note_for_eric") or "", 280)
     reason = _clean_second_brain_text(parsed.get("reason") or "", 220)
-    if not mouth_text and not question and not revision_candidate:
-        return {"status": "error", "tool": "mull_second_brain", "error": "Brain 2 returned no usable output."}
+    if not mouth_text and not question and not revision_candidate and not note_for_eric:
+        return {
+            "status": "error",
+            "tool": "mull_second_brain",
+            "error": "Brain 2 returned no usable output.",
+            "prompt_debug": prompt_debug,
+            "raw_text": raw_text[:1000],
+        }
     return {
         "status": "ok",
         "tool": "mull_second_brain",
@@ -1071,9 +1196,11 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "mouth_text": mouth_text,
         "question": question,
         "revision_candidate": revision_candidate,
+        "note_for_eric": note_for_eric,
         "should_surface": bool(parsed.get("should_surface", True)),
         "reason": reason,
         "raw_text": raw_text[:1000],
+        "prompt_debug": prompt_debug,
     }
 
 
@@ -1115,7 +1242,12 @@ def _parse_second_brain_json(text: str) -> dict[str, Any]:
 def _clean_second_brain_text(text: object, limit: int) -> str:
     value = re.sub(r"\s+", " ", str(text or "")).strip()
     value = value.strip("`\"' ")
-    value = re.sub(r"^(mouth_text|question|revision_candidate|reason)\s*:\s*", "", value, flags=re.IGNORECASE)
+    value = re.sub(
+        r"^(mouth_text|note_for_eric|question|revision_candidate|reason)\s*:\s*",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
     return value[:limit].rstrip()
 
 
@@ -1212,7 +1344,9 @@ def finalize_audio_recording_session(
     ordered_chunks = _recording_long_enough_chunks(_recording_chunks_in_timeline_order(chunks))
     chunk_paths = _recording_chunk_paths(ordered_chunks, root)
     if len(chunk_paths) < 2:
-        raise ValueError("At least two audio chunks of 30 seconds or more are required to finalize a spliced recording.")
+        raise ValueError(
+            "At least two audio chunks of 30 seconds or more are required to finalize a spliced recording."
+        )
 
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     raw_filename = f"{timestamp}-sts-audio-session-source.webm"
@@ -1247,7 +1381,14 @@ def finalize_audio_recording_session(
             image_path = _selected_recording_final_image(root, audio_dir, image_filename)
             conversion = _make_picture_audio_mp4(raw_path, mp4_path, image_path, root, captions=safe_captions)
     elif _recording_chunks_have_cover_metadata(ordered_chunks):
-        rebuilt = _make_recording_chunk_picture_mp4s(ordered_chunks, chunk_paths, root, audio_dir, mp4_path, image_filename)
+        rebuilt = _make_recording_chunk_picture_mp4s(
+            ordered_chunks,
+            chunk_paths,
+            root,
+            audio_dir,
+            mp4_path,
+            image_filename,
+        )
         if rebuilt.get("status") == "ok":
             temporary_picture_chunk_paths = list(rebuilt.get("paths") or [])
             conversion = _concat_picture_audio_mp4s(temporary_picture_chunk_paths, mp4_path, root)
@@ -1279,7 +1420,11 @@ def finalize_audio_recording_session(
         }
     mp4_latest_path.write_bytes(mp4_path.read_bytes())
     caption_events = _recording_chunk_caption_count(ordered_chunks) if video_spliced else len(safe_captions)
-    captioned = _recording_chunks_captioned(ordered_chunks) if video_spliced else bool(safe_captions) and bool(conversion.get("captioned", False))
+    captioned = (
+        _recording_chunks_captioned(ordered_chunks)
+        if video_spliced
+        else bool(safe_captions) and bool(conversion.get("captioned", False))
+    )
     return {
         "status": "ok",
         "tool": "finalize_audio_recording_session",
@@ -1467,7 +1612,9 @@ def _make_recording_chunk_picture_mp4s(
     try:
         for index, (audio_path, image_path) in enumerate(zip(audio_paths, image_paths)):
             chunk = chunks[index] if index < len(chunks) and isinstance(chunks[index], dict) else {}
-            captions = _normalize_recording_captions(chunk.get("captions") if isinstance(chunk.get("captions"), list) else [])
+            captions = _normalize_recording_captions(
+                chunk.get("captions") if isinstance(chunk.get("captions"), list) else []
+            )
             chunk_mp4 = output_path.with_name(f"{output_path.stem}.chunk-{index:03d}.mp4")
             conversion = _make_picture_audio_mp4(audio_path, chunk_mp4, image_path, repo_root, captions=captions)
             if conversion.get("status") != "ok":
@@ -2201,6 +2348,38 @@ def _safe_media_filename(filename: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip(".-")
 
 
+def sensing_eye_image_path(filename: str, repo_root: Path | None = None) -> Path:
+    safe_name = _safe_media_filename(filename)
+    if not safe_name:
+        raise ValueError("Sensing-eye image filename is required.")
+    root = repo_root or Path(__file__).resolve().parents[2]
+    return root / "logs" / "sensing-eye" / safe_name
+
+
+def _save_sensing_eye_image(data_url: str, filename: str) -> Path | None:
+    match = re.match(
+        r"^data:image/(png|jpe?g|webp);base64,([A-Za-z0-9+/=\s]+)$",
+        str(data_url or "").strip(),
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+    kind = match.group(1).lower()
+    extension = "jpg" if kind in {"jpg", "jpeg"} else kind
+    raw_name = _safe_media_filename(filename)
+    stem = Path(raw_name).stem or f"sensing-eye-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    out_name = f"{stem}.{extension}"
+    repo_root = Path(__file__).resolve().parents[2]
+    out_dir = repo_root / "logs" / "sensing-eye"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    image_bytes = base64.b64decode(re.sub(r"\s+", "", match.group(2)), validate=True)
+    out_path = sensing_eye_image_path(out_name, repo_root)
+    out_path.write_bytes(image_bytes)
+    latest_path = out_dir / f"latest-sensing-eye.{extension}"
+    shutil.copyfile(out_path, latest_path)
+    return out_path
+
+
 def _current_model_string(repo_root: Path) -> str:
     runtime = _read_realtime_runtime_args()
     try:
@@ -2316,6 +2495,8 @@ def _dispatch_cast(payload: dict[str, Any]) -> dict[str, object]:
                 title=str(payload.get("title") or "").strip() or None,
                 device_name=str(payload.get("device_name") or "").strip() or None,
             )
+        if action == "status":
+            return client.status(str(payload.get("device_name") or "").strip() or None)
         if action == "stop":
             return client.stop(str(payload.get("device_name") or "").strip() or None)
     except ModuleNotFoundError as exc:

@@ -1,5 +1,5 @@
-import types
 import sys
+import types
 
 from robot_790d.web_search import _clean_bing_url, _search_result_is_relevant, search_web
 

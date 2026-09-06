@@ -16,6 +16,8 @@ const mediaCaption = document.querySelector("#media-caption");
 const mediaList = document.querySelector("#media-list");
 const logList = document.querySelector("#log-list");
 const logReader = document.querySelector("#log-reader");
+const logReaderTitle = document.querySelector("#log-reader-title");
+const logOpenFile = document.querySelector("#log-open-file");
 const pageHeader = document.querySelector(".page-header");
 const headerBannerImage = document.querySelector("#header-banner-image");
 const randomBanner = document.querySelector("#random-banner");
@@ -144,6 +146,12 @@ function renderMarkdown(markdown) {
 function renderedMarkdownUrl(source) {
   const value = String(source || "");
   if (!/\.md$/i.test(value) || /^[a-z]+:/i.test(value) || value.startsWith("//")) return value;
+  return `${githubDocsBase}${value.replace(/^\/+/, "")}`;
+}
+
+function renderedDocsUrl(source) {
+  const value = String(source || "");
+  if (!value || /^[a-z]+:/i.test(value) || value.startsWith("//")) return value;
   return `${githubDocsBase}${value.replace(/^\/+/, "")}`;
 }
 
@@ -616,6 +624,18 @@ function requestedLogSource() {
   }
 }
 
+function logKindLabel(log) {
+  const source = String(log?.source || "");
+  if (/\.md$/i.test(source)) return "Markdown";
+  if (/\.log$/i.test(source)) return "Log";
+  return "Transcript";
+}
+
+function setLogReaderState(kind) {
+  logReader.classList.toggle("markdown-log", kind === "markdown");
+  logReader.classList.toggle("text-log", kind === "text");
+}
+
 async function selectLog(log, selectedButton, { replaceUrl = true } = {}) {
   logList.querySelectorAll("[data-log]").forEach((button) => {
     button.classList.toggle("selected", button === selectedButton);
@@ -625,15 +645,29 @@ async function selectLog(log, selectedButton, { replaceUrl = true } = {}) {
       button.removeAttribute("aria-current");
     }
   });
-  logReader.textContent = "Loading...";
+  if (logReaderTitle) logReaderTitle.textContent = log.title || "Selected transcript";
+  if (logOpenFile) {
+    logOpenFile.href = renderedDocsUrl(log.source);
+    logOpenFile.hidden = false;
+  }
+  setLogReaderState("");
+  logReader.innerHTML = '<p class="empty">Loading...</p>';
   try {
     const response = await fetch(log.source);
     if (!response.ok) {
       throw new Error(`${response.status} ${response.statusText}`);
     }
-    logReader.textContent = await response.text();
+    const text = await response.text();
+    if (/\.md$/i.test(log.source || "")) {
+      setLogReaderState("markdown");
+      logReader.innerHTML = renderMarkdown(text);
+    } else {
+      setLogReaderState("text");
+      logReader.innerHTML = `<pre class="transcript-text">${escapeHtml(text)}</pre>`;
+    }
   } catch (error) {
-    logReader.textContent = `Could not load ${log.source}.`;
+    setLogReaderState("");
+    logReader.innerHTML = `<p class="empty">Could not load ${escapeHtml(log.source)}.</p>`;
   }
   if (replaceUrl) {
     const url = new URL(location.href);
@@ -655,7 +689,7 @@ function showLogs(logs) {
   logList.innerHTML = logs.map((log, index) => `
     <button class="log-item" type="button" data-log="${index}">
       <strong>${escapeHtml(log.title)}</strong><br>
-      <span class="meta">${escapeHtml(log.modified || "")} - ${bytesLabel(log.bytes)}</span>
+      <span class="meta">${escapeHtml(logKindLabel(log))} - ${escapeHtml(log.modified || "")} - ${bytesLabel(log.bytes)}</span>
     </button>
   `).join("");
 

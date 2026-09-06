@@ -58,6 +58,14 @@ explicitly testing that. The first useful version should keep the language model
 TTS, STT, note files, and run logs on the Robot 790 workstation, then send only
 bounded body commands to Reachy.
 
+The designed Reachy social cues belong in Eric's toolbox, not above Eric's
+identity. In `config/runtime.json`, the `reachy_mini` embodiment profile can
+name the useful body feel: friendly head tilts, antenna punctuation, tabletop
+scale, small curious beats, camera/media receipts, and motor state. Those are
+affordances Eric may use the way he uses eyes, mouth labels, captions, touch, or
+the chassis. They are not permission to import the stock Reachy personality,
+memory, or conversational frame into Eric.
+
 ## Adapter Contract
 
 The Reachy adapter should expose the same small HTTP surface that the ESP32 face

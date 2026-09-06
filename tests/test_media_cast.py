@@ -169,3 +169,48 @@ def test_show_image_requires_direct_image_url() -> None:
         "status": "error",
         "error": "Provide a direct HTTP or HTTPS image URL ending in jpg, jpeg, png, webp, or gif.",
     }
+
+
+def test_status_reports_inactive_cast_playback(monkeypatch) -> None:
+    media_status = SimpleNamespace(
+        player_state="IDLE",
+        idle_reason="CANCELLED",
+        media_session_id=None,
+        content_id=None,
+        content_type=None,
+        stream_type=None,
+    )
+    media_controller = SimpleNamespace(
+        status=media_status,
+        update_status=MagicMock(),
+    )
+    fake_cast = SimpleNamespace(
+        cast_info=SimpleNamespace(
+            friendly_name="Living Room TV",
+            host=SimpleNamespace(host="192.168.0.45", port=8009),
+            model_name="Receiver",
+            manufacturer="Test",
+            uuid="uuid-1",
+        ),
+        wait=MagicMock(),
+        media_controller=media_controller,
+    )
+    fake_pychromecast = SimpleNamespace(
+        get_chromecasts=MagicMock(return_value=([fake_cast], object())),
+        discovery=SimpleNamespace(stop_discovery=MagicMock()),
+    )
+
+    def fake_import_module(name: str) -> object:
+        if name == "pychromecast":
+            return fake_pychromecast
+        raise ModuleNotFoundError(name)
+
+    monkeypatch.setattr(media_cast.importlib, "import_module", fake_import_module)
+
+    result = CastMediaClient(CastMediaSettings(timeout_s=4.0)).status()
+
+    assert result["status"] == "ok"
+    assert result["action"] == "status"
+    assert result["playback_active"] is False
+    assert result["receiver_status"]["player_state"] == "IDLE"
+    media_controller.update_status.assert_called_once_with()

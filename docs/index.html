@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Eric Robot 790</title>
   <meta name="description" content="Eric Robot 790: a local embodied AI and robot experiment with face, voice, tools, notes, idle thought, and public experiment logs.">
-  <link rel="stylesheet" href="assets/site.css?v=2026-09-02-4">
+  <link rel="stylesheet" href="assets/site.css?v=2026-09-05-2">
 </head>
 <body>
   <header class="page-header">
@@ -114,7 +114,18 @@
         <p>Drop public-safe <code>.txt</code>, <code>.log</code>, or <code>.md</code> files into <code>docs/logs/</code>.</p>
       </div>
       <div id="log-list" class="log-list"></div>
-      <pre id="log-reader" class="log-reader" aria-live="polite">No transcript selected.</pre>
+      <div class="log-reader-shell">
+        <div class="log-reader-header">
+          <div>
+            <p class="eyebrow">Selected Run</p>
+            <h3 id="log-reader-title">No transcript selected</h3>
+          </div>
+          <a id="log-open-file" href="#" hidden>Open File</a>
+        </div>
+        <article id="log-reader" class="log-reader" aria-live="polite" tabindex="0">
+          <p class="empty">No transcript selected.</p>
+        </article>
+      </div>
     </section>
 
     <section id="notes" class="notes-grid">
@@ -128,6 +139,6 @@
     </section>
   </main>
 
-  <script src="assets/site.js?v=2026-09-02-4"></script>
+  <script src="assets/site.js?v=2026-09-05-1"></script>
 </body>
 </html>

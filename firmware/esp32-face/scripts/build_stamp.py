@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-import subprocess
 
-Import("env")
+# PlatformIO/SCons injects these names when the build script runs.
+Import("env")  # noqa: F821
 
 
-PROJECT_DIR = Path(env.subst("$PROJECT_DIR")).resolve()
+PROJECT_DIR = Path(env.subst("$PROJECT_DIR")).resolve()  # noqa: F821
 REPO_ROOT = PROJECT_DIR.parent.parent
 HEADER_PATH = PROJECT_DIR / "include" / "firmware_build.h"
 VERSION = "0.3.0"

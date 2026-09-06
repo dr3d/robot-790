@@ -9,6 +9,7 @@ def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
         {
           "current_embodiment": "Current test body.",
           "body_trajectory": "Bodies are test fixtures.",
+          "embodiment_profile_rule": "Profiles are body language, not identity.",
           "idle_level12_cooldown_s": 3.5,
           "default_embodiment": "mask",
           "embodiments": [
@@ -16,7 +17,9 @@ def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
               "key": "mask",
               "label": "Mask face",
               "face_url": "http://esp32-eyes.local/",
-              "description": "External mask rig."
+              "description": "External mask rig.",
+              "personality": "Mask Eric is theatrical but still Eric.",
+              "toolbox": ["big eyes", "mouth captions"]
             },
             {
               "key": "",
@@ -34,6 +37,7 @@ def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
     assert result["status"] == "ok"
     assert result["current_embodiment"] == "Current test body."
     assert result["body_trajectory"] == "Bodies are test fixtures."
+    assert result["embodiment_profile_rule"] == "Profiles are body language, not identity."
     assert result["idle_level12_cooldown_s"] == 3.5
     assert result["base_session_prompt"] == ""
     assert result["base_session_prompt_source"] == "prompts/robot-790-realtime-system.md"
@@ -45,6 +49,8 @@ def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
             "label": "Mask face",
             "face_url": "http://esp32-eyes.local/",
             "description": "External mask rig.",
+            "personality": "Mask Eric is theatrical but still Eric.",
+            "toolbox": ["big eyes", "mouth captions"],
         }
     ]
 
@@ -79,7 +85,8 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
                             "content": (
                                 '{"mouth_text":"He keeps circling the same hinge.",'
                                 '"question":"Is the worry about Eric or the apparatus?",'
-                                '"revision_candidate":"I said it was apparatus worry; thinking about it more, it is replay worry.",'
+                                '"revision_candidate":"I said it was apparatus worry; thinking about it more, '
+                                'it is replay worry.",'
                                 '"should_surface":true,"reason":"recent repeat"}'
                             )
                         }
@@ -166,7 +173,10 @@ def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
     monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
     result = sts_page_server.mull_second_brain(
         {
-            "conversation": "Scott: I think performance mode changed the answer.\nRobot 790: The spotlight made me tidy.",
+            "conversation": (
+                "Scott: I think performance mode changed the answer.\n"
+                "Robot 790: The spotlight made me tidy."
+            ),
             "person_focus": 8,
         }
     )
@@ -266,6 +276,7 @@ def test_operator_command_queue_rejects_empty_and_unknown_kind(tmp_path) -> None
 
 
 def test_sensing_eye_inbox_push_and_poll() -> None:
+    sts_page_server.clear_sensing_eye_inbox()
     pushed = sts_page_server.push_sensing_eye_image(
         {
             "source": "browser_face",
@@ -285,6 +296,26 @@ def test_sensing_eye_inbox_push_and_poll() -> None:
     assert result["item"]["filename"] == "face-mirror.jpg"
     assert result["item"]["state"]["mood"] == "suspicious"
     assert sts_page_server.poll_sensing_eye_inbox(after=int(pushed["seq"]))["item"] is None
+    sts_page_server.clear_sensing_eye_inbox()
+
+
+def test_sensing_eye_inbox_clear_removes_latest_item() -> None:
+    pushed = sts_page_server.push_sensing_eye_image(
+        {
+            "filename": "stale-eye.jpg",
+            "image_data_url": "data:image/jpeg;base64,ZmFrZSBqcGVn",
+        }
+    )
+
+    assert sts_page_server.poll_sensing_eye_inbox(after=0)["item"]["seq"] == pushed["seq"]
+
+    cleared = sts_page_server.clear_sensing_eye_inbox()
+    result = sts_page_server.poll_sensing_eye_inbox(after=0)
+
+    assert cleared["status"] == "ok"
+    assert cleared["latest_seq"] > pushed["seq"]
+    assert result["status"] == "ok"
+    assert result["item"] is None
 
 
 def test_sensing_eye_inbox_rejects_non_image_data_url() -> None:

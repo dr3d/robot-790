@@ -13,6 +13,9 @@
       --text: #eef6f8;
       --muted: #8fa2ad;
       --accent: #5eead4;
+      --face-native-aspect: 0.75;
+      --face-touchscreen-x-scale: 0.9;
+      --face-display-max-width: 648px;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -42,9 +45,9 @@
       overflow: hidden;
     }
     canvas {
-      width: min(100%, calc((100dvh - 16px) * 0.675), 684px);
+      width: min(100%, calc((100dvh - 16px) * var(--face-native-aspect) * var(--face-touchscreen-x-scale)), var(--face-display-max-width));
       min-width: 0;
-      max-width: 684px;
+      max-width: var(--face-display-max-width);
       aspect-ratio: 27 / 40;
       border: 1px solid rgba(136, 164, 178, 0.18);
       background: #030508;
@@ -118,7 +121,7 @@
       main { grid-template-columns: 1fr; }
       .stage { height: 100dvh; padding: 6px; }
       canvas {
-        width: min(calc(100vw - 12px), calc((100dvh - 12px) * 0.675));
+        width: min(calc(100vw - 12px), calc((100dvh - 12px) * var(--face-native-aspect) * var(--face-touchscreen-x-scale)));
         min-width: 0;
       }
       aside { display: none; }
@@ -211,8 +214,8 @@
     const eyeModes = ["normal", "crossed", "swapped", "googly"];
     let state = null;
     let lastStateAt = 0;
-    let mouthTextKey = "";
-    let mouthTextStartedAt = 0;
+    const mouthTextKeys = { eric: "", brain2: "" };
+    const mouthTextStartedAt = { eric: 0, brain2: 0 };
     const mouthPoseKeys = ["open", "width", "curve", "skew", "teeth", "tension", "slant", "upperLift"];
     let easedMouthPose = null;
     let easedMouthShape = "";
@@ -220,6 +223,7 @@
     let easedMouthTalkLevel = 0;
     let lastMouthEaseAt = 0;
     let faceCommandLastSeq = 0;
+    const handledFaceCommandSeqs = new Set();
     let faceCommandPollInFlight = false;
     let faceRecorder = null;
     let faceRecordChunks = [];
@@ -228,6 +232,12 @@
     let faceRecordFilename = "";
     const faceCommandPollMs = 500;
     const stsUrlStorageKey = "robot790.faceSim.stsUrl.v1";
+    const gpuHistoryLimit = 90;
+    const gpuHistoryBucketMs = 1000;
+    const gpuHistoryStorageKey = "robot790.faceSimGpuHistory.v1";
+    const gpuUtilHistory = loadGpuHistory();
+    let gpuTelemetry = { status: "waiting", error: "", primary: null, lastOkAt: 0 };
+    let gpuStatusPollTimer = null;
 
     function fillSelect(select, values) {
       select.replaceChildren(...values.map((value) => {
@@ -270,6 +280,17 @@
       return new Date().toISOString().replace(/[:.]/g, "-").replace("T", "-").replace("Z", "");
     }
 
+    function clockDuration(ms) {
+      const totalSeconds = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const two = (value) => String(value).padStart(2, "0");
+      return hours > 0
+        ? `${hours}:${two(minutes)}:${two(seconds)}`
+        : `${two(minutes)}:${two(seconds)}`;
+    }
+
     function browserFaceRecordingSupported() {
       return Boolean(canvas.captureStream && window.MediaRecorder);
     }
@@ -285,9 +306,11 @@
 
     function updateRecordFaceButton() {
       const recording = faceRecorder && faceRecorder.state === "recording";
-      recordFaceButton.textContent = recording ? "Stop Face Recording" : "Record Face";
+      const elapsed = recording ? Date.now() - faceRecordStartedAt : 0;
+      recordFaceButton.textContent = recording ? `Stop Face ${clockDuration(elapsed)}` : "Record Face";
       recordFaceButton.disabled = !browserFaceRecordingSupported();
       if (!browserFaceRecordingSupported()) setRecordStatus("face recording unsupported", "bad");
+      else if (recording) setRecordStatus(`recording browser face ${clockDuration(elapsed)}`);
     }
 
     async function saveFaceRecording(blob, filename) {
@@ -420,6 +443,14 @@
         }
         for (const command of result.commands || []) {
           const seq = Number(command.seq) || 0;
+          const seqKey = String(command.seq || "");
+          if (seqKey && handledFaceCommandSeqs.has(seqKey)) continue;
+          if (seqKey) {
+            handledFaceCommandSeqs.add(seqKey);
+            while (handledFaceCommandSeqs.size > 100) {
+              handledFaceCommandSeqs.delete(handledFaceCommandSeqs.values().next().value);
+            }
+          }
           if (seq > faceCommandLastSeq) faceCommandLastSeq = seq;
           if (command.type === "capture_to_eye") {
             await captureFaceToEye({
@@ -438,12 +469,14 @@
 
     function trackMouthTextState() {
       const mouth = state?.mouth || {};
-      const key = mouth.text_active && mouth.text
-        ? `${mouth.text_source || "eric"}\n${mouth.text_mode || "center"}\n${mouth.text}`
-        : "";
-      if (key !== mouthTextKey) {
-        mouthTextKey = key;
-        mouthTextStartedAt = performance.now();
+      const items = mouthTextItems(mouth);
+      for (const source of ["eric", "brain2"]) {
+        const item = items.find((candidate) => candidate.source === source);
+        const key = item ? `${item.source}\n${item.mode}\n${item.text}` : "";
+        if (key !== mouthTextKeys[source]) {
+          mouthTextKeys[source] = key;
+          mouthTextStartedAt[source] = performance.now();
+        }
       }
     }
 
@@ -488,6 +521,101 @@
       return Math.max(low, Math.min(high, value));
     }
 
+    function boundedPercent(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return null;
+      return clamp(number, 0, 100);
+    }
+
+    function formatGpuNumber(value, digits = 0) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "";
+      return number.toFixed(digits);
+    }
+
+    function gpuHistoryValue(sample) {
+      if (typeof sample === "number") return boundedPercent(sample) ?? 0;
+      return boundedPercent(sample?.value) ?? 0;
+    }
+
+    function pushGpuHistory(value, sampledAt = Date.now()) {
+      const percent = boundedPercent(value);
+      if (percent === null) return;
+      const bucket = Math.floor(Number(sampledAt) / gpuHistoryBucketMs) * gpuHistoryBucketMs;
+      const last = gpuUtilHistory[gpuUtilHistory.length - 1];
+      if (last && typeof last === "object" && last.t === bucket) {
+        last.value = Math.max(gpuHistoryValue(last), percent);
+      } else {
+        gpuUtilHistory.push({ t: bucket, value: percent });
+      }
+      while (gpuUtilHistory.length > gpuHistoryLimit) gpuUtilHistory.shift();
+      saveGpuHistory();
+    }
+
+    function loadGpuHistory() {
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem(gpuHistoryStorageKey) || "[]");
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .map((sample) => {
+            if (typeof sample === "number") return { t: 0, value: boundedPercent(sample) ?? 0 };
+            return { t: Number(sample?.t) || 0, value: boundedPercent(sample?.value) ?? 0 };
+          })
+          .slice(-gpuHistoryLimit);
+      } catch {
+        return [];
+      }
+    }
+
+    function saveGpuHistory() {
+      try {
+        sessionStorage.setItem(gpuHistoryStorageKey, JSON.stringify(gpuUtilHistory.slice(-gpuHistoryLimit)));
+      } catch {
+        return;
+      }
+    }
+
+    function normalizeGpuPayload(payload) {
+      const gpu = payload?.gpu || payload || {};
+      const primary = gpu?.primary || (Array.isArray(gpu?.gpus) ? gpu.gpus[0] : null);
+      if (gpu.status === "ok" && primary) {
+        return {
+          status: "ok",
+          error: "",
+          primary,
+          sampledAt: gpu.sampled_at || payload?.generated_at || ""
+        };
+      }
+      return {
+        status: "unavailable",
+        error: gpu?.error || payload?.error || "GPU payload did not include usable primary telemetry.",
+        primary: null,
+        sampledAt: gpu?.sampled_at || payload?.generated_at || ""
+      };
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url, { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      return { response, payload };
+    }
+
+    async function fetchGpuStatusFromSts() {
+      const base = normalizedStsUrl();
+      const direct = await fetchJson(new URL("/api/gpu/status", base));
+      let normalized = normalizeGpuPayload(direct.payload);
+      if (direct.response.ok && normalized.status === "ok") return normalized;
+      const brain = await fetchJson(new URL("/api/brain/status", base));
+      normalized = normalizeGpuPayload(brain.payload);
+      if (brain.response.ok && normalized.status === "ok") return normalized;
+      const statusText = !direct.response.ok
+        ? `${direct.response.status} ${direct.response.statusText}`
+        : !brain.response.ok
+        ? `${brain.response.status} ${brain.response.statusText}`
+        : normalized.error;
+      return { status: "unavailable", error: statusText, primary: null, sampledAt: "" };
+    }
+
     function mix(a, b, t) {
       return a + (b - a) * clamp(t, 0, 1);
     }
@@ -514,6 +642,140 @@
       const ca = hexToRgb(a);
       const cb = hexToRgb(b);
       return `rgb(${Math.round(mix(ca.r, cb.r, t))}, ${Math.round(mix(ca.g, cb.g, t))}, ${Math.round(mix(ca.b, cb.b, t))})`;
+    }
+
+    async function refreshGpuStatusQuietly() {
+      try {
+        const direct = await fetchJson(new URL("/api/gpu/status", window.location.href));
+        let normalized = direct.response.ok
+          ? normalizeGpuPayload(direct.payload)
+          : { status: "unavailable", error: `${direct.response.status} ${direct.response.statusText}`, primary: null };
+        if (normalized.status !== "ok") {
+          normalized = await fetchGpuStatusFromSts();
+        }
+        if (normalized.status !== "ok" || !normalized.primary) {
+          gpuTelemetry = {
+            status: "unavailable",
+            error: normalized.error || "GPU telemetry unavailable",
+            primary: null,
+            lastOkAt: gpuTelemetry.lastOkAt || 0
+          };
+          return;
+        }
+        gpuTelemetry = { status: "ok", error: "", primary: normalized.primary, sampledAt: normalized.sampledAt || "", lastOkAt: performance.now() };
+        pushGpuHistory(normalized.primary.utilization_percent);
+      } catch (error) {
+        gpuTelemetry = {
+          status: "unavailable",
+          error: error.message,
+          primary: null,
+          lastOkAt: gpuTelemetry.lastOkAt || 0
+        };
+      } finally {
+        gpuStatusPollTimer = setTimeout(refreshGpuStatusQuietly, 1000);
+      }
+    }
+
+    function drawGpuStrip(t) {
+      const x = 24;
+      const y = 10;
+      const w = faceLayout.width - x * 2;
+      const h = 58;
+      const labelW = 104;
+      const vramW = 194;
+      const chartX = x + labelW + 14;
+      const chartY = y + 16;
+      const chartW = w - labelW - vramW - 34;
+      const chartH = 28;
+      const samples = gpuUtilHistory.length ? gpuUtilHistory.map((sample) => gpuHistoryValue(sample)) : [0, 0];
+      const primary = gpuTelemetry.primary || {};
+      const util = formatGpuNumber(primary.utilization_percent, 0);
+      const usedGb = formatGpuNumber(primary.memory_used_gb, 1);
+      const totalGb = formatGpuNumber(primary.memory_total_gb, 1);
+      const ok = gpuTelemetry.status === "ok" && performance.now() - gpuTelemetry.lastOkAt < 4000;
+
+      ctx.save();
+      drawRoundRect(x, y, w, h, 10, "rgba(6, 6, 12, 0.82)", ok ? "rgba(214, 77, 255, 0.66)" : "rgba(148, 163, 184, 0.30)", 1.2);
+
+      ctx.fillStyle = ok ? "#dffcf2" : "rgba(223, 252, 242, 0.55)";
+      ctx.font = "800 16px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("NERVES", x + labelW / 2, y + h / 2 + 1);
+
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.22)";
+      ctx.lineWidth = 0.7;
+      for (let i = 0; i <= 5; i += 1) {
+        const gx = chartX + (i / 5) * chartW;
+        ctx.beginPath();
+        ctx.moveTo(gx, chartY);
+        ctx.lineTo(gx, chartY + chartH);
+        ctx.stroke();
+      }
+      for (let i = 0; i <= 2; i += 1) {
+        const gy = chartY + (i / 2) * chartH;
+        ctx.beginPath();
+        ctx.moveTo(chartX, gy);
+        ctx.lineTo(chartX + chartW, gy);
+        ctx.stroke();
+      }
+
+      const padded = samples.length === 1 ? [samples[0], samples[0]] : samples;
+      const lastIndex = Math.max(1, padded.length - 1);
+      const points = padded.map((value, index) => ({
+        x: chartX + (index / lastIndex) * chartW,
+        y: chartY + chartH - (boundedPercent(value) ?? 0) / 100 * chartH
+      }));
+      const fill = ctx.createLinearGradient(0, chartY, 0, chartY + chartH);
+      fill.addColorStop(0, "rgba(229, 92, 255, 0.82)");
+      fill.addColorStop(1, "rgba(111, 14, 132, 0.50)");
+      ctx.beginPath();
+      ctx.moveTo(chartX, chartY + chartH);
+      for (const point of points) ctx.lineTo(point.x, point.y);
+      ctx.lineTo(chartX + chartW, chartY + chartH);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = ok ? "#e05cff" : "rgba(224, 92, 255, 0.45)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      points.forEach((point, index) => {
+        if (index === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
+
+      ctx.fillStyle = ok ? "#f4edff" : "rgba(244, 237, 255, 0.55)";
+      ctx.font = "800 18px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(util ? `${util}%` : "--%", chartX + chartW - 4, y + 13);
+
+      ctx.fillStyle = "rgba(214, 190, 236, 0.88)";
+      ctx.font = "800 12px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("VRAM", x + w - vramW / 2, y + 17);
+      ctx.fillStyle = ok ? "#dffcf2" : "rgba(223, 252, 242, 0.55)";
+      ctx.font = "800 24px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.fillText(usedGb && totalGb ? `${usedGb}/${totalGb} GB` : "--", x + w - vramW / 2, y + 39);
+
+      const statusLine = String(state?.status_line || gpuTelemetry.error || "tools: idle").replace(/\s+/g, " ").trim();
+      const statusState = String(state?.status_line_state || "off");
+      ctx.fillStyle = statusState === "running"
+        ? "#fff0ba"
+        : statusState === "bad"
+        ? "#ffb3b3"
+        : statusState === "ok"
+        ? "#c8f6df"
+        : "rgba(211, 218, 228, 0.88)";
+      ctx.font = "800 13px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.textAlign = "left";
+      let clippedStatus = statusLine || "tools: idle";
+      const maxStatusW = w - 28;
+      while (clippedStatus.length > 12 && ctx.measureText(clippedStatus).width > maxStatusW) {
+        clippedStatus = `${clippedStatus.slice(0, -2)}...`;
+      }
+      ctx.fillText(clippedStatus, x + 14, y + h + 15);
+      ctx.restore();
     }
 
     function drawEllipse(x, y, rx, ry, fill, stroke = "", width = 1) {
@@ -574,11 +836,11 @@
     const faceLayout = {
       width: 720,
       height: 960,
-      eyeBandY: 42,
+      eyeBandY: 104,
       eyeBandH: 360,
-      statusY: 330,
+      statusY: 388,
       statusH: 280,
-      mouthY: 555,
+      mouthY: 605,
       mouthH: 320,
       eyePadX: 18,
       mouthPadX: 18,
@@ -805,16 +1067,34 @@
 
     function drawTear(x, y, scale = 1) {
       ctx.save();
-      ctx.fillStyle = "#67d7ff";
-      ctx.strokeStyle = "#c7f6ff";
-      ctx.lineWidth = 1.5;
+      const glow = ctx.createRadialGradient(x - 2 * scale, y + 4 * scale, 3 * scale, x, y + 7 * scale, 28 * scale);
+      glow.addColorStop(0, "rgba(218, 252, 255, 0.72)");
+      glow.addColorStop(0.48, "rgba(104, 218, 255, 0.40)");
+      glow.addColorStop(1, "rgba(104, 218, 255, 0)");
+      ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.moveTo(x, y - 12 * scale);
-      ctx.bezierCurveTo(x + 13 * scale, y + 4 * scale, x + 9 * scale, y + 22 * scale, x, y + 23 * scale);
-      ctx.bezierCurveTo(x - 9 * scale, y + 22 * scale, x - 13 * scale, y + 4 * scale, x, y - 12 * scale);
+      ctx.ellipse(x, y + 8 * scale, 30 * scale, 36 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const drop = ctx.createLinearGradient(x, y - 14 * scale, x, y + 28 * scale);
+      drop.addColorStop(0, "#e5fdff");
+      drop.addColorStop(0.42, "#64ddff");
+      drop.addColorStop(1, "#168cc9");
+      ctx.fillStyle = drop;
+      ctx.strokeStyle = "#d8fbff";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 17 * scale);
+      ctx.bezierCurveTo(x + 18 * scale, y + 5 * scale, x + 13 * scale, y + 30 * scale, x, y + 32 * scale);
+      ctx.bezierCurveTo(x - 13 * scale, y + 30 * scale, x - 18 * scale, y + 5 * scale, x, y - 17 * scale);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.86)";
+      ctx.beginPath();
+      ctx.ellipse(x - 5 * scale, y - 1 * scale, 4.4 * scale, 7.2 * scale, -0.34, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
 
@@ -882,7 +1162,7 @@
         drawSparkle(left ? firmwareEye.width - 54 : 52, 68, 4, "#f6f8dd");
       }
       if (mood === "sad") {
-        drawTear(left ? firmwareEye.width - 52 : 52, 174, 0.82);
+        drawTear(left ? firmwareEye.width - 60 : 60, 178, 1.18);
       }
       drawLids(pose, blinkAmount(t, left), "rgba(5, 12, 15, 0.96)");
       if ((mood === "sleepy" || mood === "bored") && !left) {
@@ -1372,13 +1652,38 @@
       return minSize;
     }
 
-    function drawMouthText(t) {
-      const mouth = state?.mouth || {};
-      const text = String(mouth.text || "");
+    function mouthTextItems(mouth = state?.mouth || {}) {
+      const items = [];
+      const channels = mouth.text_channels || {};
+      for (const source of ["eric", "brain2"]) {
+        const channel = channels[source] || {};
+        const text = String(channel.text || "");
+        if (channel.text_active && text) {
+          items.push({
+            source,
+            text,
+            mode: String(channel.text_mode || "center").toLowerCase(),
+            color: channel.text_color || ""
+          });
+        }
+      }
+      if (!items.length && mouth.text_active && mouth.text) {
+        const source = String(mouth.text_source || "eric").toLowerCase();
+        items.push({
+          source: source === "brain2" || source === "brain_2" || source === "b2" ? "brain2" : "eric",
+          text: String(mouth.text || ""),
+          mode: String(mouth.text_mode || "center").toLowerCase(),
+          color: mouth.text_color || ""
+        });
+      }
+      return items;
+    }
+
+    function drawMouthText(t, item) {
+      const text = String(item?.text || "");
       if (!text) return;
 
-      const source = String(mouth.text_source || "eric").toLowerCase();
-      const isBrain2 = source === "brain2" || source === "brain_2" || source === "b2";
+      const isBrain2 = item.source === "brain2";
       const panelX = faceLayout.captionInsetX + faceLayout.mouthOffsetX;
       const panelY = isBrain2 ? faceLayout.brain2CaptionY : faceLayout.ericCaptionY;
       const panelW = faceLayout.width - faceLayout.captionInsetX * 2;
@@ -1386,8 +1691,9 @@
       const padX = isBrain2 ? 24 : 18;
       const maxTextW = panelW - padX * 2;
       const maxTextH = panelH - 18;
-      const mode = String(mouth.text_mode || "center").toLowerCase();
-      const flashLit = mode !== "flash" || Math.floor((t - mouthTextStartedAt) / 120) % 2 === 0;
+      const mode = item.mode || "center";
+      const startedAt = mouthTextStartedAt[item.source] || 0;
+      const flashLit = mode !== "flash" || Math.floor((t - startedAt) / 120) % 2 === 0;
 
       ctx.save();
       const panelFill = isBrain2 ? "rgba(4, 7, 18, 0.60)" : "rgba(0, 5, 10, 0.90)";
@@ -1401,7 +1707,7 @@
         : mouthTextFontSize(text, maxTextW, maxTextH, isBrain2 ? 24 : 34, isBrain2 ? 13 : 14, fontPrefix);
       ctx.font = `${fontPrefix}${fontSize}px ui-monospace, SFMono-Regular, Consolas, monospace`;
       ctx.textBaseline = "middle";
-      ctx.fillStyle = flashLit ? mouth.text_color || (isBrain2 ? "#d8cfff" : "#dffcff") : "#263c40";
+      ctx.fillStyle = flashLit ? item.color || (isBrain2 ? "#d8cfff" : "#dffcff") : "#263c40";
 
       const textW = ctx.measureText(text).width;
       const textY = panelY + panelH / 2;
@@ -1411,7 +1717,7 @@
 
       if ((mode === "marquee" || textW > maxTextW) && textW > 0) {
         const travel = textW + panelW + padX * 2;
-        const elapsed = Math.max(0, t - mouthTextStartedAt);
+        const elapsed = Math.max(0, t - startedAt);
         const offset = (elapsed / faceLayout.mouthTextMarqueeMsPerPx) % travel;
         const textX = panelX + panelW - offset;
         ctx.textAlign = "left";
@@ -1443,9 +1749,7 @@
       } else {
         drawHumanMouth(shape, pose, eased.talkLevel, energy, t);
       }
-      if (mouth.text_active && mouth.text) {
-        drawMouthText(t);
-      }
+      for (const item of mouthTextItems(mouth)) drawMouthText(t, item);
     }
 
     function drawNose(t) {
@@ -1516,6 +1820,7 @@
       ctx.beginPath();
       ctx.ellipse(360, 520, 314, 386, 0, 0, Math.PI * 2);
       ctx.fill();
+      drawGpuStrip(t);
       const eyeScale = faceLayout.eyeW / firmwareEye.width;
       drawEye(faceLayout.eyePadX + faceLayout.eyeW / 2, faceLayout.eyeBandY + faceLayout.eyeH / 2, true, t, eyeScale);
       drawEye(faceLayout.width - faceLayout.eyePadX - faceLayout.eyeW / 2, faceLayout.eyeBandY + faceLayout.eyeH / 2, false, t, eyeScale);
@@ -1557,7 +1862,9 @@
     stsUrlInput.value = normalizedStsUrl(localStorage.getItem(stsUrlStorageKey) || stsUrlInput.value);
     updateRecordFaceButton();
     pollState();
+    refreshGpuStatusQuietly();
     scheduleFaceCommandPoll();
+    setInterval(updateRecordFaceButton, 1000);
     draw();
   </script>
 </body>

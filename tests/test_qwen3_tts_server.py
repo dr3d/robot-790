@@ -4,7 +4,7 @@ from io import BytesIO
 import numpy as np
 from fastapi.testclient import TestClient
 
-from robot_790_tts.server import QwenTtsBackend, QwenTtsSettings, create_app, _array_to_wav_bytes
+from robot_790_tts.server import QwenTtsBackend, QwenTtsSettings, _array_to_wav_bytes, create_app
 
 
 def test_array_to_wav_bytes_writes_valid_wav() -> None:

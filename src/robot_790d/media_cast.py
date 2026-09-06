@@ -270,6 +270,41 @@ class CastMediaClient:
 
         return {"status": "ok", "tool": "cast_media", "action": "stop", "device": self._device_payload(cast)}
 
+    def status(self, device_name: str | None = None) -> dict[str, object]:
+        pychromecast = importlib.import_module("pychromecast")
+        cast, devices, browser = self._find_cast(device_name)
+        try:
+            if cast is None:
+                target = device_name or self.settings.device_name
+                return {
+                    "status": "error",
+                    "error": f"Cast device not found: {target}",
+                    "target": target,
+                    "devices": devices,
+                }
+            cast.wait(timeout=self.settings.timeout_s)
+            controller = getattr(cast, "media_controller", None)
+            update_status = getattr(controller, "update_status", None)
+            if callable(update_status):
+                update_status()
+        except Exception as exc:
+            logger.warning("Failed to read Cast status: %s", exc)
+            return {"status": "error", "error": f"Failed to read Cast status: {type(exc).__name__}: {exc}"}
+        finally:
+            pychromecast.discovery.stop_discovery(browser)
+
+        receiver_status = self._media_status_payload(cast)
+        player_state = str(receiver_status.get("player_state") or "").upper()
+        playback_active = player_state in {"PLAYING", "BUFFERING", "PAUSED"}
+        return {
+            "status": "ok",
+            "tool": "cast_media",
+            "action": "status",
+            "device": self._device_payload(cast),
+            "receiver_status": receiver_status,
+            "playback_active": playback_active,
+        }
+
     def _find_cast(self, device_name: str | None) -> tuple[Any | None, list[dict[str, object]], Any]:
         pychromecast = importlib.import_module("pychromecast")
         target = (device_name or self.settings.device_name).strip().casefold()

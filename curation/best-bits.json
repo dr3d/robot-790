@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "notes": "Candidate clip moments for later best-of reels. Use video timecode in start and end, not wall-clock time. Exporter adds handle seconds around each clip for fades and final trim.",
+  "default_lead_in_seconds": 2.0,
+  "default_tail_out_seconds": 3.0,
+  "entries": []
+}

@@ -147,20 +147,28 @@ class ReachyAdapterState:
         return self.snapshot()
 
     def set_mouth(self, payload: dict[str, Any]) -> dict[str, Any]:
-        if payload.get("auto") is True or payload.get("clear") is True:
-            self.mouth.update({"manual": False, "talking": False, "text_active": False, "text": ""})
+        if payload.get("auto") is True:
+            self.mouth.update({"manual": False, "talking": False})
             return self.snapshot()
+        if payload.get("clear") is True:
+            self.mouth.update({"text_active": False, "text": ""})
+            return self.snapshot()
+        pose_touched = False
         if "shape" in payload and payload["shape"]:
             self.mouth["shape"] = _clean_token(payload["shape"], "neutral")
+            pose_touched = True
         if "talking" in payload:
             self.mouth["talking"] = bool(payload["talking"])
+            pose_touched = True
         if "energy" in payload:
             self.mouth["energy"] = _clamp_float(payload["energy"], 0.0, 1.0, 0.35)
+            pose_touched = True
         if "text" in payload:
             text = str(payload.get("text") or "")[:180]
             self.mouth["text"] = text
             self.mouth["text_active"] = bool(text)
-        self.mouth["manual"] = True
+        if pose_touched:
+            self.mouth["manual"] = True
         self.director = "mouth"
         return self.snapshot()
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import base64
 import html
-import re
 import logging
+import re
 from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse

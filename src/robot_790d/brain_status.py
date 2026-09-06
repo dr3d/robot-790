@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import copy
 import re
 import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 DEFAULT_TAIL_BYTES = 2_000_000
+NVIDIA_SMI_CACHE_SECONDS = 2.0
+_NVIDIA_SMI_CACHE: tuple[float, int, dict[str, Any]] | None = None
 
 
 def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
@@ -70,6 +74,42 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
 
 def get_gpu_status() -> dict[str, Any]:
     """Read compact GPU telemetry for the local STS dashboard."""
+    windows_utilization = _read_windows_gpu_engine_utilization()
+    nvidia_status = _read_nvidia_smi_gpu_status_cached()
+    if nvidia_status.get("status") != "ok":
+        if windows_utilization:
+            return _gpu_status_from_windows_utilization(windows_utilization)
+        return nvidia_status
+
+    if windows_utilization:
+        primary = nvidia_status.get("primary")
+        if isinstance(primary, dict):
+            nvidia_utilization = primary.get("utilization_percent")
+            primary["nvidia_utilization_percent"] = nvidia_utilization
+            primary["utilization_percent"] = windows_utilization["three_d_percent"]
+            primary["windows_gpu_engine_3d_percent"] = windows_utilization["three_d_percent"]
+            primary["windows_gpu_engine_all_percent"] = windows_utilization["all_percent"]
+        nvidia_status["source"] = "windows-pdh+nvidia-smi"
+        nvidia_status["utilization_source"] = "windows-pdh GPU Engine engtype_3D"
+        nvidia_status["memory_source"] = "nvidia-smi"
+        nvidia_status["windows_gpu_engine"] = windows_utilization
+    return nvidia_status
+
+
+def _read_nvidia_smi_gpu_status_cached() -> dict[str, Any]:
+    global _NVIDIA_SMI_CACHE
+    now = time.monotonic()
+    reader_id = hash((id(_read_nvidia_smi_gpu_status), id(subprocess.run)))
+    if _NVIDIA_SMI_CACHE is not None:
+        sampled_at, cached_reader_id, cached_status = _NVIDIA_SMI_CACHE
+        if cached_reader_id == reader_id and now - sampled_at < NVIDIA_SMI_CACHE_SECONDS:
+            return copy.deepcopy(cached_status)
+    status = _read_nvidia_smi_gpu_status()
+    _NVIDIA_SMI_CACHE = (now, reader_id, copy.deepcopy(status))
+    return status
+
+
+def _read_nvidia_smi_gpu_status() -> dict[str, Any]:
     try:
         completed = subprocess.run(
             [
@@ -109,6 +149,201 @@ def get_gpu_status() -> dict[str, Any]:
         "primary": gpus[0] if gpus else None,
         "gpus": gpus,
     }
+
+
+def _read_windows_gpu_engine_utilization() -> dict[str, Any] | None:
+    try:
+        import win32pdh  # type: ignore[import-not-found]
+    except ImportError:
+        return _read_windows_gpu_engine_utilization_ctypes()
+
+    query = None
+    try:
+        query = win32pdh.OpenQuery()
+        counter = _pdh_add_counter(win32pdh, query, r"\GPU Engine(*)\Utilization Percentage")
+        win32pdh.CollectQueryData(query)
+        time.sleep(0.1)
+        win32pdh.CollectQueryData(query)
+        values = win32pdh.GetFormattedCounterArray(counter, win32pdh.PDH_FMT_DOUBLE)
+    except Exception:
+        return None
+    finally:
+        if query is not None:
+            try:
+                win32pdh.CloseQuery(query)
+            except Exception:
+                pass
+    return _summarize_pdh_gpu_engine_values(values)
+
+
+def _read_windows_gpu_engine_utilization_ctypes() -> dict[str, Any] | None:
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except ImportError:
+        return None
+    try:
+        pdh = ctypes.WinDLL("pdh")
+    except (AttributeError, OSError):
+        return None
+
+    class _PdhValueUnion(ctypes.Union):
+        _fields_ = [
+            ("longValue", ctypes.c_long),
+            ("doubleValue", ctypes.c_double),
+            ("largeValue", ctypes.c_longlong),
+            ("WideStringValue", wintypes.LPWSTR),
+        ]
+
+    class _PdhFmtCounterValue(ctypes.Structure):
+        _fields_ = [("CStatus", wintypes.DWORD), ("value", _PdhValueUnion)]
+
+    class _PdhFmtCounterValueItem(ctypes.Structure):
+        _fields_ = [("szName", wintypes.LPWSTR), ("FmtValue", _PdhFmtCounterValue)]
+
+    dword_ptr = ctypes.c_size_t
+    pdh.PdhOpenQueryW.argtypes = [wintypes.LPCWSTR, dword_ptr, ctypes.POINTER(wintypes.HANDLE)]
+    pdh.PdhOpenQueryW.restype = wintypes.LONG
+    add_counter = getattr(pdh, "PdhAddEnglishCounterW", pdh.PdhAddCounterW)
+    add_counter.argtypes = [
+        wintypes.HANDLE,
+        wintypes.LPCWSTR,
+        dword_ptr,
+        ctypes.POINTER(wintypes.HANDLE),
+    ]
+    add_counter.restype = wintypes.LONG
+    pdh.PdhCollectQueryData.argtypes = [wintypes.HANDLE]
+    pdh.PdhCollectQueryData.restype = wintypes.LONG
+    pdh.PdhGetFormattedCounterArrayW.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.POINTER(wintypes.DWORD),
+        ctypes.POINTER(_PdhFmtCounterValueItem),
+    ]
+    pdh.PdhGetFormattedCounterArrayW.restype = wintypes.LONG
+    pdh.PdhCloseQuery.argtypes = [wintypes.HANDLE]
+    pdh.PdhCloseQuery.restype = wintypes.LONG
+
+    pdh_fmt_double = 0x00000200
+    pdh_more_data = 0x800007D2
+    query = wintypes.HANDLE()
+    counter = wintypes.HANDLE()
+    if pdh.PdhOpenQueryW(None, 0, ctypes.byref(query)) != 0:
+        return None
+    try:
+        if add_counter(query, r"\GPU Engine(*)\Utilization Percentage", 0, ctypes.byref(counter)) != 0:
+            return None
+        if pdh.PdhCollectQueryData(query) != 0:
+            return None
+        time.sleep(0.1)
+        if pdh.PdhCollectQueryData(query) != 0:
+            return None
+        buffer_size = wintypes.DWORD(0)
+        item_count = wintypes.DWORD(0)
+        result = pdh.PdhGetFormattedCounterArrayW(
+            counter,
+            pdh_fmt_double,
+            ctypes.byref(buffer_size),
+            ctypes.byref(item_count),
+            None,
+        )
+        if result & 0xFFFFFFFF != pdh_more_data or buffer_size.value <= 0 or item_count.value <= 0:
+            return None
+        buffer = ctypes.create_string_buffer(buffer_size.value)
+        items = ctypes.cast(buffer, ctypes.POINTER(_PdhFmtCounterValueItem))
+        if (
+            pdh.PdhGetFormattedCounterArrayW(
+                counter,
+                pdh_fmt_double,
+                ctypes.byref(buffer_size),
+                ctypes.byref(item_count),
+                items,
+            )
+            != 0
+        ):
+            return None
+        values = {items[index].szName: items[index].FmtValue.value.doubleValue for index in range(item_count.value)}
+    finally:
+        pdh.PdhCloseQuery(query)
+    return _summarize_pdh_gpu_engine_values(values)
+
+
+def _pdh_add_counter(win32pdh: Any, query: Any, path: str) -> Any:
+    add_english_counter = getattr(win32pdh, "AddEnglishCounter", None)
+    if add_english_counter:
+        return add_english_counter(query, path)
+    return win32pdh.AddCounter(query, path)
+
+
+def _summarize_pdh_gpu_engine_values(values: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(values, dict) or not values:
+        return None
+    by_luid: dict[str, dict[str, float]] = {}
+    all_percent = 0.0
+    three_d_percent = 0.0
+    for raw_name, raw_value in values.items():
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if value <= 0:
+            continue
+        name = str(raw_name)
+        engine_type = _pdh_gpu_engine_type(name)
+        luid = _pdh_gpu_luid(name) or "unknown"
+        by_luid.setdefault(luid, {})
+        by_luid[luid][engine_type] = by_luid[luid].get(engine_type, 0.0) + value
+        all_percent += value
+        if engine_type == "3D":
+            three_d_percent += value
+    return {
+        "source": "windows-pdh",
+        "sampled_at": datetime.now().isoformat(timespec="seconds"),
+        "three_d_percent": _clamp_percent(round(three_d_percent, 1)),
+        "all_percent": _clamp_percent(round(all_percent, 1)),
+        "by_luid": {
+            luid: {engine: _clamp_percent(round(value, 1)) for engine, value in engines.items()}
+            for luid, engines in by_luid.items()
+        },
+    }
+
+
+def _gpu_status_from_windows_utilization(windows_utilization: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": "ok",
+        "source": "windows-pdh",
+        "sampled_at": windows_utilization.get("sampled_at") or datetime.now().isoformat(timespec="seconds"),
+        "utilization_source": "windows-pdh GPU Engine engtype_3D",
+        "primary": {
+            "name": "Windows GPU Engine",
+            "utilization_percent": windows_utilization["three_d_percent"],
+            "windows_gpu_engine_3d_percent": windows_utilization["three_d_percent"],
+            "windows_gpu_engine_all_percent": windows_utilization["all_percent"],
+            "memory_used_mb": None,
+            "memory_total_mb": None,
+            "memory_used_gb": None,
+            "memory_total_gb": None,
+            "memory_usage_percent": None,
+            "temperature_c": None,
+        },
+        "gpus": [],
+        "windows_gpu_engine": windows_utilization,
+    }
+
+
+def _pdh_gpu_luid(name: str) -> str | None:
+    match = re.search(r"luid_(0x[0-9a-fA-F]+_0x[0-9a-fA-F]+)", name)
+    return match.group(1) if match else None
+
+
+def _pdh_gpu_engine_type(name: str) -> str:
+    match = re.search(r"engtype_([^\\)]+)$", name)
+    return match.group(1) if match else "unknown"
+
+
+def _clamp_percent(value: float) -> float:
+    return max(0.0, min(100.0, value))
 
 
 def _parse_nvidia_smi_gpu_line(line: str) -> dict[str, Any] | None:

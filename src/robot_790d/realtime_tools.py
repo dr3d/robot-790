@@ -477,16 +477,16 @@ TOOLS: list[dict[str, object]] = [
         "type": "function",
         "name": "cast_media",
         "description": (
-            "Search YouTube, play videos, show direct image URLs, list Cast receivers, or stop playback on "
-            "Robot 790's configured Chromecast-compatible TV. Use this when the user asks to show, watch, "
-            "cast, play, or put YouTube videos or pictures on the TV."
+            "Search YouTube, play videos, show direct image URLs, list Cast receivers, check playback status, "
+            "or stop playback on Robot 790's configured Chromecast-compatible TV. Use this when the user asks "
+            "to show, watch, cast, play, or put YouTube videos or pictures on the TV."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["devices", "search_youtube", "play_youtube", "show_image", "stop"],
+                    "enum": ["devices", "search_youtube", "play_youtube", "show_image", "status", "stop"],
                     "description": "Media action to perform.",
                 },
                 "query": {
@@ -1032,6 +1032,8 @@ def _cast_media(arguments: dict[str, object]) -> dict[str, object]:
                 title=str(arguments.get("title") or "").strip() or None,
                 device_name=str(arguments.get("device_name") or "").strip() or None,
             )
+        if action == "status":
+            return client.status(str(arguments.get("device_name") or "").strip() or None)
         if action == "stop":
             return client.stop(str(arguments.get("device_name") or "").strip() or None)
     except ModuleNotFoundError as exc:

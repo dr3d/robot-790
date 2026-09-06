@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+try:
+    from .brain_status import get_gpu_status
+except ImportError:  # pragma: no cover - direct script execution fallback
+    from brain_status import get_gpu_status
+
 
 WEB_ROOT = Path(__file__).resolve().parents[2] / "web" / "face-sim"
 DEFAULT_HOST = "127.0.0.1"
@@ -18,6 +23,8 @@ DEFAULT_PORT = 8791
 EYE_MODES = {"normal", "crossed", "swapped", "googly"}
 BROWSER_FACE_RECORDING_URL_PREFIX = "/recorded-face/"
 MAX_BROWSER_FACE_RECORDING_BYTES = 250 * 1024 * 1024
+BROWSER_FACE_CAPTION_PANEL_WIDTH_PX = 720 - 44 * 2
+BROWSER_FACE_MARQUEE_MS_PER_PX = 10
 
 
 def _default_state() -> dict[str, Any]:
@@ -61,6 +68,8 @@ def _default_state() -> dict[str, Any]:
         "camera": False,
         "backlight": 255,
         "message": "browser face ready",
+        "status_line": "tools: idle",
+        "status_line_state": "off",
         "mouth": {
             "present": True,
             "buffered": True,
@@ -76,6 +85,11 @@ def _default_state() -> dict[str, Any]:
             "text_mode": "",
             "text_color": "",
             "text_source": "",
+            "text_until": 0.0,
+            "text_channels": {
+                "eric": {"text_active": False, "text": "", "text_mode": "", "text_color": "", "text_until": 0.0},
+                "brain2": {"text_active": False, "text": "", "text_mode": "", "text_color": "", "text_until": 0.0},
+            },
         },
         "wifi": {
             "mode": "simulated",
@@ -105,6 +119,7 @@ class FaceSimState:
         self.started_at = time.time()
         self.command_lock = threading.Lock()
         self.commands: list[dict[str, Any]] = []
+        self.command_seq = 0
         self.state = _default_state()
         url = f"http://{host}:{port}/"
         self.state["mdns_url"] = url
@@ -113,19 +128,21 @@ class FaceSimState:
         self.state["wifi"]["mdns_url"] = url
 
     def snapshot(self) -> dict[str, Any]:
+        self._expire_mouth_text()
         state = json.loads(json.dumps(self.state))
         state["uptime_ms"] = int((time.time() - self.started_at) * 1000)
         return state
 
     def queue_capture_to_eye(self, payload: dict[str, Any]) -> dict[str, Any]:
-        command = {
-            "seq": time.time_ns(),
-            "type": "capture_to_eye",
-            "created_at": time.time(),
-            "sts_url": str(payload.get("sts_url") or "http://127.0.0.1:8790/").strip(),
-            "reason": str(payload.get("reason") or "").strip()[:160],
-        }
         with self.command_lock:
+            self.command_seq += 1
+            command = {
+                "seq": self.command_seq,
+                "type": "capture_to_eye",
+                "created_at": time.time(),
+                "sts_url": str(payload.get("sts_url") or "http://127.0.0.1:8790/").strip(),
+                "reason": str(payload.get("reason") or "").strip()[:160],
+            }
             self.commands.append(command)
             self.commands = self.commands[-50:]
         self._touch()
@@ -161,9 +178,7 @@ class FaceSimState:
         self.state["mouth"]["talking"] = False
         self.state["mouth"]["shape"] = "neutral"
         self.state["mouth"]["energy"] = 0.45
-        self.state["mouth"]["text_active"] = False
-        self.state["mouth"]["text"] = ""
-        self.state["mouth"]["text_source"] = ""
+        self._clear_mouth_text()
         target = {"x": 0.0, "y": 0.0, "z": 420.0}
         self.state["gaze"]["manual"] = False
         self.state["gaze"]["now"] = target
@@ -223,31 +238,41 @@ class FaceSimState:
         if payload.get("auto") is True:
             mouth["manual"] = False
             mouth["talking"] = False
-            mouth["text_active"] = False
-            mouth["text"] = ""
-            mouth["text_source"] = ""
             self._touch()
             return self.snapshot()
+        pose_touched = False
         if "style" in payload and payload["style"]:
             mouth["style"] = _clean_token(payload["style"], fallback="human")
+            pose_touched = True
         if "shape" in payload and payload["shape"]:
             mouth["shape"] = _clean_token(payload["shape"], fallback="neutral")
+            pose_touched = True
         if "talking" in payload:
             mouth["talking"] = bool(payload["talking"])
+            pose_touched = True
         if "energy" in payload:
             mouth["energy"] = _clamp_float(payload["energy"], 0.0, 1.0, 0.45)
+            pose_touched = True
         if "text" in payload:
             text = str(payload.get("text") or "")[:180]
-            mouth["text"] = text
-            mouth["text_active"] = bool(text)
-            mouth["text_mode"] = str(payload.get("mode") or payload.get("text_mode") or "center")
-            mouth["text_color"] = str(payload.get("color") or payload.get("text_color") or "")
-            mouth["text_source"] = _clean_text_source(payload.get("source") or payload.get("text_source") or "eric")
+            source = _clean_text_source(payload.get("source") or payload.get("text_source") or "eric")
+            channel = self._mouth_text_channel(source)
+            channel["text"] = text
+            channel["text_active"] = bool(text)
+            channel["text_mode"] = str(payload.get("mode") or payload.get("text_mode") or "center")
+            channel["text_color"] = str(payload.get("color") or payload.get("text_color") or "")
+            duration_ms = _mouth_text_duration_ms(payload)
+            channel["text_until"] = 0.0 if duration_ms == 0 else time.time() + duration_ms / 1000.0
+            self._sync_legacy_mouth_text(preferred_source=source)
         if payload.get("clear") is True:
-            mouth["text"] = ""
-            mouth["text_active"] = False
-            mouth["text_source"] = ""
-        mouth["manual"] = True
+            source = (
+                _clean_text_source(payload.get("source") or payload.get("text_source"))
+                if payload.get("source") is not None or payload.get("text_source") is not None
+                else None
+            )
+            self._clear_mouth_text(source=source)
+        if pose_touched:
+            mouth["manual"] = True
         self._touch()
         return self.snapshot()
 
@@ -279,6 +304,10 @@ class FaceSimState:
             )
         if isinstance(payload.get("mouth"), dict):
             result = self.set_mouth(payload["mouth"])
+        if "status_line" in payload:
+            self.state["status_line"] = str(payload.get("status_line") or "")[:220]
+            self.state["status_line_state"] = _clean_token(payload.get("status_line_state"), fallback="off")
+            result = self.snapshot()
         if payload.get("color"):
             self._set_color(str(payload.get("color")))
             result = self.snapshot()
@@ -319,6 +348,53 @@ class FaceSimState:
     def _touch(self) -> None:
         self.state["updated_at"] = time.time()
 
+    def _mouth_text_channel(self, source: str) -> dict[str, Any]:
+        mouth = self.state["mouth"]
+        channels = mouth.setdefault("text_channels", {})
+        if source not in channels or not isinstance(channels[source], dict):
+            channels[source] = {"text_active": False, "text": "", "text_mode": "", "text_color": "", "text_until": 0.0}
+        return channels[source]
+
+    def _clear_mouth_text(self, source: str | None = None) -> None:
+        sources = [source] if source else ["eric", "brain2"]
+        for item in sources:
+            channel = self._mouth_text_channel(item)
+            channel["text_active"] = False
+            channel["text"] = ""
+            channel["text_mode"] = ""
+            channel["text_color"] = ""
+            channel["text_until"] = 0.0
+        self._sync_legacy_mouth_text(preferred_source=source or "eric")
+
+    def _expire_mouth_text(self) -> None:
+        now = time.time()
+        changed = False
+        for source in ("eric", "brain2"):
+            channel = self._mouth_text_channel(source)
+            text_until = float(channel.get("text_until") or 0.0)
+            if channel.get("text_active") and text_until > 0 and now >= text_until:
+                channel["text_active"] = False
+                channel["text"] = ""
+                channel["text_mode"] = ""
+                channel["text_color"] = ""
+                channel["text_until"] = 0.0
+                changed = True
+        if changed:
+            self._sync_legacy_mouth_text()
+            self._touch()
+
+    def _sync_legacy_mouth_text(self, preferred_source: str = "eric") -> None:
+        mouth = self.state["mouth"]
+        sources = [preferred_source, "eric", "brain2"]
+        source = next((item for item in sources if self._mouth_text_channel(item).get("text_active")), "eric")
+        channel = self._mouth_text_channel(source)
+        mouth["text_active"] = bool(channel.get("text_active"))
+        mouth["text"] = str(channel.get("text") or "")
+        mouth["text_mode"] = str(channel.get("text_mode") or "")
+        mouth["text_color"] = str(channel.get("text_color") or "")
+        mouth["text_source"] = source if mouth["text_active"] else ""
+        mouth["text_until"] = float(channel.get("text_until") or 0.0)
+
 
 def _clean_token(value: object, fallback: str) -> str:
     text = str(value or "").strip().lower().replace(" ", "_").replace("-", "_")
@@ -353,6 +429,40 @@ def _clamp_float(value: object, low: float, high: float, fallback: float) -> flo
     return max(low, min(high, number))
 
 
+def _mouth_text_duration_ms(payload: dict[str, Any]) -> int:
+    source = _clean_text_source(payload.get("source") or payload.get("text_source") or "eric")
+    minimum_ms = _minimum_marquee_duration_ms(payload, source)
+    try:
+        precise_ms = float(payload.get("duration_ms"))
+    except (TypeError, ValueError):
+        precise_ms = 0.0
+    if precise_ms > 0:
+        return int(max(50, min(30000, max(precise_ms, minimum_ms))))
+    if "duration" in payload:
+        try:
+            seconds = float(payload.get("duration"))
+        except (TypeError, ValueError):
+            seconds = 0.0
+        if seconds == 0:
+            return 0
+        seconds = max(seconds, minimum_ms / 1000.0)
+        return int(max(0, min(30, seconds)) * 1000)
+    return int(max(5000, minimum_ms))
+
+
+def _minimum_marquee_duration_ms(payload: dict[str, Any], source: str) -> int:
+    mode = str(payload.get("mode") or payload.get("text_mode") or "").strip().lower()
+    if mode not in {"marquee", "scroll"}:
+        return 0
+    text = str(payload.get("text") or "")
+    if not text:
+        return 0
+    char_width_px = 13 if source == "brain2" else 16
+    text_width_px = len(text) * char_width_px
+    pass_to_center_px = BROWSER_FACE_CAPTION_PANEL_WIDTH_PX / 2 + text_width_px + 28
+    return int(max(1000, min(30000, pass_to_center_px * BROWSER_FACE_MARQUEE_MS_PER_PX)))
+
+
 def _int_param(params: dict[str, list[str]], name: str, default: int) -> int:
     try:
         return int((params.get(name) or [default])[0])
@@ -384,6 +494,9 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
         if parsed.path in {"/state", "/api/status", "/status"}:
             self._send_json(200, self.sim_state.snapshot())
             return
+        if parsed.path in {"/api/gpu/status", "/gpu/status"}:
+            self._send_json(200, get_gpu_status())
+            return
         if parsed.path in {"/commands", "/api/commands"}:
             params = parse_qs(parsed.query)
             after = _int_param(params, "after", 0)
@@ -405,7 +518,13 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
             self._send_json(200, self.sim_state.control(payload))
             return
         if parsed.path in {"/mood", "/emotion", "/expression"}:
-            name = str(payload.get("name") or payload.get("mood") or payload.get("emotion") or payload.get("expression") or "")
+            name = str(
+                payload.get("name")
+                or payload.get("mood")
+                or payload.get("emotion")
+                or payload.get("expression")
+                or ""
+            )
             self._send_json(200, self.sim_state.set_mood(name, color=str(payload.get("color") or "")))
             return
         if parsed.path == "/style":

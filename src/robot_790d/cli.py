@@ -1,6 +1,6 @@
-import os
-import json
 import argparse
+import json
+import os
 
 from robot_790d.behavior import BehaviorDaemon
 from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, FaceSettings
@@ -52,4 +52,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

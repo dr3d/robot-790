@@ -1,5 +1,29 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["tests"]
+  "python.testing.pytestArgs": ["tests"],
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/firmware/**/.pio/**": true,
+    "**/docs/media/raw-video/**": true,
+    "**/logs/audio/**": true,
+    "**/logs/live/**": true
+  },
+  "search.exclude": {
+    "**/.venv/**": true,
+    "**/firmware/**/.pio/**": true,
+    "**/docs/media/raw-video/**": true,
+    "**/logs/audio/**": true,
+    "**/logs/live/**": true
+  },
+  "C_Cpp.files.exclude": {
+    "**/.venv/**": true,
+    "**/firmware/**/.pio/**": true
+  },
+  "C_Cpp.autocomplete": "disabled",
+  "C_Cpp.errorSquiggles": "disabled",
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "C_Cpp.workspaceParsingPriority": "low",
+  "C_Cpp.workspaceSymbols": "disabled",
+  "C_Cpp.codeAnalysis.runAutomatically": false
 }

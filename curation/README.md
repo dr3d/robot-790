@@ -32,6 +32,28 @@ The usual workflow:
 The miner is intentionally a first pass. It is meant to reduce TLDR pain, not
 replace judgment.
 
+## Best Bits
+
+After each postmortem, add a short `Best Bits` section when the run has a moment
+worth saving for a later reel. Use video timecode, not wall-clock time.
+
+Each candidate should name:
+
+- title
+- source video
+- start and end timecode
+- handle seconds before and after the marked moment
+- why it matters
+- source class
+- publishability
+- status: candidate, cut, used, or rejected
+
+Promote durable candidates into `curation/best-bits.md` and
+`curation/best-bits.json`. Then run `scripts/export_best_bits.ps1` to isolate
+clips under `curation/best-bits/clips/` for later assembly into a best-of reel.
+The manifest defaults to a small lead-in and a longer tail-out so later fades
+have room; final publishing trims can be tighter.
+
 Eric-authored summaries are different from mined transcripts. They are useful
 because they show what the public voice thinks the run meant, but they still
 need provenance fences. The strongest form is: "here is what happened, here is
@@ -72,6 +94,18 @@ Current key concept:
   first-person continuity.
 - `warm-up-curve.md`: the candidate pattern where Eric becomes more
   companionable after enough current-run material accumulates.
+- `brain2-self-user-safety.md`: the safety contract for letting Brain2 leave
+  labeled reflection cues for Brain1 without impersonating Scott or silently
+  rewriting memory.
+- `nerves-and-pulse.md`: the pinned terminology seed that frames Eric as a
+  quantized loop where each pulse samples state and leaves a trace.
+
+## Archive Sweeps
+
+Bulky or high-count ignored runtime artifacts can be moved to the adjacent
+`robot-790-archive` folder when they no longer need to sit in the active repo.
+Record each sweep in `curation/archive-sweeps.md`, including the archive folder,
+manifest path, policy, and totals.
 
 ## Audio Clip Albums
 
