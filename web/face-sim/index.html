@@ -427,6 +427,28 @@
       setTimeout(pollFaceCommands, faceCommandPollMs);
     }
 
+    async function syncFaceCommandCursor() {
+      const url = new URL("/commands", location.href);
+      url.searchParams.set("after", String(Number.MAX_SAFE_INTEGER));
+      url.searchParams.set("limit", "1");
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      faceCommandLastSeq = Math.max(faceCommandLastSeq, Number(result.latest_seq) || 0);
+    }
+
+    async function startFaceCommandPolling() {
+      try {
+        await syncFaceCommandCursor();
+      } catch (error) {
+        setCaptureStatus(`mirror sync failed: ${error.message}`, "bad");
+      } finally {
+        scheduleFaceCommandPoll();
+      }
+    }
+
     async function pollFaceCommands() {
       if (faceCommandPollInFlight) {
         scheduleFaceCommandPoll();
@@ -1863,7 +1885,7 @@
     updateRecordFaceButton();
     pollState();
     refreshGpuStatusQuietly();
-    scheduleFaceCommandPoll();
+    startFaceCommandPolling();
     setInterval(updateRecordFaceButton, 1000);
     draw();
   </script>

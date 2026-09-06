@@ -275,8 +275,8 @@ def test_operator_command_queue_rejects_empty_and_unknown_kind(tmp_path) -> None
         raise AssertionError("Expected unsupported operator command kind to fail")
 
 
-def test_sensing_eye_inbox_push_and_poll() -> None:
-    sts_page_server.clear_sensing_eye_inbox()
+def test_sensing_eye_inbox_push_and_poll(tmp_path) -> None:
+    sts_page_server.clear_sensing_eye_inbox(repo_root=tmp_path)
     pushed = sts_page_server.push_sensing_eye_image(
         {
             "source": "browser_face",
@@ -284,7 +284,8 @@ def test_sensing_eye_inbox_push_and_poll() -> None:
             "image_data_url": "data:image/jpeg;base64,ZmFrZSBqcGVn",
             "reason": "self audit",
             "state": {"mood": "suspicious", "mouth": {"shape": "sneer"}},
-        }
+        },
+        repo_root=tmp_path,
     )
 
     result = sts_page_server.poll_sensing_eye_inbox(after=0)
@@ -296,26 +297,49 @@ def test_sensing_eye_inbox_push_and_poll() -> None:
     assert result["item"]["filename"] == "face-mirror.jpg"
     assert result["item"]["state"]["mood"] == "suspicious"
     assert sts_page_server.poll_sensing_eye_inbox(after=int(pushed["seq"]))["item"] is None
-    sts_page_server.clear_sensing_eye_inbox()
+    sts_page_server.clear_sensing_eye_inbox(repo_root=tmp_path)
 
 
-def test_sensing_eye_inbox_clear_removes_latest_item() -> None:
+def test_sensing_eye_inbox_clear_removes_latest_item(tmp_path) -> None:
     pushed = sts_page_server.push_sensing_eye_image(
         {
             "filename": "stale-eye.jpg",
             "image_data_url": "data:image/jpeg;base64,ZmFrZSBqcGVn",
-        }
+        },
+        repo_root=tmp_path,
     )
+    latest_path = tmp_path / "logs" / "sensing-eye" / "latest-sensing-eye.jpg"
 
     assert sts_page_server.poll_sensing_eye_inbox(after=0)["item"]["seq"] == pushed["seq"]
+    assert latest_path.exists()
 
-    cleared = sts_page_server.clear_sensing_eye_inbox()
+    cleared = sts_page_server.clear_sensing_eye_inbox(repo_root=tmp_path)
     result = sts_page_server.poll_sensing_eye_inbox(after=0)
 
     assert cleared["status"] == "ok"
     assert cleared["latest_seq"] > pushed["seq"]
+    assert str(latest_path) in cleared["cleared_files"]
+    assert not latest_path.exists()
     assert result["status"] == "ok"
     assert result["item"] is None
+
+
+def test_sensing_eye_inbox_poll_reports_cursor_without_replaying_stale_item(tmp_path) -> None:
+    pushed = sts_page_server.push_sensing_eye_image(
+        {
+            "filename": "reload-stale-eye.jpg",
+            "image_data_url": "data:image/jpeg;base64,ZmFrZSBqcGVn",
+        },
+        repo_root=tmp_path,
+    )
+
+    result = sts_page_server.poll_sensing_eye_inbox(after=999_999)
+
+    assert result["status"] == "ok"
+    assert result["item"] is None
+    assert result["latest_seq"] == pushed["seq"]
+    assert sts_page_server.poll_sensing_eye_inbox(after=int(pushed["seq"]))["item"] is None
+    sts_page_server.clear_sensing_eye_inbox(repo_root=tmp_path)
 
 
 def test_sensing_eye_inbox_rejects_non_image_data_url() -> None:

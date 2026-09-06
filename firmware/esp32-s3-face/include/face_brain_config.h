@@ -16,6 +16,7 @@
 #define FACE_LCD_WIDTH 240
 #define FACE_LCD_HEIGHT 320
 #define FACE_LCD_ROTATION 0
+#define FACE_BOOT_BUTTON 0
 
 // The S3 integrated-face build defaults 180 degrees from the raw Waveshare
 // panel orientation, matching the current Robot 790 housing experiments.

@@ -20,6 +20,22 @@ def test_browser_face_mouth_text_tracks_caption_source() -> None:
     assert cleared["mouth"]["text_source"] == ""
 
 
+def test_browser_face_command_queue_can_be_cleared() -> None:
+    state = face_sim_server.FaceSimState("127.0.0.1", 8791)
+
+    queued = state.queue_capture_to_eye({"reason": "mirror test"})
+    before_clear = state.list_commands(after=0)
+    cleared = state.clear_commands()
+    after_clear = state.list_commands(after=0)
+
+    assert queued["queued"] is True
+    assert before_clear["commands"][0]["seq"] == queued["seq"]
+    assert cleared["cleared"] == 1
+    assert cleared["latest_seq"] > queued["seq"]
+    assert after_clear["commands"] == []
+    assert after_clear["latest_seq"] == cleared["latest_seq"]
+
+
 def test_save_browser_face_recording_writes_timestamped_and_latest_files(tmp_path: Path) -> None:
     result = face_sim_server.save_browser_face_recording(
         b"webm data",

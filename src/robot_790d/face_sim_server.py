@@ -154,16 +154,30 @@ class FaceSimState:
             "message": "browser face capture queued",
         }
 
+    def clear_commands(self) -> dict[str, Any]:
+        with self.command_lock:
+            cleared = len(self.commands)
+            self.commands = []
+            self.command_seq += 1
+            latest_seq = self.command_seq
+        self._touch()
+        return {
+            "ok": True,
+            "tool": "clear_browser_face_commands",
+            "cleared": cleared,
+            "latest_seq": latest_seq,
+        }
+
     def list_commands(self, after: int = 0, limit: int = 10) -> dict[str, Any]:
         safe_after = max(0, int(after or 0))
         safe_limit = max(1, min(50, int(limit or 10)))
         with self.command_lock:
             commands = [command for command in self.commands if int(command.get("seq") or 0) > safe_after][:safe_limit]
-            latest_seq = int(self.commands[-1]["seq"]) if self.commands else safe_after
+            latest_seq = self.command_seq
         return {
             "ok": True,
             "commands": commands,
-            "latest_seq": commands[-1]["seq"] if commands else latest_seq,
+            "latest_seq": latest_seq,
         }
 
     def release(self) -> dict[str, Any]:
@@ -553,6 +567,9 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path in {"/capture_to_eye", "/api/capture_to_eye"}:
             self._send_json(200, self.sim_state.queue_capture_to_eye(payload))
+            return
+        if parsed.path in {"/commands/clear", "/api/commands/clear"}:
+            self._send_json(200, self.sim_state.clear_commands())
             return
         self._send_json(404, {"ok": False, "error": "unknown endpoint"})
 

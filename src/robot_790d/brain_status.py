@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 import subprocess
 import time
@@ -39,6 +40,9 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
         model["reasoning_effort"] = "omitted"
     if runtime_args.get("responses_api_audio_max_tokens"):
         model["audio_max_tokens"] = _int_or_none(runtime_args["responses_api_audio_max_tokens"])
+    runtime_specimen = _read_runtime_specimen(root, model.get("llm_model"))
+    if runtime_specimen:
+        model["runtime_specimen"] = runtime_specimen
     lm_studio = _read_lm_studio_status(model.get("llm_model"))
     if lm_studio:
         model["lm_studio"] = lm_studio
@@ -487,6 +491,9 @@ def _parse_session(err_text: str, events_text: str, conversation_text: str) -> d
 
 
 def _read_lm_studio_status(preferred_model: str | None = None) -> dict[str, Any] | None:
+    json_status = _read_lm_studio_status_json(preferred_model)
+    if json_status is not None:
+        return json_status
     try:
         completed = subprocess.run(
             ["lms", "ps"],
@@ -507,6 +514,106 @@ def _read_lm_studio_status(preferred_model: str | None = None) -> dict[str, Any]
         "loaded_models": models,
         "raw_status": _compact_lms_ps(text),
     }
+
+
+def _read_lm_studio_status_json(preferred_model: str | None = None) -> dict[str, Any] | None:
+    try:
+        completed = subprocess.run(
+            ["lms", "ps", "--json"],
+            check=False,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    raw = (completed.stdout or "").strip()
+    try:
+        payload = json.loads(raw or "[]")
+    except json.JSONDecodeError:
+        return None
+    models = _normalize_lms_ps_json(payload)
+    active = _choose_lm_studio_model(models, preferred_model)
+    return {
+        "available": True,
+        "active_model": active,
+        "loaded_models": models,
+        "raw_status": _compact_json(payload),
+        "raw_json_available": True,
+    }
+
+
+def _normalize_lms_ps_json(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, dict):
+        entries = payload.get("models") or payload.get("loaded_models") or payload.get("data") or []
+    else:
+        entries = payload
+    if not isinstance(entries, list):
+        return []
+    models: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        identifier = (
+            entry.get("identifier")
+            or entry.get("id")
+            or entry.get("modelIdentifier")
+            or entry.get("model")
+            or entry.get("path")
+        )
+        model = entry.get("model") or entry.get("modelKey") or entry.get("identifier") or identifier
+        normalized = {
+            "identifier": str(identifier or "").strip(),
+            "model": str(model or "").strip(),
+            "status": str(entry.get("status") or entry.get("state") or "").strip() or None,
+            "size": entry.get("size") or entry.get("sizeBytes") or entry.get("diskSize"),
+            "context_window_tokens": _first_int(
+                entry,
+                "context_window_tokens",
+                "contextLength",
+                "context_length",
+                "context",
+                "n_ctx",
+            ),
+            "parallel_predictions": _first_int(
+                entry,
+                "parallel_predictions",
+                "parallelPredictions",
+                "parallel",
+                "slots",
+            ),
+            "device": entry.get("device") or entry.get("placement"),
+            "ttl": entry.get("ttl") or entry.get("ttlSeconds"),
+        }
+        if not normalized["identifier"] and not normalized["model"]:
+            continue
+        models.append(normalized)
+    return models
+
+
+def _read_runtime_specimen(repo_root: Path, preferred_model: str | None = None) -> dict[str, Any] | None:
+    path = repo_root / "config" / "runtime_specimen.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    specimens = payload.get("specimens") if isinstance(payload, dict) else None
+    if not isinstance(specimens, list):
+        return None
+    preferred = str(preferred_model or "").strip().lower()
+    fallback: dict[str, Any] | None = None
+    for specimen in specimens:
+        if not isinstance(specimen, dict):
+            continue
+        model = str(specimen.get("model") or "").strip().lower()
+        if not fallback:
+            fallback = specimen
+        if preferred and model == preferred:
+            return specimen
+    return fallback if not preferred else None
 
 
 def _parse_lms_ps(text: str) -> list[dict[str, Any]]:
@@ -562,7 +669,18 @@ def _read_realtime_runtime_args(repo_root: Path) -> dict[str, str]:
         return {}
     args = {
         key: value
-        for key in ("model_name", "responses_api_reasoning_effort", "responses_api_audio_max_tokens")
+        for key in (
+            "model_name",
+            "responses_api_reasoning_effort",
+            "responses_api_audio_max_tokens",
+            "qwen3_tts_dtype",
+            "qwen3_tts_speaker",
+            "stt",
+            "tts",
+            "llm_backend",
+            "num_pipelines",
+            "stream_batch_sentences",
+        )
         if (value := _command_arg(command, key))
     }
     args["_running"] = "true"
@@ -606,6 +724,23 @@ def _command_arg(command: str, name: str) -> str | None:
 def _compact_lms_ps(text: str) -> str:
     lines = [line.rstrip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines[-8:])
+
+
+def _compact_json(payload: Any, max_chars: int = 4000) -> str:
+    try:
+        text = json.dumps(payload, ensure_ascii=True, sort_keys=True)
+    except (TypeError, ValueError):
+        text = str(payload)
+    return text if len(text) <= max_chars else f"{text[:max_chars]}..."
+
+
+def _first_int(entry: dict[str, Any], *keys: str) -> int | None:
+    for key in keys:
+        value = entry.get(key)
+        parsed = _int_or_none(value)
+        if parsed is not None:
+            return parsed
+    return None
 
 
 def _add_estimated_throughput(
@@ -692,6 +827,17 @@ def _build_notes(
         notes.append("LLM model name was not found in the startup log.")
     if context.get("context_window_tokens") is None:
         notes.append("Context window size was not found; context pressure is an inference, not a measured maximum.")
+    specimen = model.get("runtime_specimen")
+    if isinstance(specimen, dict):
+        quantization = specimen.get("quantization")
+        observations = specimen.get("observations")
+        if isinstance(quantization, dict):
+            key = quantization.get("kv_cache_key")
+            value = quantization.get("kv_cache_value")
+            if key or value:
+                notes.append(f"Runtime specimen records KV cache as k={key or 'unknown'}, v={value or 'unknown'}.")
+        if isinstance(observations, dict) and observations.get("audit_status"):
+            notes.append(f"Runtime specimen audit status: {observations.get('audit_status')}.")
     return notes
 
 

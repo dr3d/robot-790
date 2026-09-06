@@ -19,6 +19,7 @@ FEATURES = [
     "touch_probe",
     "imu_probe",
     "display_flip",
+    "boot_brightness_cycle",
     "arduino_ota",
 ]
 

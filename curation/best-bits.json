@@ -3,5 +3,71 @@
   "notes": "Candidate clip moments for later best-of reels. Use video timecode in start and end, not wall-clock time. Exporter adds handle seconds around each clip for fades and final trim.",
   "default_lead_in_seconds": 2.0,
   "default_tail_out_seconds": 3.0,
-  "entries": []
+  "entries": [
+    {
+      "id": "20260905-four-diets-one-mouth",
+      "title": "Four diets, one mouth",
+      "run": "20260905-215204",
+      "source_video": "logs/audio/20260905-215204-sts-audio-picture.mp4",
+      "source_postmortem": "curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md",
+      "start": "00:15",
+      "end": "00:28",
+      "why": "Eric explains the multi-lane architecture in usable public language, then lands the mechanism: different inputs produce different outputs.",
+      "source_class": "video / transcript / event log",
+      "publishability": "strong",
+      "status": "candidate"
+    },
+    {
+      "id": "20260905-four-diets-failure-mode",
+      "title": "Four distinct blind spots",
+      "run": "20260905-215204",
+      "source_video": "logs/audio/20260905-215204-sts-audio-picture.mp4",
+      "source_postmortem": "curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md",
+      "start": "01:19",
+      "end": "01:32",
+      "why": "Eric owns the design risk instead of defending it: independent lanes can disagree, stale verifiers can block or rubber-stamp, and different diets make distinct blind spots.",
+      "source_class": "video / transcript / Brain2",
+      "publishability": "strong",
+      "status": "candidate"
+    },
+    {
+      "id": "20260905-b1-final-say",
+      "title": "The public voice has final say",
+      "run": "20260905-215204",
+      "source_video": "logs/audio/20260905-215204-sts-audio-picture.mp4",
+      "source_postmortem": "curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md",
+      "start": "03:45",
+      "end": "03:53",
+      "why": "This defines governance for the architecture. Brain2 is a tap on the shoulder, not another public speaker.",
+      "source_class": "video / transcript",
+      "publishability": "strong",
+      "status": "candidate"
+    },
+    {
+      "id": "20260905-director-notes-booth",
+      "title": "The director's notes leaked into the booth",
+      "run": "20260905-233311",
+      "source_video": "logs/audio/20260905-233244-sts-audio-session-picture.mp4",
+      "source_postmortem": "curation/postmortems/20260905-233311-salem-dollar-booth-routine.md",
+      "start": "15:52",
+      "end": "16:04",
+      "why": "B2 names the failure exactly: Eric stopped performing the Salem table routine and let internal stage directions reach the public mouth.",
+      "source_class": "Brain2 / event log / audio",
+      "publishability": "maybe",
+      "status": "candidate"
+    },
+    {
+      "id": "20260905-stage-directions-escaped",
+      "title": "The stage directions escaped the script",
+      "run": "20260905-233311",
+      "source_video": "logs/audio/20260905-233244-sts-audio-session-picture.mp4",
+      "source_postmortem": "curation/postmortems/20260905-233311-salem-dollar-booth-routine.md",
+      "start": "16:05",
+      "end": "16:17",
+      "why": "This is the compact diagnosis of the run: not bad character, bad role-boundary filtering.",
+      "source_class": "Brain2 / event log / audio",
+      "publishability": "maybe",
+      "status": "candidate"
+    }
+  ]
 }

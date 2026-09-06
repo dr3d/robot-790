@@ -1,4 +1,7 @@
 {
+  "media/videos/AI_Is_More_Believable_As_A_Robot.mp4": {
+    "description": "A cover-arted MP4 converted from the NotebookLM audio piece AI Is More Believable As A Robot, using the Robot-embodiment image. This is an outside-world explainer for the project claim that Eric becomes more coherent when he is treated as a robot personage with body, tools, limits, memory practice, and receipts rather than as a simulated human."
+  },
   "media/videos/Anatomy_of_a_Mind__Robot_790.mp4": {
     "description": "A NotebookLM-style companion video made from the What Robot 790 Is Becoming paper. It serves as the outside-world orientation pass: Robot 790 as the platform, Eric as the robot personage emerging from body, loop, tools, notes, receipts, voice, and correction rather than from a hidden soul claim or a cute prompt alone."
   },

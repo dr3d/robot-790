@@ -424,7 +424,7 @@
       grid-template-columns: minmax(260px, 460px) auto auto minmax(0, 1fr);
     }
     .server-controls {
-      grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px) auto auto auto auto auto;
+      grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px) auto auto auto auto auto auto;
     }
     .custom-model-controls {
       grid-template-columns: minmax(260px, 1fr) minmax(120px, 160px) minmax(110px, 150px) minmax(110px, 150px) minmax(0, 1fr);
@@ -473,6 +473,13 @@
     }
     .loaded-note-control {
       min-width: 0;
+    }
+    .thread-note-control {
+      grid-column: 1 / span 2;
+      min-width: 0;
+    }
+    .thread-reset-option {
+      justify-self: start;
     }
     .mic-vision-controls {
       grid-template-columns: 152px auto 152px auto minmax(140px, 1fr) minmax(120px, 160px);
@@ -984,6 +991,7 @@
       <div class="header-actions">
         <div class="header-buttons">
           <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
+          <button id="topHaltRuntime" class="panel-link danger" type="button">Halt</button>
           <button id="stopCast" class="panel-link warn" type="button" hidden disabled>Stop Cast</button>
           <button id="showEssentials" class="panel-link" type="button">Essentials</button>
           <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
@@ -1046,6 +1054,7 @@
           </label>
           <button id="connect" class="primary">Connect</button>
           <button id="disconnect" class="danger" disabled>Disconnect</button>
+          <button id="haltRuntime" class="danger" type="button">Halt</button>
           <button id="passivateEric" class="warn" type="button">Passivate</button>
           <button id="restartServer" class="warn">Restart</button>
           <button id="unloadServer" class="danger">Unload</button>
@@ -1348,10 +1357,18 @@
           <button id="memoryRefresh">Refresh</button>
           <button id="memoryForgetAll">Forget All</button>
           <label class="loaded-note-control">
-            Pinned Note
+            Pinned Notes
             <select id="loadedNoteSelect"></select>
           </label>
           <button id="loadedNoteUnpin" type="button" disabled>Unpin</button>
+          <label class="thread-note-control">
+            Latest Thread
+            <input id="conversationNoteFilename" placeholder="threads/personal-talk">
+          </label>
+          <button id="conversationNoteSave" type="button">Save Latest</button>
+          <button id="clearLatestThread" type="button">Clear Latest</button>
+          <button id="resetToPinnedContext" type="button">Reset To Pinned</button>
+          <label class="toggle-row thread-reset-option"><input id="conversationNoteResetAfterSave" type="checkbox"> Reset after save</label>
           <label class="toggle-row"><input id="loadEricMemories" type="checkbox" checked> Load Eric memories on refresh</label>
           <label class="toggle-row"><input id="loadPassivatedEric" type="checkbox" checked> Load passivated state + pinned notes</label>
           <div class="tool-toggle-row">
@@ -1450,6 +1467,9 @@
     const chassisUrlInput = document.querySelector("#chassisUrl");
     const connectButton = document.querySelector("#connect");
     const disconnectButton = document.querySelector("#disconnect");
+    const haltRuntimeButton = document.querySelector("#haltRuntime");
+    const topHaltRuntimeButton = document.querySelector("#topHaltRuntime");
+    const haltRuntimeButtons = [haltRuntimeButton, topHaltRuntimeButton].filter(Boolean);
     const restartServerButton = document.querySelector("#restartServer");
     const unloadServerButton = document.querySelector("#unloadServer");
     const modelPreset = document.querySelector("#modelPreset");
@@ -1479,6 +1499,11 @@
     const memoryForgetAllButton = document.querySelector("#memoryForgetAll");
     const loadedNoteSelect = document.querySelector("#loadedNoteSelect");
     const loadedNoteUnpinButton = document.querySelector("#loadedNoteUnpin");
+    const conversationNoteFilename = document.querySelector("#conversationNoteFilename");
+    const conversationNoteSaveButton = document.querySelector("#conversationNoteSave");
+    const clearLatestThreadButton = document.querySelector("#clearLatestThread");
+    const conversationNoteResetAfterSave = document.querySelector("#conversationNoteResetAfterSave");
+    const resetToPinnedContextButton = document.querySelector("#resetToPinnedContext");
     const passivateEricButton = document.querySelector("#passivateEric");
     const loadPassivatedEric = document.querySelector("#loadPassivatedEric");
     const ttsVoice = document.querySelector("#ttsVoice");
@@ -1651,6 +1676,9 @@
     let audioRecordStopPromise = null;
     let audioRecordStopPromiseResolve = null;
     let audioRecordCancelRestartAfterStop = false;
+    let lastExitSnapshotAt = 0;
+    let lastExitSnapshotReason = "";
+    let intentionalExitCleanupInProgress = false;
     let quickRecordConversationBusy = false;
     let playbackTime = 0;
     const audioFlushMs = 120;
@@ -1674,6 +1702,8 @@
     let operatorBlockedSeq = 0;
     let operatorBlockedReason = "";
     let sensingEyeInboxLastSeq = 0;
+    let sensingEyeInboxIgnoreSeqThrough = 0;
+    let sensingEyeInboxClearInFlight = false;
     const handledSensingEyeInboxSeqs = new Set();
     let sensingEyeInboxPollTimer = null;
     let sensingEyeInboxPollInFlight = false;
@@ -2646,6 +2676,38 @@
           properties: {},
           additionalProperties: false
         }
+      },
+      {
+        type: "function",
+        name: "list_pinned_notes",
+        description: (
+          "List the note files currently pinned into Robot 790's active STS browser context. " +
+          "This is different from listing every note file on disk."
+        ),
+        parameters: {
+          type: "object",
+          properties: {},
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "unpin_note",
+        description: (
+          "Stop feeding one currently pinned note file into future Robot 790 context when the user explicitly asks " +
+          "to unpin, forget, stop using, remove, or close a note. This does not delete the note file and does not erase conversation history."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            filename: {
+              type: "string",
+              description: "Filename of the pinned note to unpin, such as erics_many_minds.md or core/passivated_eric_state.txt."
+            }
+          },
+          required: ["filename"],
+          additionalProperties: false
+        }
       }
     ];
 
@@ -3077,9 +3139,12 @@
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
       "Use note file tools only when the user explicitly asks you to write, save, append, read, or list a text file or note.",
       "When reading a note, call read_text_file with a filename argument. Do not speak XML, JSON, or <tool_call> markup out loud.",
+      "When the user asks what notes are pinned, loaded, open, or in context, call list_pinned_notes. Do not confuse pinned notes with all files on disk.",
+      "When the user asks you to forget, unpin, close, stop using, or remove a loaded/pinned note from context, call unpin_note with the filename. This does not delete the file or erase previous conversation history.",
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
       "If Scott says write/save this as a note, write the note directly. If his wording is elliptical but clearly refers to the current report or summary, ask for one compact filename clarification instead of describing permission rules.",
       "When using write_text_file for a short note you authored, pass filename and content.",
+      "When Scott asks to save the current conversation or thread as a named note, call write_text_file with filename and source conversation unless he explicitly asks for idle/events/full session too.",
       "When the user asks to summarize a named note or transcript into another note, call write_text_file with the target filename, source note_summary, and source_filename set to the note being summarized.",
       "Do not use source conversation when the user asks for a summary of a previously read or named note; source conversation copies the visible transcript.",
       "When using write_text_file for a long note based on captured session material, omit content and pass source instead; do not generate a huge content argument.",
@@ -3495,6 +3560,84 @@
       });
       log(events, `loaded note unpinned: ${name}`);
       return true;
+    }
+
+    function noteLookupKey(value) {
+      return String(value || "")
+        .trim()
+        .replace(/\\/g, "/")
+        .replace(/\.(txt|md)$/i, "")
+        .replace(/[^a-z0-9/]+/gi, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .toLowerCase();
+    }
+
+    function resolveLoadedNoteFilename(filename) {
+      const wanted = String(filename || "").trim();
+      if (!wanted) return "";
+      const wantedLower = wanted.toLowerCase();
+      const exact = loadedNoteContexts.find((item) => String(item.filename || "").toLowerCase() === wantedLower);
+      if (exact) return exact.filename;
+      const wantedKey = noteLookupKey(wanted);
+      const keyed = loadedNoteContexts.find((item) => noteLookupKey(item.filename) === wantedKey);
+      if (keyed) return keyed.filename;
+      const baseKeyed = loadedNoteContexts.find((item) => noteLookupKey(String(item.filename || "").split(/[\\/]/).pop()) === wantedKey);
+      return baseKeyed?.filename || "";
+    }
+
+    function listPinnedNotes() {
+      const notes = loadedNoteContexts.map((item) => ({
+        filename: item.filename,
+        loaded_at: item.loadedAt ? new Date(item.loadedAt).toISOString() : null,
+        characters: String(item.content || "").length
+      }));
+      return {
+        status: "ok",
+        tool: "list_pinned_notes",
+        files: notes.map((item) => item.filename),
+        notes,
+        meaning: "Pinned notes are currently fed into future STS context. They are not the full notes folder."
+      };
+    }
+
+    function unpinNote(args = {}) {
+      const requested = String(args.filename || args.path || args.name || "").trim();
+      if (!requested) {
+        return {
+          status: "error",
+          tool: "unpin_note",
+          error: "Missing required argument: filename",
+          pinned_notes: loadedNoteContexts.map((item) => item.filename)
+        };
+      }
+      const filename = resolveLoadedNoteFilename(requested);
+      if (!filename) {
+        return {
+          status: "error",
+          tool: "unpin_note",
+          error: `No pinned note matched '${requested}'`,
+          requested,
+          pinned_notes: loadedNoteContexts.map((item) => item.filename)
+        };
+      }
+      if (!unpinLoadedNoteContext(filename)) {
+        return {
+          status: "error",
+          tool: "unpin_note",
+          error: `Could not unpin '${filename}'`,
+          requested,
+          pinned_notes: loadedNoteContexts.map((item) => item.filename)
+        };
+      }
+      return {
+        status: "ok",
+        tool: "unpin_note",
+        filename,
+        requested,
+        remaining_pinned_notes: loadedNoteContexts.map((item) => item.filename),
+        effect: "The note file remains on disk; it will stop being fed into future context updates for this browser session."
+      };
     }
 
     function passivatedPinnedNoteFilenames(content) {
@@ -5815,12 +5958,20 @@
     function modelStampFromBrainStatus(status) {
       const model = status?.model || {};
       const active = model?.lm_studio?.active_model || {};
+      const specimen = model?.runtime_specimen || {};
+      const quant = specimen?.quantization || {};
+      const observations = specimen?.observations || {};
       const llm = active.identifier || active.model || model.llm_model || "unknown";
       const parts = [`llm=${llm}`];
       if (model.reasoning_effort) parts.push(`reasoning=${model.reasoning_effort}`);
       if (model.audio_max_tokens) parts.push(`audio_max_tokens=${model.audio_max_tokens}`);
       if (active.context_window_tokens) parts.push(`context=${active.context_window_tokens}`);
       if (active.parallel_predictions) parts.push(`parallel=${active.parallel_predictions}`);
+      if (quant.kv_cache_key || quant.kv_cache_value) {
+        parts.push(`kv=k:${quant.kv_cache_key || "?"}/v:${quant.kv_cache_value || "?"}`);
+      }
+      if (observations.vram_gain_gb) parts.push(`vram_gain=${observations.vram_gain_gb}GB`);
+      if (observations.audit_status) parts.push(`audit=${observations.audit_status}`);
       if (active.status) parts.push(`lm_status=${active.status}`);
       return parts.join(" / ");
     }
@@ -6539,6 +6690,14 @@
       }
       if (saved.length) log(events, `${reason} snapshots saved: ${saved.join(", ")}`);
       return saved;
+    }
+
+    async function recordExitPaneSnapshots(reason = "exit") {
+      const now = Date.now();
+      if (lastExitSnapshotReason === reason && now - lastExitSnapshotAt < 2500) return [];
+      lastExitSnapshotAt = now;
+      lastExitSnapshotReason = reason;
+      return recordThreePaneSnapshots(reason);
     }
 
     function beaconLogSnapshot(target, source) {
@@ -9141,6 +9300,7 @@
       conversation.scrollTop = conversation.scrollHeight;
       renderLogPopout("conversation");
       updateBrain2Controls();
+      updateConversationThreadButtons();
     }
 
     function conversationLine(text) {
@@ -9161,6 +9321,51 @@
       renderConversation();
       if (touchActivity) noteConversationActivity();
       return index;
+    }
+
+    function clearHotConversationState({ reason = "manual", clearEvents = true } = {}) {
+      conversationLines = [];
+      conversationProsodyByIndex = {};
+      clearInputDraft();
+      if (clearEvents) {
+        eventLogLines = [];
+        events.textContent = "";
+      }
+      brain2Log.textContent = "";
+      brain2QuestionCandidates = [];
+      brain2RevisionCandidates = [];
+      brain2NoteCandidates = [];
+      recentBrain2Outputs = [];
+      recentIdleOutputs = [];
+      idleOutputLog = [];
+      idleSelfTasks = [];
+      lastIdleSelfTaskAt = 0;
+      searchContextReceipts = [];
+      aloneActivityLog = [];
+      toolFollowupPromptLog = [];
+      toolFollowupPromptSources = [];
+      promptLedgerLog = [];
+      brain2PromptLog = [];
+      lastSessionPromptSnapshot = null;
+      responseCreateLedgerCredits = 0;
+      uiControlLog = [];
+      loadedNoteContextDirty = true;
+      resetConversationReengageCycle();
+      clearBrain2Timer();
+      clearBrain2SurfaceTimer();
+      clearAssistantFinishTimer();
+      clearUserTurnPending();
+      renderConversation();
+      renderEvents({ forceScroll: true });
+      updateBrain2Controls();
+      renderAllLogPopouts({ forceScroll: true });
+      updateSessionTools({ quiet: true });
+      if (contextPanel?.open) renderContextMap();
+      recordUiEvent("hot conversation reset", reason, {
+        loaded_notes: loadedNoteContexts.map((item) => item.filename),
+        connected: realtimeConnected()
+      });
+      log(events, `hot conversation reset to pinned notes: ${reason}`);
     }
 
     function rememberConversationProsody(index, rawShape) {
@@ -9589,6 +9794,10 @@
       const seq = Number(item?.seq) || 0;
       const dataUrl = String(item?.image_data_url || "");
       if (!seq || !dataUrl) return false;
+      if (sensingEyeInboxClearInFlight || seq <= sensingEyeInboxIgnoreSeqThrough) {
+        sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
+        return false;
+      }
       const seqKey = String(item.seq || "");
       if (seqKey && handledSensingEyeInboxSeqs.has(seqKey)) {
         sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
@@ -9639,7 +9848,27 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, Number(result.latest_seq) || 0);
+      sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, Number(result.latest_seq) || 0);
       return result;
+    }
+
+    async function clearBrowserFaceCaptureQueue() {
+      if (!browserFaceControllerActive()) return null;
+      return postFace("commands/clear", { reason: "sensing eye cleared" });
+    }
+
+    async function syncSensingEyeInboxCursor() {
+      const url = new URL("/api/sensing-eye/inbox", location.href);
+      url.searchParams.set("after", String(Number.MAX_SAFE_INTEGER));
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      const latestSeq = Number(result.latest_seq) || 0;
+      sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, latestSeq);
+      sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, latestSeq);
+      return latestSeq;
     }
 
     async function pollSensingEyeInbox() {
@@ -9661,8 +9890,11 @@
     }
 
     function startSensingEyeInboxPolling() {
-      sensingEyeInboxLastSeq = 0;
-      scheduleSensingEyeInboxPoll();
+      syncSensingEyeInboxCursor().catch((error) => {
+        log(events, `sensing-eye inbox sync error: ${error.message}`);
+      }).finally(() => {
+        scheduleSensingEyeInboxPoll();
+      });
     }
 
     function normalizeFaceBaseUrl() {
@@ -11475,6 +11707,69 @@
       return values.length ? values.map((item) => `- ${item}`).join("\n") : "- none";
     }
 
+    async function runtimeStep(label, operation, { timeoutMs = 12000, required = false, prefix = "runtime step" } = {}) {
+      log(events, `${prefix}: ${label}`);
+      let timer = null;
+      try {
+        const timeout = new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(timeoutMs / 1000)}s`)), timeoutMs);
+        });
+        const result = await Promise.race([Promise.resolve().then(operation), timeout]);
+        log(events, `${prefix} done: ${label}`);
+        return result;
+      } catch (error) {
+        log(events, `${prefix} ${required ? "failed" : "skipped"}: ${label}: ${error.message}`);
+        if (required) throw error;
+        return null;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
+    async function passivationStep(label, operation, options = {}) {
+      return runtimeStep(label, operation, { ...options, prefix: "passivation step" });
+    }
+
+    function beginIntentionalExitCleanup() {
+      intentionalExitCleanupInProgress = true;
+    }
+
+    function endIntentionalExitCleanupSoon() {
+      setTimeout(() => {
+        intentionalExitCleanupInProgress = false;
+      }, 5000);
+    }
+
+    function haltRealtimeActivity(reason = "runtime halt") {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = null;
+      idleTimerFireAt = 0;
+      clearIdleSchedulerStatusTimer();
+      clearBrain2Timer();
+      clearBrain2SurfaceTimer();
+      cancelBrain2MonitorSpeech();
+      if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
+      imageToolProtectionTimer = null;
+      imageToolProtectionUntil = 0;
+      imageToolProtectionEnabled = false;
+      assistantFinishPending = false;
+      assistantFinishWasIdle = false;
+      assistantFinishArmedAt = 0;
+      clearAssistantFinishTimer();
+      resetConversationReengageCycle();
+      clearMicFreshnessTimer();
+      responseActive = false;
+      idleInFlight = false;
+      brain2InFlight = false;
+      reengageInFlight = false;
+      clearUserTurnPending();
+      stopPlaybackNow();
+      clearAudioQueue();
+      updateIdleSchedulerStatus();
+      updateLanePressure({ reason });
+      log(events, `runtime halted: ${reason}`);
+    }
+
     function buildEricPassivationPacket() {
       const loadedNotes = loadedNoteContexts.map((item) => ({
         filename: item.filename,
@@ -11610,7 +11905,7 @@
         : (passivatedEricHalted ? "Start Eric" : "Passivate");
     }
 
-    async function passivateEricState() {
+    async function passivateEricState({ reason = "Eric passivated" } = {}) {
       if (passivatedEricBusy) return;
       passivatedEricBusy = true;
       updatePassivationButton();
@@ -11626,9 +11921,9 @@
           passivationJson(packet)
         ].join("\n");
         const noteText = buildEricPassivationNote(packet);
-        await writeOperatorNoteFile({ filename: passivatedEricPacketFilename, content: packetText });
-        await writeOperatorNoteFile({ filename: passivatedEricNoteFilename, content: noteText });
-        await readTextFile({ filename: passivatedEricNoteFilename });
+        await passivationStep("write full packet", () => writeOperatorNoteFile({ filename: passivatedEricPacketFilename, content: packetText }), { required: true });
+        await passivationStep("write compact note", () => writeOperatorNoteFile({ filename: passivatedEricNoteFilename, content: noteText }), { required: true });
+        await passivationStep("reload compact note", () => readTextFile({ filename: passivatedEricNoteFilename }), { required: true });
         passivatedEricHalted = true;
         recordUiEvent("Eric passivated", passivatedEricNoteFilename, {
           packet: passivatedEricPacketFilename,
@@ -11636,25 +11931,31 @@
           mic: micRuntimeLabel()
         });
         log(events, `Eric passivated to ${passivatedEricNoteFilename} and ${passivatedEricPacketFilename}`);
+        beginIntentionalExitCleanup();
+        const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
+        haltRealtimeActivity(reason);
+        if (closingSocket) {
+          await passivationStep("close realtime websocket", async () => {
+            closingSocket.close();
+            await waitForRealtimeClose(closingSocket);
+          }, { timeoutMs: 4000 });
+        }
         if (audioRecordingActive()) {
-          const stopResult = await stopAudioRecording({ reason: "Eric passivated" });
-          log(events, `audio recording stopped for passivation: ${stopResult?.recording_name || stopResult?.status || "done"}`);
+          const stopResult = await passivationStep("stop audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
+          if (stopResult) log(events, `audio recording stopped for passivation: ${stopResult.recording_name || stopResult.status || "done"}`);
         } else if (audioRecordFinalizing || audioRecordStopPromise) {
-          const stopResult = await stopAudioRecording({ reason: "Eric passivated" });
-          log(events, `audio recording finalized for passivation: ${stopResult?.recording_name || stopResult?.status || "done"}`);
+          const stopResult = await passivationStep("finish audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
+          if (stopResult) log(events, `audio recording finalized for passivation: ${stopResult.recording_name || stopResult.status || "done"}`);
         }
         if (micStream) {
-          await stopMic({ reason: "Eric passivated" });
+          await passivationStep("stop mic", () => stopMic({ reason }), { timeoutMs: 6000 });
         }
-        if (realtimeConnected()) {
-          ws?.close();
-        } else {
-          await recordThreePaneSnapshots("passivation");
-        }
+        await passivationStep("save pane snapshots", () => recordExitPaneSnapshots("passivation"), { timeoutMs: 10000 });
       } catch (error) {
         log(events, `Eric passivation error: ${error.message}`);
       } finally {
         passivatedEricBusy = false;
+        endIntentionalExitCleanupSoon();
         updatePassivationButton();
       }
     }
@@ -11758,6 +12059,135 @@
       const content = lines.filter((line) => line !== "").join("\n");
       if (!content.trim()) throw new Error("No captured session material is available to write.");
       return clipSessionNote(content);
+    }
+
+    function timestampForFilename(date = new Date()) {
+      const pad = (value) => String(value).padStart(2, "0");
+      return [
+        date.getFullYear(),
+        pad(date.getMonth() + 1),
+        pad(date.getDate()),
+        "-",
+        pad(date.getHours()),
+        pad(date.getMinutes()),
+        pad(date.getSeconds())
+      ].join("");
+    }
+
+    function conversationThreadFilenameValue() {
+      const typed = String(conversationNoteFilename?.value || "").trim();
+      return typed || `threads/conversation-${timestampForFilename()}.txt`;
+    }
+
+    function updateConversationThreadButtons() {
+      if (conversationNoteSaveButton) conversationNoteSaveButton.disabled = !conversationLines.length;
+      if (clearLatestThreadButton) clearLatestThreadButton.disabled = !conversationLines.length;
+      if (resetToPinnedContextButton) resetToPinnedContextButton.disabled = false;
+    }
+
+    async function waitForRealtimeClose(socket, timeoutMs = 2500) {
+      if (!socket || socket.readyState === WebSocket.CLOSED) return;
+      await new Promise((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          resolve();
+        };
+        socket.addEventListener("close", finish, { once: true });
+        setTimeout(finish, timeoutMs);
+      });
+    }
+
+    async function waitForRealtimeOpen(timeoutMs = 4500) {
+      if (ws && ws.readyState === WebSocket.OPEN) return true;
+      const socket = ws;
+      if (!socket) return false;
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = (value) => {
+          if (done) return;
+          done = true;
+          resolve(value);
+        };
+        socket.addEventListener("open", () => finish(true), { once: true });
+        socket.addEventListener("close", () => finish(false), { once: true });
+        socket.addEventListener("error", () => finish(false), { once: true });
+        setTimeout(() => finish(false), timeoutMs);
+      });
+    }
+
+    async function resetToPinnedContext({ reason = "manual reset to pinned notes" } = {}) {
+      const wasConnected = realtimeConnected();
+      const restartMic = Boolean(micStream);
+      resetToPinnedContextButton && (resetToPinnedContextButton.disabled = true);
+      clearLatestThreadButton && (clearLatestThreadButton.disabled = true);
+      try {
+        const closingSocket = ws;
+        if (restartMic) await stopMic({ reason });
+        if (wasConnected && closingSocket) {
+          closingSocket.close();
+          await waitForRealtimeClose(closingSocket);
+        }
+        clearHotConversationState({ reason });
+        if (wasConnected) {
+          await connect();
+          const opened = await waitForRealtimeOpen();
+          if (opened && restartMic) await startMic({ reason: "after pinned-context reset" });
+        }
+      } catch (error) {
+        log(events, `reset to pinned context error: ${error.message}`);
+      } finally {
+        updateConversationThreadButtons();
+      }
+    }
+
+    async function clearLatestThread() {
+      if (!conversationLines.length) return;
+      recordUiEvent("latest thread clear", realtimeConnected() ? "reset to pinned" : "local clear", {
+        conversation_lines: conversationLines.length,
+        loaded_notes: loadedNoteContexts.map((item) => item.filename)
+      });
+      if (realtimeConnected()) {
+        await resetToPinnedContext({ reason: "operator cleared latest thread" });
+        return;
+      }
+      clearHotConversationState({ reason: "operator cleared latest thread", clearEvents: false });
+      updateConversationThreadButtons();
+    }
+
+    async function saveConversationThreadNote() {
+      if (!conversationLines.length) return;
+      const originalText = conversationNoteSaveButton?.textContent || "Save Latest";
+      if (conversationNoteSaveButton) {
+        conversationNoteSaveButton.disabled = true;
+        conversationNoteSaveButton.textContent = "Saving...";
+      }
+      try {
+        const filename = conversationThreadFilenameValue();
+        const content = await formatSessionNote({ source: "conversation" });
+        const result = await writeOperatorNoteFile({ filename, content });
+        if (conversationNoteFilename && !conversationNoteFilename.value.trim()) {
+          conversationNoteFilename.value = result.filename || filename;
+        }
+        recordUiEvent("conversation saved as note", result.filename || filename, {
+          characters: result.characters || content.length,
+          reset_after_save: Boolean(conversationNoteResetAfterSave?.checked)
+        });
+        log(events, `conversation saved as note: ${result.filename || filename}`);
+        if (conversationNoteSaveButton) conversationNoteSaveButton.textContent = "Saved";
+        if (conversationNoteResetAfterSave?.checked) {
+          await resetToPinnedContext({ reason: `saved conversation note ${result.filename || filename}` });
+        }
+      } catch (error) {
+        if (conversationNoteSaveButton) conversationNoteSaveButton.textContent = "Failed";
+        log(events, `conversation note save error: ${error.message}`);
+      } finally {
+        setTimeout(() => {
+          if (conversationNoteSaveButton) conversationNoteSaveButton.textContent = originalText;
+          updateConversationThreadButtons();
+        }, 1400);
+      }
     }
 
     async function noteForSummary(sourceFilename = "") {
@@ -12138,6 +12568,7 @@
 
     function clearVisionImage() {
       const previous = sensingInputLabel();
+      sensingEyeInboxClearInFlight = true;
       visionImageUrl = "";
       visionImageName = "";
       visionImageStaged = false;
@@ -12153,14 +12584,24 @@
       updateSessionTools();
       if (contextPanel?.open) renderContextMap();
       recordUiEvent("sensing input cleared", previous || "none", { current: sensingInputLabel() });
-      clearSensingEyeInboxOnServer().then(
-        (result) => {
-          log(events, `sensing-eye inbox cleared: seq ${result.latest_seq || 0}`);
-        },
-        (error) => {
-          log(events, `sensing-eye inbox clear error: ${error.message}`);
+      Promise.allSettled([
+        clearSensingEyeInboxOnServer(),
+        clearBrowserFaceCaptureQueue()
+      ]).then((results) => {
+        const inboxResult = results[0];
+        const faceResult = results[1];
+        if (inboxResult.status === "fulfilled") {
+          log(events, `sensing-eye inbox cleared: seq ${inboxResult.value.latest_seq || 0}`);
+        } else {
+          log(events, `sensing-eye inbox clear error: ${inboxResult.reason?.message || inboxResult.reason}`);
         }
-      );
+        if (faceResult.status === "fulfilled" && faceResult.value) {
+          log(events, `browser-face mirror queue cleared: seq ${faceResult.value.latest_seq || 0}`);
+        } else if (faceResult.status === "rejected") {
+          log(events, `browser-face mirror queue clear error: ${faceResult.reason?.message || faceResult.reason}`);
+        }
+        sensingEyeInboxClearInFlight = false;
+      });
     }
 
     function openSensingEyeImage() {
@@ -12283,6 +12724,8 @@
       if (name === "write_text_file") return writeTextFile(args);
       if (name === "read_text_file") return readTextFile(args);
       if (name === "list_text_files") return listTextFiles(args);
+      if (name === "list_pinned_notes") return listPinnedNotes(args);
+      if (name === "unpin_note") return unpinNote(args);
       throw new Error(`Unknown tool: ${name}`);
     }
 
@@ -12325,7 +12768,9 @@
         set_smart_home_device: "HOME",
         write_text_file: "WRITE",
         read_text_file: "READ",
-        list_text_files: "LIST"
+        list_text_files: "LIST",
+        list_pinned_notes: "PINNED",
+        unpin_note: "UNPIN"
       };
       return map[name] || String(name || "TOOL").replace(/^.*?_/, "").toUpperCase().slice(0, 10);
     }
@@ -12362,7 +12807,7 @@
 
     function toolDetailFromArgs(name, args = {}) {
       if (name === "search_web") return args.query;
-      if (name === "read_text_file" || name === "write_text_file") return args.filename || args.path || args.name;
+      if (name === "read_text_file" || name === "write_text_file" || name === "unpin_note") return args.filename || args.path || args.name;
       if (name === "show_web_page") return args.url;
       if (name === "generate_image") return args.title || args.prompt;
       if (name === "cast_media") return args.query || args.url || args.action;
@@ -12526,9 +12971,13 @@
     }
 
     function noteFileFollowupText(toolName, result) {
+      if (result?.status === "error" && toolName === "unpin_note") return "I could not unpin that note.";
       if (result?.status === "error") return "I could not touch that file.";
       if (toolName === "write_text_file") {
         return `Saved that to ${result?.filename || "the note file"}.`;
+      }
+      if (toolName === "unpin_note") {
+        return `I unpinned ${result?.filename || "that note"}.`;
       }
       return "Done.";
     }
@@ -12544,6 +12993,11 @@
         const count = Array.isArray(result?.files) ? result.files.length : 0;
         if (!count) return exactSpeechInstruction("I found no note files.");
         return "Use the list_text_files tool output to name the available note files compactly.";
+      }
+      if (toolName === "list_pinned_notes") {
+        const count = Array.isArray(result?.files) ? result.files.length : 0;
+        if (!count) return exactSpeechInstruction("No notes are pinned right now.");
+        return "Use the list_pinned_notes tool output to name the currently pinned notes compactly. Say they are open context, not every note on disk.";
       }
       return "";
     }
@@ -12586,7 +13040,7 @@
         "Use the get_brain_status tool output to answer the user's diagnostics question compactly. " +
         "For context questions, answer with context.last_input_tokens, context.context_window_tokens, context.remaining_context_tokens, and context.window_usage_percent when available; this is how much context the last request consumed. " +
         "If browser_context_estimate is present, use it to explain roughly how much loaded notes, visible transcript, or event panes contribute. " +
-        "State measured values such as model, context window, parallel count, token counts, latency, and TTS timing when available. " +
+        "State measured values such as model, context window, parallel count, token counts, latency, and TTS timing when available. If model.runtime_specimen is present, include KV cache, quantization, VRAM gain, and audit status when relevant. " +
         "If exact llama.cpp tok/sec is unavailable but estimated_end_to_end_output_tokens_per_second is present, call it an end-to-end estimate and give the value."
       );
     }
@@ -12708,7 +13162,10 @@
         if (event.name === "write_text_file") {
           toolFollowupExactText = noteFileFollowupText(event.name, result);
         }
-        if (event.name === "read_text_file" || event.name === "list_text_files") {
+        if (event.name === "unpin_note") {
+          toolFollowupExactText = noteFileFollowupText(event.name, result);
+        }
+        if (event.name === "read_text_file" || event.name === "list_text_files" || event.name === "list_pinned_notes") {
           toolFollowupInstructions = noteFileFollowupInstructions(event.name, result);
         }
         if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
@@ -12732,7 +13189,7 @@
             output: JSON.stringify(["search_web", "get_weather", "get_current_time", "get_brain_status"].includes(event.name) ? result : { status: "ok", result })
           }
         });
-        if (event.name === "remember_fact" || event.name === "forget_fact" || event.name === "search_web" || loadedNoteContextDirty) {
+        if (event.name === "remember_fact" || event.name === "forget_fact" || event.name === "search_web" || event.name === "unpin_note" || loadedNoteContextDirty) {
           const quietRefresh = event.name === "search_web";
           loadedNoteContextDirty = false;
           updateSessionTools({ quiet: quietRefresh });
@@ -12746,7 +13203,7 @@
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = "I could not save that.";
         }
-        if (event.name === "write_text_file" || event.name === "read_text_file" || event.name === "list_text_files") {
+        if (event.name === "write_text_file" || event.name === "read_text_file" || event.name === "list_text_files" || event.name === "list_pinned_notes" || event.name === "unpin_note") {
           toolFollowupExactText = "I could not touch that file.";
         }
         if (event.name === "search_web") toolFollowupExactText = "I could not search.";
@@ -13707,7 +14164,18 @@
         updateVisionButtons();
         syncServerPanelToConnection();
         log(events, "disconnected");
-        recordThreePaneSnapshots("disconnect").catch((error) => log(events, `disconnect snapshots error: ${error.message}`));
+        if (!intentionalExitCleanupInProgress && (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise)) {
+          stopAudioRecording({ reason: "realtime disconnected" }).then(
+            (stopResult) => log(events, `audio recording stopped for disconnect: ${stopResult?.recording_name || stopResult?.status || "done"}`),
+            (error) => log(events, `audio recording stop after disconnect error: ${error.message}`)
+          );
+        }
+        if (!intentionalExitCleanupInProgress && micStream) {
+          stopMic({ reason: "realtime disconnected" }).catch((error) => log(events, `mic stop after disconnect error: ${error.message}`));
+        }
+        if (!intentionalExitCleanupInProgress) {
+          recordExitPaneSnapshots("disconnect").catch((error) => log(events, `disconnect snapshots error: ${error.message}`));
+        }
       });
       ws.addEventListener("error", () => {
         setState("Socket error");
@@ -13719,16 +14187,20 @@
       restartServerButton.disabled = true;
       unloadServerButton.disabled = true;
       log(events, "realtime restart requested");
+      beginIntentionalExitCleanup();
       try {
         if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
-          await stopAudioRecording({ reason: "realtime restart" });
+          const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime restart" }), { timeoutMs: 18000, prefix: "restart step" });
+          if (stopResult) log(events, `audio recording stopped for restart: ${stopResult.recording_name || stopResult.status || "done"}`);
         }
-        if (micStream) await stopMic();
+        if (micStream) await runtimeStep("stop mic", () => stopMic({ reason: "realtime restart" }), { timeoutMs: 6000, prefix: "restart step" });
+        await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("realtime restart"), { timeoutMs: 10000, prefix: "restart step" });
       } catch (error) {
         log(events, `recording/mic stop during restart error: ${error.message}`);
       }
       if (ws && ws.readyState === WebSocket.OPEN) ws.close();
       clearAudioQueue();
+      endIntentionalExitCleanupSoon();
       setState("Restarting realtime", "warn");
       connectButton.disabled = true;
       disconnectButton.disabled = true;
@@ -13761,20 +14233,73 @@
       }
     }
 
+    async function haltRealtimeServer() {
+      haltRuntimeButtons.forEach((button) => {
+        button.disabled = true;
+      });
+      log(events, "realtime halt requested");
+      beginIntentionalExitCleanup();
+      try {
+        const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
+        haltRealtimeActivity("realtime halt");
+        if (closingSocket) {
+          await runtimeStep("close realtime websocket", async () => {
+            closingSocket.close();
+            await waitForRealtimeClose(closingSocket);
+          }, { timeoutMs: 4000, prefix: "halt step" });
+        }
+        if (micStream) {
+          await runtimeStep("stop mic", () => stopMic({ reason: "realtime halt" }), { timeoutMs: 6000, prefix: "halt step" });
+        }
+        if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
+          const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime halt" }), { timeoutMs: 18000, prefix: "halt step" });
+          if (stopResult) log(events, `audio recording stopped for halt: ${stopResult.recording_name || stopResult.status || "done"}`);
+        }
+        await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("realtime halt"), { timeoutMs: 10000, prefix: "halt step" });
+        const response = await fetch(new URL("/api/realtime/stop", location.href), { method: "POST" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === "error") {
+          throw new Error(result.error || response.statusText || "Realtime halt failed.");
+        }
+        log(events, `realtime halt started: pid ${result.pid || "unknown"}`);
+        setState("Disconnected");
+        connectButton.disabled = false;
+        disconnectButton.disabled = true;
+        startMicButton.disabled = true;
+        stopMicButton.disabled = true;
+        resetMicButton.disabled = true;
+        updateMicMuteButton();
+        updateTypedInputButtons();
+        updateVisionButtons();
+        syncServerPanelToConnection();
+      } catch (error) {
+        log(events, `realtime halt error: ${error.message}`);
+      } finally {
+        endIntentionalExitCleanupSoon();
+        haltRuntimeButtons.forEach((button) => {
+          button.disabled = false;
+        });
+      }
+    }
+
     async function unloadRealtimeServer() {
       restartServerButton.disabled = true;
       unloadServerButton.disabled = true;
       log(events, "realtime unload requested");
+      beginIntentionalExitCleanup();
       try {
         if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
-          await stopAudioRecording({ reason: "realtime unload" });
+          const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime unload" }), { timeoutMs: 18000, prefix: "unload step" });
+          if (stopResult) log(events, `audio recording stopped for unload: ${stopResult.recording_name || stopResult.status || "done"}`);
         }
-        if (micStream) await stopMic({ reason: "realtime unload" });
+        if (micStream) await runtimeStep("stop mic", () => stopMic({ reason: "realtime unload" }), { timeoutMs: 6000, prefix: "unload step" });
+        await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("realtime unload"), { timeoutMs: 10000, prefix: "unload step" });
       } catch (error) {
         log(events, `recording/mic stop during unload error: ${error.message}`);
       }
       if (ws && ws.readyState === WebSocket.OPEN) ws.close();
       clearAudioQueue();
+      endIntentionalExitCleanupSoon();
       setState("Unloading realtime", "warn");
       connectButton.disabled = true;
       disconnectButton.disabled = true;
@@ -13905,6 +14430,8 @@
       connect: "Connect the browser UI to the realtime STS server.",
       disconnect: "Close the current realtime connection.",
       restartServer: "Restart the local realtime server using the selected model settings.",
+      haltRuntime: "Hard-stop only the realtime backend; leave STS, browser-face, and LM Studio loaded.",
+      topHaltRuntime: "Hard-stop only the realtime backend; leave STS, browser-face, and LM Studio loaded.",
       unloadServer: "Disconnect, stop the realtime backend, and unload LM Studio models to reclaim GPU memory.",
       visionDrop: "Drop an image, text file, or markdown note into Eric's sensing eye.",
       visionClear: "Clear the currently staged sensing-eye input.",
@@ -13971,6 +14498,11 @@
       memoryForgetAll: "Clear Robot 790 browser memory facts.",
       loadedNoteSelect: "Choose a note currently pinned into the runtime context.",
       loadedNoteUnpin: "Stop feeding this loaded note into future context updates; it does not erase the live conversation history.",
+      conversationNoteFilename: "Optional note filename for saving the latest hot conversation thread. Blank uses threads/conversation-YYYYMMDD-HHMMSS.txt.",
+      conversationNoteSave: "Save Latest writes the current hot conversation as a durable thread note without pinning it automatically.",
+      clearLatestThread: "Clear Latest discards the hot conversation scratch state. If connected, it reconnects so old realtime conversation context is actually dropped.",
+      resetToPinnedContext: "Close the hot realtime session, clear conversation/idle/B2 scratch state, and reconnect from the currently pinned notes.",
+      conversationNoteResetAfterSave: "After saving the conversation note, reset the hot session back to the pinned-note context.",
       passivateEric: "Save Eric's compact boot state plus full audit packet, then halt the current realtime session.",
       loadEricMemories: "Load Eric's memory note into startup context on refresh.",
       loadPassivatedEric: "Load the compact passivated-state note into startup context on refresh or Start Eric.",
@@ -14158,18 +14690,38 @@
       connect();
     });
     disconnectButton.addEventListener("click", async () => {
-      recordUiEvent("realtime disconnect", "requested", { connected: realtimeConnected() });
+      recordUiEvent("realtime disconnect", "hard stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
+      beginIntentionalExitCleanup();
       try {
-        if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
-          const stopResult = await stopAudioRecording({ reason: "realtime disconnect" });
-          log(events, `audio recording stopped for disconnect: ${stopResult?.recording_name || stopResult?.status || "done"}`);
+        const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
+        haltRealtimeActivity("realtime disconnect");
+        if (closingSocket) {
+          await runtimeStep("close realtime websocket", async () => {
+            closingSocket.close();
+            await waitForRealtimeClose(closingSocket);
+          }, { timeoutMs: 4000, prefix: "disconnect step" });
         }
-        if (micStream) await stopMic({ reason: "realtime disconnect" });
-      } catch (error) {
-        log(events, `recording/mic stop during disconnect error: ${error.message}`);
+        if (micStream) {
+          await runtimeStep("stop mic", () => stopMic({ reason: "realtime disconnect" }), { timeoutMs: 6000, prefix: "disconnect step" });
+        }
+        if (audioRecordingActive()) {
+          const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime disconnect" }), { timeoutMs: 18000, prefix: "disconnect step" });
+          if (stopResult) log(events, `audio recording stopped for disconnect: ${stopResult.recording_name || stopResult.status || "done"}`);
+        } else if (audioRecordFinalizing || audioRecordStopPromise) {
+          const stopResult = await runtimeStep("finish audio recording", () => stopAudioRecording({ reason: "realtime disconnect" }), { timeoutMs: 18000, prefix: "disconnect step" });
+          if (stopResult) log(events, `audio recording finalized for disconnect: ${stopResult.recording_name || stopResult.status || "done"}`);
+        }
+        await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("hard disconnect"), { timeoutMs: 10000, prefix: "disconnect step" });
+      } finally {
+        endIntentionalExitCleanupSoon();
       }
-      ws?.close();
+    });
+    haltRuntimeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        recordUiEvent("realtime halt", button.id || "requested", { endpoint: serverUrl.value || "" });
+        haltRealtimeServer().catch((error) => log(events, `realtime halt error: ${error.message}`));
+      });
     });
     modelPreset.addEventListener("change", () => {
       saveModelPreset();
@@ -14207,11 +14759,11 @@
       recordUiEvent("lab goal cleared", "none", idleControlDetails());
     });
     restartServerButton.addEventListener("click", () => {
-      recordUiEvent("realtime server restart", "requested", { endpoint: endpoint.value || "" });
+      recordUiEvent("realtime server restart", "requested", { endpoint: serverUrl.value || "" });
       restartRealtimeServer().catch((error) => log(events, `realtime restart error: ${error.message}`));
     });
     unloadServerButton.addEventListener("click", () => {
-      recordUiEvent("realtime server unload", "requested", { endpoint: endpoint.value || "" });
+      recordUiEvent("realtime server unload", "requested", { endpoint: serverUrl.value || "" });
       unloadRealtimeServer().catch((error) => log(events, `realtime unload error: ${error.message}`));
     });
     faceIdleButton.addEventListener("click", () => setFaceMode({ mode: "idle" }).then(
@@ -14292,7 +14844,7 @@
         elapsed: audioRecordSessionStartedAt ? clockDuration(Date.now() - audioRecordSessionStartedAt) : "unknown",
         chunks: audioRecordSessionChunks.length
       });
-      stopAudioRecording();
+      stopAudioRecording({ reason: "manual stop" }).catch((error) => log(events, `audio record stop error: ${error.message}`));
     });
     typedInput.addEventListener("input", updateTypedInputButtons);
     typedInput.addEventListener("keydown", (event) => {
@@ -14638,41 +15190,25 @@
       });
       log(events, "memory cleared");
     });
-    loadedNoteUnpinButton?.addEventListener("click", () => {
-      unpinLoadedNoteContext(loadedNoteSelect?.value || "");
-    });
+      loadedNoteUnpinButton?.addEventListener("click", () => {
+        unpinLoadedNoteContext(loadedNoteSelect?.value || "");
+      });
+      conversationNoteSaveButton?.addEventListener("click", () => {
+        saveConversationThreadNote();
+      });
+      clearLatestThreadButton?.addEventListener("click", () => {
+        clearLatestThread();
+      });
+      resetToPinnedContextButton?.addEventListener("click", () => {
+        resetToPinnedContext({ reason: "operator reset to pinned notes" });
+      });
     passivateEricButton?.addEventListener("click", () => {
       recordUiEvent(passivatedEricHalted ? "Eric passivation start" : "Eric passivation halt", "requested", currentUiSettingsSnapshot());
       toggleEricPassivation();
     });
     loadPassivatedEric?.addEventListener("change", handlePassivatedEricPrefChange);
     clearLogButton.addEventListener("click", () => {
-      conversationLines = [];
-      conversationProsodyByIndex = {};
-      clearInputDraft();
-      eventLogLines = [];
-      events.textContent = "";
-      brain2Log.textContent = "";
-      brain2QuestionCandidates = [];
-      brain2RevisionCandidates = [];
-      brain2NoteCandidates = [];
-      recentBrain2Outputs = [];
-      idleSelfTasks = [];
-      lastIdleSelfTaskAt = 0;
-      searchContextReceipts = [];
-      aloneActivityLog = [];
-      toolFollowupPromptLog = [];
-      toolFollowupPromptSources = [];
-      promptLedgerLog = [];
-      brain2PromptLog = [];
-      lastSessionPromptSnapshot = null;
-      responseCreateLedgerCredits = 0;
-      uiControlLog = [];
-      loadedNoteContextDirty = true;
-      updateBrain2Controls();
-      renderAllLogPopouts({ forceScroll: true });
-      updateSessionTools({ quiet: true });
-      recordUiEvent("logs cleared", "conversation/events/brain2", { prompt_ledger_reset: true });
+      clearHotConversationState({ reason: "clear log", clearEvents: true });
     });
     popoutConversationButton.addEventListener("click", () => {
       recordUiEvent("popout conversation", "open", { lines: countPaneLines(conversation) });

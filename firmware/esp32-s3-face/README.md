@@ -39,6 +39,7 @@ flashed and inspected on the actual board.
 - mouth rendering on the built-in display
 - autonomous mood, gaze, blink, pupil, mouth, and idle beat logic
 - CST816D touch and QMI8658 IMU probes over I2C
+- BOOT/GPIO0 button cycles LCD brightness presets: 100%, 85%, 60%, 30%
 - microSD and camera probes disabled by default
 - Wi-Fi station mode with AP fallback
 - mDNS hostname `esp32-s3-face.local`
@@ -133,6 +134,7 @@ The pin map is adapted from Waveshare's ESP32-S3-Touch-LCD-2 Arduino examples
 and schematic:
 
 - LCD SPI: SCLK `39`, MOSI `38`, MISO `40`, DC `42`, CS `45`, BL `1`
+- BOOT button: GPIO `0`, active low, cycles backlight presets `100/85/60/30`
 - I2C: SDA `48`, SCL `47`
 - Touch: CST816D at `0x15`
 - IMU: QMI8658 at `0x6B`

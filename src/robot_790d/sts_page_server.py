@@ -143,6 +143,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/realtime/restart":
             self._handle_realtime_restart()
             return
+        if parsed.path == "/api/realtime/stop":
+            self._handle_realtime_stop()
+            return
         if parsed.path == "/api/realtime/unload":
             self._handle_realtime_unload()
             return
@@ -563,6 +566,49 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             },
         )
 
+    def _handle_realtime_stop(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        script_path = repo_root / "scripts" / "stop_sts.ps1"
+        if not script_path.exists():
+            self._send_json(500, {"status": "error", "error": f"Missing stop script at {script_path}."})
+            return
+
+        logs_dir = repo_root / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        out_log = logs_dir / "sts-realtime-stop.out.log"
+        err_log = logs_dir / "sts-realtime-stop.err.log"
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        try:
+            with out_log.open("ab") as stdout, err_log.open("ab") as stderr:
+                process = subprocess.Popen(
+                    [
+                        "powershell.exe",
+                        "-NoProfile",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-File",
+                        str(script_path),
+                        "-RealtimeOnly",
+                    ],
+                    cwd=repo_root,
+                    stdout=stdout,
+                    stderr=stderr,
+                    creationflags=creationflags,
+                )
+        except OSError as exc:
+            self._send_json(500, {"status": "error", "error": str(exc)})
+            return
+
+        self._send_json(
+            202,
+            {
+                "status": "ok",
+                "tool": "stop_realtime_server",
+                "pid": process.pid,
+                "message": "Realtime backend stop started; LM Studio left loaded.",
+            },
+        )
+
     def _read_json_body(self) -> dict[str, Any]:
         length_header = self.headers.get("Content-Length") or "0"
         try:
@@ -893,7 +939,7 @@ def list_operator_commands(
     }
 
 
-def push_sensing_eye_image(payload: dict[str, Any]) -> dict[str, object]:
+def push_sensing_eye_image(payload: dict[str, Any], repo_root: Path | None = None) -> dict[str, object]:
     global SENSING_EYE_INBOX_LATEST, SENSING_EYE_INBOX_SEQ
     if not isinstance(payload, dict):
         raise ValueError("Sensing-eye push body must be an object.")
@@ -912,7 +958,7 @@ def push_sensing_eye_image(payload: dict[str, Any]) -> dict[str, object]:
     filename = _safe_media_filename(str(payload.get("filename") or "")) or (
         f"{source.replace(' ', '-')}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.jpg"
     )
-    saved_path = _save_sensing_eye_image(data_url, filename)
+    saved_path = _save_sensing_eye_image(data_url, filename, repo_root)
     state = payload.get("state") if isinstance(payload.get("state"), dict) else {}
     with SENSING_EYE_INBOX_LOCK:
         SENSING_EYE_INBOX_SEQ += 1
@@ -945,29 +991,32 @@ def poll_sensing_eye_inbox(after: int = 0) -> dict[str, object]:
     safe_after = max(0, int(after or 0))
     with SENSING_EYE_INBOX_LOCK:
         item = dict(SENSING_EYE_INBOX_LATEST or {})
+        latest_seq = SENSING_EYE_INBOX_SEQ
     if item and int(item.get("seq") or 0) > safe_after:
         return {
             "status": "ok",
             "item": item,
-            "latest_seq": item["seq"],
+            "latest_seq": latest_seq,
         }
     return {
         "status": "ok",
         "item": None,
-        "latest_seq": int(item.get("seq") or safe_after) if item else safe_after,
+        "latest_seq": latest_seq,
     }
 
 
-def clear_sensing_eye_inbox() -> dict[str, object]:
+def clear_sensing_eye_inbox(repo_root: Path | None = None) -> dict[str, object]:
     global SENSING_EYE_INBOX_LATEST, SENSING_EYE_INBOX_SEQ
     with SENSING_EYE_INBOX_LOCK:
         SENSING_EYE_INBOX_SEQ += 1
         latest_seq = SENSING_EYE_INBOX_SEQ
         SENSING_EYE_INBOX_LATEST = None
+    cleared_files = _clear_latest_sensing_eye_aliases(repo_root)
     return {
         "status": "ok",
         "tool": "clear_sensing_eye_inbox",
         "latest_seq": latest_seq,
+        "cleared_files": [str(path) for path in cleared_files],
     }
 
 
@@ -2356,7 +2405,19 @@ def sensing_eye_image_path(filename: str, repo_root: Path | None = None) -> Path
     return root / "logs" / "sensing-eye" / safe_name
 
 
-def _save_sensing_eye_image(data_url: str, filename: str) -> Path | None:
+def _clear_latest_sensing_eye_aliases(repo_root: Path | None = None) -> list[Path]:
+    root = repo_root or Path(__file__).resolve().parents[2]
+    out_dir = root / "logs" / "sensing-eye"
+    cleared: list[Path] = []
+    for path in out_dir.glob("latest-sensing-eye.*"):
+        if not path.is_file():
+            continue
+        path.unlink()
+        cleared.append(path)
+    return cleared
+
+
+def _save_sensing_eye_image(data_url: str, filename: str, repo_root: Path | None = None) -> Path | None:
     match = re.match(
         r"^data:image/(png|jpe?g|webp);base64,([A-Za-z0-9+/=\s]+)$",
         str(data_url or "").strip(),
@@ -2369,7 +2430,7 @@ def _save_sensing_eye_image(data_url: str, filename: str) -> Path | None:
     raw_name = _safe_media_filename(filename)
     stem = Path(raw_name).stem or f"sensing-eye-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     out_name = f"{stem}.{extension}"
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = repo_root or Path(__file__).resolve().parents[2]
     out_dir = repo_root / "logs" / "sensing-eye"
     out_dir.mkdir(parents=True, exist_ok=True)
     image_bytes = base64.b64decode(re.sub(r"\s+", "", match.group(2)), validate=True)

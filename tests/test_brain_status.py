@@ -1,4 +1,10 @@
-from robot_790d.brain_status import _parse_lms_ps, _summarize_pdh_gpu_engine_values, get_brain_status, get_gpu_status
+from robot_790d.brain_status import (
+    _normalize_lms_ps_json,
+    _parse_lms_ps,
+    _summarize_pdh_gpu_engine_values,
+    get_brain_status,
+    get_gpu_status,
+)
 
 
 def log_line(source: str, message: str) -> str:
@@ -124,6 +130,47 @@ def test_brain_status_context_reports_window_usage(monkeypatch, tmp_path) -> Non
     assert result["context"]["window_usage_percent"] == 25.0
 
 
+def test_brain_status_reports_runtime_specimen(monkeypatch, tmp_path) -> None:
+    logs = tmp_path / "logs"
+    config = tmp_path / "config"
+    logs.mkdir()
+    config.mkdir()
+    (logs / "sts-realtime.out.log").write_text("LLM model: qwen3.8-27b-nvfp4-mtp\n", encoding="utf-8")
+    (logs / "sts-realtime.err.log").write_text("", encoding="utf-8")
+    (config / "runtime_specimen.json").write_text(
+        """
+        {
+          "schema": 1,
+          "specimens": [
+            {
+              "model": "qwen3.8-27b-nvfp4-mtp",
+              "quantization": {
+                "weights": "NVFP4",
+                "kv_cache_key": "q8_0",
+                "kv_cache_value": "q5_0"
+              },
+              "observations": {
+                "vram_gain_gb": 1.2,
+                "audit_status": "pending_ear_test"
+              }
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("robot_790d.brain_status._read_lm_studio_status", lambda _preferred=None: None)
+
+    result = get_brain_status(tmp_path)
+
+    specimen = result["model"]["runtime_specimen"]
+    assert specimen["quantization"]["kv_cache_key"] == "q8_0"
+    assert specimen["quantization"]["kv_cache_value"] == "q5_0"
+    assert specimen["observations"]["vram_gain_gb"] == 1.2
+    assert "Runtime specimen records KV cache as k=q8_0, v=q5_0." in result["notes"]
+    assert "Runtime specimen audit status: pending_ear_test." in result["notes"]
+
+
 def test_brain_status_parses_lm_studio_status() -> None:
     models = _parse_lms_ps(
         "\n".join(
@@ -145,6 +192,35 @@ def test_brain_status_parses_lm_studio_status() -> None:
             "parallel_predictions": 1,
             "device": "Local",
             "ttl": "60m / 1h",
+        }
+    ]
+
+
+def test_brain_status_normalizes_lm_studio_json() -> None:
+    models = _normalize_lms_ps_json(
+        [
+            {
+                "identifier": "qwen3.8-27b-nvfp4-mtp",
+                "model": "qwen3.8-27b-nvfp4-mtp",
+                "status": "IDLE",
+                "size": "15.79 GB",
+                "contextLength": 131072,
+                "parallelPredictions": 2,
+                "device": "Local",
+            }
+        ]
+    )
+
+    assert models == [
+        {
+            "identifier": "qwen3.8-27b-nvfp4-mtp",
+            "model": "qwen3.8-27b-nvfp4-mtp",
+            "status": "IDLE",
+            "size": "15.79 GB",
+            "context_window_tokens": 131072,
+            "parallel_predictions": 2,
+            "device": "Local",
+            "ttl": None,
         }
     ]
 

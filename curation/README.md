@@ -99,6 +99,8 @@ Current key concept:
   rewriting memory.
 - `nerves-and-pulse.md`: the pinned terminology seed that frames Eric as a
   quantized loop where each pulse samples state and leaves a trace.
+- `machine-language.md`: the shared vocabulary that maps Scott's words, prompt
+  rules, UI controls, logs, and context operations onto the same machine parts.
 
 ## Archive Sweeps
 

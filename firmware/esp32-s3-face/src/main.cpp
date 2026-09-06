@@ -37,7 +37,7 @@
 #define ROBOT790_FIRMWARE_BUILT_AT __DATE__ " " __TIME__
 #endif
 #ifndef ROBOT790_FIRMWARE_FEATURES
-#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,touch_probe,imu_probe,eye_pose_modes"
+#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,touch_probe,imu_probe,eye_pose_modes,boot_brightness_cycle"
 #endif
 
 namespace {
@@ -81,6 +81,7 @@ uint8_t cst816Id = 0;
 uint32_t bootMs = 0;
 uint32_t requests = 0;
 int backlight = 255;
+uint8_t backlightPresetIndex = 0;
 String lastMessage = "booting";
 bool displayFlipped = FACE_LCD_DEFAULT_FLIPPED;
 
@@ -115,6 +116,9 @@ constexpr size_t MOUTH_TEXT_MAX_CHARS = 96;
 constexpr uint32_t MOUTH_TEXT_FLASH_MS = 120;
 constexpr uint32_t MOUTH_TEXT_MARQUEE_MS_PER_PX = 13;
 constexpr uint32_t MOUTH_TEXT_MARQUEE_END_PAD_MS = 250;
+constexpr uint8_t BACKLIGHT_PRESET_PERCENTS[] = {100, 85, 60, 30};
+constexpr uint8_t BACKLIGHT_PRESET_COUNT = sizeof(BACKLIGHT_PRESET_PERCENTS) / sizeof(BACKLIGHT_PRESET_PERCENTS[0]);
+constexpr uint32_t BOOT_BUTTON_DEBOUNCE_MS = 180;
 constexpr int16_t INTEGRATED_EYE_BAND_H = 120;
 constexpr int16_t INTEGRATED_MOUTH_BAND_H = 100;
 constexpr int16_t INTEGRATED_MOUTH_Y = FACE_LCD_HEIGHT - INTEGRATED_MOUTH_BAND_H;
@@ -435,6 +439,8 @@ float pupilRadius = 15.5f;
 uint32_t lastUpdate = 0;
 uint32_t lastEyeFrame = 0;
 uint32_t lastMouthFrame = 0;
+uint32_t lastBootButtonCycle = 0;
+bool bootButtonPressed = false;
 
 uint32_t fitMouthMarqueePeriodMs(uint32_t defaultPeriodMs)
 {
@@ -1411,10 +1417,64 @@ String ipString()
   return wifiStation ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
 }
 
+int backlightDutyForPercent(uint8_t percent)
+{
+  return constrain((int(percent) * 255 + 50) / 100, 1, 255);
+}
+
+uint8_t nearestBacklightPresetIndex(int value)
+{
+  uint8_t bestIndex = 0;
+  int bestDelta = abs(value - backlightDutyForPercent(BACKLIGHT_PRESET_PERCENTS[0]));
+  for (uint8_t i = 1; i < BACKLIGHT_PRESET_COUNT; i++) {
+    const int delta = abs(value - backlightDutyForPercent(BACKLIGHT_PRESET_PERCENTS[i]));
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      bestIndex = i;
+    }
+  }
+  return bestIndex;
+}
+
 void setBacklight(int value)
 {
   backlight = constrain(value, 0, 255);
+  backlightPresetIndex = nearestBacklightPresetIndex(backlight);
   analogWrite(FACE_LCD_BL, backlight);
+}
+
+void setBacklightPreset(uint8_t index)
+{
+  const uint8_t nextIndex = index % BACKLIGHT_PRESET_COUNT;
+  const uint8_t percent = BACKLIGHT_PRESET_PERCENTS[nextIndex];
+  setBacklight(backlightDutyForPercent(percent));
+  backlightPresetIndex = nextIndex;
+  lastMessage = "brightness " + String(percent) + "%";
+  Serial.printf("boot brightness cycle: %u%% duty=%d\n", percent, backlight);
+}
+
+void cycleBacklightPreset()
+{
+  setBacklightPreset((backlightPresetIndex + 1) % BACKLIGHT_PRESET_COUNT);
+}
+
+void initBootButton()
+{
+  pinMode(FACE_BOOT_BUTTON, INPUT_PULLUP);
+  bootButtonPressed = digitalRead(FACE_BOOT_BUTTON) == LOW;
+  lastBootButtonCycle = millis();
+}
+
+void updateBootButton(uint32_t now)
+{
+  const bool pressed = digitalRead(FACE_BOOT_BUTTON) == LOW;
+  if (pressed == bootButtonPressed) return;
+  if (now - lastBootButtonCycle < BOOT_BUTTON_DEBOUNCE_MS) return;
+  bootButtonPressed = pressed;
+  lastBootButtonCycle = now;
+  if (pressed) {
+    cycleBacklightPreset();
+  }
 }
 
 bool readReg8(uint8_t addr, uint8_t reg, uint8_t *value)
@@ -2287,21 +2347,20 @@ void drawIntegratedStatus(Arduino_GFX &g, uint32_t now)
   const uint16_t moodColor = statusColorForMood(mood);
   const int16_t noseX = FACE_LCD_WIDTH / 2;
   const int16_t noseY = INTEGRATED_STATUS_Y + INTEGRATED_STATUS_H / 2 - 10;
-  const int16_t noseRx = 68;
-  const int16_t noseRy = 53;
+  const int16_t noseRx = 60;
+  const int16_t noseRy = 47;
   const float pulse = 0.5f + 0.5f * sinf(float(now) * 0.0024f);
-  const int16_t haloGrow = int16_t(4.0f + pulse * 5.0f);
-  const uint16_t haloOuter = mixColor(BLACK, moodColor, 0.14f + pulse * 0.08f);
-  const uint16_t haloMid = mixColor(BLACK, moodColor, 0.24f + pulse * 0.10f);
+  const int16_t haloGrow = int16_t(2.0f + pulse * 3.0f);
+  const uint16_t haloOuter = mixColor(BLACK, moodColor, 0.10f + pulse * 0.06f);
+  const uint16_t haloMid = mixColor(BLACK, moodColor, 0.20f + pulse * 0.08f);
   const uint16_t noseBase = mixColor(rgb(5, 20, 30), moodColor, 0.30f);
   const uint16_t noseCore = mixColor(rgb(10, 42, 54), moodColor, 0.48f);
   const uint16_t noseHot = mixColor(moodColor, WHITE, 0.36f);
-  fillEllipse(g, noseX, noseY, noseRx + 18 + haloGrow, noseRy + 13 + haloGrow / 2, haloOuter);
-  fillEllipse(g, noseX, noseY, noseRx + 9 + haloGrow / 2, noseRy + 7 + haloGrow / 3, haloMid);
+  fillEllipse(g, noseX, noseY, noseRx + 10 + haloGrow, noseRy + 7 + haloGrow / 2, haloOuter);
+  fillEllipse(g, noseX, noseY, noseRx + 5 + haloGrow / 2, noseRy + 4 + haloGrow / 3, haloMid);
   fillEllipse(g, noseX, noseY, noseRx, noseRy, noseBase);
   fillEllipse(g, noseX, noseY, noseRx - 13, noseRy - 13, noseCore);
-  fillEllipse(g, noseX - 20, noseY - 18, 12, 7, mixColor(noseHot, WHITE, 0.35f));
-  g.drawEllipse(noseX, noseY, noseRx + 5, noseRy + 4, mixColor(moodColor, WHITE, 0.18f));
+  g.drawEllipse(noseX, noseY, noseRx + 3, noseRy + 2, mixColor(moodColor, WHITE, 0.14f));
   g.drawEllipse(noseX, noseY, noseRx, noseRy, noseHot);
   g.drawEllipse(noseX, noseY, noseRx - 7, noseRy - 7, mixColor(moodColor, WHITE, 0.08f));
 
@@ -2686,6 +2745,8 @@ void addState(JsonDocument &doc, uint32_t now)
   doc["sd"] = sdOk;
   doc["camera"] = cameraOk;
   doc["backlight"] = backlight;
+  doc["backlight_percent"] = BACKLIGHT_PRESET_PERCENTS[backlightPresetIndex];
+  doc["backlight_preset"] = backlightPresetIndex;
   doc["message"] = lastMessage;
 
   JsonObject mouth = doc["mouth"].to<JsonObject>();
@@ -3298,6 +3359,7 @@ void setup()
                 psramFound() ? "yes" : "no",
                 WiFi.macAddress().c_str());
 
+  initBootButton();
   initWifi();
   initHttp();
   initDisplay();
@@ -3329,6 +3391,7 @@ void loop()
     return;
   }
   server.handleClient();
+  updateBootButton(now);
   updateBehavior(now);
   static uint32_t lastDraw = 0;
 #if FACE_INTEGRATED_VIEWPORTS

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "updated_at": "2026-09-06",
+  "specimens": [
+    {
+      "model": "qwen3.8-27b-nvfp4-mtp",
+      "label": "Qwen 27B MTP Fast",
+      "context_window_tokens": 131072,
+      "parallel_predictions": 2,
+      "gpu_offload": "max",
+      "quantization": {
+        "weights": "NVFP4",
+        "kv_cache_key": "q8_0",
+        "kv_cache_value": "q5_0"
+      },
+      "observations": {
+        "vram_gain_gb": 1.2,
+        "source": "Scott observed after changing KV cache values",
+        "audit_status": "runtime_load_failed",
+        "recommendation": "do not use as Robot 790 default; revert to known-good KV cache and retest only with supported non-legacy modes",
+        "rejection_reason": "model did not load cleanly in LM Studio; Q5_0 was reported as legacy, so no valid Eric behavior ear test occurred"
+      }
+    }
+  ]
+}
