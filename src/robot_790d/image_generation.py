@@ -33,7 +33,7 @@ def generate_image(
     if not normalized_prompt:
         return {"status": "error", "error": "prompt must be a non-empty string"}
 
-    selected_provider = _provider_name(provider)
+    selected_provider = _provider_name(provider, repo_root=repo_root)
     if selected_provider == "mock":
         return _generate_mock_image(normalized_prompt, title=title, size=size, repo_root=repo_root)
     if selected_provider == "openai":
@@ -59,11 +59,11 @@ def generate_image(
 
 
 def image_output_dir(repo_root: Path | None = None) -> Path:
-    explicit = os.getenv("ROBOT_790_IMAGE_OUTPUT_DIR", "").strip()
+    explicit = _env_value("ROBOT_790_IMAGE_OUTPUT_DIR", repo_root=repo_root).strip()
     if explicit:
         return Path(explicit).expanduser()
 
-    instance_path = os.getenv("ROBOT_790_INSTANCE_PATH", "").strip()
+    instance_path = _env_value("ROBOT_790_INSTANCE_PATH", repo_root=repo_root).strip()
     if instance_path:
         return Path(instance_path).expanduser() / "generated-images"
 
@@ -91,7 +91,9 @@ def _generate_openai_image(
     quality: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
-    api_key = os.getenv("ROBOT_790_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    api_key = _env_value("ROBOT_790_OPENAI_API_KEY", repo_root=repo_root) or _env_value(
+        "OPENAI_API_KEY", repo_root=repo_root
+    )
     if not api_key:
         return {
             "status": "error",
@@ -108,17 +110,19 @@ def _generate_openai_image(
             "provider": "openai",
         }
 
-    model = _normalize_openai_image_model(model)
-    image_size = _normalize_size(size or os.getenv("ROBOT_790_IMAGE_SIZE") or DEFAULT_IMAGE_SIZE)
-    quality = _normalize_openai_image_quality(quality)
-    base_url = os.getenv("ROBOT_790_OPENAI_BASE_URL", "https://api.openai.com/v1").strip().rstrip("/")
-    timeout_s = _float_env("ROBOT_790_IMAGE_TIMEOUT_S", 180.0)
+    model = _normalize_openai_image_model(model, repo_root=repo_root)
+    image_size = _normalize_size(size or _env_value("ROBOT_790_IMAGE_SIZE", repo_root=repo_root) or DEFAULT_IMAGE_SIZE)
+    quality = _normalize_openai_image_quality(quality, repo_root=repo_root)
+    base_url = _env_value(
+        "ROBOT_790_OPENAI_BASE_URL", default="https://api.openai.com/v1", repo_root=repo_root
+    ).strip().rstrip("/")
+    timeout_s = _float_env("ROBOT_790_IMAGE_TIMEOUT_S", 180.0, repo_root=repo_root)
 
     payload: dict[str, object] = {"model": model, "prompt": prompt, "n": 1, "size": image_size}
     if model.startswith("gpt-image"):
         payload["quality"] = quality
         payload["output_format"] = DEFAULT_OUTPUT_FORMAT
-        moderation = os.getenv("ROBOT_790_OPENAI_IMAGE_MODERATION", "auto").strip()
+        moderation = _env_value("ROBOT_790_OPENAI_IMAGE_MODERATION", default="auto", repo_root=repo_root).strip()
         if moderation in {"auto", "low"}:
             payload["moderation"] = moderation
     else:
@@ -296,8 +300,10 @@ def _generated_filename(*, prompt: str, title: str, provider: str, ext: str) -> 
     return f"{stamp}-{provider}-{slug[:48]}.{ext.lower()}"
 
 
-def _provider_name(provider: str | None) -> str:
-    value = (provider or os.getenv("ROBOT_790_IMAGE_PROVIDER") or DEFAULT_IMAGE_PROVIDER).strip().lower()
+def _provider_name(provider: str | None, *, repo_root: Path | None = None) -> str:
+    value = (
+        provider or _env_value("ROBOT_790_IMAGE_PROVIDER", repo_root=repo_root) or DEFAULT_IMAGE_PROVIDER
+    ).strip().lower()
     return value or DEFAULT_IMAGE_PROVIDER
 
 
@@ -314,18 +320,22 @@ def _normalize_size(size: str) -> str:
     return value
 
 
-def _normalize_openai_image_model(model: str | None) -> str:
+def _normalize_openai_image_model(model: str | None, *, repo_root: Path | None = None) -> str:
     value = str(model or "").strip()
     if not value:
-        env_model = os.getenv("ROBOT_790_OPENAI_IMAGE_MODEL", DEFAULT_OPENAI_IMAGE_MODEL).strip()
+        env_model = _env_value(
+            "ROBOT_790_OPENAI_IMAGE_MODEL", default=DEFAULT_OPENAI_IMAGE_MODEL, repo_root=repo_root
+        ).strip()
         return env_model or DEFAULT_OPENAI_IMAGE_MODEL
     return re.sub(r"[^A-Za-z0-9._:-]", "", value)[:80] or DEFAULT_OPENAI_IMAGE_MODEL
 
 
-def _normalize_openai_image_quality(quality: str | None) -> str:
+def _normalize_openai_image_quality(quality: str | None, *, repo_root: Path | None = None) -> str:
     value = str(quality or "").strip().lower()
     if value not in {"auto", "low", "medium", "high"}:
-        value = os.getenv("ROBOT_790_OPENAI_IMAGE_QUALITY", DEFAULT_IMAGE_QUALITY).strip().lower()
+        value = _env_value(
+            "ROBOT_790_OPENAI_IMAGE_QUALITY", default=DEFAULT_IMAGE_QUALITY, repo_root=repo_root
+        ).strip().lower()
     if value not in {"auto", "low", "medium", "high"}:
         return DEFAULT_IMAGE_QUALITY
     return value
@@ -386,8 +396,43 @@ def _api_error_message(payload: dict[str, Any], status_code: int) -> str:
     return f"OpenAI image request failed with HTTP {status_code}."
 
 
-def _float_env(name: str, default: float) -> float:
+def _float_env(name: str, default: float, *, repo_root: Path | None = None) -> float:
     try:
-        return float(os.getenv(name, ""))
+        return float(_env_value(name, repo_root=repo_root))
     except ValueError:
         return default
+
+
+def _env_value(name: str, *, default: str = "", repo_root: Path | None = None) -> str:
+    value = os.getenv(name)
+    if value:
+        return value
+    if os.getenv("ROBOT_790_DISABLE_DOTENV_FALLBACK", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return default
+
+    root = repo_root or Path(__file__).resolve().parents[2]
+    env_path = root / ".env"
+    if not env_path.exists():
+        return default
+    return _read_dotenv_value(env_path, name) or default
+
+
+def _read_dotenv_value(path: Path, name: str) -> str:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ""
+
+    pattern = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$")
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        match = pattern.match(line)
+        if not match or match.group(1) != name:
+            continue
+        value = match.group(2).strip()
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        return value
+    return ""

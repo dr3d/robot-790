@@ -11,7 +11,7 @@ Date: 2026-09-06
 - Events: `logs/live/20260906-114306-events.txt`
 - Recording stop report: `logs/live/20260906-114304-recording_stop_report.txt`
 - Session source audio: `logs/audio/20260906-114251-sts-audio-source.webm`
-- Session picture video: `logs/audio/20260906-114251-sts-audio-picture.mp4`
+- Session picture video: `logs/audio/20260906-114251-Hermes-Mapping-Eric-As-A-Spoken-Notebook.mp4`
 - Saved conversation note: `notes/latest.txt`
 - Passivated compact state: `notes/core/passivated_eric_state.txt`
 - Passivated full packet: `notes/core/passivated_eric_state_packet.txt`
@@ -42,7 +42,7 @@ Date: 2026-09-06
 ## Artifact Diagnosis
 
 This was a short, clean run with one audio chunk. The session picture video was
-saved at `logs/audio/20260906-114251-sts-audio-picture.mp4`, about 3.1 MB. The
+saved at `logs/audio/20260906-114251-Hermes-Mapping-Eric-As-A-Spoken-Notebook.mp4`, about 3.1 MB. The
 source audio was saved at `logs/audio/20260906-114251-sts-audio-source.webm`,
 about 7.5 MB.
 

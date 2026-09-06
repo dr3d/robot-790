@@ -225,6 +225,9 @@
     let faceCommandLastSeq = 0;
     const handledFaceCommandSeqs = new Set();
     let faceCommandPollInFlight = false;
+    let facePaint = emptyFacePaint();
+    let facePaintImage = new Image();
+    let facePaintImageKey = "";
     let faceRecorder = null;
     let faceRecordChunks = [];
     let faceRecordStartedAt = 0;
@@ -246,6 +249,20 @@
         option.textContent = value.replaceAll("_", " ");
         return option;
       }));
+    }
+
+    function emptyFacePaint() {
+      return {
+        active: false,
+        imageReady: false,
+        imageDataUrl: "",
+        filename: "",
+        source: "",
+        target: "face",
+        fit: "contain",
+        opacity: 0.96,
+        expiresAt: 0
+      };
     }
 
     async function post(path, payload = {}) {
@@ -415,12 +432,21 @@
         state = await response.json();
         lastStateAt = performance.now();
         trackMouthTextState();
+        syncFacePaintStateFromServer();
         syncControls();
       } catch (error) {
         summary.textContent = error.message;
       } finally {
         setTimeout(pollState, 250);
       }
+    }
+
+    function syncFacePaintStateFromServer() {
+      const serverPaint = state?.face_paint;
+      if (!serverPaint || serverPaint.active !== false || !facePaint.active) return;
+      facePaint = emptyFacePaint();
+      facePaintImageKey = "";
+      facePaintImage = new Image();
     }
 
     function scheduleFaceCommandPoll() {
@@ -479,6 +505,8 @@
               stsUrl: command.sts_url || normalizedStsUrl(),
               reason: command.reason || "browser face self-capture"
             });
+          } else if (command.type === "face_paint") {
+            applyFacePaintCommand(command);
           }
         }
       } catch (error) {
@@ -487,6 +515,55 @@
         faceCommandPollInFlight = false;
         scheduleFaceCommandPoll();
       }
+    }
+
+    function applyFacePaintCommand(command) {
+      if (command.clear) {
+        facePaint = emptyFacePaint();
+        facePaintImageKey = "";
+        facePaintImage = new Image();
+        setCaptureStatus("cleared face image", "ok");
+        return;
+      }
+      const imageDataUrl = String(command.image_data_url || "");
+      if (!imageDataUrl) {
+        setCaptureStatus("face paint missing image", "bad");
+        return;
+      }
+      const target = String(command.target || "auto").toLowerCase();
+      const resolvedTarget = target === "nose" ? "nose" : "face";
+      const fit = String(command.fit || "contain").toLowerCase() === "cover" ? "cover" : "contain";
+      const duration = Math.max(0, Number(command.duration) || 0);
+      facePaint = {
+        active: true,
+        imageReady: false,
+        imageDataUrl,
+        filename: String(command.filename || ""),
+        source: String(command.source || "sensing_eye"),
+        target: resolvedTarget,
+        fit,
+        opacity: Math.max(0.15, Math.min(1, Number(command.opacity) || 0.96)),
+        expiresAt: duration === 0 ? 0 : performance.now() + duration * 1000
+      };
+      if (imageDataUrl !== facePaintImageKey) {
+        facePaintImageKey = imageDataUrl;
+        facePaintImage = new Image();
+        const paintKey = imageDataUrl;
+        facePaintImage.onload = () => {
+          if (facePaintImageKey !== paintKey) return;
+          facePaint.imageReady = true;
+          setCaptureStatus(`face image set${facePaint.filename ? `: ${facePaint.filename}` : ""}`, "ok");
+        };
+        facePaintImage.onerror = () => {
+          if (facePaintImageKey !== paintKey) return;
+          facePaint = emptyFacePaint();
+          setCaptureStatus("face image failed to load", "bad");
+        };
+        facePaintImage.src = imageDataUrl;
+      } else {
+        facePaint.imageReady = facePaintImage.complete && facePaintImage.naturalWidth > 0;
+      }
+      setCaptureStatus("loading face image...");
     }
 
     function trackMouthTextState() {
@@ -1830,6 +1907,74 @@
       ctx.fillText("sim", cx, cy + 82);
     }
 
+    function fittedImageRect(image, x, y, w, h, fit = "contain") {
+      const iw = image.naturalWidth || image.width || 1;
+      const ih = image.naturalHeight || image.height || 1;
+      const scale = fit === "cover" ? Math.max(w / iw, h / ih) : Math.min(w / iw, h / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      return {
+        x: x + (w - dw) / 2,
+        y: y + (h - dh) / 2,
+        w: dw,
+        h: dh
+      };
+    }
+
+    function drawFacePaint(t) {
+      if (!facePaint.active) return;
+      if (facePaint.expiresAt > 0 && t >= facePaint.expiresAt) {
+        facePaint = emptyFacePaint();
+        return;
+      }
+      ctx.save();
+      if (!facePaint.imageReady || !facePaintImage.complete || !facePaintImage.naturalWidth) {
+        const y = 128;
+        ctx.fillStyle = "rgba(94, 234, 212, 0.08)";
+        ctx.fillRect(26, y, canvas.width - 52, canvas.height - y - 30);
+        ctx.restore();
+        return;
+      }
+      ctx.globalAlpha = facePaint.opacity;
+      if (facePaint.target === "nose") {
+        const cx = 360;
+        const cy = faceLayout.statusY + faceLayout.statusH / 2;
+        const rx = 118;
+        const ry = 96;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.clip();
+        const rect = fittedImageRect(facePaintImage, cx - rx, cy - ry, rx * 2, ry * 2, facePaint.fit);
+        ctx.drawImage(facePaintImage, rect.x, rect.y, rect.w, rect.h);
+        ctx.restore();
+        ctx.save();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "rgba(126, 255, 235, 0.75)";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx + 4, ry + 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
+      const x = 22;
+      const y = 126;
+      const w = canvas.width - x * 2;
+      const h = canvas.height - y - 24;
+      const rect = fittedImageRect(facePaintImage, x, y, w, h, facePaint.fit);
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      ctx.clip();
+      ctx.fillStyle = "#020407";
+      ctx.fillRect(x, y, w, h);
+      ctx.drawImage(facePaintImage, rect.x, rect.y, rect.w, rect.h);
+      ctx.restore();
+      ctx.save();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(126, 255, 235, 0.38)";
+      ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+      ctx.restore();
+    }
+
     function draw() {
       const t = performance.now();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1848,6 +1993,7 @@
       drawEye(faceLayout.width - faceLayout.eyePadX - faceLayout.eyeW / 2, faceLayout.eyeBandY + faceLayout.eyeH / 2, false, t, eyeScale);
       drawMouth(t);
       drawNose(t);
+      drawFacePaint(t);
       if (!state || performance.now() - lastStateAt > 1200) {
         ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
         ctx.font = "18px ui-monospace, SFMono-Regular, Consolas, monospace";

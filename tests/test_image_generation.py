@@ -37,6 +37,7 @@ def test_mock_image_generation_writes_svg_and_metadata(tmp_path, monkeypatch) ->
 def test_openai_generation_reports_missing_key(monkeypatch) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ROBOT_790_OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("ROBOT_790_DISABLE_DOTENV_FALLBACK", "1")
 
     result = image_generation.generate_image("a small robot face", provider="openai")
 
@@ -75,6 +76,43 @@ def test_openai_generation_accepts_model_and_quality(tmp_path, monkeypatch) -> N
     payload = captured["json"]
     assert payload["model"] == "gpt-image-1"
     assert payload["quality"] == "high"
+
+
+def test_openai_generation_reads_repo_dotenv_fallback(tmp_path, monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {"data": [{"b64_json": "aGVsbG8=", "revised_prompt": "revised"}]}
+
+    fake_httpx = types.SimpleNamespace(
+        HTTPError=RuntimeError,
+        post=lambda url, **kwargs: captured.update({"url": url, **kwargs}) or FakeResponse(),
+    )
+    monkeypatch.setitem(sys.modules, "httpx", fake_httpx)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ROBOT_790_OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("ROBOT_790_DISABLE_DOTENV_FALLBACK", raising=False)
+    (tmp_path / ".env").write_text(
+        "\n".join(
+            [
+                "OPENAI_API_KEY=dotenv-key",
+                "ROBOT_790_OPENAI_IMAGE_MODEL=gpt-image-1",
+                "ROBOT_790_OPENAI_IMAGE_QUALITY=medium",
+                "ROBOT_790_IMAGE_SIZE=1024x1024",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = image_generation.generate_image("a robot smelling popcorn", provider="openai", repo_root=tmp_path)
+
+    assert result["status"] == "ok"
+    assert result["model"] == "gpt-image-1"
+    assert result["quality"] == "medium"
+    assert captured["headers"]["Authorization"] == "Bearer dotenv-key"
 
 
 def test_generated_image_path_rejects_unsafe_filename(tmp_path) -> None:

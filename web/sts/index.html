@@ -42,13 +42,10 @@
       padding: 28px 0 36px;
       display: grid;
       --control-sidebar-width: 360px;
-      grid-template-columns: minmax(0, 1fr) 10px minmax(300px, var(--control-sidebar-width));
+      grid-template-columns: minmax(0, 1fr) 10px minmax(220px, var(--control-sidebar-width));
       grid-template-areas:
         "header header header"
-        "logs sidebar-resize interaction"
-        "logs sidebar-resize server"
-        "logs sidebar-resize controls"
-        "logs sidebar-resize context";
+        "logs sidebar-resize sidebar";
       align-content: start;
       gap: 14px 8px;
     }
@@ -422,6 +419,45 @@
       font-size: 13px;
       white-space: nowrap;
     }
+    .runtime-settings-expando {
+      border-top: 1px solid var(--line);
+      padding: 12px 0 4px;
+    }
+    .runtime-settings-expando > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text);
+      cursor: pointer;
+      list-style: none;
+    }
+    .runtime-settings-expando > summary::-webkit-details-marker {
+      display: none;
+    }
+    .runtime-settings-expando > summary::after {
+      content: ">";
+      color: var(--accent);
+      font-size: 13px;
+      transition: transform 120ms ease;
+    }
+    .runtime-settings-expando[open] > summary::after {
+      transform: rotate(90deg);
+    }
+    .runtime-settings-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+    .runtime-settings-expando-body {
+      display: grid;
+      gap: 10px;
+      padding-top: 10px;
+    }
+    .runtime-settings-expando-body > section:first-child {
+      border-top: 0;
+    }
     .subtle {
       color: var(--muted);
       font-size: 12px;
@@ -444,7 +480,11 @@
       grid-template-columns: minmax(260px, 460px) auto auto minmax(0, 1fr);
     }
     .server-controls {
-      grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px) auto auto auto auto auto auto;
+      grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px);
+    }
+    .realtime-action-controls {
+      grid-template-columns: repeat(6, minmax(92px, auto));
+      justify-content: start;
     }
     .custom-model-controls {
       grid-template-columns: minmax(260px, 1fr) minmax(120px, 160px) minmax(110px, 150px) minmax(110px, 150px) minmax(0, 1fr);
@@ -713,17 +753,20 @@
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
-    #micPanel {
-      grid-area: interaction;
-    }
-    #serverPanel {
-      grid-area: server;
-    }
-    #settingsPanel {
-      grid-area: controls;
-    }
-    #contextPanel {
-      grid-area: context;
+    #controlSidebar {
+      grid-area: sidebar;
+      align-self: start;
+      position: sticky;
+      top: 106px;
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+      max-height: calc(100vh - 124px);
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding-right: 8px;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
     }
     #controlSidebarResize {
       grid-area: sidebar-resize;
@@ -740,16 +783,49 @@
       opacity: 0.85;
       background: linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.45), transparent);
     }
-    #serverPanel,
-    #micPanel,
-    #settingsPanel,
-    #contextPanel {
+    #controlSidebar > .settings-panel {
       align-self: start;
+      min-width: 0;
     }
-    main.sidebar-collapsed #serverPanel,
-    main.sidebar-collapsed #micPanel,
-    main.sidebar-collapsed #settingsPanel,
-    main.sidebar-collapsed #contextPanel,
+    #controlSidebar .settings-panel > summary {
+      min-width: 0;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+    #controlSidebar .settings-title {
+      flex: 0 1 auto;
+    }
+    #controlSidebar .runtime-settings-expando > summary {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    #controlSidebar .settings-hint,
+    #controlSidebar .subtle {
+      flex: 1 1 9rem;
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    #controlSidebar .controls,
+    #controlSidebar label,
+    #controlSidebar input,
+    #controlSidebar textarea,
+    #controlSidebar select,
+    #controlSidebar button,
+    #controlSidebar .button-link,
+    #controlSidebar .runtime-settings-expando,
+    #controlSidebar .runtime-settings-expando-body {
+      min-width: 0;
+      max-width: 100%;
+    }
+    #controlSidebar .controls > button,
+    #controlSidebar .controls > .button-link,
+    #controlSidebar .runtime-settings-expando-body > button,
+    #controlSidebar .runtime-settings-expando-body > .button-link {
+      width: 100%;
+    }
+    main.sidebar-collapsed #controlSidebar,
     main.sidebar-collapsed #controlSidebarResize {
       display: none;
     }
@@ -757,8 +833,8 @@
     #serverPanel .settings-body,
     #settingsPanel .settings-body,
     #contextPanel .settings-body {
-      max-height: min(68vh, 760px);
-      overflow: auto;
+      max-height: none;
+      overflow: visible;
     }
     #micPanel .controls,
     #serverPanel .controls,
@@ -1036,15 +1112,18 @@
         grid-template-areas:
           "header"
           "logs"
-          "interaction"
-          "server"
-          "controls"
-          "context";
+          "sidebar";
       }
       main.sidebar-collapsed {
         grid-template-areas:
           "header"
           "logs";
+      }
+      #controlSidebar {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
       }
       #controlSidebarResize {
         display: none;
@@ -1190,29 +1269,14 @@
       </div>
     </header>
 
-    <details id="serverPanel" class="settings-panel server-panel" open>
-      <summary>
-        <span class="settings-title">Realtime Server</span>
-        <span class="settings-hint">Endpoint, connection, and backend restart</span>
-      </summary>
-      <div class="settings-body">
-        <section class="controls server-controls">
-          <label>
-            Realtime server
-            <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
-          </label>
-          <label>
-            Brain
-            <select id="modelPreset">
-              <option value="qwen27-mtp-vlow">Qwen 27B MTP Fast</option>
-              <option value="qwen27">Qwen 27B</option>
-              <option value="qwen9">Qwen 9B</option>
-              <option value="qwen4">Qwen 4B</option>
-              <option value="nemotron30">Nemotron 30B</option>
-              <option value="openai">OpenAI</option>
-              <option value="custom">Custom LM Studio</option>
-            </select>
-          </label>
+    <div id="controlSidebar">
+      <details id="serverPanel" class="settings-panel server-panel" open>
+        <summary>
+          <span class="settings-title">Realtime Server</span>
+          <span class="settings-hint">Endpoint, connection, and backend restart</span>
+        </summary>
+        <div class="settings-body">
+        <section class="controls realtime-action-controls">
           <button id="connect" class="primary">Connect</button>
           <button id="disconnect" class="danger" disabled>Disconnect</button>
           <button id="haltRuntime" class="danger" type="button">Halt</button>
@@ -1220,148 +1284,214 @@
           <button id="restartServer" class="warn">Restart</button>
           <button id="unloadServer" class="danger">Unload</button>
         </section>
-        <section id="customModelControls" class="controls custom-model-controls" hidden>
-          <label>
-            LM Studio model key
-            <input id="customModelKey" value="qwen3.8-27b-nvfp4-mtp" spellcheck="false">
-          </label>
-          <label>
-            Thinking
-            <select id="customModelReasoning">
-              <option value="none">Off</option>
-              <option value="low">Low</option>
-              <option value="">Omit</option>
-              <option value="medium">Medium</option>
-              <option value="xhigh">XHigh</option>
-            </select>
-          </label>
-          <label>
-            Context
-            <input id="customModelContext" type="number" min="4096" max="262144" step="4096" value="131072">
-          </label>
-          <label>
-            Parallel
-            <input id="customModelParallel" type="number" min="1" max="8" step="1" value="2">
-          </label>
-          <span class="subtle">Use the identifier shown by LM Studio after load, or from <code>lms ls</code>.</span>
-        </section>
-      </div>
-    </details>
+        <details class="runtime-settings-expando">
+          <summary>
+            <span class="runtime-settings-label">Connection Settings</span>
+            <span class="subtle">Endpoint, brain preset, and custom LM Studio fields</span>
+          </summary>
+          <div class="runtime-settings-expando-body">
+            <section class="controls server-controls">
+              <label>
+                Realtime server
+                <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
+              </label>
+              <label>
+                Brain
+                <select id="modelPreset">
+                  <option value="qwen27-mtp-vlow">Qwen 27B MTP Fast</option>
+                  <option value="qwen27">Qwen 27B</option>
+                  <option value="qwen9">Qwen 9B</option>
+                  <option value="qwen4">Qwen 4B</option>
+                  <option value="nemotron30">Nemotron 30B</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="custom">Custom LM Studio</option>
+                </select>
+              </label>
+            </section>
+            <section id="customModelControls" class="controls custom-model-controls" hidden>
+              <label>
+                LM Studio model key
+                <input id="customModelKey" value="qwen3.8-27b-nvfp4-mtp" spellcheck="false">
+              </label>
+              <label>
+                Thinking
+                <select id="customModelReasoning">
+                  <option value="none">Off</option>
+                  <option value="low">Low</option>
+                  <option value="">Omit</option>
+                  <option value="medium">Medium</option>
+                  <option value="xhigh">XHigh</option>
+                </select>
+              </label>
+              <label>
+                Context
+                <input id="customModelContext" type="number" min="4096" max="262144" step="4096" value="131072">
+              </label>
+              <label>
+                Parallel
+                <input id="customModelParallel" type="number" min="1" max="8" step="1" value="2">
+              </label>
+              <span class="subtle">Use the identifier shown by LM Studio after load, or from <code>lms ls</code>.</span>
+            </section>
+          </div>
+        </details>
+        </div>
+      </details>
 
-    <details id="micPanel" class="settings-panel mic-panel" open>
-      <summary>
-        <span class="settings-title">Eye And Mic</span>
-        <span class="settings-hint">Staged sensing input, browser camera, microphone</span>
-      </summary>
-      <div class="settings-body">
+      <details id="micPanel" class="settings-panel mic-panel" open>
+        <summary>
+          <span class="settings-title">Eye And Mic</span>
+          <span class="settings-hint">Staged sensing input, browser camera, microphone</span>
+        </summary>
+        <div class="settings-body">
         <section class="controls mic-vision-controls">
-          <label id="visionDrop" class="vision-drop" tabindex="0">
-            <img id="visionPreview" class="vision-preview" alt="">
-            <span class="vision-copy">
-              <span class="vision-title">Sensing Eye</span>
-              <span id="visionHint" class="vision-hint">Drop image or text, then speak</span>
-            </span>
-            <input id="visionFile" type="file" accept="image/*,.txt,.md,text/plain,text/markdown" hidden>
-          </label>
-          <button id="visionClear" disabled>Clear Input</button>
-          <button id="visionOpen" type="button" disabled>Open Eye</button>
-          <div id="visionCameraCard" class="camera-card">
-            <video id="visionCameraPreview" class="camera-preview" muted playsinline></video>
-            <span class="vision-copy">
-              <span class="vision-title">Browser Live Camera</span>
-              <span id="visionCameraHint" class="vision-hint">Live camera off</span>
-            </span>
-          </div>
-          <div class="camera-actions">
-            <button id="visionCameraStart" type="button">Camera On</button>
-            <button id="visionCameraFrame" type="button" disabled>Capture To Eye</button>
-            <button id="visionBrowserFaceFrame" type="button" disabled>Mirror Face</button>
-            <button id="visionCameraStop" type="button" disabled>Camera Off</button>
-          </div>
-          <div class="meters">
-            <span>Mic</span>
-            <div class="bar"><span id="level"></span></div>
-          </div>
-          <label>
-            Microphone
-            <select id="micDevice">
-              <option value="">System default</option>
-            </select>
-          </label>
-          <button id="refreshMicDevices" type="button">Refresh Mics</button>
-          <label>
-            Interrupt <span id="interruptSensitivityValue">6/10</span>
-            <input id="interruptSensitivity" type="range" min="0" max="10" step="1" value="6">
-          </label>
-          <button id="startMic" disabled>Start Mic</button>
-          <button id="stopMic" disabled>Stop Mic</button>
-          <button id="muteMicForEric" type="button" disabled aria-pressed="false">Mute Me</button>
-          <button id="muteEricAudio" type="button" aria-pressed="false">Mute Eric</button>
-          <button id="resetMic" disabled>Fresh Ears</button>
+          <details id="micControlsExpando" class="runtime-settings-expando mic-controls-expando" open>
+            <summary>
+              <span class="runtime-settings-label">Mic Controls</span>
+              <span class="subtle">Start, stop, mute, and refresh ears</span>
+            </summary>
+            <div class="runtime-settings-expando-body">
+              <button id="startMic" disabled>Start Mic</button>
+              <button id="stopMic" disabled>Stop Mic</button>
+              <button id="muteMicForEric" type="button" disabled aria-pressed="false">Mute Me</button>
+              <button id="muteEricAudio" type="button" aria-pressed="false">Mute Eric</button>
+              <button id="resetMic" disabled>Fresh Ears</button>
+            </div>
+          </details>
+          <details class="runtime-settings-expando mic-settings-expando">
+            <summary>
+              <span class="runtime-settings-label">Mic Settings</span>
+              <span class="subtle">Device, level, and interrupt</span>
+            </summary>
+            <div class="runtime-settings-expando-body">
+              <div class="meters">
+                <span>Mic</span>
+                <div class="bar"><span id="level"></span></div>
+              </div>
+              <label>
+                Microphone
+                <select id="micDevice">
+                  <option value="">System default</option>
+                </select>
+              </label>
+              <button id="refreshMicDevices" type="button">Refresh Mics</button>
+              <label>
+                Interrupt <span id="interruptSensitivityValue">6/10</span>
+                <input id="interruptSensitivity" type="range" min="0" max="10" step="1" value="6">
+              </label>
+              <section class="controls audio-record-controls">
+                <div class="audio-record-status">
+                  <strong>Audio recording</strong><br>
+                  <span id="audioRecordStatus">Not recording</span>
+                </div>
+                <label class="toggle-row">
+                  <input id="autoAudioRecord" type="checkbox" checked>
+                  Auto record
+                </label>
+                <button id="startAudioRecord">Record Audio</button>
+                <button id="stopAudioRecord" disabled>Stop Recording</button>
+                <a id="downloadAudioRecord" class="button-link" href="#" download hidden>Download</a>
+              </section>
+            </div>
+          </details>
+          <details id="visionCameraExpando" class="runtime-settings-expando vision-camera-expando" open>
+            <summary>
+              <span class="runtime-settings-label">Sensing Eye + Camera</span>
+              <span class="subtle">Staged input, live camera, and face mirror</span>
+            </summary>
+            <div class="runtime-settings-expando-body">
+              <label id="visionDrop" class="vision-drop" tabindex="0">
+                <img id="visionPreview" class="vision-preview" alt="">
+                <span class="vision-copy">
+                  <span class="vision-title">Sensing Eye</span>
+                  <span id="visionHint" class="vision-hint">Drop image or text, then speak</span>
+                </span>
+                <input id="visionFile" type="file" accept="image/*,.txt,.md,text/plain,text/markdown" hidden>
+              </label>
+              <button id="visionClear" disabled>Clear Input</button>
+              <button id="visionOpen" type="button" disabled>Open Eye</button>
+              <button id="visionPaintFace" type="button" disabled>Paint Face</button>
+              <button id="visionClearFacePaint" type="button" disabled>Clear Face Paint</button>
+              <div id="visionCameraCard" class="camera-card">
+                <video id="visionCameraPreview" class="camera-preview" muted playsinline></video>
+                <span class="vision-copy">
+                  <span class="vision-title">Browser Live Camera</span>
+                  <span id="visionCameraHint" class="vision-hint">Live camera off</span>
+                </span>
+              </div>
+              <div class="camera-actions">
+                <button id="visionCameraStart" type="button">Camera On</button>
+                <button id="visionCameraFrame" type="button" disabled>Capture To Eye</button>
+                <button id="visionBrowserFaceFrame" type="button" disabled>Mirror Face</button>
+                <button id="visionCameraStop" type="button" disabled>Camera Off</button>
+              </div>
+            </div>
+          </details>
         </section>
-        <section class="controls text-injection-controls">
-          <label>
-            Typed input
-            <textarea id="typedInput" rows="2" spellcheck="true" placeholder="Type to Eric, or test pronunciation..."></textarea>
-          </label>
-          <div class="typed-actions" aria-label="Typed input actions">
-            <button id="typedSend" type="button" disabled>Send</button>
-            <button id="typedSay" type="button" disabled>Say</button>
+        <details id="generatedImageExpando" class="runtime-settings-expando generated-image-expando">
+          <summary>
+            <span class="runtime-settings-label">Imagined Image</span>
+            <span class="subtle">Generation preview, model, and cost</span>
+          </summary>
+          <div class="runtime-settings-expando-body">
+            <section class="controls generated-image-controls">
+              <div id="generatedImageCard" class="generated-image-card">
+                <img id="generatedImagePreview" class="generated-image-preview" alt="">
+                <span class="vision-copy">
+                  <span class="vision-title">Imagined Image</span>
+                  <span id="generatedImageHint" class="vision-hint">No generated image yet</span>
+                </span>
+              </div>
+              <label>
+                Image model
+                <select id="imageModel">
+                  <option value="gpt-image-1-mini">Mini</option>
+                  <option value="gpt-image-1">GPT Image 1</option>
+                  <option value="">Use .env</option>
+                </select>
+              </label>
+              <label>
+                Cost
+                <select id="imageCost">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="auto">Auto</option>
+                </select>
+              </label>
+              <button id="generatedImageOpen" disabled>Open</button>
+              <button id="generatedImageClear" disabled>Clear</button>
+            </section>
           </div>
-          <span id="typedStatus" class="subtle">Connect first</span>
-        </section>
-        <section class="controls audio-record-controls">
-          <div class="audio-record-status">
-            <strong>Audio recording</strong><br>
-            <span id="audioRecordStatus">Not recording</span>
+        </details>
+        <details id="typedInputExpando" class="runtime-settings-expando typed-input-expando">
+          <summary>
+            <span class="runtime-settings-label">Typed Input</span>
+            <span class="subtle">Text to Eric or pronunciation tests</span>
+          </summary>
+          <div class="runtime-settings-expando-body">
+            <section class="controls text-injection-controls">
+              <label>
+                Typed input
+                <textarea id="typedInput" rows="2" spellcheck="true" placeholder="Type to Eric, or test pronunciation..."></textarea>
+              </label>
+              <div class="typed-actions" aria-label="Typed input actions">
+                <button id="typedSend" type="button" disabled>Send</button>
+                <button id="typedSay" type="button" disabled>Say</button>
+              </div>
+              <span id="typedStatus" class="subtle">Connect first</span>
+            </section>
           </div>
-          <label class="toggle-row">
-            <input id="autoAudioRecord" type="checkbox" checked>
-            Auto record
-          </label>
-          <button id="startAudioRecord">Record Audio</button>
-          <button id="stopAudioRecord" disabled>Stop Recording</button>
-          <a id="downloadAudioRecord" class="button-link" href="#" download hidden>Download</a>
-        </section>
-        <section class="controls generated-image-controls">
-          <div id="generatedImageCard" class="generated-image-card">
-            <img id="generatedImagePreview" class="generated-image-preview" alt="">
-            <span class="vision-copy">
-              <span class="vision-title">Imagined Image</span>
-              <span id="generatedImageHint" class="vision-hint">No generated image yet</span>
-            </span>
-          </div>
-          <label>
-            Image model
-            <select id="imageModel">
-              <option value="gpt-image-1-mini">Mini</option>
-              <option value="gpt-image-1">GPT Image 1</option>
-              <option value="">Use .env</option>
-            </select>
-          </label>
-          <label>
-            Cost
-            <select id="imageCost">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="auto">Auto</option>
-            </select>
-          </label>
-          <button id="generatedImageOpen" disabled>Open</button>
-          <button id="generatedImageClear" disabled>Clear</button>
-        </section>
-      </div>
-    </details>
+        </details>
+        </div>
+      </details>
 
-    <div id="controlSidebarResize" role="separator" aria-orientation="vertical" aria-label="Resize control sidebar" title="Drag to resize control sidebar"></div>
-
-    <details id="settingsPanel" class="settings-panel">
-      <summary>
-        <span class="settings-title">Robot Controls</span>
-        <span class="settings-hint">Face, bodies, Brain1, Brain2, memory, and LLM tool switches</span>
-      </summary>
-      <div class="settings-body">
+      <details id="settingsPanel" class="settings-panel">
+        <summary>
+          <span class="settings-title">Robot Controls</span>
+          <span class="settings-hint">Face, bodies, Brain1, Brain2, memory, and LLM tool switches</span>
+        </summary>
+        <div class="settings-body">
         <section class="controls url-controls">
           <label>
             Embodiment
@@ -1548,23 +1678,26 @@
             <label class="toggle-row"><input id="llmSmartHomeTools" type="checkbox" checked> LLM smart home</label>
           </div>
         </section>
-      </div>
-    </details>
+        </div>
+      </details>
 
-    <details id="contextPanel" class="settings-panel">
-      <summary>
-        <span class="settings-title">Context Map</span>
-        <span class="settings-hint">Read-only view of sources Eric can draw from</span>
-      </summary>
-      <div class="settings-body">
+      <details id="contextPanel" class="settings-panel">
+        <summary>
+          <span class="settings-title">Context Map</span>
+          <span class="settings-hint">Read-only view of sources Eric can draw from</span>
+        </summary>
+        <div class="settings-body">
         <div class="context-toolbar">
           <button id="contextMapRefresh" type="button">Refresh</button>
           <button id="contextMapCopy" class="copy-link" type="button">Copy</button>
           <span id="contextMapStatus" class="subtle">Not scanned yet</span>
         </div>
         <div id="contextMap" class="context-map"></div>
-      </div>
-    </details>
+        </div>
+      </details>
+    </div>
+
+    <div id="controlSidebarResize" role="separator" aria-orientation="vertical" aria-label="Resize control sidebar" title="Drag to resize control sidebar"></div>
 
     <section class="grid log-grid">
       <div>
@@ -1584,6 +1717,17 @@
         </div>
         <div id="prosodyKeyPanel" class="subtle" hidden>v key: q quiet, m medium, l loud, p pause; > shift; + combined cues.</div>
         <div id="conversation" class="log"></div>
+      </div>
+      <div>
+        <div class="log-header">
+          <label>Brain 2 <span id="brain2Status" class="subtle"></span></label>
+          <span class="log-actions">
+            <button id="recordBrain2" class="copy-link record-action" type="button">Record</button>
+            <button id="popoutBrain2" class="copy-link" type="button">Pop Out</button>
+            <button id="copyBrain2" class="copy-link" type="button">Copy</button>
+          </span>
+        </div>
+        <div id="brain2Log" class="log"></div>
       </div>
       <div>
         <div class="log-header">
@@ -1608,17 +1752,6 @@
           </span>
         </div>
         <div id="events" class="log"></div>
-      </div>
-      <div>
-        <div class="log-header">
-          <label>Brain 2 <span id="brain2Status" class="subtle"></span></label>
-          <span class="log-actions">
-            <button id="recordBrain2" class="copy-link record-action" type="button">Record</button>
-            <button id="popoutBrain2" class="copy-link" type="button">Pop Out</button>
-            <button id="copyBrain2" class="copy-link" type="button">Copy</button>
-          </span>
-        </div>
-        <div id="brain2Log" class="log"></div>
       </div>
     </section>
   </main>
@@ -1712,6 +1845,7 @@
     const firstContactReportButton = document.querySelector("#firstContactReport");
     const interruptSensitivity = document.querySelector("#interruptSensitivity");
     const interruptSensitivityValue = document.querySelector("#interruptSensitivityValue");
+    const micControlsExpando = document.querySelector("#micControlsExpando");
     const startMicButton = document.querySelector("#startMic");
     const stopMicButton = document.querySelector("#stopMic");
     const muteMicForEricButton = document.querySelector("#muteMicForEric");
@@ -1736,6 +1870,8 @@
     const visionHint = document.querySelector("#visionHint");
     const visionClearButton = document.querySelector("#visionClear");
     const visionOpenButton = document.querySelector("#visionOpen");
+    const visionPaintFaceButton = document.querySelector("#visionPaintFace");
+    const visionClearFacePaintButton = document.querySelector("#visionClearFacePaint");
     const visionCameraCard = document.querySelector("#visionCameraCard");
     const visionCameraPreview = document.querySelector("#visionCameraPreview");
     const visionCameraHint = document.querySelector("#visionCameraHint");
@@ -2433,6 +2569,43 @@
             }
           },
           required: ["enabled"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "paint_face_from_sensing_eye",
+        description: (
+          "Put the current staged sensing-eye image onto Robot 790's active face display as temporary face paint. " +
+          "Use when Scott asks you to make your face be the image, put what is in your sensing eye onto your face, copy the image into your countenance, or clear that face image. " +
+          "The active embodiment chooses the body-specific target: browser_face fills the face display; multipart ESP32 faces may map this to the nose/status display."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            duration: {
+              type: "number",
+              minimum: 0,
+              maximum: 300,
+              description: "Seconds to hold the image. Use 0 to hold until the face is cleared or released."
+            },
+            fit: {
+              type: "string",
+              enum: ["contain", "cover"],
+              default: "contain",
+              description: "contain shows the whole image; cover fills the face target and may crop."
+            },
+            target: {
+              type: "string",
+              enum: ["auto", "face", "nose"],
+              default: "auto",
+              description: "Usually auto. Use nose only if Scott specifically asks for the nose/status display."
+            },
+            clear: {
+              type: "boolean",
+              description: "True clears the temporary face image."
+            }
+          },
           additionalProperties: false
         }
       },
@@ -3250,6 +3423,7 @@
       "Never say you set, moved, closed, opened, or changed your eyes unless an eye or face tool was actually called successfully.",
       "Use set_face_mood for named moods such as happy, excited, sad, silly, helpful, calculating, wonder, glitchy, goofy, curious, confused, focused, suspicious, or mischief. Include color only when the user asks for a face glow, face tint, nose color, or mood-ring color.",
       "Use set_face_animation when the user asks you to hold still, stop idling, stop the idle face animation, freeze your face, stop wandering your face, or turn idle face animation back on.",
+      "Use paint_face_from_sensing_eye when the user asks you to put the current sensing-eye image onto your face, make your face be that image, copy the image into your countenance, or clear the temporary face image.",
       "Use play_face_beat for animated beats such as funny face, silly face, scan, double take, startle, mischief, thoughtful, or slow smile.",
       "Use set_eye_style when the user asks for an eye style such as robot, friendly, classic, cartoony, sinister, red, or sleepy eyes, or an eye mode such as crossed/cross-eye, swapped/swap eyes, googly eyes, or normal eyes.",
       "Use set_eye_gaze when the user asks you to look or aim your eyes in a direction.",
@@ -5368,7 +5542,7 @@
     function controlSidebarWidthBounds() {
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1200;
       return {
-        min: 280,
+        min: 220,
         max: Math.max(320, Math.min(620, Math.round(viewportWidth * 0.48)))
       };
     }
@@ -5435,7 +5609,8 @@
     }
 
     function syncMicPanelToMic() {
-      setPanelOpen(micPanel, !micStream);
+      setPanelOpen(micPanel, true);
+      setPanelOpen(micControlsExpando, !micStream);
       scheduleLogPaneHeightUpdate();
     }
 
@@ -5634,6 +5809,8 @@
     function updateVisionButtons() {
       visionClearButton.disabled = !visionImageUrl && !sensingTextContent;
       if (visionOpenButton) visionOpenButton.disabled = !visionImageUrl;
+      if (visionPaintFaceButton) visionPaintFaceButton.disabled = !visionImageUrl || !browserFaceControllerActive();
+      if (visionClearFacePaintButton) visionClearFacePaintButton.disabled = !browserFaceControllerActive();
       if (visionBrowserFaceFrameButton) visionBrowserFaceFrameButton.disabled = !browserFaceControllerActive();
     }
 
@@ -10327,6 +10504,47 @@
       return { status: "ok", tool: "set_face_animation", enabled: on, face: result };
     }
 
+    async function paintFaceFromSensingEye({ duration = 12, fit = "contain", target = "auto", clear = false } = {}) {
+      const shouldClear = normalizeBoolean(clear, false);
+      const normalizedFit = String(fit || "contain").trim().toLowerCase() === "cover" ? "cover" : "contain";
+      const normalizedTarget = ["face", "nose"].includes(String(target || "").trim().toLowerCase())
+        ? String(target || "").trim().toLowerCase()
+        : "auto";
+      const seconds = Math.max(0, Math.min(300, Number(duration) || 0));
+      if (!shouldClear && !visionImageUrl) {
+        throw new Error("No sensing-eye image is loaded.");
+      }
+      const payload = shouldClear
+        ? { clear: true }
+        : {
+            source: "sensing_eye",
+            filename: visionImageName || "sensing-eye image",
+            image_data_url: visionImageUrl,
+            duration: seconds,
+            fit: normalizedFit,
+            target: normalizedTarget,
+            opacity: 0.96
+          };
+      const result = await postFace("face_image", payload);
+      if (result?.ok === false || result?.status === "error") {
+        throw new Error(result.error || "Face image was not accepted.");
+      }
+      if (shouldClear) {
+        clearFaceVisualHold();
+      } else {
+        noteFaceVisualHold(seconds);
+      }
+      return {
+        status: "ok",
+        tool: "paint_face_from_sensing_eye",
+        clear: shouldClear,
+        filename: visionImageName || "",
+        target: normalizedTarget,
+        fit: normalizedFit,
+        face: result
+      };
+    }
+
     function normalizeEyeMode(mode) {
       const value = String(mode || "").trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
       if (!value) return "";
@@ -12938,6 +13156,7 @@
       if (name === "play_face_beat") return playFaceBeat(args);
       if (name === "set_face_mood") return setFaceMood(args);
       if (name === "set_face_animation") return setFaceAnimation(args);
+      if (name === "paint_face_from_sensing_eye") return paintFaceFromSensingEye(args);
       if (name === "set_eye_style") return setEyeStyle(args);
       if (name === "set_eye_gaze") return setEyeGaze(args);
       if (name === "set_mouth") return setMouth(args);
@@ -12983,6 +13202,7 @@
         play_face_beat: "BEAT",
         set_face_mood: "MOOD",
         set_face_animation: "ANIM",
+        paint_face_from_sensing_eye: "PAINT",
         set_eye_style: "EYES",
         set_eye_gaze: "GAZE",
         set_mouth: "MOUTH",
@@ -13046,6 +13266,7 @@
       if (name === "read_text_file" || name === "write_text_file" || name === "unpin_note") return args.filename || args.path || args.name;
       if (name === "show_web_page") return args.url;
       if (name === "generate_image") return args.title || args.prompt;
+      if (name === "paint_face_from_sensing_eye") return args.clear ? "clear" : (visionImageName || args.target || "sensing eye");
       if (name === "cast_media") return args.query || args.url || args.action;
       if (name === "set_chassis") return args.action;
       if (name === "get_weather") return args.location || args.place;
@@ -13303,6 +13524,12 @@
       return "I made the image.";
     }
 
+    function facePaintFollowupText(result) {
+      if (result?.status === "error") return "I could not put that image on my face.";
+      if (result?.clear) return "I cleared the face image.";
+      return "I put the sensing-eye image on my face.";
+    }
+
     function sensingEyeFollowupInstructions(result) {
       if (result?.status === "error") return exactSpeechInstruction("I could not capture the live camera frame.");
       return (
@@ -13391,6 +13618,7 @@
         if (event.name === "set_face_animation") {
           toolFollowupExactText = result.enabled === false ? "I will hold my idle face still." : "My idle face animation is back on.";
         }
+        if (event.name === "paint_face_from_sensing_eye") toolFollowupExactText = facePaintFollowupText(result);
         if (event.name === "set_chassis") toolFollowupExactText = chassisFollowupText(result);
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = memoryFollowupText(event.name, result);
@@ -13435,6 +13663,7 @@
         if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
         if (event.name === "set_embodiment") toolFollowupExactText = "I could not move there.";
         if (event.name === "set_face_animation") toolFollowupExactText = "I could not change my idle face animation.";
+        if (event.name === "paint_face_from_sensing_eye") toolFollowupExactText = "I could not put that image on my face.";
         if (event.name === "set_chassis") toolFollowupExactText = "I could not move.";
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = "I could not save that.";
@@ -15119,6 +15348,32 @@
     });
     visionClearButton.addEventListener("click", clearVisionImage);
     visionOpenButton?.addEventListener("click", openSensingEyeImage);
+    visionPaintFaceButton?.addEventListener("click", () => {
+      const originalText = visionPaintFaceButton.textContent;
+      visionPaintFaceButton.disabled = true;
+      visionPaintFaceButton.textContent = "Painting...";
+      recordUiEvent("face paint from sensing eye", visionImageName || "image", { target: "auto", fit: "contain" });
+      paintFaceFromSensingEye({ duration: 0, fit: "contain", target: "auto" }).then(
+        (result) => log(events, `face painted from sensing eye: ${result.filename || visionImageName || "image"}`),
+        (error) => log(events, `face paint error: ${error.message}`)
+      ).finally(() => {
+        visionPaintFaceButton.textContent = originalText || "Paint Face";
+        updateVisionButtons();
+      });
+    });
+    visionClearFacePaintButton?.addEventListener("click", () => {
+      const originalText = visionClearFacePaintButton.textContent;
+      visionClearFacePaintButton.disabled = true;
+      visionClearFacePaintButton.textContent = "Clearing...";
+      recordUiEvent("face paint clear", "operator button", { browser_face: browserFaceControllerActive() ? "active" : "inactive" });
+      paintFaceFromSensingEye({ clear: true }).then(
+        () => log(events, "face paint cleared"),
+        (error) => log(events, `face paint clear error: ${error.message}`)
+      ).finally(() => {
+        visionClearFacePaintButton.textContent = originalText || "Clear Face Paint";
+        updateVisionButtons();
+      });
+    });
     visionCameraStartButton.addEventListener("click", () => {
       recordUiEvent("camera start requested", "on", { sensing_input: sensingInputLabel() });
       startVisionCamera().catch((error) => {

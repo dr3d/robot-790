@@ -23,6 +23,7 @@ DEFAULT_PORT = 8791
 EYE_MODES = {"normal", "crossed", "swapped", "googly"}
 BROWSER_FACE_RECORDING_URL_PREFIX = "/recorded-face/"
 MAX_BROWSER_FACE_RECORDING_BYTES = 250 * 1024 * 1024
+MAX_FACE_PAINT_DATA_URL_CHARS = 2_500_000
 BROWSER_FACE_CAPTION_PANEL_WIDTH_PX = 720 - 44 * 2
 BROWSER_FACE_MARQUEE_MS_PER_PX = 10
 
@@ -39,7 +40,7 @@ def _default_state() -> dict[str, Any]:
         "firmware": {
             "target": "browser-face-sim",
             "version": "0.1.0",
-            "features": "state,mood,gaze,eye_modes,mouth,nose_glow,idle_canvas,cors",
+            "features": "state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors",
         },
         "uptime_ms": 0,
         "free_heap": 0,
@@ -70,6 +71,15 @@ def _default_state() -> dict[str, Any]:
         "message": "browser face ready",
         "status_line": "tools: idle",
         "status_line_state": "off",
+        "face_paint": {
+            "active": False,
+            "source": "",
+            "filename": "",
+            "target": "",
+            "fit": "",
+            "opacity": 0.0,
+            "until": 0.0,
+        },
         "mouth": {
             "present": True,
             "buffered": True,
@@ -129,6 +139,7 @@ class FaceSimState:
 
     def snapshot(self) -> dict[str, Any]:
         self._expire_mouth_text()
+        self._expire_face_paint()
         state = json.loads(json.dumps(self.state))
         state["uptime_ms"] = int((time.time() - self.started_at) * 1000)
         return state
@@ -152,6 +163,62 @@ class FaceSimState:
             "queued": True,
             "seq": command["seq"],
             "message": "browser face capture queued",
+        }
+
+    def queue_face_paint(self, payload: dict[str, Any]) -> dict[str, Any]:
+        clear = bool(payload.get("clear"))
+        image_data_url = str(payload.get("image_data_url") or payload.get("data_url") or "").strip()
+        if not clear and not image_data_url:
+            return {"ok": False, "error": "face paint requires image_data_url or clear=true"}
+        if len(image_data_url) > MAX_FACE_PAINT_DATA_URL_CHARS:
+            return {"ok": False, "error": "face paint image is too large"}
+        target = _clean_face_paint_target(payload.get("target"))
+        fit = _clean_face_paint_fit(payload.get("fit"))
+        duration_s = _clamp_float(payload.get("duration"), 0.0, 300.0, 12.0)
+        opacity = _clamp_float(payload.get("opacity"), 0.15, 1.0, 0.96)
+        filename = str(payload.get("filename") or payload.get("name") or "").strip()[:160]
+        source = str(payload.get("source") or "sensing_eye").strip()[:80]
+        until = 0.0 if duration_s == 0 else time.time() + duration_s
+
+        with self.command_lock:
+            self.command_seq += 1
+            command = {
+                "seq": self.command_seq,
+                "type": "face_paint",
+                "created_at": time.time(),
+                "clear": clear,
+                "image_data_url": "" if clear else image_data_url,
+                "filename": filename,
+                "source": source,
+                "target": target,
+                "fit": fit,
+                "opacity": opacity,
+                "duration": duration_s,
+                "until": until,
+            }
+            self.commands.append(command)
+            self.commands = self.commands[-50:]
+        self.state["face_paint"] = {
+            "active": not clear,
+            "source": "" if clear else source,
+            "filename": "" if clear else filename,
+            "target": "" if clear else target,
+            "fit": "" if clear else fit,
+            "opacity": 0.0 if clear else opacity,
+            "until": 0.0 if clear else until,
+        }
+        self.state["director"] = "face_paint" if not clear else "none"
+        self._touch()
+        return {
+            "ok": True,
+            "tool": "paint_face_from_sensing_eye",
+            "queued": True,
+            "seq": command["seq"],
+            "clear": clear,
+            "target": target,
+            "fit": fit,
+            "filename": filename,
+            "message": "browser face paint queued",
         }
 
     def clear_commands(self) -> dict[str, Any]:
@@ -193,6 +260,7 @@ class FaceSimState:
         self.state["mouth"]["shape"] = "neutral"
         self.state["mouth"]["energy"] = 0.45
         self._clear_mouth_text()
+        self._clear_face_paint()
         target = {"x": 0.0, "y": 0.0, "z": 420.0}
         self.state["gaze"]["manual"] = False
         self.state["gaze"]["now"] = target
@@ -397,6 +465,28 @@ class FaceSimState:
             self._sync_legacy_mouth_text()
             self._touch()
 
+    def _clear_face_paint(self) -> None:
+        self.state["face_paint"] = {
+            "active": False,
+            "source": "",
+            "filename": "",
+            "target": "",
+            "fit": "",
+            "opacity": 0.0,
+            "until": 0.0,
+        }
+
+    def _expire_face_paint(self) -> None:
+        paint = self.state.get("face_paint")
+        if not isinstance(paint, dict) or not paint.get("active"):
+            return
+        until = float(paint.get("until") or 0.0)
+        if until > 0 and time.time() >= until:
+            self._clear_face_paint()
+            if self.state.get("director") == "face_paint":
+                self.state["director"] = "none"
+            self._touch()
+
     def _sync_legacy_mouth_text(self, preferred_source: str = "eric") -> None:
         mouth = self.state["mouth"]
         sources = [preferred_source, "eric", "brain2"]
@@ -433,6 +523,22 @@ def _clean_text_source(value: object) -> str:
     if text in {"brain2", "brain_2", "b2", "person_lane", "monitor"}:
         return "brain2"
     return "eric"
+
+
+def _clean_face_paint_target(value: object) -> str:
+    text = _clean_token(value, fallback="auto")
+    if text in {"", "auto", "default"}:
+        return "auto"
+    if text in {"nose", "status", "status_display", "status_panel"}:
+        return "nose"
+    return "face" if text in {"face", "display", "screen", "full", "canvas"} else "auto"
+
+
+def _clean_face_paint_fit(value: object) -> str:
+    text = _clean_token(value, fallback="contain")
+    if text in {"cover", "fill"}:
+        return "cover"
+    return "contain"
 
 
 def _clamp_float(value: object, low: float, high: float, fallback: float) -> float:
@@ -567,6 +673,10 @@ class FaceSimHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path in {"/capture_to_eye", "/api/capture_to_eye"}:
             self._send_json(200, self.sim_state.queue_capture_to_eye(payload))
+            return
+        if parsed.path in {"/face_image", "/api/face_image", "/paint", "/api/paint"}:
+            result = self.sim_state.queue_face_paint(payload)
+            self._send_json(200 if result.get("ok") else 400, result)
             return
         if parsed.path in {"/commands/clear", "/api/commands/clear"}:
             self._send_json(200, self.sim_state.clear_commands())
