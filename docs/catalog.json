@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-07 01:50:27",
+    "generated":  "2026-09-07 19:03:46",
     "articles":  [
                      {
                          "title":  "A Working Proposition About Lessons",
@@ -158,6 +158,30 @@
                  ],
     "logs":  [
                  {
+                     "title":  "Daily Driver Empty Boot 2026 09 07 postmortem",
+                     "source":  "logs/Daily-Driver-Empty-Boot-2026-09-07-postmortem.md",
+                     "bytes":  2676,
+                     "modified":  "2026-09-07 19:03"
+                 },
+                 {
+                     "title":  "Long Alone Idle Run 2026 09 07 postmortem",
+                     "source":  "logs/Long-Alone-Idle-Run-2026-09-07-postmortem.md",
+                     "bytes":  8846,
+                     "modified":  "2026-09-07 11:29"
+                 },
+                 {
+                     "title":  "Generated Image To Eye Face Paint Loop 2026 09 07 postmortem",
+                     "source":  "logs/Generated-Image-To-Eye-Face-Paint-Loop-2026-09-07-postmortem.md",
+                     "bytes":  8157,
+                     "modified":  "2026-09-07 03:36"
+                 },
+                 {
+                     "title":  "Pose Gallery And Stale Receipt Collapse 2026 09 07 postmortem",
+                     "source":  "logs/Pose-Gallery-And-Stale-Receipt-Collapse-2026-09-07-postmortem.md",
+                     "bytes":  9991,
+                     "modified":  "2026-09-07 02:46"
+                 },
+                 {
                      "title":  "Eye Notes And Recordkeeping 2026 09 07 postmortem",
                      "source":  "logs/Eye-Notes-And-Recordkeeping-2026-09-07-postmortem.md",
                      "bytes":  16928,
@@ -315,6 +339,18 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Daily Driver",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Daily-Driver.mp4",
+                      "preview":  null,
+                      "banner_rank":  45,
+                      "bytes":  15901074,
+                      "date":  "2026-09-07 19:02",
+                      "modified":  "2026-09-07 19:02",
+                      "description":  "A moving screen recording of the first clean daily-driver Empty Connect run after the passivated-state design was retired. Scott starts Eric lean but not blank: core Eric memory is present, old session material is omitted, and the rest of the context is built deliberately in conversation through browser-face embodiment, a goofy-pose check, voice switching, get_go, Boot Eric, and Scott\u0027s profile summary. The key observation is that Empty Connect can behave like an owned-unit boot, and disconnect can turn the sit-down into a timestamped continuity session note for the next run."
+                  },
                   {
                       "title":  "AI Is More Believable As A Robot",
                       "kind":  "video",
