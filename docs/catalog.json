@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-06 12:32:41",
+    "generated":  "2026-09-06 20:58:09",
     "articles":  [
+                     {
+                         "title":  "A Working Proposition About Lessons",
+                         "excerpt":  "This is not a discovery yet.",
+                         "source":  "articles/a-working-proposition-about-lessons.md",
+                         "bytes":  7663,
+                         "modified":  "2026-09-06 20:58"
+                     },
                      {
                          "title":  "What Robot 790 Is Becoming",
                          "excerpt":  "Robot 790 is the platform. Eric is the personage that shows up inside it.",
@@ -151,10 +158,28 @@
                  ],
     "logs":  [
                  {
+                     "title":  "Eric Iterator And Receipts 2026 09 06 postmortem",
+                     "source":  "logs/Eric-Iterator-And-Receipts-2026-09-06-postmortem.md",
+                     "bytes":  11849,
+                     "modified":  "2026-09-06 20:28"
+                 },
+                 {
+                     "title":  "Browser Face Mirror And UI Control Seed 2026 09 06 postmortem",
+                     "source":  "logs/Browser-Face-Mirror-And-UI-Control-Seed-2026-09-06-postmortem.md",
+                     "bytes":  11629,
+                     "modified":  "2026-09-06 17:53"
+                 },
+                 {
+                     "title":  "Creature Specimen Extraction 2026 09 06 postmortem",
+                     "source":  "logs/Creature-Specimen-Extraction-2026-09-06-postmortem.md",
+                     "bytes":  9143,
+                     "modified":  "2026-09-06 16:40"
+                 },
+                 {
                      "title":  "Hermes Mapping Notetaking 2026 09 06 postmortem",
                      "source":  "logs/Hermes-Mapping-Notetaking-2026-09-06-postmortem.md",
-                     "bytes":  11237,
-                     "modified":  "2026-09-06 11:46"
+                     "bytes":  11283,
+                     "modified":  "2026-09-06 15:02"
                  },
                  {
                      "title":  "Robot 790 Teaching Eric To See His Own Face 2026 09 04 postmortem",

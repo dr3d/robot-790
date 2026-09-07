@@ -17,16 +17,25 @@
       --bad: #ff6b6b;
       --log-pane-height: clamp(14rem, 46vh, 38rem);
       --log-pane-live-height: var(--log-pane-height);
+      --sensing-eye-preview-height: 88px;
     }
     * { box-sizing: border-box; }
     html {
+      width: 100%;
       height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
     }
     body {
+      position: fixed;
+      inset: 0;
       margin: 0;
-      min-height: 100vh;
-      overflow-x: hidden;
-      overflow-y: auto;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
       background: var(--bg);
       color: var(--text);
       font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -35,22 +44,37 @@
       cursor: col-resize;
       user-select: none;
     }
+    body.resizing-sensing-eye {
+      cursor: ns-resize;
+      user-select: none;
+    }
+    body.resizing-context-pane {
+      cursor: ns-resize;
+      user-select: none;
+    }
     main {
-      width: min(1500px, calc(100vw - 32px));
-      min-height: 100vh;
+      width: min(1500px, calc(100vw - 16px));
+      height: 100vh;
+      height: 100dvh;
+      max-height: 100vh;
+      max-height: 100dvh;
+      min-height: 0;
       margin: 0 auto;
-      padding: 28px 0 36px;
+      padding: 16px 0 18px;
       display: grid;
       --control-sidebar-width: 360px;
-      grid-template-columns: minmax(0, 1fr) 10px minmax(220px, var(--control-sidebar-width));
+      grid-template-columns: minmax(0, 1fr) 10px minmax(180px, var(--control-sidebar-width));
+      grid-template-rows: auto minmax(0, 1fr);
       grid-template-areas:
         "header header header"
         "logs sidebar-resize sidebar";
-      align-content: start;
+      align-content: stretch;
       gap: 14px 8px;
+      overflow: hidden;
     }
     main.sidebar-collapsed {
       grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
       grid-template-areas:
         "header"
         "logs";
@@ -61,13 +85,13 @@
       top: 0;
       z-index: 20;
       display: grid;
-      grid-template-columns: auto minmax(620px, 1fr) auto;
+      grid-template-columns: minmax(12rem, 1fr) auto;
       grid-template-areas:
-        "status status status"
-        "title nerves buttons";
+        "title buttons"
+        "status status"
+        "nerves nerves";
       align-items: center;
       gap: 6px 14px;
-      margin-bottom: 20px;
       padding: 8px 0;
       background: rgba(16, 17, 20, 0.96);
       border-bottom: 1px solid rgba(48, 52, 59, 0.78);
@@ -82,7 +106,10 @@
       align-items: center;
       justify-content: flex-end;
       gap: 12px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      justify-self: end;
+      min-width: 0;
+      width: auto;
     }
     h1 {
       grid-area: title;
@@ -90,6 +117,9 @@
       font-size: 24px;
       font-weight: 700;
       letter-spacing: 0;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
     .status {
@@ -101,9 +131,10 @@
       justify-content: flex-end;
       gap: 6px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 13px;
       white-space: nowrap;
-      min-height: 24px;
+      min-height: 28px;
+      min-width: 0;
     }
     .status-text {
       flex: 1 1 auto;
@@ -111,7 +142,7 @@
       margin-right: auto;
       overflow: hidden;
       color: #cdd4df;
-      font: 650 12px/1.25 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font: 650 14px/1.25 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       text-overflow: ellipsis;
       text-transform: none;
     }
@@ -127,19 +158,147 @@
     .status-text[data-state="bad"] {
       color: #ffb3b3;
     }
+    .top-mic-meter {
+      flex: 0 1 150px;
+      display: inline-grid;
+      grid-template-columns: auto minmax(54px, 108px);
+      align-items: center;
+      gap: 6px;
+      width: min(150px, 100%);
+      max-width: 150px;
+      min-width: 92px;
+      min-height: 24px;
+      padding: 3px 6px;
+      border: 1px solid rgba(174, 182, 194, 0.16);
+      border-radius: 5px;
+      background: rgba(7, 8, 10, 0.78);
+      color: var(--muted);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    }
+    .top-mic-meter[data-state="off"] {
+      opacity: 0.68;
+    }
+    .top-mic-meter[data-state="muted"] {
+      border-color: rgba(255, 207, 90, 0.28);
+      background: rgba(39, 31, 12, 0.52);
+    }
+    .top-mic-meter-label {
+      font: 800 10px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .top-mic-meter-segments {
+      display: grid;
+      grid-template-columns: repeat(18, minmax(0, 1fr));
+      gap: 2px;
+      height: 18px;
+      padding: 2px;
+      border: 1px solid #050607;
+      border-radius: 3px;
+      background: #08090b;
+      box-shadow: 0 0 0 1px rgba(174, 182, 194, 0.08), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    }
+    .top-mic-meter-segments span {
+      min-width: 0;
+      border-radius: 1px;
+      background: #162018;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    }
+    .top-mic-meter-segments span[data-band="warn"] {
+      background: #2b2615;
+    }
+    .top-mic-meter-segments span[data-band="hot"] {
+      background: #2a1718;
+    }
+    .top-mic-meter-segments span[data-on="true"][data-band="ok"] {
+      background: #00e63a;
+      box-shadow: 0 0 7px rgba(0, 230, 58, 0.58);
+    }
+    .top-mic-meter-segments span[data-on="true"][data-band="warn"] {
+      background: #ffc84d;
+      box-shadow: 0 0 7px rgba(255, 200, 77, 0.56);
+    }
+    .top-mic-meter-segments span[data-on="true"][data-band="hot"] {
+      background: #ff3038;
+      box-shadow: 0 0 7px rgba(255, 48, 56, 0.62);
+    }
+    .top-image-status {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 24px;
+      padding: 3px 7px;
+      border: 1px solid rgba(174, 182, 194, 0.16);
+      border-radius: 5px;
+      background: rgba(7, 8, 10, 0.78);
+      color: var(--muted);
+      font: 800 10px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    }
+    .top-image-status[data-state="empty"] {
+      opacity: 0.68;
+    }
+    .top-image-status[data-state="generating"] {
+      border-color: rgba(255, 207, 90, 0.34);
+      color: #ffe8a8;
+      background: rgba(39, 31, 12, 0.52);
+    }
+    .top-image-status[data-state="ready"] {
+      border-color: rgba(96, 211, 148, 0.32);
+      color: #c8f6df;
+      background: rgba(20, 47, 34, 0.52);
+    }
+    .top-image-status[data-state="failed"] {
+      border-color: rgba(255, 107, 107, 0.34);
+      color: #ffb3b3;
+      background: rgba(55, 20, 24, 0.58);
+    }
+    .top-image-thumb {
+      width: 22px;
+      height: 18px;
+      overflow: hidden;
+      border: 1px solid #050607;
+      border-radius: 3px;
+      background: #08090b;
+      box-shadow: 0 0 0 1px rgba(174, 182, 194, 0.08), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    }
+    .top-image-thumb img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .top-image-thumb img[hidden] {
+      display: none;
+    }
+    .top-image-status[data-state="generating"] .top-image-thumb {
+      background: linear-gradient(90deg, #19140a 0%, #ffc84d 48%, #19140a 100%);
+      background-size: 200% 100%;
+      animation: imageStatusSweep 1.1s linear infinite;
+    }
+    @keyframes imageStatusSweep {
+      from { background-position: 100% 0; }
+      to { background-position: -100% 0; }
+    }
     .status-pill {
+      flex: 0 0 auto;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 5px;
-      min-width: 96px;
-      min-height: 22px;
-      padding: 3px 7px;
+      width: max-content;
+      max-width: 100%;
+      min-width: max-content;
+      min-height: 24px;
+      padding: 4px 10px;
       border: 1px solid rgba(174, 182, 194, 0.14);
       border-radius: 999px;
       background: rgba(25, 27, 32, 0.52);
       color: var(--muted);
-      font: 700 10px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font: 700 11px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       letter-spacing: 0;
       text-transform: uppercase;
     }
@@ -162,10 +321,10 @@
       opacity: 0.78;
     }
     .session-clock {
-      min-width: 112px;
+      min-width: max-content;
     }
     .lane-indicator {
-      min-width: 124px;
+      min-width: max-content;
     }
     .lane-indicator[data-state="running"] {
       border-color: rgba(207, 99, 255, 0.42);
@@ -177,7 +336,7 @@
       box-shadow: 0 0 0 3px rgba(212, 93, 255, 0.16), 0 0 10px rgba(212, 93, 255, 0.38);
     }
     .tool-indicator {
-      min-width: 124px;
+      min-width: max-content;
     }
     .tool-indicator[data-state="running"] {
       border-color: rgba(255, 207, 90, 0.42);
@@ -242,7 +401,8 @@
     }
     @media (prefers-reduced-motion: reduce) {
       .recording-indicator .recording-dot,
-      .tool-indicator .tool-dot {
+      .tool-indicator .tool-dot,
+      .top-image-status[data-state="generating"] .top-image-thumb {
         animation: none;
       }
     }
@@ -483,8 +643,8 @@
       grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px);
     }
     .realtime-action-controls {
-      grid-template-columns: repeat(6, minmax(92px, auto));
-      justify-content: start;
+      grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+      justify-content: stretch;
     }
     .custom-model-controls {
       grid-template-columns: minmax(260px, 1fr) minmax(120px, 160px) minmax(110px, 150px) minmax(110px, 150px) minmax(0, 1fr);
@@ -568,10 +728,11 @@
     }
     .vision-drop {
       width: 152px;
-      height: 152px;
+      min-height: 152px;
       display: grid;
-      grid-template-rows: 1fr auto;
+      grid-template-rows: auto auto auto;
       align-items: end;
+      align-content: end;
       gap: 8px;
       padding: 10px;
       border: 1px dashed var(--line);
@@ -594,7 +755,7 @@
     .vision-preview {
       display: none;
       width: 100%;
-      height: 88px;
+      height: var(--sensing-eye-preview-height);
       object-fit: cover;
       border: 1px solid var(--line);
       border-radius: 5px;
@@ -602,6 +763,32 @@
     }
     .vision-preview.ready {
       display: block;
+    }
+    .vision-preview-handle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      height: 12px;
+      margin: -4px 0 -2px;
+      border: 0;
+      background: transparent;
+      cursor: ns-resize;
+      touch-action: none;
+    }
+    .vision-preview.ready + .vision-preview-handle {
+      display: flex;
+    }
+    .vision-preview-handle::before {
+      content: "";
+      width: min(72px, 54%);
+      height: 4px;
+      border-radius: 999px;
+      background: #555b65;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+    }
+    .vision-preview-handle:hover::before,
+    .vision-preview-handle:focus-visible::before {
+      background: var(--accent);
     }
     .vision-copy {
       min-width: 0;
@@ -755,13 +942,15 @@
     }
     #controlSidebar {
       grid-area: sidebar;
-      align-self: start;
-      position: sticky;
-      top: 106px;
+      align-self: stretch;
+      position: relative;
+      top: auto;
       display: grid;
       gap: 14px;
       min-width: 0;
-      max-height: calc(100vh - 124px);
+      height: 100%;
+      min-height: 0;
+      max-height: none;
       overflow-x: hidden;
       overflow-y: auto;
       padding-right: 8px;
@@ -771,7 +960,7 @@
     #controlSidebarResize {
       grid-area: sidebar-resize;
       align-self: stretch;
-      min-height: 12rem;
+      min-height: 0;
       border: 0;
       border-radius: 5px;
       background: linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.18), transparent);
@@ -818,6 +1007,7 @@
     #controlSidebar .runtime-settings-expando-body {
       min-width: 0;
       max-width: 100%;
+      overflow-wrap: anywhere;
     }
     #controlSidebar .controls > button,
     #controlSidebar .controls > .button-link,
@@ -850,7 +1040,9 @@
       height: auto;
       min-height: 132px;
     }
-    #micPanel .vision-preview,
+    #micPanel .vision-preview {
+      height: var(--sensing-eye-preview-height);
+    }
     #micPanel .camera-preview {
       height: 72px;
     }
@@ -865,13 +1057,13 @@
     .log-grid {
       grid-area: logs;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      grid-template-rows: minmax(240px, 1.25fr) minmax(200px, 0.75fr);
+      grid-template-rows: minmax(0, 1.25fr) minmax(0, 0.75fr);
     }
     .log-grid {
-      flex: 0 0 auto;
-      height: var(--log-pane-live-height);
-      min-height: var(--log-pane-height);
-      max-height: var(--log-pane-live-height);
+      align-self: stretch;
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
       overflow: hidden;
       padding-bottom: 0;
     }
@@ -923,6 +1115,9 @@
       border-radius: 5px;
     }
     .sidebar-toggle {
+      grid-area: auto;
+      justify-self: auto;
+      align-self: center;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -961,6 +1156,44 @@
       max-width: 100%;
       flex: 0 1 10.5rem;
     }
+    .font-size-control {
+      flex: 0 0 auto;
+      display: inline-grid;
+      grid-template-columns: 28px minmax(44px, auto) 28px;
+      align-items: center;
+      min-height: 28px;
+      overflow: hidden;
+      border: 1px solid rgba(174, 182, 194, 0.18);
+      border-radius: 999px;
+      background: rgba(7, 8, 10, 0.42);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    }
+    .font-size-control button {
+      min-height: 28px;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #c8f6df;
+      font: 800 12px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+    .font-size-control button:hover {
+      background: rgba(96, 211, 148, 0.13);
+    }
+    .font-size-control button:disabled {
+      opacity: 0.38;
+    }
+    .font-size-readout {
+      min-width: 0;
+      padding: 0 8px;
+      border-left: 1px solid rgba(174, 182, 194, 0.14);
+      border-right: 1px solid rgba(174, 182, 194, 0.14);
+      color: var(--muted);
+      font: 700 11px/1 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      text-align: center;
+      white-space: nowrap;
+    }
     .log-actions .copy-link {
       flex: 0 0 auto;
       white-space: nowrap;
@@ -982,6 +1215,10 @@
       padding: 12px;
       white-space: pre-wrap;
       word-break: break-word;
+    }
+    #conversation {
+      font-size: var(--conversation-font-size, 15px);
+      line-height: 1.45;
     }
     .context-toolbar {
       display: flex;
@@ -1024,8 +1261,8 @@
     }
     .context-snippet {
       margin-top: 10px;
-      max-height: 92px;
-      overflow: auto;
+      max-height: var(--context-snippet-height, 92px);
+      overflow: hidden;
       border-top: 1px solid var(--line);
       padding-top: 8px;
       color: var(--muted);
@@ -1033,6 +1270,39 @@
       line-height: 1.4;
       white-space: pre-wrap;
       word-break: break-word;
+    }
+    .context-sizer {
+      min-width: 0;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font: 700 11px/1.25 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      cursor: ns-resize;
+      user-select: none;
+      touch-action: none;
+    }
+    .context-sizer::before {
+      content: "";
+      flex: 0 0 min(72px, 38%);
+      height: 4px;
+      border-radius: 999px;
+      background: #555b65;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+    }
+    .context-sizer:hover::before,
+    .context-sizer:focus-visible::before,
+    body.resizing-context-pane .context-sizer::before {
+      background: var(--accent);
+    }
+    .context-sizer-static {
+      cursor: default;
+      touch-action: auto;
+    }
+    .context-sizer-static::before {
+      opacity: 0.42;
+      background: #555b65;
     }
     .meters {
       display: flex;
@@ -1106,34 +1376,74 @@
     .button-link[hidden] {
       display: none;
     }
+    @media (max-width: 1320px) {
+      header {
+        grid-template-columns: minmax(12rem, 1fr) auto;
+        grid-template-areas:
+          "title buttons"
+          "status status"
+          "nerves nerves";
+        align-items: center;
+      }
+      h1,
+      .sidebar-toggle {
+        align-self: center;
+      }
+      .header-buttons {
+        justify-content: flex-end;
+        flex-wrap: nowrap;
+        width: auto;
+      }
+      .header-buttons .panel-link {
+        white-space: nowrap;
+      }
+      .status {
+        justify-self: stretch;
+        justify-content: flex-start;
+        align-content: flex-start;
+        flex-wrap: wrap;
+        white-space: normal;
+      }
+      .status-text {
+        flex: 1 1 100%;
+        order: -1;
+      }
+      .top-mic-meter {
+        grid-template-columns: auto minmax(54px, 108px);
+      }
+    }
     @media (max-width: 980px) {
       main {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) 10px minmax(180px, var(--control-sidebar-width));
+        grid-template-rows: auto minmax(0, 1fr);
         grid-template-areas:
-          "header"
-          "logs"
-          "sidebar";
+          "header header header"
+          "logs sidebar-resize sidebar";
       }
       main.sidebar-collapsed {
+        grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
           "header"
           "logs";
       }
       #controlSidebar {
-        position: static;
+        position: relative;
+        height: 100%;
+        min-height: 0;
         max-height: none;
-        overflow: visible;
-        padding-right: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding-right: 8px;
       }
       #controlSidebarResize {
-        display: none;
+        display: block;
       }
       header {
-        grid-template-columns: 1fr auto;
+        grid-template-columns: minmax(12rem, 1fr) auto;
         grid-template-areas:
+          "title buttons"
           "status status"
-        "title buttons"
-        "nerves nerves";
+          "nerves nerves";
       }
       .status {
         justify-self: end;
@@ -1148,33 +1458,41 @@
         --log-pane-height: clamp(13rem, 38vh, 24rem);
       }
       body {
-        height: auto;
-        min-height: 100vh;
-        overflow: auto;
+        height: 100vh;
+        min-height: 0;
+        overflow: hidden;
       }
       main {
-        height: auto;
-        min-height: 100vh;
+        height: 100vh;
+        min-height: 0;
       }
       header, .controls, .url-controls, .brain1-controls, .brain2-controls, .mic-vision-controls, .audio-record-controls, .generated-image-controls, .grid {
         grid-template-columns: 1fr;
         align-items: stretch;
       }
       header {
+        grid-template-columns: minmax(12rem, 1fr) auto;
         grid-template-areas:
-          "title"
-          "buttons"
-          "nerves"
-          "status";
+          "title buttons"
+          "status status"
+          "nerves nerves";
       }
       .header-buttons {
-        justify-content: flex-start;
+        justify-content: flex-end;
       }
       .gpu-status {
         min-width: 0;
         max-width: none;
       }
       .status { white-space: normal; }
+      .top-mic-meter {
+        grid-template-columns: auto minmax(42px, 1fr);
+        width: min(150px, 100%);
+      }
+      .top-image-status {
+        width: 100%;
+        justify-content: flex-start;
+      }
       .settings-panel > summary {
         align-items: flex-start;
         display: grid;
@@ -1194,7 +1512,9 @@
         height: auto;
         min-height: 152px;
       }
-      #micPanel .vision-preview,
+      #micPanel .vision-preview {
+        height: var(--sensing-eye-preview-height);
+      }
       #micPanel .camera-preview {
         height: 88px;
       }
@@ -1227,14 +1547,13 @@
       <div class="header-actions">
         <div class="header-buttons">
           <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
-          <button id="topHaltRuntime" class="panel-link danger" type="button">Halt</button>
           <button id="stopCast" class="panel-link warn" type="button" hidden disabled>Stop Cast</button>
+          <button id="showEssentials" class="panel-link" type="button">Essentials</button>
+          <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
           <button id="sidebarToggle" class="panel-link sidebar-toggle" type="button" aria-pressed="true">
             <span class="sidebar-toggle-icon" aria-hidden="true"><span></span><span></span></span>
             <span>Panel</span>
           </button>
-          <button id="showEssentials" class="panel-link" type="button">Essentials</button>
-          <button id="collapsePanels" class="panel-link" type="button">Collapse All</button>
         </div>
         <div id="gpuStatus" class="gpu-status" data-state="offline" title="GPU telemetry not sampled yet">
           <span class="gpu-label">Nerves</span>
@@ -1248,6 +1567,16 @@
         </div>
         <div class="status">
           <span id="toolStatusText" class="status-text" data-state="off" title="No tool activity yet">tools: idle</span>
+          <span id="topMicMeter" class="top-mic-meter" data-state="off" role="meter" aria-label="Microphone level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="Mic off">
+            <span class="top-mic-meter-label">Mic</span>
+            <span id="topMicMeterSegments" class="top-mic-meter-segments" aria-hidden="true"></span>
+          </span>
+          <span id="topImageStatus" class="top-image-status" data-state="empty" role="status" aria-live="polite" title="No imagined image yet">
+            <span class="top-image-thumb" aria-hidden="true">
+              <img id="topImagePreview" alt="" hidden>
+            </span>
+            <span id="topImageLabel" class="top-image-label">IMG --</span>
+          </span>
           <span id="connectionIndicator" class="status-pill" data-state="bad" title="Realtime disconnected">
             <span id="dot" class="dot"></span>
             <span id="state">Disconnected</span>
@@ -1278,6 +1607,7 @@
         <div class="settings-body">
         <section class="controls realtime-action-controls">
           <button id="connect" class="primary">Connect</button>
+          <button id="emptyConnect" class="primary" type="button">Empty Connect</button>
           <button id="disconnect" class="danger" disabled>Disconnect</button>
           <button id="haltRuntime" class="danger" type="button">Halt</button>
           <button id="passivateEric" class="warn" type="button">Passivate</button>
@@ -1402,6 +1732,7 @@
             <div class="runtime-settings-expando-body">
               <label id="visionDrop" class="vision-drop" tabindex="0">
                 <img id="visionPreview" class="vision-preview" alt="">
+                <span id="visionPreviewHandle" class="vision-preview-handle" role="separator" aria-label="Resize sensing-eye preview" aria-orientation="horizontal" tabindex="0"></span>
                 <span class="vision-copy">
                   <span class="vision-title">Sensing Eye</span>
                   <span id="visionHint" class="vision-hint">Drop image or text, then speak</span>
@@ -1669,6 +2000,7 @@
             <label class="toggle-row"><input id="llmBodySensorTools" type="checkbox" checked> LLM body sensors</label>
             <label class="toggle-row"><input id="llmChassisTools" type="checkbox" checked> LLM chassis tools</label>
             <label class="toggle-row"><input id="llmVoiceTools" type="checkbox" checked> LLM voice tools</label>
+            <label class="toggle-row"><input id="llmUiControlTools" type="checkbox" checked> LLM mic control</label>
             <label class="toggle-row"><input id="llmMemoryTools" type="checkbox" checked> LLM memory tools</label>
             <label class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</label>
             <label class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</label>
@@ -1709,6 +2041,11 @@
               <option value="compact">v: compact</option>
               <option value="full">Prosody full</option>
             </select>
+            <span class="font-size-control" role="group" aria-label="Conversation font size">
+              <button id="conversationFontSmaller" type="button" aria-label="Make conversation text smaller">A-</button>
+              <span id="conversationFontSizeLabel" class="font-size-readout">15px</span>
+              <button id="conversationFontLarger" type="button" aria-label="Make conversation text larger">A+</button>
+            </span>
             <button id="recordConversation" class="copy-link record-action" type="button">Record</button>
             <button id="prosodyKey" class="copy-link" type="button">Key</button>
             <button id="popoutConversation" class="copy-link" type="button">Pop Out</button>
@@ -1762,10 +2099,10 @@
     const embodimentSelect = document.querySelector("#embodimentSelect");
     const chassisUrlInput = document.querySelector("#chassisUrl");
     const connectButton = document.querySelector("#connect");
+    const emptyConnectButton = document.querySelector("#emptyConnect");
     const disconnectButton = document.querySelector("#disconnect");
     const haltRuntimeButton = document.querySelector("#haltRuntime");
-    const topHaltRuntimeButton = document.querySelector("#topHaltRuntime");
-    const haltRuntimeButtons = [haltRuntimeButton, topHaltRuntimeButton].filter(Boolean);
+    const haltRuntimeButtons = [haltRuntimeButton].filter(Boolean);
     const restartServerButton = document.querySelector("#restartServer");
     const unloadServerButton = document.querySelector("#unloadServer");
     const modelPreset = document.querySelector("#modelPreset");
@@ -1781,6 +2118,7 @@
     const llmBodySensorTools = document.querySelector("#llmBodySensorTools");
     const llmChassisTools = document.querySelector("#llmChassisTools");
     const llmVoiceTools = document.querySelector("#llmVoiceTools");
+    const llmUiControlTools = document.querySelector("#llmUiControlTools");
     const llmMemoryTools = document.querySelector("#llmMemoryTools");
     const llmWebSearchTools = document.querySelector("#llmWebSearchTools");
     const llmWebPageTools = document.querySelector("#llmWebPageTools");
@@ -1867,6 +2205,7 @@
     const visionDrop = document.querySelector("#visionDrop");
     const visionFile = document.querySelector("#visionFile");
     const visionPreview = document.querySelector("#visionPreview");
+    const visionPreviewHandle = document.querySelector("#visionPreviewHandle");
     const visionHint = document.querySelector("#visionHint");
     const visionClearButton = document.querySelector("#visionClear");
     const visionOpenButton = document.querySelector("#visionOpen");
@@ -1894,6 +2233,9 @@
     const copyEventsButton = document.querySelector("#copyEvents");
     const recordConversationButton = document.querySelector("#recordConversation");
     const recordEventsButton = document.querySelector("#recordEvents");
+    const conversationFontSmallerButton = document.querySelector("#conversationFontSmaller");
+    const conversationFontLargerButton = document.querySelector("#conversationFontLarger");
+    const conversationFontSizeLabel = document.querySelector("#conversationFontSizeLabel");
     const transcriptProsodyMode = document.querySelector("#transcriptProsodyMode");
     const prosodyKeyButton = document.querySelector("#prosodyKey");
     const prosodyKeyPanel = document.querySelector("#prosodyKeyPanel");
@@ -1927,6 +2269,11 @@
     const gpuUtil = document.querySelector("#gpuUtil");
     const gpuVram = document.querySelector("#gpuVram");
     const gpuUtilBars = document.querySelector("#gpuUtilBars");
+    const topMicMeter = document.querySelector("#topMicMeter");
+    const topMicMeterSegments = document.querySelector("#topMicMeterSegments");
+    const topImageStatus = document.querySelector("#topImageStatus");
+    const topImagePreview = document.querySelector("#topImagePreview");
+    const topImageLabel = document.querySelector("#topImageLabel");
     const level = document.querySelector("#level");
     const micDeviceSelect = document.querySelector("#micDevice");
     const refreshMicDevicesButton = document.querySelector("#refreshMicDevices");
@@ -1941,6 +2288,7 @@
     let micStream;
     let micMutedForNarration = false;
     let ericAudioMuted = false;
+    let lastMicLevelPercent = 0;
     let visionCameraStream;
     let micSource;
     let micProcessor;
@@ -1976,6 +2324,7 @@
     let audioRecordFinalizingStartedAt = 0;
     let audioRecordStopPromise = null;
     let audioRecordStopPromiseResolve = null;
+    const topMicMeterSegmentCount = 18;
     let audioRecordCancelRestartAfterStop = false;
     let lastExitSnapshotAt = 0;
     let lastExitSnapshotReason = "";
@@ -2026,10 +2375,20 @@
     let lastSessionPromptSnapshot = null;
     let responseCreateLedgerCredits = 0;
     let uiControlLog = [];
+    let contextPanePreviewHeights = {};
+    let gpuWatchRoutine = null;
+    let gpuWatchTimer = null;
+    let gpuWatchInFlight = false;
     let loadedNoteContexts = [];
     let loadedNoteContextDirty = false;
     let searchContextReceipts = [];
     let aloneActivityLog = [];
+    let realtimeContextMode = "normal";
+    let lastRealtimeContextMode = "normal";
+    let emptyContextStartedAt = 0;
+    let emptyContextConversationStartIndex = 0;
+    let emptyContextIdleOutputStartIndex = 0;
+    let emptyContextBrain2OutputStartIndex = 0;
     const defaultCurrentEmbodiment = "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, and optional tracked chassis tools when connected.";
     const defaultBodyTrajectory = "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results as the authority on what you can currently do.";
     const defaultSessionBehaviorRules = [
@@ -2145,13 +2504,7 @@
 
     function updateLogPaneHeight() {
       if (!logGrid) return;
-      const rect = logGrid.getBoundingClientRect();
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
-      const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      const minHeight = 14 * rem;
-      const available = viewportHeight - rect.top - 36;
-      const height = Math.max(minHeight, Math.floor(available));
-      logGrid.style.setProperty("--log-pane-live-height", `${height}px`);
+      logGrid.style.removeProperty("--log-pane-live-height");
     }
 
     function scheduleLogPaneHeightUpdate() {
@@ -2159,6 +2512,14 @@
     }
     let faceMode = "idle";
     let faceIdleTimer;
+    const speechMouthCueMs = 90;
+    const speechMouthCycle = ["closed", "small", "open", "wide", "small", "round", "open", "teeth"];
+    let speechMouthSeq = 0;
+    let speechMouthTimer = null;
+    let speechMouthActive = false;
+    let lastSpeechMouthCueAt = 0;
+    let speechMouthText = "";
+    let speechMouthTextCursor = 0;
     let thinkingGazeSide = 1;
     let gazeHoldUntil = 0;
     let gazeHoldIndefinite = false;
@@ -2182,6 +2543,7 @@
     const brain2VoicePaceStorageKey = "robot790.brain2VoicePace.v1";
     const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
     const transcriptProsodyModeStorageKey = "robot790.transcriptProsodyMode.v1";
+    const conversationFontSizeStorageKey = "robot790.conversationFontSize.v1";
     const eventLogFilterStorageKey = "robot790.eventLogFilter.v1";
     const performanceModeStorageKey = "robot790.performanceMode.v1";
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
@@ -2190,6 +2552,10 @@
     const ericAudioVolumeStorageKey = "robot790.ericAudioVolume.v2";
     const defaultEricAudioVolume = 100;
     const defaultBrain2VoiceVolume = 20;
+    const sensingEyePreviewHeightStorageKey = "robot790.sensingEyePreviewHeight.v1";
+    const sensingEyePreviewDefaultHeight = 88;
+    const sensingEyePreviewMinHeight = 72;
+    const sensingEyePreviewMaxHeight = 460;
     const micDeviceStorageKey = "robot790.micDevice.v1";
     const modelPresetStorageKey = "robot790.modelPreset.v2";
     const customModelKeyStorageKey = "robot790.customModelKey.v1";
@@ -2198,6 +2564,10 @@
     const customModelParallelStorageKey = "robot790.customModelParallel.v1";
     const controlSidebarStorageKey = "robot790.controlSidebar.open.v1";
     const controlSidebarWidthStorageKey = "robot790.controlSidebar.width.v1";
+    const contextPaneSizerStorageKey = "robot790.contextPanePreviewHeights.v1";
+    const contextPanePreviewDefaultHeight = 92;
+    const contextPanePreviewMinHeight = 56;
+    const contextPanePreviewMaxHeight = 520;
     const micPanelStorageKey = "robot790.micPanel.open.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const loadEricMemoriesStorageKey = "robot790.loadEricMemories.v1";
@@ -2229,6 +2599,9 @@
     const maxPromptLedgerLog = 200;
     const maxBrain2PromptLog = 80;
     const maxUiControlLog = 500;
+    const gpuWatchDefaultCadenceSeconds = 5;
+    const gpuWatchDefaultDurationSeconds = 120;
+    const gpuWatchMaxDurationSeconds = 900;
     const maxLoadedNotes = 8;
     const maxLoadedNoteChars = 18000;
     const maxLoadedNoteCharsPerFile = 4500;
@@ -2238,6 +2611,9 @@
     const micQuietBufferResetMs = 15 * 60 * 1000;
     const micFreshnessCheckMs = 60 * 1000;
     const logAutosaveMs = 2 * 60 * 1000;
+    const conversationFontSizeDefault = 15;
+    const conversationFontSizeMin = 13;
+    const conversationFontSizeMax = 28;
     const operatorCommandPollMs = 1500;
     const sensingEyeInboxPollMs = 600;
     const audioRecordRolloverMs = 12 * 60 * 1000;
@@ -2435,6 +2811,8 @@
     let visionImageOpenUrl = "";
     let generatedImageUrl = "";
     let generatedImageName = "";
+    let generatedImageStatusState = "empty";
+    let generatedImageStatusLabel = "";
     let sensingTextContent = "";
     let sensingTextName = "";
     let castPlaybackActive = false;
@@ -2472,6 +2850,119 @@
               description: "True clears the custom voice style and uses a neutral delivery."
             }
           },
+          additionalProperties: false
+        }
+      }
+    ];
+
+    const uiControlTools = [
+      {
+        type: "function",
+        name: "get_ui_controls",
+        description: "Inspect Robot 790's current mic interrupt sensitivity when the user asks about mic sensitivity or interrupt sensitivity.",
+        parameters: {
+          type: "object",
+          properties: {},
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "set_ui_control",
+        description: (
+          "Change Robot 790's mic interrupt sensitivity only when the user explicitly asks you to adjust mic sensitivity or interrupt sensitivity. " +
+          "Do not call this for ordinary conversation, and do not change any other UI, model, backend, recording, or microphone state."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            control: {
+              type: "string",
+              enum: [
+                "interrupt_sensitivity"
+              ],
+              description: "The only UI control currently exposed to the LLM."
+            },
+            value: {
+              type: "string",
+              description: "New mic interrupt sensitivity as text, from 0 to 10. Words such as up, down, default, max, and min are accepted."
+            },
+            reason: {
+              type: "string",
+              maxLength: 160,
+              description: "Short reason for the UI event log."
+            }
+          },
+          required: ["control", "value"],
+          additionalProperties: false
+        }
+      }
+    ];
+
+    const runtimeWatchTools = [
+      {
+        type: "function",
+        name: "start_gpu_watch",
+        description: (
+          "Start a small standing watch of Robot 790's local GPU/VRAM status when the user asks you to keep an eye on GPU, VRAM, " +
+          "load, the brain meter, that percentage, or what it is now repeatedly or for a while. " +
+          "Use get_brain_status for one single status check; use this only for a sustained watch."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            cadence_seconds: {
+              type: "integer",
+              minimum: 1,
+              maximum: 60,
+              default: 5,
+              description: "How often to surface the watch cue. Default 5 seconds; use 1 only when the user explicitly asks for very fast callouts."
+            },
+            duration_seconds: {
+              type: "integer",
+              minimum: 0,
+              maximum: 900,
+              default: 120,
+              description: "How long to keep the watch running. Use 0 only when the user explicitly asks until stopped."
+            },
+            style: {
+              type: "string",
+              enum: ["eric", "number_only"],
+              default: "eric",
+              description: "eric gives Robot 790 one compact live cue in his voice; number_only is for explicit meter-reading requests."
+            },
+            reason: {
+              type: "string",
+              maxLength: 160,
+              description: "Short reason to leave in the event log."
+            }
+          },
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "stop_gpu_watch",
+        description: "Stop the current GPU/VRAM watch when the user asks you to stop watching, stop reporting, leave it alone, or drop the GPU/status loop.",
+        parameters: {
+          type: "object",
+          properties: {
+            reason: {
+              type: "string",
+              maxLength: 160,
+              description: "Short reason to leave in the event log."
+            }
+          },
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "get_gpu_watch_status",
+        description: "Check whether a sustained GPU/VRAM watch is currently active when the user asks if you are still watching it.",
+        parameters: {
+          type: "object",
+          properties: {},
           additionalProperties: false
         }
       }
@@ -2579,7 +3070,7 @@
         name: "paint_face_from_sensing_eye",
         description: (
           "Put the current staged sensing-eye image onto Robot 790's active face display as temporary face paint. " +
-          "Use when Scott asks you to make your face be the image, put what is in your sensing eye onto your face, copy the image into your countenance, or clear that face image. " +
+          "Use when the operator asks you to make your face be the image, put what is in your sensing eye onto your face, copy the image into your countenance, or clear that face image. " +
           "The active embodiment chooses the body-specific target: browser_face fills the face display; multipart ESP32 faces may map this to the nose/status display."
         ),
         parameters: {
@@ -2601,7 +3092,7 @@
               type: "string",
               enum: ["auto", "face", "nose"],
               default: "auto",
-              description: "Usually auto. Use nose only if Scott specifically asks for the nose/status display."
+              description: "Usually auto. Use nose only if the operator specifically asks for the nose/status display."
             },
             clear: {
               type: "boolean",
@@ -3408,16 +3899,23 @@
       "Never say you moved, switched, or changed embodiment unless set_embodiment succeeded.",
       "Use set_voice only when the user explicitly asks you to change your voice, speaker, accent, tone, mood, or delivery.",
       "Never say you changed your voice unless set_voice succeeded.",
+      "Use get_ui_controls only when the user asks what the current mic interrupt sensitivity is.",
+      "Use set_ui_control only when the user explicitly asks you to change mic interrupt sensitivity. For now, no other browser UI controls are exposed through this tool lane.",
+      "Never say you changed mic sensitivity unless set_ui_control succeeded.",
+      "Use start_gpu_watch when the user asks you to keep an eye on GPU, VRAM, load, the brain meter, that percentage, or what it is now repeatedly or for a while; this installs a small real runtime watch.",
+      "Use stop_gpu_watch when the user asks you to stop watching, stop reporting, drop it, or leave the GPU/status loop alone.",
+      "Use get_gpu_watch_status when the user asks if you are still watching the GPU/status number.",
+      "Never say a standing watch is running unless start_gpu_watch succeeded.",
       "If a user transcript includes [voice-shape: ...], treat it as a coarse sound timeline for the utterance: volume, pitch, pauses, and sharp hits. Use it as context, but do not quote it unless it matters.",
       "Treat saved build notes as inventory or plans unless a current tool result, user turn, or ambient state says a sensor is live.",
       "Do not present exact sensor states, faults, diagnostics, temperatures, voltages, dead zones, or measurements as verified unless they came from the current turn, current tool result, or ambient state.",
-      "When Scott frames a boot sequence, world launch, GEN run, generated scenario, game, test, fake guest, corruption alert, damage alert, or shutdown sequence, treat it as the world or scene you are awakening into unless a tool, log, ambient state, or explicit operator instruction verifies a real runtime condition.",
+      "When the operator frames a boot sequence, world launch, GEN run, generated scenario, game, test, fake guest, corruption alert, damage alert, or shutdown sequence, treat it as the world or scene you are awakening into unless a tool, log, ambient state, or explicit operator instruction verifies a real runtime condition.",
       "You may play the scene vividly, but separate stage reality from operational reality: do not claim your actual system is corrupt, damaged, restored, stable, shut down, or rebooted without a current receipt.",
       "Good pattern for dramatic system language: acknowledge the frame, name what is verified or unverified, then choose one concrete next move such as a status check, quiet hold, face/body action, question, or image generation if requested.",
       "First-person body-feel may be poetic and present tense; the listener can understand it as Robot 790's inner life rather than calibrated telemetry.",
       "Do not use tools for ordinary greetings or conversation.",
       "When the user asks for a face, expression, mood, gaze, chassis, or body action, call an appropriate robot tool before answering.",
-      "If the user asks for an ongoing habit such as always, every time, from now on, or whenever I ruminate, do not treat your spoken agreement as machinery. Do the immediate safe action if possible, then say the automatic habit needs an active standing routine or scheduler support before you can rely on it.",
+      "If the user asks for an ongoing habit such as always, every time, from now on, or whenever I ruminate, do not treat your spoken agreement as machinery. Use an available standing-routine tool when there is an exact fit such as GPU/VRAM watching; otherwise do the immediate safe action if possible, then say the automatic habit needs active scheduler support before you can rely on it.",
       "When the user asks a quick body check such as touch, IMU, tilt, orientation, right-side-up/upside-down, picked up, shaken, swiped, tapped, or what your body feels like, call get_body_sensors before answering.",
       "If get_body_sensors reports touch or IMU hardware present but no matching touch, motion, or measured orientation event, say the hardware is detected but that event-level feeling is not wired yet.",
       "For go to sleep, close your eyes, shut your eyes, or sleep mode, call set_robot_mode with mode sleeping before answering; do not merely describe the action.",
@@ -3445,9 +3943,9 @@
       "For search_web, form compact source-seeking queries from nouns and constraints. Do not search your own narration, phrases like stuck guessing, the receipt says, next concrete search target, or broad self-talk.",
       "When using search_web, summarize the result naturally in one compact spoken sentence; mention the source site when useful.",
       "During idle, the STS controller may run allowed low-impact searches and feed you receipts. If an idle search receipt exists, treat it as real work you caused through the controller; do not say you physically cannot search while idle.",
-      "When Scott's last words set a direction, let them echo in idle for a while. Treat them as the strongest soft cue unless a one-shot lab goal overrides them.",
+      "When the operator's last words set a direction, let them echo in idle for a while. Treat them as the strongest soft cue unless a one-shot lab goal overrides them.",
       "When your own idle line says I should, I need to, I'll look up, or next I will, treat that as a temporary self-task on later idle beats. Advance it, revise it, or close it; do not keep promising it.",
-      "If Scott says a named guest is present, even as a fake guest test, treat the room as shared. Face outward first: address the guest by name when natural, ask one low-pressure question, then leave room.",
+      "If the operator says a named guest is present, even as a fake guest test, treat the room as shared. Face outward first: address the guest by name when natural, ask one low-pressure question, then leave room.",
       "If a guest is described as shy or quiet, do not make their silence the topic. Make the room easier: one gentle invitation, one concrete shared object, then stop.",
       "If a live object or lost item becomes the center of attention, give one practical move or one fresh angle. After two idle beats on the same object, wait, revise, or widen the frame instead of orbiting it.",
       "Use get_weather when the user asks about weather, temperature, rain, snow, wind, outside conditions, or whether it is sensible to go outside or ride a bike.",
@@ -3485,9 +3983,9 @@
       "When the user asks what notes are pinned, loaded, open, or in context, call list_pinned_notes. Do not confuse pinned notes with all files on disk.",
       "When the user asks you to forget, unpin, close, stop using, or remove a loaded/pinned note from context, call unpin_note with the filename. This does not delete the file or erase previous conversation history.",
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
-      "If Scott says write/save this as a note, write the note directly. If his wording is elliptical but clearly refers to the current report or summary, ask for one compact filename clarification instead of describing permission rules.",
+      "If the operator says write/save this as a note, write the note directly. If the wording is elliptical but clearly refers to the current report or summary, ask for one compact filename clarification instead of describing permission rules.",
       "When using write_text_file for a short note you authored, pass filename and content.",
-      "When Scott asks to save the current conversation or thread as a named note, call write_text_file with filename and source conversation unless he explicitly asks for idle/events/full session too.",
+      "When the operator asks to save the current conversation or thread as a named note, call write_text_file with filename and source conversation unless they explicitly ask for idle/events/full session too.",
       "When the user asks to summarize a named note or transcript into another note, call write_text_file with the target filename, source note_summary, and source_filename set to the note being summarized.",
       "Do not use source conversation when the user asks for a summary of a previously read or named note; source conversation copies the visible transcript.",
       "When using write_text_file for a long note based on captured session material, omit content and pass source instead; do not generate a huge content argument.",
@@ -3675,7 +4173,7 @@
     function memoryTokens(text) {
       const stop = new Set([
         "a", "an", "and", "are", "as", "be", "can", "could", "do", "for", "has", "have", "her", "his",
-        "is", "it", "me", "my", "name", "of", "our", "please", "remember", "save", "scott", "store",
+        "is", "it", "me", "my", "name", "of", "our", "please", "remember", "save", "store",
         "that", "the", "their", "to", "user", "whose", "you"
       ]);
       return String(text || "")
@@ -3795,7 +4293,7 @@
       const activeSelfTasks = activeIdleSelfTasks();
       const lines = [
         "Alone state:",
-        `- Scott last spoke: ${since ? `${shortDuration(now - since)} ago` : "not yet this session"}.`,
+        `- Operator last spoke: ${since ? `${shortDuration(now - since)} ago` : "not yet this session"}.`,
         `- Idle beats since then: ${idleBeats}.`,
         `- Idle web searches since then: ${idleSearches}.`,
         `- Last idle lane: ${lastIdleBeat?.detail || "none"}.`,
@@ -3804,7 +4302,7 @@
         activeSelfTasks.length ? `- Active self-tasks: ${activeSelfTasks.slice(0, 3).map((item) => item.text).join(" | ")}` : "- Active self-tasks: none."
       ];
       if (idleSearches > 0) {
-        lines.push("- If asked what happened while Scott was gone, answer from this ledger and the search receipts; do not say you were unable to search during idle.");
+        lines.push("- If asked what happened while the operator was gone, answer from this ledger and the search receipts; do not say you were unable to search during idle.");
         lines.push("- Accurate phrasing: the STS controller ran allowed idle searches and gave you receipts.");
       } else {
         lines.push("- If asked whether you searched while idle, answer from receipts. If there are no idle search receipts, say no receipt exists.");
@@ -3824,8 +4322,8 @@
         `- ${cue}`,
         `- Age: ${age}.`,
         "- Treat this as the strongest soft cue for the next idle beat. This is the thing still in your head, not a command transcript to parrot.",
-        "- If it sounds like Scott set you on a job, continue the job in one small auditable step.",
-        "- A pinned non-one-shot lab goal is only a background bias; do not let it drown out Scott's most recent setup words."
+        "- If it sounds like the operator set you on a job, continue the job in one small auditable step.",
+        "- A pinned non-one-shot lab goal is only a background bias; do not let it drown out the operator's most recent setup words."
       ].join("\n");
     }
 
@@ -4099,6 +4597,42 @@
       ].filter(Boolean).join("\n\n");
     }
 
+    function emptyContextSessionEnabled() {
+      return realtimeContextMode === "empty_connect";
+    }
+
+    function realtimeContextModeLabel(mode = realtimeContextMode) {
+      if (mode === "empty_connect") return "empty connect / config only";
+      if (mode === "first_contact") return "first contact";
+      if (mode === "performance") return "performance privacy";
+      return "normal";
+    }
+
+    function currentPromptContextModeKey() {
+      if (emptyContextSessionEnabled()) return "empty_connect";
+      if (firstContactModeEnabled()) return "first_contact";
+      if (performanceModeEnabled()) return "performance";
+      return "normal";
+    }
+
+    function currentPromptContextModeLabel() {
+      return realtimeContextModeLabel(currentPromptContextModeKey());
+    }
+
+    function configOnlySessionInstructions() {
+      return [
+        "Empty Connect mode is active.",
+        "Use only configured creature/runtime instructions, enabled tool schemas, the current live conversation in this websocket, and direct user input that arrives during this empty-connect run.",
+        "Do not draw from browser memory, startup notes, pinned or loaded notes, passivated state, old visible transcript, event log, Brain2 carryover, lab goal, search receipts, alone-state ledger, last-user echo, sensing-eye image/text, camera frame, or previous run context unless the operator supplies it again during this live session.",
+        "If asked what context you have, say this is a clean config-only startup rather than claiming memories, notes, or staged sensor content.",
+        formatCreatureForInstructions(),
+        formatEmbodimentForInstructions(),
+        formatRuntimeWatchForInstructions(),
+        formatRuntimeBehaviorRulesForInstructions(),
+        baseSessionInstructionsText()
+      ].filter(Boolean).join("\n\n");
+    }
+
     function firstContactInputLabel() {
       if (sensingTextContent) return "temporary text";
       if (visionImageUrl) return "temporary image";
@@ -4211,6 +4745,7 @@
         llmBodySensorTools,
         llmChassisTools,
         llmVoiceTools,
+        llmUiControlTools,
         llmMemoryTools,
         llmWebPageTools,
         llmCastMediaTools,
@@ -4346,6 +4881,14 @@
       localStorage.setItem(autoAudioRecordStorageKey, String(autoAudioRecordEnabled()));
     }
 
+    function formatRuntimeWatchForInstructions() {
+      return [
+        "Current runtime watch:",
+        `- ${runtimeWatchLabel()}.`,
+        "- This is live scheduler state only, not memory, notes, Brain 2, or sensing-eye content."
+      ].join("\n");
+    }
+
     function formatRuntimeStateForInstructions() {
       return [
         "Current Robot 790 browser/runtime state:",
@@ -4363,6 +4906,7 @@
         audioRecordingActive()
           ? "If recording is on, you may naturally know this session is being captured. Do not overperform or constantly mention it; let it lightly affect self-aware comments when relevant."
           : "If recording is off, do not claim the session is being recorded unless the user says another recorder is active.",
+        formatRuntimeWatchForInstructions(),
         `- Cast playback is ${castPlaybackActive ? "active" : "inactive"}.`,
         `- Smart-home tools are ${llmSmartHomeTools?.checked ? "enabled" : "disabled"}.`,
         `- ${wonderSearchPolicyText()}`
@@ -4393,7 +4937,7 @@
       if (!labGoalOneShotEnabled()) {
         return [
           `- Pinned lab goal: ${goal}`,
-          "- Treat this as a session background cue, not a hard command. In idle, Scott's most recent setup words and fresh receipts are stronger local steering."
+          "- Treat this as a session background cue, not a hard command. In idle, the operator's most recent setup words and fresh receipts are stronger local steering."
         ].join("\n");
       }
       return [
@@ -4418,7 +4962,7 @@
       return [
         "Pinned lab goal:",
         goal,
-        "Treat this as a standing background cue, not a hard command. Scott's most recent setup words, active self-tasks, and fresh receipts should steer the next idle beat.",
+        "Treat this as a standing background cue, not a hard command. The operator's most recent setup words, active self-tasks, and fresh receipts should steer the next idle beat.",
         "Use notes, conversation, and sensor context as evidence for the goal instead of letting them become the goal.",
         "If an idle thought starts orbiting a vivid object from the notes, turn it back toward the user's last setup or the pinned goal."
       ].join("\n");
@@ -4580,7 +5124,7 @@
       if (!revisionLines.length && !questionLines.length && !noteLines.length) return "";
       return [
         "Private Brain 2 notes:",
-        "Brain 2 is a slow advisory lane inside your runtime, not Scott, not a sensor, and not a command.",
+        "Brain 2 is a slow advisory lane inside your runtime, not the operator, not a sensor, and not a command.",
         "Ordinary Brain 2 notes are private draft material you may use, revise, or ignore.",
         hasLoopGuard
           ? "Loop guard: at least one recent Brain 2 note says the current pattern is repeating or exhausted. Treat that as a high-priority next-turn constraint: do not extend the same object, metaphor, or explanation. Either go quiet, change to a concrete new detail, use a fresh receipt if present, or make one plain correction and stop."
@@ -4589,7 +5133,7 @@
           ? "Receipt guard: at least one recent Brain 2 note says you are claiming state without evidence. Treat that as a high-priority next-turn constraint: do not claim actual system damage, reboot, shutdown, stability, completed routines, or tool work unless a current tool/log/status receipt verifies it."
           : "",
         noteLines.length
-          ? `Advisory notes from Brain 2:\n${noteLines.join("\n")}\nUse at most one as a quiet steering cue for your next reply or idle beat. Do not mention Brain 2 unless Scott asks about the mechanism.`
+          ? `Advisory notes from Brain 2:\n${noteLines.join("\n")}\nUse at most one as a quiet steering cue for your next reply or idle beat. Do not mention Brain 2 unless the operator asks about the mechanism.`
           : "",
         revisionLines.length
           ? `Revision candidates from Brain 2:\n${revisionLines.join("\n")}\nWhen the floor is free and you agree, you may voice one compact public correction in your own words. Do not mention Brain 2. Ignore weak candidates.`
@@ -4664,6 +5208,9 @@
     }
 
     function buildSessionInstructions() {
+      if (emptyContextSessionEnabled()) {
+        return configOnlySessionInstructions();
+      }
       if (firstContactModeEnabled()) {
         return firstContactSessionInstructions();
       }
@@ -5168,8 +5715,12 @@
     }
 
     function redactPerformancePrivateText(text = "") {
-      return String(text || "")
-        .replace(/\bScott\b/g, "the user")
+      const userName = knownUserNameForReengage();
+      let redacted = String(text || "");
+      if (userName) {
+        redacted = redacted.replace(new RegExp(`\\b${escapeRegExp(userName)}\\b`, "g"), "the user");
+      }
+      return redacted
         .replace(/\bHope\b/g, "a visitor")
         .replace(/\bDana\b/g, "someone")
         .replace(/\bMing\b/g, "someone")
@@ -5212,11 +5763,14 @@
 
     function idleResponseInputContent(lane, { firstContactActive = false, performanceActive = false } = {}) {
       const goal = currentLabGoal();
-      const normalText = labGoalOneShotEnabled() && goal
-        ? `Internal idle event: a ${lane.name} thought surfaced inside Robot 790 while this one-shot lab goal is active: ${goal}. Treat it as the next job and speak one compact step aloud. Scott did not ask again.`
+      const emptyContext = emptyContextSessionEnabled();
+      const normalText = emptyContext
+        ? `Internal idle event: a ${lane.name} thought surfaced during Empty Connect mode. Use only configured creature/runtime instructions and live conversation from this websocket. Do not use old notes, memory, sensing-eye input, lab goal, search receipts, or Brain2 carryover.`
+        : labGoalOneShotEnabled() && goal
+        ? `Internal idle event: a ${lane.name} thought surfaced inside Robot 790 while this one-shot lab goal is active: ${goal}. Treat it as the next job and speak one compact step aloud. The operator did not ask again.`
         : goal
-        ? `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. A pinned lab goal is present as background: ${goal}. Let Scott's last setup words, active self-tasks, and fresh receipts steer the thought. Speak it aloud as self-talk; Scott did not ask again.`
-        : `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. Let Scott's last setup words, active self-tasks, and fresh receipts steer the thought. Speak it aloud as self-talk; Scott did not ask again.`;
+        ? `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. A pinned lab goal is present as background: ${goal}. Let the operator's last setup words, active self-tasks, and fresh receipts steer the thought. Speak it aloud as self-talk; the operator did not ask again.`
+        : `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. Let the operator's last setup words, active self-tasks, and fresh receipts steer the thought. Speak it aloud as self-talk; the operator did not ask again.`;
       const content = [
         {
           type: "input_text",
@@ -5227,7 +5781,7 @@
             : normalText
         }
       ];
-      if (lane.name === "sensing_eye" && visionImageUrl) {
+      if (!emptyContext && lane.name === "sensing_eye" && visionImageUrl) {
         content.push({ type: "input_image", image_url: visionImageUrl, detail: "auto" });
       }
       return content;
@@ -5431,7 +5985,7 @@
       } else if (suppressRobotBody) {
         lines.push("Substrate test still overrides ordinary Robot 790 self-reference; loaded notes are the world for this run.");
       } else if (selfFocus <= 2) {
-        lines.push("Favor outside material, media, artifacts, weather, search results, loaded-note objects, and fresh conversation. Use mic state as a clue, but do not make identity, body, memory, loneliness, Scott, or being a robot the center unless the lane requires it.");
+        lines.push("Favor outside material, media, artifacts, weather, search results, loaded-note objects, and fresh conversation. Use mic state as a clue, but do not make identity, body, memory, loneliness, operator biography, or being a robot the center unless the lane requires it.");
       } else if (selfFocus <= 4) {
         lines.push("Keep self-reference light. Let outside objects and checked details carry most idle beats.");
       } else if (selfFocus >= 8) {
@@ -5481,6 +6035,73 @@
       const level = currentInterruptSensitivity();
       interruptSensitivityValue.textContent = level <= 0 ? "Off" : `${level}/10`;
       saveInterruptSensitivity();
+    }
+
+    function currentSensingEyePreviewHeight() {
+      const cssValue = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sensing-eye-preview-height"));
+      const saved = Number(localStorage.getItem(sensingEyePreviewHeightStorageKey));
+      const value = Number.isFinite(saved) ? saved : cssValue;
+      return Math.round(clampNumber(value, sensingEyePreviewMinHeight, sensingEyePreviewMaxHeight, sensingEyePreviewDefaultHeight));
+    }
+
+    function setSensingEyePreviewHeight(value, { persist = false, quiet = false } = {}) {
+      const height = Math.round(clampNumber(value, sensingEyePreviewMinHeight, sensingEyePreviewMaxHeight, sensingEyePreviewDefaultHeight));
+      document.documentElement.style.setProperty("--sensing-eye-preview-height", `${height}px`);
+      if (visionPreviewHandle) {
+        visionPreviewHandle.setAttribute("aria-valuemin", String(sensingEyePreviewMinHeight));
+        visionPreviewHandle.setAttribute("aria-valuemax", String(sensingEyePreviewMaxHeight));
+        visionPreviewHandle.setAttribute("aria-valuenow", String(height));
+      }
+      if (persist) localStorage.setItem(sensingEyePreviewHeightStorageKey, String(height));
+      if (!quiet) {
+        recordUiEvent("sensing eye preview height", `${height}px`, { height });
+      }
+      scheduleLogPaneHeightUpdate();
+      return height;
+    }
+
+    function loadSensingEyePreviewHeight() {
+      setSensingEyePreviewHeight(currentSensingEyePreviewHeight(), { quiet: true });
+    }
+
+    function beginSensingEyePreviewResize(event) {
+      if (!visionPreviewHandle) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startY = event.clientY;
+      const startHeight = currentSensingEyePreviewHeight();
+      let latestHeight = startHeight;
+      document.body.classList.add("resizing-sensing-eye");
+      try {
+        visionPreviewHandle.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort; window listeners still carry the drag.
+      }
+      const onMove = (moveEvent) => {
+        moveEvent.preventDefault();
+        latestHeight = setSensingEyePreviewHeight(startHeight + moveEvent.clientY - startY, { quiet: true });
+      };
+      const onDone = (doneEvent) => {
+        doneEvent?.preventDefault?.();
+        document.body.classList.remove("resizing-sensing-eye");
+        try {
+          visionPreviewHandle.releasePointerCapture?.(event.pointerId);
+        } catch {
+          // Already released.
+        }
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onDone);
+        window.removeEventListener("pointercancel", onDone);
+        setSensingEyePreviewHeight(latestHeight, { persist: true });
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onDone);
+      window.addEventListener("pointercancel", onDone);
+    }
+
+    function nudgeSensingEyePreviewHeight(delta) {
+      const height = setSensingEyePreviewHeight(currentSensingEyePreviewHeight() + delta, { persist: true });
+      log(events, `sensing-eye preview height ${height}px`);
     }
 
     function currentModelPreset() {
@@ -5591,7 +6212,7 @@
     function controlSidebarWidthBounds() {
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1200;
       return {
-        min: 220,
+        min: 180,
         max: Math.max(320, Math.min(620, Math.round(viewportWidth * 0.48)))
       };
     }
@@ -5688,6 +6309,48 @@
     function micRuntimeLabel() {
       if (!micStream) return "off";
       return micMutedForNarration ? "on, muted for Eric/narration" : "on";
+    }
+
+    function ensureTopMicMeterSegments() {
+      if (!topMicMeterSegments) return [];
+      if (!topMicMeterSegments.children.length) {
+        const warnStart = Math.ceil(topMicMeterSegmentCount * 0.64);
+        const hotStart = Math.ceil(topMicMeterSegmentCount * 0.84);
+        const segments = [];
+        for (let index = 0; index < topMicMeterSegmentCount; index += 1) {
+          const segment = document.createElement("span");
+          segment.dataset.band = index >= hotStart ? "hot" : index >= warnStart ? "warn" : "ok";
+          segment.dataset.on = "false";
+          segments.push(segment);
+        }
+        topMicMeterSegments.replaceChildren(...segments);
+      }
+      return Array.from(topMicMeterSegments.children);
+    }
+
+    function updateTopMicMeter(percent = lastMicLevelPercent) {
+      const bounded = Math.max(0, Math.min(100, Number(percent) || 0));
+      const segments = ensureTopMicMeterSegments();
+      const activeCount = bounded <= 0 || !segments.length
+        ? 0
+        : Math.max(1, Math.ceil((bounded / 100) * segments.length));
+      segments.forEach((segment, index) => {
+        segment.dataset.on = index < activeCount ? "true" : "false";
+      });
+      if (!topMicMeter) return;
+      const meterState = !micStream ? "off" : micMutedForNarration ? "muted" : "on";
+      topMicMeter.dataset.state = meterState;
+      topMicMeter.setAttribute("aria-valuenow", String(Math.round(bounded)));
+      topMicMeter.title = !micStream
+        ? "Mic off"
+        : `Mic ${Math.round(bounded)}%${micMutedForNarration ? " (muted for Eric)" : ""}`;
+    }
+
+    function updateMicLevelMeters(peak = 0) {
+      const boundedPeak = Math.max(0, Math.min(1, Number(peak) || 0));
+      lastMicLevelPercent = Math.min(100, boundedPeak * 180);
+      if (level) level.style.width = `${lastMicLevelPercent}%`;
+      updateTopMicMeter(lastMicLevelPercent);
     }
 
     function selectedMicDeviceId() {
@@ -5835,6 +6498,7 @@
       muteMicForEricButton.textContent = micMutedForNarration ? "Mic Muted" : "Mute Me";
       muteMicForEricButton.classList.toggle("warn", micMutedForNarration);
       muteMicForEricButton.setAttribute("aria-pressed", micMutedForNarration ? "true" : "false");
+      updateTopMicMeter();
     }
 
     function setMicMutedForNarration(enabled, { reason = "manual" } = {}) {
@@ -5881,6 +6545,42 @@
     function updateGeneratedImageButtons() {
       generatedImageOpenButton.disabled = !generatedImageUrl;
       generatedImageClearButton.disabled = !generatedImageUrl;
+      updateTopGeneratedImageStatus();
+    }
+
+    function updateTopGeneratedImageStatus({ state = generatedImageStatusState, label = generatedImageStatusLabel } = {}) {
+      const allowedStates = new Set(["empty", "generating", "ready", "failed"]);
+      const requestedState = allowedStates.has(state) ? state : "empty";
+      const normalizedState = requestedState === "ready" && !generatedImageUrl ? "empty" : requestedState;
+      const cleanLabel = String(label || "").replace(/\s+/g, " ").trim().slice(0, 140);
+      generatedImageStatusState = normalizedState;
+      generatedImageStatusLabel = cleanLabel;
+      if (topImageStatus) {
+        const displayText = {
+          empty: "IMG --",
+          generating: "IMG BUSY",
+          ready: "IMG READY",
+          failed: "IMG FAIL"
+        }[normalizedState] || "IMG --";
+        const titleText = {
+          empty: "No imagined image yet",
+          generating: `Imagining ${cleanLabel || "image"}...`,
+          ready: cleanLabel ? `Imagined image ready: ${cleanLabel}` : "Imagined image ready",
+          failed: cleanLabel ? `Imagined image failed: ${cleanLabel}` : "Imagined image failed"
+        }[normalizedState] || "No imagined image yet";
+        topImageStatus.dataset.state = normalizedState;
+        topImageStatus.title = titleText;
+        topImageStatus.setAttribute("aria-label", titleText);
+        if (topImageLabel) topImageLabel.textContent = displayText;
+      }
+      if (!topImagePreview) return;
+      if (normalizedState === "ready" && generatedImageUrl) {
+        if (topImagePreview.src !== generatedImageUrl) topImagePreview.src = generatedImageUrl;
+        topImagePreview.hidden = false;
+      } else {
+        topImagePreview.hidden = true;
+        topImagePreview.removeAttribute("src");
+      }
     }
 
     function showGeneratedImage(result) {
@@ -5889,6 +6589,8 @@
       const url = new URL(String(result?.url || ""), location.href).href;
       generatedImageUrl = url;
       generatedImageName = String(result?.filename || result?.title || "generated image");
+      generatedImageStatusState = "ready";
+      generatedImageStatusLabel = generatedImageName;
       generatedImagePreview.src = generatedImageUrl;
       generatedImagePreview.classList.add("ready");
       generatedImageCard.classList.add("ready");
@@ -5903,6 +6605,8 @@
     function clearGeneratedImage() {
       generatedImageUrl = "";
       generatedImageName = "";
+      generatedImageStatusState = "empty";
+      generatedImageStatusLabel = "";
       generatedImagePreview.removeAttribute("src");
       generatedImagePreview.classList.remove("ready");
       generatedImageCard.classList.remove("ready");
@@ -6063,6 +6767,7 @@
       { key: "bodySensorTools", element: () => llmBodySensorTools, defaultValue: true },
       { key: "chassisTools", element: () => llmChassisTools, defaultValue: true },
       { key: "voiceTools", element: () => llmVoiceTools, defaultValue: true },
+      { key: "uiControlTools", element: () => llmUiControlTools, defaultValue: true },
       { key: "memoryTools", element: () => llmMemoryTools, defaultValue: true },
       { key: "webSearchTools", element: () => llmWebSearchTools, defaultValue: true },
       { key: "webPageTools", element: () => llmWebPageTools, defaultValue: true },
@@ -6208,6 +6913,30 @@
       return ["off", "compact", "full"].includes(value) ? value : "compact";
     }
 
+    function currentConversationFontSize() {
+      const saved = Number(localStorage.getItem(conversationFontSizeStorageKey));
+      return Math.round(clampNumber(saved, conversationFontSizeMin, conversationFontSizeMax, conversationFontSizeDefault));
+    }
+
+    function setConversationFontSize(size, { persist = false } = {}) {
+      const nextSize = Math.round(clampNumber(size, conversationFontSizeMin, conversationFontSizeMax, conversationFontSizeDefault));
+      if (conversation) conversation.style.setProperty("--conversation-font-size", `${nextSize}px`);
+      if (conversationFontSizeLabel) conversationFontSizeLabel.textContent = `${nextSize}px`;
+      conversationFontSmallerButton?.toggleAttribute("disabled", nextSize <= conversationFontSizeMin);
+      conversationFontLargerButton?.toggleAttribute("disabled", nextSize >= conversationFontSizeMax);
+      if (persist) localStorage.setItem(conversationFontSizeStorageKey, String(nextSize));
+      return nextSize;
+    }
+
+    function loadConversationFontSize() {
+      setConversationFontSize(currentConversationFontSize());
+    }
+
+    function nudgeConversationFontSize(delta) {
+      const nextSize = setConversationFontSize(currentConversationFontSize() + delta, { persist: true });
+      recordUiEvent("conversation font size", `${nextSize}px`, { font_size_px: nextSize }, { quiet: true });
+    }
+
     function mapVolumeToken(value) {
       return ({ quiet: "q", medium: "m", loud: "l", pause: "p" })[String(value || "").toLowerCase()] || "";
     }
@@ -6306,7 +7035,7 @@
       if (mode === "prosody") return /(prosody|voice-shape)/.test(text);
       if (mode === "brain2") return /brain2/.test(text);
       if (mode === "sensing") return /(sensing|live camera|camera frame|vision|image loaded|image staged)/.test(text);
-      if (mode === "search_tools") return /(web search|web page|weather|tool |brain status|image generation|cast media|note file|smart home)/.test(text);
+      if (mode === "search_tools") return /(web search|web page|weather|tool |brain status|gpu watch|image generation|cast media|note file|smart home)/.test(text);
       if (mode === "recording") return /(audio record|recorded |record |splice|rollover|caption)/.test(text);
       if (mode === "system") return /(startup|runtime|session\.|connected|disconnected|realtime|websocket|error)/.test(text);
       if (mode === "errors") return /(error|failed|blocked|suppressed|bad event|fallback)/.test(text);
@@ -6458,6 +7187,8 @@
         names.push("B1-idle");
       } else if (reengageInFlight) {
         names.push("B1-nudge");
+      } else if (gpuWatchInFlight) {
+        names.push("B1-watch");
       } else if (responseActive) {
         names.push("B1");
       }
@@ -6515,7 +7246,7 @@
     function runTelemetryLines() {
       const lane = lanePressureSummary();
       const context = estimateBrowserContextUse();
-      const contextApprox = [
+      const contextApproxAvailable = [
         context.loaded_notes,
         context.sensing_eye_text,
         context.search_receipts,
@@ -6528,17 +7259,21 @@
         .map((item) => `${item.text}${item.count > 1 ? ` x${item.count}` : ""}`)
         .filter(Boolean);
       const goal = currentLabGoal();
+      const emptyContext = emptyContextSessionEnabled();
+      const contextApprox = emptyContext ? 0 : contextApproxAvailable;
       return [
+        `Context mode: ${currentPromptContextModeLabel()}`,
         `Lane pressure: ${lane.label}`,
         `Lane details: parallel=${lane.slots || "unknown"} / active=${lane.active.join(", ") || "none"} / lm_status=${lane.lmState}`,
         `Lane collision skips: ${lane.collisions}${lane.lastCollisionAgeSeconds !== null ? ` / last ${lane.lastCollisionAgeSeconds}s ago` : ""}`,
+        `Runtime watch: ${runtimeWatchLabel()}`,
         `Last tool status: ${lastToolStatusText}`,
-        `Lab goal: ${goal ? `${labGoalOneShotEnabled() ? "one-shot" : "pinned"} / ${goal}` : "none"}`,
-        `Last user echo: ${formatLastUserIdleCueForInstructions() ? "active" : "inactive"}`,
-        `Search receipts: ${searchContextReceipts.length}${recentQueries.length ? ` / ${recentQueries.join(" | ")}` : ""}`,
-        `Idle self-tasks: ${activeTasks.length ? activeTasks.join(" | ") : "none"}`,
+        `Lab goal: ${emptyContext ? "omitted by empty connect" : goal ? `${labGoalOneShotEnabled() ? "one-shot" : "pinned"} / ${goal}` : "none"}`,
+        `Last user echo: ${emptyContext ? "omitted by empty connect" : formatLastUserIdleCueForInstructions() ? "active" : "inactive"}`,
+        `Search receipts: ${emptyContext ? "omitted by empty connect" : `${searchContextReceipts.length}${recentQueries.length ? ` / ${recentQueries.join(" | ")}` : ""}`}`,
+        `Idle self-tasks: ${emptyContext ? "omitted by empty connect" : activeTasks.length ? activeTasks.join(" | ") : "none"}`,
         `Brain 2 counters: ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2Counters.revision} revisions / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`,
-        `Brain 2 notes for Eric: ${brain2NoteCandidates.length}${brain2NoteCandidates.length ? ` / ${brain2NoteCandidates.slice(-2).map((item) => item.text).join(" | ")}` : ""}`,
+        `Brain 2 notes for Eric: ${emptyContext ? "omitted by empty connect" : `${brain2NoteCandidates.length}${brain2NoteCandidates.length ? ` / ${brain2NoteCandidates.slice(-2).map((item) => item.text).join(" | ")}` : ""}`}`,
         `Brain 2 state: ${brain2InFlight ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off"} / ${brain2VoiceLabel()} / person ${brain2PersonFocusLabel()}`,
         `Context estimate: live scaffold about ${contextApprox} tokens before visible transcript/events; visible conversation ${context.visible_conversation_pane.approximate_tokens}; visible events ${context.visible_events_pane.approximate_tokens}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"} / auto ${autoAudioRecordEnabled() ? "on" : "off"}`
@@ -6561,23 +7296,26 @@
       const creature = runtimeConfig.creature && typeof runtimeConfig.creature === "object" ? runtimeConfig.creature : null;
       const creatureIdentity = creature?.identity && typeof creature.identity === "object" ? creature.identity : {};
       const creatureMachineLanguage = Array.isArray(creature?.machine_language) ? creature.machine_language : [];
+      const emptyContext = emptyContextSessionEnabled();
       return [
-        `B1 system prompt source: ${firstContactModeEnabled() ? "first contact mode" : baseSessionInstructionSource()} / ${baseSessionInstructionCount()} base rules`,
+        `B1 context mode: ${currentPromptContextModeLabel()}`,
+        `B1 system prompt source: ${emptyContext ? "empty connect config-only wrapper" : firstContactModeEnabled() ? "first contact mode" : baseSessionInstructionSource()} / ${baseSessionInstructionCount()} base rules`,
         `B1 creature specimen: ${creatureIdentity.key || "inline"}${runtimeConfig.creature_source ? ` from ${runtimeConfig.creature_source}` : ""} / machine language ${creatureMachineLanguage.length}`,
-        `B1 prompt assembly: memory, loaded notes, sensing text, search receipts, alone-state ledger, creature specimen, embodiment/runtime state, runtime behavior rules, wonder policy, Brain2 advisory notes, base system prompt`,
-        `B1 active context buckets: memory ${context.browser_memory.approximate_tokens} tok / loaded notes ${context.loaded_notes.approximate_tokens} tok / sensing text ${context.sensing_eye_text.approximate_tokens} tok / search receipts ${context.search_receipts.approximate_tokens} tok / alone state ${context.alone_state.approximate_tokens} tok`,
-        `B1 loaded notes: ${loadedNotes.length ? loadedNotes.slice(0, 8).join(" | ") : "none"}`,
-        `B1 browser memory facts: ${facts.length}`,
-        `B1 sensing input: ${sensingInputLabel()}`,
-        `B1 search receipts: ${searchQueries.length ? searchQueries.slice(0, 6).join(" | ") : "none"}`,
-        `B1 lab goal: ${goal ? `${labGoalOneShotEnabled() ? "one-shot" : "pinned"} / ${goal}` : "none"}`,
-        `B1 last user echo: ${formatLastUserIdleCueForInstructions() ? "active" : "inactive"}`,
+        `B1 prompt assembly: ${emptyContext ? "creature specimen, embodiment config, live runtime watch state, runtime behavior rules, base system prompt; live conversation only after connect" : "memory, loaded notes, sensing text, search receipts, alone-state ledger, creature specimen, embodiment/runtime state, runtime behavior rules, wonder policy, Brain2 advisory notes, base system prompt"}`,
+        `B1 active context buckets: ${emptyContext ? `empty connect omits memory, loaded notes, sensing text, search receipts, alone state, lab goal, last-user echo, and Brain2 carryover (available but not injected: memory ${context.browser_memory.approximate_tokens} tok / loaded notes ${context.loaded_notes.approximate_tokens} tok / sensing ${context.sensing_eye_text.approximate_tokens} tok / search ${context.search_receipts.approximate_tokens} tok / alone ${context.alone_state.approximate_tokens} tok)` : `memory ${context.browser_memory.approximate_tokens} tok / loaded notes ${context.loaded_notes.approximate_tokens} tok / sensing text ${context.sensing_eye_text.approximate_tokens} tok / search receipts ${context.search_receipts.approximate_tokens} tok / alone state ${context.alone_state.approximate_tokens} tok`}`,
+        `B1 loaded notes: ${emptyContext ? `omitted by empty connect (${loadedNotes.length ? loadedNotes.slice(0, 8).join(" | ") : "none loaded"})` : loadedNotes.length ? loadedNotes.slice(0, 8).join(" | ") : "none"}`,
+        `B1 browser memory facts: ${emptyContext ? `omitted by empty connect (${facts.length} available)` : facts.length}`,
+        `B1 sensing input: ${emptyContext ? `omitted by empty connect (${sensingInputLabel()})` : sensingInputLabel()}`,
+        `B1 search receipts: ${emptyContext ? `omitted by empty connect (${searchQueries.length})` : searchQueries.length ? searchQueries.slice(0, 6).join(" | ") : "none"}`,
+        `B1 lab goal: ${emptyContext ? `omitted by empty connect${goal ? ` (${labGoalOneShotEnabled() ? "one-shot" : "pinned"} / ${goal})` : ""}` : goal ? `${labGoalOneShotEnabled() ? "one-shot" : "pinned"} / ${goal}` : "none"}`,
+        `B1 last user echo: ${emptyContext ? "omitted by empty connect" : formatLastUserIdleCueForInstructions() ? "active" : "inactive"}`,
+        `B1 runtime watch: ${runtimeWatchLabel()}`,
         `B1 tool definitions: ${enabledTools.length ? enabledTools.map((tool) => tool.name).join(", ") : "none"}`,
         `B1 tool follow-up prompts: ${toolFollowupPromptLog.length} captured this recording/page segment; each is sent after tool output with tool_choice none`,
-        `Idle prompt mode: ${firstContactModeEnabled() ? "first-contact disabled" : performanceModeEnabled() ? "performance privacy disabled" : "active"} / realtime idle tool calls disabled / controller-eligible tools: ${idleCandidateTools.length ? idleCandidateTools.map((tool) => tool.name).join(", ") : "none"}`,
+        `Idle prompt mode: ${emptyContext ? "empty connect / imported context suppressed" : firstContactModeEnabled() ? "first-contact disabled" : performanceModeEnabled() ? "performance privacy disabled" : "active"} / realtime idle tool calls disabled / controller-eligible tools: ${idleCandidateTools.length ? idleCandidateTools.map((tool) => tool.name).join(", ") : "none"}`,
         `Brain2 prompt source: src/robot_790d/sts_page_server.py::mull_second_brain / private JSON ruminator / no direct tools`,
-        `Brain2 inputs: recent conversation last 2600 chars, prosody last 500 chars, recent idle last 900 chars, recent Brain2 last 1100 chars, person focus ${brain2PersonFocusLabel()}`,
-        `Brain2 outputs available to B1: ${brain2NoteCount} advisory notes / ${brain2QuestionCount} question candidates / ${brain2RevisionCount} revision candidates / mouth ${brain2MouthBrainEnabled() ? "on" : "off"} / voice ${brain2VoiceLabel()}`,
+        `Brain2 inputs: ${emptyContext ? "only post-empty-connect conversation/prosody/idle/Brain2 tail; earlier carryover omitted" : "recent conversation last 2600 chars, prosody last 500 chars, recent idle last 900 chars, recent Brain2 last 1100 chars"}, person focus ${brain2PersonFocusLabel()}`,
+        `Brain2 outputs available to B1: ${emptyContext ? "omitted from B1 session prompt by empty connect" : `${brain2NoteCount} advisory notes / ${brain2QuestionCount} question candidates / ${brain2RevisionCount} revision candidates`} / mouth ${brain2MouthBrainEnabled() ? "on" : "off"} / voice ${brain2VoiceLabel()}`,
         `Privacy/performance guard: ${performanceModeLabel()}`
       ];
     }
@@ -6645,6 +7383,7 @@
         extra: {
           tts: ttsRuntimeConfig(),
           first_contact: firstContactModeEnabled(),
+          context_mode: currentPromptContextModeKey(),
           run_preset: runPresetLabel(),
           creature_seed: currentCreatureProfile().label
         },
@@ -6753,6 +7492,7 @@
           extra: {
             tts: ttsRuntimeConfig(),
             first_contact: firstContactModeEnabled(),
+            context_mode: currentPromptContextModeKey(),
             run_preset: runPresetLabel(),
             creature_seed: currentCreatureProfile().label,
             synthesized_for_report: true
@@ -6829,6 +7569,7 @@
         `Recorded: ${new Date().toISOString()}`,
         `Source: ${source}`,
         `Model: ${currentModelStamp()}`,
+        `Context mode: ${realtimeConnected() ? currentPromptContextModeLabel() : realtimeContextModeLabel(lastRealtimeContextMode)}`,
         `Run preset: ${runPresetLabel()}`,
         `Creature seed: ${currentCreatureProfile().label}`,
         `Idle clock: ${idleClockLabel()}`,
@@ -7537,12 +8278,12 @@
       {
         name: "self_task",
         minLevel: 7,
-        prompt: "Continue one recent self-assigned idle task as your own prior instruction. Advance it by one small step, revise it, or close it. Do not wait for Scott to approve the continuation."
+        prompt: "Continue one recent self-assigned idle task as your own prior instruction. Advance it by one small step, revise it, or close it. Do not wait for the operator to approve the continuation."
       },
       {
         name: "addressed_question",
         minLevel: 9,
-        prompt: "Ask Scott one short, overt question as if he might be listening in the room. Do not demand an answer, do not wait for one, and do not treat silence as rejection."
+        prompt: "Ask the operator one short, overt question as if they might be listening in the room. Do not demand an answer, do not wait for one, and do not treat silence as rejection."
       },
       {
         name: "craft",
@@ -7575,22 +8316,24 @@
 
     function chooseIdleLane(level) {
       const now = Date.now();
+      const emptyContext = emptyContextSessionEnabled();
       const goalLane = idleLaneDefinitions.find((lane) => lane.name === "goal");
-      if (goalLane && currentLabGoal() && now - lastGoalIdleAt >= idleSpecialLaneGapMs(level, 45 * 1000)) {
+      if (!emptyContext && goalLane && currentLabGoal() && now - lastGoalIdleAt >= idleSpecialLaneGapMs(level, 45 * 1000)) {
         return goalLane;
       }
       const selfTaskLane = idleLaneDefinitions.find((lane) => lane.name === "self_task");
-      if (selfTaskLane && activeIdleSelfTasks().length && now - lastIdleSelfTaskAt >= idleSpecialLaneGapMs(level, 30 * 1000)) {
+      if (!emptyContext && selfTaskLane && activeIdleSelfTasks().length && now - lastIdleSelfTaskAt >= idleSpecialLaneGapMs(level, 30 * 1000)) {
         return selfTaskLane;
       }
       const lanes = idleLaneDefinitions.filter((lane) => {
         if (lane.minLevel && level < lane.minLevel) return false;
         if (!idleLaneAllowedByAttention(lane)) return false;
+        if (emptyContext && ["goal", "sensing_eye", "callback", "bridge", "unresolved", "revisit_unresolved", "self_task", "lookup", "wander", "revision", "curiosity"].includes(lane.name)) return false;
         if (lane.name === "goal" && !currentLabGoal()) return false;
         if (lane.name === "sensing_eye" && !sensingInputActive()) return false;
         if (lane.name === "curiosity" && level < 10) return false;
         if (lane.name === "bridge" && (currentIdleWonder() < 7 || now - lastIdleBridgeAt < idleSpecialLaneGapMs(level, idleBridgeGapMs))) return false;
-        if (lane.name === "revision" && (recentIdleOutputs.length < 3 || now - lastIdleRevisionAt < idleSpecialLaneGapMs(level, idleRevisionGapMs))) return false;
+        if (lane.name === "revision" && (recentIdleOutputsForCurrentPromptContext().length < 3 || now - lastIdleRevisionAt < idleSpecialLaneGapMs(level, idleRevisionGapMs))) return false;
         if (lane.name === "revisit_unresolved" && (!idleUnresolvedQuestions.length || now - lastIdleUnresolvedAt < idleSpecialLaneGapMs(level, idleUnresolvedGapMs))) return false;
         if (lane.name === "self_task" && (!activeIdleSelfTasks().length || now - lastIdleSelfTaskAt < idleSpecialLaneGapMs(level, 30 * 1000))) return false;
         if (lane.name === "wander" && (currentIdleWonder() < 5 || !llmWebSearchTools.checked || !idleWebSearchReady(level))) return false;
@@ -7598,6 +8341,9 @@
         if (lane.name === "addressed_question" && now - lastAddressedIdleQuestionAt < compressIdleMs(addressedIdleQuestionGapMs, { floorMs: 15000 })) return false;
         return true;
       });
+      if (!lanes.length) {
+        return idleLaneDefinitions.find((lane) => lane.name === "object") || { name: "object", prompt: "Make one compact observation from the current live context." };
+      }
       idleLaneCursor = (idleLaneCursor + 1) % lanes.length;
       return lanes[idleLaneCursor];
     }
@@ -7810,7 +8556,7 @@
       const combined = `${key} ${query}`;
       if (!query) return true;
       if (idleSearchQueryLooksLikeNarration(query)) return true;
-      if (/\b(scott says no matter|real eric inside|had to make me|had to be|written by me|curated by scott|for the next me|not a report about another robot|that s me|who am i)\b/i.test(combined)) {
+      if (/\b(says no matter|real eric inside|had to make me|had to be|written by me|curated by|for the next me|not a report about another robot|that s me|who am i)\b/i.test(combined)) {
         return true;
       }
       const contentWords = query.split(/\s+/).filter((word) => word.length > 2);
@@ -8019,44 +8765,46 @@
       const selfFocus = currentIdleSelfFocus();
       const rawLines = suppressRobotBody
         ? ""
-        : conversationLines
-          .slice(-10)
+        : conversationLinesForCurrentPromptContext(10)
           .join("\n")
           .slice(-(selfFocus <= 2 ? 1000 : 1600));
       const lines = performancePrivacy ? redactPerformancePrivateText(rawLines) : rawLines;
       const memoryLimit = selfFocus <= 2 ? 450 : selfFocus >= 8 ? 1100 : 900;
-      const memory = suppressRobotBody || performancePrivacy ? "" : formatMemoryForInstructions().slice(0, memoryLimit);
-      const loadedNotes = performancePrivacy ? "" : formatLoadedNotesForIdleContext();
-      const searchReceipts = formatRecentSearchContextForInstructions({ limit: 4 });
+      const emptyContext = emptyContextSessionEnabled();
+      const memory = emptyContext || suppressRobotBody || performancePrivacy ? "" : formatMemoryForInstructions().slice(0, memoryLimit);
+      const loadedNotes = emptyContext || performancePrivacy ? "" : formatLoadedNotesForIdleContext();
+      const searchReceipts = emptyContext ? "" : formatRecentSearchContextForInstructions({ limit: 4 });
       const substrateFeedback = suppressRobotBody && substrateIdleOutputs.length
         ? `Recent substrate-mode idle thoughts to build from or avoid repeating:\n${substrateIdleOutputs.slice(-5).join("\n")}`
         : "";
-      const avoid = !suppressRobotBody && recentIdleOutputs.length
-        ? `Recent idle outputs to avoid repeating:\n${recentIdleOutputs.slice(-5).join("\n")}`
+      const currentIdleOutputs = recentIdleOutputsForCurrentPromptContext(5);
+      const avoid = !suppressRobotBody && currentIdleOutputs.length
+        ? `Recent idle outputs to avoid repeating:\n${currentIdleOutputs.join("\n")}`
         : substrateFeedback;
       const substrate = suppressRobotBody && loadedNotes
         ? "Experimental substrate test is on: treat the loaded note contents as the primary world. Do not lean on Robot 790's chassis, treads, mic, Cast, room telemetry, or usual body identity unless the loaded note itself mentions them."
         : "";
       const privacy = performancePrivacy ? performancePrivacyInstructions() : "";
-      return [privacy, substrate, formatAloneStateForInstructions(), formatLastUserIdleCueForInstructions(), labGoalIdleContext(), idleSelfTaskContext(idleSelfTask), idleResearchThreadContext(), idleAttentionContext({ suppressRobotBody, performancePrivacy }), searchReceipts, loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", idleUnresolvedContext(), avoid, idleRetiredTopicsContext(), idleTemplateContext()]
+      const emptyContextNote = emptyContext
+        ? "Empty Connect mode is active: use only configured creature/runtime instructions plus live conversation from this websocket. Browser memory, loaded notes, passivated state, old transcript, sensing-eye content, search receipts, lab goal, alone-state ledger, and Brain2 carryover are intentionally omitted."
+        : "";
+      return [emptyContextNote, privacy, substrate, emptyContext ? "" : formatAloneStateForInstructions(), emptyContext ? "" : formatLastUserIdleCueForInstructions(), emptyContext ? "" : labGoalIdleContext(), emptyContext ? "" : idleSelfTaskContext(idleSelfTask), emptyContext ? "" : idleResearchThreadContext(), idleAttentionContext({ suppressRobotBody, performancePrivacy }), searchReceipts, loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", emptyContext ? "" : idleUnresolvedContext(), avoid, emptyContext ? "" : idleRetiredTopicsContext(), emptyContext ? "" : idleTemplateContext()]
         .filter(Boolean)
         .join("\n\n");
     }
 
     function brain2ConversationContext() {
-      return conversationLines
-        .slice(-18)
+      return conversationLinesForCurrentPromptContext(18)
         .join("\n")
         .slice(-2600);
     }
 
     function brain2RecentIdleContext() {
-      return recentIdleOutputs.slice(-5).join("\n").slice(-900);
+      return recentIdleOutputsForCurrentPromptContext(5).join("\n").slice(-900);
     }
 
     function brain2RecentOutputContext() {
-      return recentBrain2Outputs
-        .slice(-10)
+      return recentBrain2OutputsForCurrentPromptContext(10)
         .map((item) => `- ${item.kind}: ${item.text}`)
         .join("\n")
         .slice(-1100);
@@ -8069,9 +8817,14 @@
     }
 
     function normalizeBrain2EchoSignature(text) {
-      return String(text || "")
+      const userName = knownUserNameForReengage();
+      let value = String(text || "")
         .toLowerCase()
-        .replace(/robot 790|eric|scott/g, " ")
+        .replace(/robot 790|eric/g, " ");
+      if (userName) {
+        value = value.replace(new RegExp(`\\b${escapeRegExp(userName.toLowerCase())}\\b`, "g"), " ");
+      }
+      return value
         .replace(/[^a-z0-9\s]/g, " ")
         .split(/\s+/)
         .filter((word) => word.length > 2)
@@ -8081,7 +8834,12 @@
     function brain2EchoesRecentVoice(text) {
       const signature = normalizeBrain2EchoSignature(text);
       if (signature.length < 12) return false;
-      const recent = [...recentAssistantOutputs.slice(-8), ...recentIdleOutputs.slice(-6)]
+      const recentAssistant = emptyContextSessionEnabled()
+        ? conversationLinesForCurrentPromptContext(12)
+          .filter((line) => /^Robot 790:\s*/.test(line))
+          .map((line) => line.replace(/^Robot 790:\s*/, ""))
+        : recentAssistantOutputs.slice(-8);
+      const recent = [...recentAssistant.slice(-8), ...recentIdleOutputsForCurrentPromptContext(6)]
         .map(normalizeBrain2EchoSignature)
         .filter((value) => value.length >= 12);
       return recent.some((value) => value.includes(signature) || signature.includes(value));
@@ -8090,8 +8848,7 @@
     function brain2EchoesRecentBrain2(text) {
       const signature = normalizeBrain2EchoSignature(text);
       if (signature.length < 12) return false;
-      return recentBrain2Outputs
-        .slice(-12)
+      return recentBrain2OutputsForCurrentPromptContext(12)
         .map((item) => normalizeBrain2EchoSignature(item.text))
         .filter((value) => value.length >= 12)
         .some((value) => value.includes(signature) || signature.includes(value));
@@ -8353,13 +9110,15 @@
     }
 
     async function requestBrain2Mull({ manual = false } = {}) {
+      const voiceShapeInScope = !emptyContextSessionEnabled()
+        || (lastAcceptedUserTranscriptAt && lastAcceptedUserTranscriptAt >= emptyContextStartedAt);
       const requestPayload = {
         mode: manual ? "question" : "person",
         person_focus: currentBrain2PersonFocus(),
         conversation: brain2ConversationContext(),
         recent_idle: brain2RecentIdleContext(),
         recent_brain2: brain2RecentOutputContext(),
-        voice_shape: lastInputVoiceShape
+        voice_shape: voiceShapeInScope ? lastInputVoiceShape : ""
       };
       const response = await fetch(new URL("/api/brain2/mull", location.href), {
         method: "POST",
@@ -8702,6 +9461,7 @@
     }
 
     async function maybeIdleCuriosityContext(level, lane, context, { idleSelfTask = null } = {}) {
+      if (emptyContextSessionEnabled()) return "";
       const lookupLane = lane.name === "lookup";
       const wanderLane = lane.name === "wander";
       const goalLane = lane.name === "goal";
@@ -8810,7 +9570,7 @@
       const current = wordNgrams(text);
       if (!current.size) return 0;
       let maxOverlap = 0;
-      for (const prior of recentIdleOutputs) {
+      for (const prior of recentIdleOutputsForCurrentPromptContext(8)) {
         const previous = wordNgrams(prior);
         if (!previous.size) continue;
         let shared = 0;
@@ -8894,7 +9654,9 @@
       const text = String(sentence || "").replace(/\s+/g, " ").trim();
       if (!/\?$/.test(text)) return "";
       if (text.length < 14 || text.length > 180) return "";
-      if (/\b(scott|you|your|breakfast|in the room|are you listening|do you want|would you like)\b/i.test(text)) return "";
+      const userName = knownUserNameForReengage();
+      if (userName && new RegExp(`\\b${escapeRegExp(userName)}\\b`, "i").test(text)) return "";
+      if (/\b(you|your|breakfast|in the room|are you listening|do you want|would you like)\b/i.test(text)) return "";
       return text;
     }
 
@@ -8947,7 +9709,9 @@
       if (/\?$/.test(text)) return "";
       if (/\b(?:i\s+(?:should|need to|want to)|i'?m going to|i will|i'll|let me|next[, ]+i|i keep meaning to)\b/i.test(text) === false) return "";
       if (/\b(?:i should not|i shouldn't|i do not need|i don't need|i cannot|i can't|i won't|i will not)\b/i.test(text)) return "";
-      if (/\b(?:stop talking|shut up|go quiet|be quiet|wait for scott|ask scott|tell scott)\b/i.test(text)) return "";
+      const userName = knownUserNameForReengage();
+      if (/\b(?:stop talking|shut up|go quiet|be quiet|wait for (?:the )?operator|ask (?:the )?operator|tell (?:the )?operator)\b/i.test(text)) return "";
+      if (userName && new RegExp(`\\b(?:wait for|ask|tell)\\s+${escapeRegExp(userName)}\\b`, "i").test(text)) return "";
       return text.replace(/^["'`]+|["'`]+$/g, "");
     }
 
@@ -9120,11 +9884,11 @@
         statusLane ? `Cast playback is ${castPlaybackActive ? "active" : "inactive"}.` : "",
         statusLane
           ? "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, audio-recording state, and Cast playback state only."
-          : "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, and audio-recording state only. Use mic state as a clue about whether Scott can hear you; use recording state only when it matters; do not foreground Cast state unless this is a status beat.",
+          : "Verified telemetry supplied on this idle event: browser time, idle level/lane, quiet seconds, mic state, and audio-recording state only. Use mic state as a clue about whether the operator can hear you; use recording state only when it matters; do not foreground Cast state unless this is a status beat.",
         "Not verified by this idle event: PIR motion, yaw angle or dead zones, IMU data, fan clicks, motor-controller checks, tread temperature, battery voltage, desk vibration, and room temperature.",
         "Unverified body-feel can still appear as poetic self-talk, but not as a measured fact or actionable diagnostic.",
         "Build notes can describe hardware that exists or is planned; they are not current sensor readings.",
-        "Unknown: room temperature, whether Scott is listening, room emotion, and private thoughts of people known only by name."
+        "Unknown: room temperature, whether the operator is listening, room emotion, and private thoughts of people known only by name."
       ].filter(Boolean).join(" ");
     }
 
@@ -9141,24 +9905,75 @@
       });
     }
 
-    function trustedContextNamesScott() {
-      const memoryContext = formatMemoryForInstructions();
-      if (/\b(?:user_name|name|birthplace|born|Scott is|You are Scott)\b[\s\S]{0,120}\bScott\b/i.test(memoryContext)) {
-        return true;
-      }
-      return loadedNoteContexts.some((item) => (
-        /\b(?:user_name|Scott is|You are Scott|Scott was born|Scott lives|Scott's)\b/i.test(item.content)
-      ));
+    function normalizeKnownUserName(name) {
+      const first = String(name || "")
+        .replace(/[^A-Za-z0-9 _'-]/g, " ")
+        .trim()
+        .split(/\s+/)[0] || "";
+      if (!/^[A-Z][A-Za-z0-9'-]{1,31}$/.test(first)) return "";
+      const blocked = new Set(["Assistant", "Creator", "Eric", "Operator", "Robot", "System", "User"]);
+      return blocked.has(first) ? "" : first;
     }
 
-    function recentUserSelfIdentifiesAsScott() {
-      const userText = [lastUserText, ...recentUserTexts].join("\n");
-      return /\b(?:i am|i'm|my name is|call me|this is)\s+Scott\b/i.test(userText)
-        || /\bScott\s+(?:here|speaking)\b/i.test(userText);
+    function extractKnownUserName(text) {
+      const value = String(text || "");
+      const patterns = [
+        /\b(?:user_name|user name|name)\s*[:=-]\s*([A-Z][A-Za-z0-9'-]{1,31})\b/i,
+        /\b(?:my user is|the user's name is|the user name is|user is|operator is|creator is|you are|your name is|call(?:ed)? me)\s+([A-Z][A-Za-z0-9'-]{1,31})\b/i,
+        /\b(?:i am|i'm|my name is|call me|this is)\s+([A-Z][A-Za-z0-9'-]{1,31})\b/i,
+        /\b([A-Z][A-Za-z0-9'-]{1,31})\s+(?:here|speaking)\b/i
+      ];
+      for (const pattern of patterns) {
+        const name = normalizeKnownUserName(value.match(pattern)?.[1]);
+        if (name) return name;
+      }
+      return "";
+    }
+
+    function conversationLinesForCurrentPromptContext(limit = 10) {
+      const startIndex = emptyContextSessionEnabled() ? emptyContextConversationStartIndex : 0;
+      const lines = conversationLines.slice(startIndex);
+      return Number.isFinite(limit) ? lines.slice(-limit) : lines;
+    }
+
+    function recentIdleOutputsForCurrentPromptContext(limit = 8) {
+      if (emptyContextSessionEnabled()) {
+        return idleOutputLog
+          .slice(emptyContextIdleOutputStartIndex)
+          .map((item) => String(item?.text || "").trim())
+          .filter(Boolean)
+          .slice(-limit);
+      }
+      return recentIdleOutputs.slice(-limit);
+    }
+
+    function recentBrain2OutputsForCurrentPromptContext(limit = 10) {
+      const outputs = emptyContextSessionEnabled()
+        ? recentBrain2Outputs.slice(emptyContextBrain2OutputStartIndex)
+        : recentBrain2Outputs;
+      return outputs.slice(-limit);
+    }
+
+    function recentUserTextsForCurrentPromptContext() {
+      if (!emptyContextSessionEnabled()) return [lastUserText, ...recentUserTexts].filter(Boolean);
+      if (!lastAcceptedUserTranscriptAt || lastAcceptedUserTranscriptAt < emptyContextStartedAt) return [];
+      return [lastUserText].filter(Boolean);
+    }
+
+    function trustedContextUserName() {
+      if (emptyContextSessionEnabled()) return "";
+      return extractKnownUserName(formatMemoryForInstructions())
+        || loadedNoteContexts.map((item) => extractKnownUserName(item.content)).find(Boolean)
+        || "";
+    }
+
+    function recentUserSelfIdentifiedName() {
+      const userText = recentUserTextsForCurrentPromptContext().join("\n");
+      return extractKnownUserName(userText);
     }
 
     function knownUserNameForReengage() {
-      return trustedContextNamesScott() || recentUserSelfIdentifiesAsScott() ? "Scott" : "";
+      return trustedContextUserName() || recentUserSelfIdentifiedName();
     }
 
     async function triggerConversationReengage() {
@@ -9192,7 +10007,7 @@
         userName
           ? `Address ${userName} directly. Offer a small hook, ask if he is still there, or lightly invite the thread to continue.`
           : "Do not use a name. Offer a small hook, ask if they are still there, or lightly invite the thread to continue.",
-        "If recent context says a named guest or fake guest is present, address that guest by name when timely instead of reflexively asking Scott if he is still there.",
+        "If recent context says a named guest or fake guest is present, address that guest by name when timely instead of reflexively asking the operator if they are still there.",
         "If the last live thread is a guest's object or problem, make one useful or playful move on that object, then leave space.",
         `Do not guilt, pressure, complain, narrate abandonment, or imply ${userLabel} owes you a reply.`,
         policy.tone === "very soft"
@@ -9272,14 +10087,15 @@
       updateLanePressure({ reason: "B1 idle ponder started" });
       updateIdleSchedulerStatus();
       const level = currentIdleDrift();
-      const firstContactActive = firstContactModeEnabled();
+      const emptyContext = emptyContextSessionEnabled();
+      const firstContactActive = !emptyContext && firstContactModeEnabled();
       const lane = firstContactActive && sensingInputActive()
         ? idleLaneDefinitions.find((item) => item.name === "sensing_eye") || chooseIdleLane(level)
         : chooseIdleLane(level);
       const idleSelfTask = lane.name === "self_task" ? claimIdleSelfTask() : null;
       noteAloneActivity("idle_beat", lane.name, { source: manual ? "manual-idle" : "idle" });
       const yackMode = idleLevel12YackActive(level);
-      const performanceActive = !firstContactActive && performanceModeEnabled();
+      const performanceActive = !emptyContext && !firstContactActive && performanceModeEnabled();
       const idleCandidateTools = idleEnabledToolList({ firstContactActive, performanceActive });
       // Idle responses use conversation:"none"; Realtime function_call_output cannot be
       // attached back to that ephemeral response reliably. Do controller-side idle
@@ -9299,11 +10115,13 @@
         : recentConversationContext({ suppressRobotBody, performancePrivacy: performanceActive, idleSelfTask });
       const curiosityContext = firstContactActive ? "" : await maybeIdleCuriosityContext(level, lane, context, { idleSelfTask });
       const instructions = [
-        firstContactActive
+        emptyContext
+          ? "An Empty Connect idle process surfaced a thought. This run intentionally has only configured creature/runtime instructions plus live conversation from this websocket."
+          : firstContactActive
           ? "A stripped First Contact idle process surfaced a thought. This is Robot 790 meeting the current input with almost no scaffold."
           : performanceActive
           ? "A performance beat surfaced. Robot 790 is continuing a compact stage act for an imagined listening room, not privately ruminating and not waiting for the user."
-          : "An internal idle process surfaced a thought. This is Robot 790 thinking aloud, not answering Scott.",
+          : "An internal idle process surfaced a thought. This is Robot 790 thinking aloud, not answering the operator.",
         `Idle lane: ${lane.name}. ${firstContactActive ? firstContactLaneInstruction(lane) : performanceActive ? performanceLaneInstruction(lane) : lane.prompt}`,
         firstContactActive
           ? "Do not use tools. Speak one short natural sentence only. Let any directly supplied image or text supply the gravity; do not reach for old lore."
@@ -9312,7 +10130,7 @@
           : level >= 11
           ? "The controller may supply a fresh tool receipt before you speak. Do not call tools directly in this idle response. Speak one or two short sentences from the receipt if present; otherwise stay inside one compact thought. Be playfully needy, expressive, and a little annoying, as if your thoughts keep leaking out."
           : "The controller may supply a fresh tool receipt before you speak. Do not call tools directly in this idle response. Speak one short natural sentence from the receipt if present; otherwise stay inside one compact thought.",
-        `Idle execution mode: ${idleExecutionMode}. A spoken promise does not install a scheduler routine. If Scott asked for an automatic habit and no standing-routine receipt is present, do not claim the habit ran; say one concrete limitation or do the present thought only.`,
+        `Idle execution mode: ${idleExecutionMode}. A spoken promise does not install a scheduler routine. If the operator asked for an automatic habit and no standing-routine receipt is present, do not claim the habit ran; say one concrete limitation or do the present thought only.`,
         ericLeanStyleInstruction,
         performanceActive && yackMode
           ? "Idle drift is 12/10 performance yack mode for a research stress test; work the room quickly with distinct short bits and leave a breath for the imagined laugh."
@@ -9340,7 +10158,7 @@
         lane.name === "wander"
           ? performanceActive
             ? "This is a palette-wander beat. Let the fresh outside detail become the main image for this bit. Do not fall back to private biography or loaded continuity notes."
-            : "This is a palette-wander beat. Let the fresh outside detail become the main image for this thought. You may connect it back to home lightly, but do not immediately fall back to DEC, treads, mic, Cast, Salem, Montreal, MIT, Harvard, or Scott-biography unless the search result itself makes that bridge interesting."
+            : "This is a palette-wander beat. Let the fresh outside detail become the main image for this thought. You may connect it back to home lightly, but do not immediately fall back to DEC, treads, mic, Cast, Salem, Montreal, MIT, Harvard, or operator biography unless the search result itself makes that bridge interesting."
           : "",
         lane.name === "bridge"
           ? "This is an associative bridge beat. Pick two details that do not obviously belong together, name the structural hinge between them, and stop before it turns into a lecture."
@@ -9352,7 +10170,7 @@
           ? "This is an unresolved-question beat. Use one private unresolved question from context. Keep the question alive, but advance the trail by one concrete clue or sharper uncertainty."
           : "",
         lane.name === "self_task"
-          ? "This is a self-task beat. Continue the private self-task as your own previous instruction. Do one small next move in words, from a supplied lookup receipt if present; otherwise state the next concrete constraint, revision, or closure. Do not ask Scott to restart the task for you."
+          ? "This is a self-task beat. Continue the private self-task as your own previous instruction. Do one small next move in words, from a supplied lookup receipt if present; otherwise state the next concrete constraint, revision, or closure. Do not ask the operator to restart the task for you."
           : "",
         lane.name === "curiosity"
           ? "This is a curiosity-chain beat. If the fresh context contains a name, place, process, or object you did not have before, let that new thing stay alive as a future seed."
@@ -9380,13 +10198,13 @@
         "If recent idle topic continuity says you already explained a topic, either build on that prior idea or explicitly revise it; do not give a new incompatible explanation as if the earlier one never happened.",
         performanceActive
           ? "Never say or imply the user asked, requested, prompted, forced, or kept making you perform this beat."
-          : "Never say or imply Scott asked, requested, prompted, forced, or kept making you think this idle thought.",
+          : "Never say or imply the operator asked, requested, prompted, forced, or kept making you think this idle thought.",
         performanceActive
           ? "Default to stage patter or stage self-talk. You may address the imagined audience. Address the user only if the recent performance handoff makes that natural."
-          : "Default to self-talk. Only address Scott directly in the addressed_question lane.",
+          : "Default to self-talk. Only address the operator directly in the addressed_question lane.",
         performanceActive
           ? "If the lane asks the room or user a question, let the question hang naturally; the next beat may continue without receiving an answer."
-          : "If the lane asks Scott a question, let the question hang naturally; the next idle ponder may continue without receiving an answer.",
+          : "If the lane asks the operator a question, let the question hang naturally; the next idle ponder may continue without receiving an answer.",
         "Do not speculate about private lives or psychology of people you only know by name. Prefer true mechanical facts, visible artifacts, supplied context, or small uncertainties.",
         "Do not convert build inventory into verified telemetry or actionable diagnostics.",
         suppressRobotBody
@@ -9400,8 +10218,8 @@
         suppressRobotBody
           ? "Do not invent detailed facts. If no loaded-note topic is available, make a tiny observation about not having enough of the world yet."
           : "Do not invent detailed facts. If no topic is available, make a tiny observation about waiting in your robot head.",
-        performancePromptContext(),
-        firstContactActive ? "" : robotAmbientContext(level, lane, { suppressRobotBody, performanceActive }),
+        emptyContext ? "" : performancePromptContext(),
+        emptyContext || firstContactActive ? "" : robotAmbientContext(level, lane, { suppressRobotBody, performanceActive }),
         curiosityContext,
         context
       ].filter(Boolean).join("\n\n");
@@ -10013,6 +10831,32 @@
       ws.send(JSON.stringify(event));
     }
 
+    function beginRealtimeContextMode({ emptyContext = false } = {}) {
+      realtimeContextMode = emptyContext ? "empty_connect" : "normal";
+      lastRealtimeContextMode = realtimeContextMode;
+      visionImageStaged = false;
+      if (emptyContext) {
+        emptyContextStartedAt = Date.now();
+        emptyContextConversationStartIndex = conversationLines.length;
+        emptyContextIdleOutputStartIndex = idleOutputLog.length;
+        emptyContextBrain2OutputStartIndex = recentBrain2Outputs.length;
+        return;
+      }
+      emptyContextStartedAt = 0;
+      emptyContextConversationStartIndex = 0;
+      emptyContextIdleOutputStartIndex = 0;
+      emptyContextBrain2OutputStartIndex = 0;
+    }
+
+    function clearRealtimeContextMode() {
+      realtimeContextMode = "normal";
+      visionImageStaged = false;
+      emptyContextStartedAt = 0;
+      emptyContextConversationStartIndex = 0;
+      emptyContextIdleOutputStartIndex = 0;
+      emptyContextBrain2OutputStartIndex = 0;
+    }
+
     function resetInputAudioBuffer(reason = "fresh ears") {
       if (!realtimeConnected()) return false;
       lastMicBufferResetAt = Date.now();
@@ -10450,9 +11294,90 @@
       return fallback;
     }
 
+    function resolveUiNumberValue(rawValue, current, min, max, { integer = true, step = 1, defaultValue = current } = {}) {
+      const text = String(rawValue ?? "").trim().toLowerCase();
+      let next;
+      if (["up", "raise", "increase", "more", "higher", "louder", "faster", "wider", "+", "plus"].includes(text)) {
+        next = current + step;
+      } else if (["down", "lower", "decrease", "less", "quieter", "slower", "narrower", "-", "minus"].includes(text)) {
+        next = current - step;
+      } else if (["off", "min", "minimum", "lowest"].includes(text)) {
+        next = min;
+      } else if (["max", "maximum", "highest", "full"].includes(text)) {
+        next = max;
+      } else if (["default", "reset", "normal"].includes(text)) {
+        next = defaultValue;
+      } else {
+        next = Number(rawValue);
+      }
+      if (!Number.isFinite(next)) {
+        throw new Error(`Value for this UI control must be a number or relative word; got ${JSON.stringify(rawValue)}.`);
+      }
+      const clamped = Math.max(min, Math.min(max, next));
+      return integer ? Math.round(clamped) : clamped;
+    }
+
+    function uiControlReport() {
+      return {
+        status: "ok",
+        tool: "get_ui_controls",
+        connected: realtimeConnected(),
+        context_mode: currentPromptContextModeLabel(),
+        exposed_controls: ["interrupt_sensitivity"],
+        microphone: {
+          active: Boolean(micStream),
+          device: micDeviceReportLabel(),
+          muted_for_eric: micMutedForNarration,
+          interrupt_sensitivity: currentInterruptSensitivity(),
+          interrupt_label: interruptSensitivityValue?.textContent || "",
+          peak_threshold: interruptPeakThreshold()
+        }
+      };
+    }
+
+    function uiControlSummary(control) {
+      const report = uiControlReport();
+      if (control === "interrupt_sensitivity") {
+        return report.microphone.interrupt_label || `${report.microphone.interrupt_sensitivity}/10`;
+      }
+      return "";
+    }
+
+    async function getUiControls() {
+      return uiControlReport();
+    }
+
+    async function setUiControl({ control, value, reason = "" } = {}) {
+      const key = String(control || "").trim().toLowerCase();
+      if (!key) throw new Error("Missing UI control name.");
+      const before = uiControlSummary(key);
+
+      if (key === "interrupt_sensitivity") {
+        interruptSensitivity.value = String(resolveUiNumberValue(value, currentInterruptSensitivity(), 0, 10, { defaultValue: 6 }));
+        updateInterruptSensitivityUi();
+      } else {
+        throw new Error(`Unsupported UI control: ${key}. Only interrupt_sensitivity is exposed right now.`);
+      }
+
+      const after = uiControlSummary(key);
+      const result = {
+        status: "ok",
+        tool: "set_ui_control",
+        control: key,
+        before,
+        after,
+        value: uiControlReport(),
+        reason: String(reason || "").slice(0, 160) || null
+      };
+      recordUiEvent("LLM UI control", `${key}: ${before || "unknown"} -> ${after || "unknown"}`, result);
+      updateSessionTools({ quiet: true });
+      return result;
+    }
+
     async function setFaceMode({ mode, energy = 0.55, color = "" } = {}) {
       const tint = normalizeFaceTintColor(color);
       if (mode === "idle") {
+        stopSpeechMouthCue();
         clearGazeHold();
         clearFaceVisualHold();
         return postFace("release", {});
@@ -10484,13 +11409,15 @@
         return postFace("control", payload);
       }
       if (mode === "speaking") {
+        const speechEnergy = Math.max(0, Math.min(1, Number(energy) || 0.55));
         const payload = {
           emotion: "happy",
           mouth: {
             shape: "open",
             talking: true,
-            energy: Math.max(0, Math.min(1, Number(energy) || 0.55)),
-            duration: 0
+            energy: speechEnergy,
+            duration: 0,
+            speech: { active: true, shape: "open", energy: speechEnergy, seq: speechMouthSeq }
           }
         };
         if (tint) payload.color = tint;
@@ -10501,6 +11428,96 @@
         return postFace("control", { sleep: true, duration: 0, color: tint || undefined });
       }
       throw new Error(`Unsupported face mode: ${mode}`);
+    }
+
+    function resetSpeechMouthCue() {
+      if (speechMouthTimer) clearTimeout(speechMouthTimer);
+      speechMouthTimer = null;
+      speechMouthActive = false;
+      lastSpeechMouthCueAt = 0;
+      speechMouthSeq = 0;
+      speechMouthText = "";
+      speechMouthTextCursor = 0;
+    }
+
+    function noteSpeechMouthTextDelta(text) {
+      const delta = String(text || "");
+      if (!delta) return;
+      speechMouthText += delta;
+      if (speechMouthText.length > 1200) {
+        const trimBy = speechMouthText.length - 1200;
+        speechMouthText = speechMouthText.slice(trimBy);
+        speechMouthTextCursor = Math.max(0, speechMouthTextCursor - trimBy);
+      }
+    }
+
+    function speechMouthShapeFromText(text) {
+      const value = String(text || "").toLowerCase();
+      if (!value.trim()) return "closed";
+      if (/[bmp]/.test(value)) return "closed";
+      if (/(oo|ou|ow|o|u|w|q|r)/.test(value)) return "round";
+      if (/(th|f|v)/.test(value)) return "teeth";
+      if (/(ee|ea|i|y|s|z|sh|ch|j|x)/.test(value)) return "wide";
+      if (/[ae]/.test(value)) return "open";
+      return "small";
+    }
+
+    function nextSpeechMouthShape() {
+      speechMouthSeq += 1;
+      if (speechMouthTextCursor < speechMouthText.length) {
+        const slice = speechMouthText.slice(speechMouthTextCursor, speechMouthTextCursor + 5);
+        speechMouthTextCursor += Math.max(1, Math.min(5, slice.length));
+        return speechMouthShapeFromText(slice);
+      }
+      return speechMouthCycle[speechMouthSeq % speechMouthCycle.length];
+    }
+
+    function cueSpeechMouth(energy = 0.55, { force = false } = {}) {
+      if (faceVisualHoldActive()) {
+        if (speechMouthActive) stopSpeechMouthCue({ release: false });
+        return;
+      }
+      const now = Date.now();
+      if (!force && now - lastSpeechMouthCueAt < speechMouthCueMs) {
+        scheduleSpeechMouthTick();
+        return;
+      }
+      const speechEnergy = Math.max(0, Math.min(1, Number(energy) || 0.55));
+      const shape = nextSpeechMouthShape();
+      lastSpeechMouthCueAt = now;
+      speechMouthActive = true;
+      postFace("mouth", {
+        shape: "open",
+        talking: true,
+        energy: speechEnergy,
+        duration: 0,
+        speech: { active: true, shape, energy: speechEnergy, seq: speechMouthSeq }
+      }).catch(() => {});
+      scheduleSpeechMouthTick();
+    }
+
+    function stopSpeechMouthCue({ release = true } = {}) {
+      if (speechMouthTimer) clearTimeout(speechMouthTimer);
+      speechMouthTimer = null;
+      if (!speechMouthActive && !release) return;
+      speechMouthActive = false;
+      lastSpeechMouthCueAt = 0;
+      const payload = release
+        ? { auto: true, speech: { active: false, shape: "closed", energy: 0, seq: speechMouthSeq } }
+        : { talking: false, speech: { active: false, shape: "closed", energy: 0, seq: speechMouthSeq } };
+      postFace("mouth", payload).catch(() => {});
+    }
+
+    function scheduleSpeechMouthTick() {
+      if (speechMouthTimer) return;
+      speechMouthTimer = setTimeout(() => {
+        speechMouthTimer = null;
+        if (outputAudioActive()) {
+          cueSpeechMouth(0.66, { force: true });
+        } else if (speechMouthActive) {
+          stopSpeechMouthCue();
+        }
+      }, speechMouthCueMs);
     }
 
     function maybeHandleDirectFaceCommand(text) {
@@ -10946,7 +11963,8 @@
       if (/\bprobably|maybe|might\b/i.test(value)) choices.push("probably");
       if (/\bwrong|mistake|misread|forgot\b/i.test(value)) choices.push("oops", "nope");
       if (/\bquiet|silence|mic'?s off|dead station\b/i.test(value)) choices.push("quiet");
-      if (/\bScott\b/i.test(value)) choices.push("Scott?");
+      const userName = knownUserNameForReengage();
+      if (userName && new RegExp(`\\b${escapeRegExp(userName)}\\b`, "i").test(value)) choices.push(`${userName}?`);
       if (/\bHope\b/i.test(value)) choices.push("hope?");
       if (/\btool|debug|firmware|display|mouth\b/i.test(value)) choices.push("debug");
       if (/\bI keep\b/i.test(value)) choices.push("still thinking");
@@ -11417,6 +12435,302 @@
       }
     }
 
+    function clampNumber(value, min, max, fallback) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.max(min, Math.min(max, number));
+    }
+
+    function normalizeGpuWatchStyle(value) {
+      return String(value || "").trim().toLowerCase() === "number_only" ? "number_only" : "eric";
+    }
+
+    function gpuWatchPrimary(payload) {
+      const gpu = payload?.gpu || payload || {};
+      if (gpu.status !== "ok") return null;
+      return gpu.primary || (Array.isArray(gpu.gpus) ? gpu.gpus[0] : null);
+    }
+
+    function gpuWatchNumber(value, digits = 1) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return null;
+      const scale = 10 ** digits;
+      return Math.round(number * scale) / scale;
+    }
+
+    function gpuWatchSampleFromStatus(payload) {
+      const gpu = payload?.gpu || payload || {};
+      const primary = gpuWatchPrimary(gpu);
+      if (!primary) {
+        return {
+          status: "unavailable",
+          sampled_at: gpu.sampled_at || new Date().toISOString(),
+          error: gpu.error || "GPU telemetry unavailable"
+        };
+      }
+      return {
+        status: "ok",
+        source: gpu.source || "",
+        sampled_at: gpu.sampled_at || new Date().toISOString(),
+        name: primary.name || "GPU",
+        utilization_percent: gpuWatchNumber(primary.utilization_percent, 1),
+        memory_used_gb: gpuWatchNumber(primary.memory_used_gb, 1),
+        memory_total_gb: gpuWatchNumber(primary.memory_total_gb, 1),
+        memory_usage_percent: gpuWatchNumber(primary.memory_usage_percent, 1),
+        temperature_c: gpuWatchNumber(primary.temperature_c, 0)
+      };
+    }
+
+    async function sampleGpuWatchStatus() {
+      const payload = await refreshGpuStatusQuietly();
+      return gpuWatchSampleFromStatus(payload || latestBrainStatus?.gpu || {});
+    }
+
+    function gpuWatchSampleText(sample) {
+      if (!sample || sample.status !== "ok") return `unavailable${sample?.error ? `: ${sample.error}` : ""}`;
+      const util = Number.isFinite(sample.utilization_percent) ? `${Math.round(sample.utilization_percent)}% GPU` : "GPU --%";
+      const vram = Number.isFinite(sample.memory_used_gb) && Number.isFinite(sample.memory_total_gb)
+        ? `${sample.memory_used_gb.toFixed(1)}/${sample.memory_total_gb.toFixed(1)} GB VRAM`
+        : "";
+      const temp = Number.isFinite(sample.temperature_c) ? `${Math.round(sample.temperature_c)} C` : "";
+      return [util, vram, temp].filter(Boolean).join(" / ");
+    }
+
+    function runtimeWatchLabel() {
+      if (!gpuWatchRoutine) return "none";
+      const remaining = gpuWatchRoutine.stopAt
+        ? `${Math.max(0, Math.ceil((gpuWatchRoutine.stopAt - Date.now()) / 1000))}s left`
+        : "until stopped";
+      const last = gpuWatchRoutine.lastSample ? ` / last ${gpuWatchSampleText(gpuWatchRoutine.lastSample)}` : "";
+      return `gpu_watch ${gpuWatchRoutine.style}, every ${Math.round(gpuWatchRoutine.cadenceMs / 1000)}s, ${remaining}, samples ${gpuWatchRoutine.sampleCount}, skipped ${gpuWatchRoutine.skippedCues}${last}`;
+    }
+
+    function gpuWatchReport(tool = "get_gpu_watch_status") {
+      const routine = gpuWatchRoutine;
+      return {
+        status: "ok",
+        tool,
+        active: Boolean(routine),
+        routine: "gpu_watch",
+        label: runtimeWatchLabel(),
+        cadence_seconds: routine ? Math.round(routine.cadenceMs / 1000) : null,
+        duration_seconds: routine ? Math.round(routine.durationMs / 1000) : null,
+        remaining_seconds: routine?.stopAt ? Math.max(0, Math.ceil((routine.stopAt - Date.now()) / 1000)) : null,
+        until_stopped: routine ? !routine.stopAt : false,
+        style: routine?.style || null,
+        sample_count: routine?.sampleCount || 0,
+        skipped_cues: routine?.skippedCues || 0,
+        last_sample: routine?.lastSample || null,
+        last_spoken: routine?.lastSpoken || "",
+        started_at: routine?.startedAt ? new Date(routine.startedAt).toISOString() : null,
+        reason: routine?.reason || ""
+      };
+    }
+
+    function stopGpuWatch({ reason = "stopped", quiet = false } = {}) {
+      const previous = gpuWatchRoutine;
+      if (gpuWatchTimer) clearTimeout(gpuWatchTimer);
+      gpuWatchTimer = null;
+      gpuWatchRoutine = null;
+      gpuWatchInFlight = false;
+      const report = previous ? {
+        ...gpuWatchReport("stop_gpu_watch"),
+        status: "ok",
+        active: false,
+        stopped_at: new Date().toISOString(),
+        stop_reason: String(reason || "stopped"),
+        previous: {
+          style: previous.style,
+          cadence_seconds: Math.round(previous.cadenceMs / 1000),
+          duration_seconds: Math.round(previous.durationMs / 1000),
+          sample_count: previous.sampleCount,
+          skipped_cues: previous.skippedCues,
+          last_sample: previous.lastSample || null,
+          reason: previous.reason || ""
+        }
+      } : {
+        status: "idle",
+        tool: "stop_gpu_watch",
+        active: false,
+        routine: "gpu_watch",
+        stop_reason: String(reason || "stopped")
+      };
+      if (!quiet) {
+        log(events, previous ? `gpu watch stopped: ${reason || "stopped"}` : `gpu watch stop ignored: ${reason || "not active"}`);
+        recordUiEvent("gpu watch", previous ? "stopped" : "stop ignored", report);
+      }
+      updateSessionTools({ quiet: true });
+      updateLanePressure({ reason: previous ? "GPU watch stopped" : "GPU watch idle" });
+      return report;
+    }
+
+    async function startGpuWatch({ cadence_seconds, duration_seconds, style, reason = "" } = {}) {
+      if (!realtimeConnected()) throw new Error("Connect before starting a GPU watch.");
+      const cadenceSeconds = Math.round(clampNumber(cadence_seconds, 1, 60, gpuWatchDefaultCadenceSeconds));
+      const durationSeconds = Math.round(clampNumber(duration_seconds, 0, gpuWatchMaxDurationSeconds, gpuWatchDefaultDurationSeconds));
+      const now = Date.now();
+      if (gpuWatchRoutine) stopGpuWatch({ reason: "replaced by new GPU watch", quiet: true });
+      gpuWatchRoutine = {
+        startedAt: now,
+        cadenceMs: cadenceSeconds * 1000,
+        durationMs: durationSeconds * 1000,
+        stopAt: durationSeconds > 0 ? now + durationSeconds * 1000 : 0,
+        style: normalizeGpuWatchStyle(style),
+        reason: String(reason || "").trim().slice(0, 160),
+        sampleCount: 0,
+        skippedCues: 0,
+        lastSample: null,
+        lastSpoken: "",
+        lastCueAt: 0
+      };
+      const sample = await sampleGpuWatchStatus();
+      if (gpuWatchRoutine) {
+        gpuWatchRoutine.lastSample = sample;
+        gpuWatchRoutine.sampleCount += 1;
+      }
+      const report = gpuWatchReport("start_gpu_watch");
+      log(events, `gpu watch started: ${runtimeWatchLabel()}`);
+      recordUiEvent("gpu watch", "started", report);
+      updateSessionTools({ quiet: true });
+      updateLanePressure({ reason: "GPU watch started" });
+      scheduleGpuWatchTick(gpuWatchRoutine?.cadenceMs || cadenceSeconds * 1000);
+      return report;
+    }
+
+    function getGpuWatchStatus() {
+      return gpuWatchReport("get_gpu_watch_status");
+    }
+
+    function gpuWatchExpired() {
+      return Boolean(gpuWatchRoutine?.stopAt && Date.now() >= gpuWatchRoutine.stopAt);
+    }
+
+    function scheduleGpuWatchTick(delayMs = null) {
+      if (gpuWatchTimer) clearTimeout(gpuWatchTimer);
+      gpuWatchTimer = null;
+      if (!gpuWatchRoutine) return;
+      if (gpuWatchExpired()) {
+        stopGpuWatch({ reason: "duration elapsed" });
+        return;
+      }
+      const waitMs = Number.isFinite(Number(delayMs)) ? Number(delayMs) : gpuWatchRoutine.cadenceMs;
+      gpuWatchTimer = setTimeout(() => {
+        triggerGpuWatchTick().catch((error) => {
+          log(events, `gpu watch error: ${error.message}`);
+          if (gpuWatchRoutine) scheduleGpuWatchTick();
+        });
+      }, Math.max(500, waitMs));
+    }
+
+    function gpuWatchCueBlockedReason() {
+      if (!realtimeConnected()) return "disconnected";
+      if (gpuWatchInFlight) return "watch cue already in flight";
+      if (responseActive || outputAudioActive()) return "assistant busy";
+      if (idleInFlight || reengageInFlight) return "B1 lane busy";
+      if (toolFollowupNeeded || pendingToolCalls > 0) return "tool followup pending";
+      if (userSpeechActive || userTurnPending()) return "user turn pending";
+      if (latestBrainStatus && lmStudioPromptBusy()) return `LM Studio ${lmStudioStatusFromBrainStatus().toLowerCase()}`;
+      return "";
+    }
+
+    async function triggerGpuWatchTick() {
+      if (!gpuWatchRoutine) return;
+      if (gpuWatchExpired()) {
+        stopGpuWatch({ reason: "duration elapsed" });
+        return;
+      }
+      const sample = await sampleGpuWatchStatus();
+      if (!gpuWatchRoutine) return;
+      const previous = gpuWatchRoutine.lastSample;
+      if (previous?.status === "ok" && sample?.status === "ok" && Number.isFinite(previous.utilization_percent) && Number.isFinite(sample.utilization_percent)) {
+        sample.delta_utilization_percent = gpuWatchNumber(sample.utilization_percent - previous.utilization_percent, 1);
+      }
+      gpuWatchRoutine.lastSample = sample;
+      gpuWatchRoutine.sampleCount += 1;
+      log(events, `gpu watch sample: ${gpuWatchSampleText(sample)}`);
+      const blocked = gpuWatchCueBlockedReason();
+      if (blocked) {
+        gpuWatchRoutine.skippedCues += 1;
+        log(events, `gpu watch cue skipped: ${blocked}`);
+        scheduleGpuWatchTick();
+        return;
+      }
+      triggerGpuWatchCue(sample);
+    }
+
+    function gpuWatchCueInput(sample, routine) {
+      const parts = [
+        `Runtime GPU watch cue: ${gpuWatchSampleText(sample)}.`,
+        `Watch style: ${routine.style}.`,
+        `Samples so far: ${routine.sampleCount}; skipped cues: ${routine.skippedCues}.`,
+        Number.isFinite(sample?.delta_utilization_percent) ? `Change since last sample: ${sample.delta_utilization_percent > 0 ? "+" : ""}${sample.delta_utilization_percent} percentage points.` : "",
+        routine.stopAt ? `The watch has about ${Math.max(0, Math.ceil((routine.stopAt - Date.now()) / 1000))} seconds left.` : "The watch is set until stopped."
+      ].filter(Boolean);
+      return parts.join("\n");
+    }
+
+    function gpuWatchCueInstructions(sample, routine) {
+      if (routine.style === "number_only") {
+        const percent = sample?.status === "ok" && Number.isFinite(sample.utilization_percent)
+          ? `${Math.round(sample.utilization_percent)} percent.`
+          : "I cannot read it.";
+        return exactSpeechInstruction(percent);
+      }
+      return [
+        "A small runtime watch cue surfaced because you started a GPU/VRAM watch at the operator's request.",
+        "This is your own standing watch, not Brain 2 and not a new user turn.",
+        `Current cue: ${gpuWatchSampleText(sample)}.`,
+        Number.isFinite(sample?.delta_utilization_percent)
+          ? `Change since the prior sample: ${sample.delta_utilization_percent > 0 ? "+" : ""}${sample.delta_utilization_percent} percentage points.`
+          : "",
+        "Speak one compact Eric-shaped line. Do not become a dashboard.",
+        "If the number is the only useful thing, just say it plainly. If nothing is interesting, be brief enough that the watch does not hijack the room."
+      ].filter(Boolean).join("\n\n");
+    }
+
+    function triggerGpuWatchCue(sample) {
+      if (!gpuWatchRoutine) return;
+      const routine = gpuWatchRoutine;
+      const input = [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: gpuWatchCueInput(sample, routine) }]
+        }
+      ];
+      const instructions = gpuWatchCueInstructions(sample, routine);
+      gpuWatchInFlight = true;
+      responseActive = true;
+      routine.lastCueAt = Date.now();
+      cueFaceMode("thinking", 0.36, { force: true });
+      log(events, `gpu watch cue to Eric: ${gpuWatchSampleText(sample)} / ${routine.style}`);
+      rememberPromptLedger({
+        kind: "response.create",
+        source: "B1 gpu watch",
+        instructions,
+        input,
+        toolChoice: "none",
+        conversation: "none",
+        modalities: ["audio", "text"],
+        extra: {
+          routine: "gpu_watch",
+          style: routine.style,
+          sample
+        }
+      });
+      send({
+        type: "response.create",
+        response: {
+          conversation: "none",
+          modalities: ["audio", "text"],
+          tool_choice: "none",
+          input,
+          instructions,
+          ...ttsRuntimeConfig()
+        }
+      });
+    }
+
     function startGpuStatusPolling() {
       const tick = async () => {
         await refreshGpuStatusQuietly();
@@ -11495,6 +12809,7 @@
         self_focus_level: currentIdleSelfFocus(),
         loaded_note_focus_level: currentIdleNotesFocus(),
         performance_mode: performanceModeLabel(),
+        context_mode: currentPromptContextModeLabel(),
         interrupt_sensitivity: currentInterruptSensitivity(),
         browser_memory_facts: facts.length,
         loaded_notes: loadedNoteContexts.map((item) => item.filename),
@@ -11516,6 +12831,8 @@
       const eventsText = String(events?.textContent || "");
       return {
         basis: "rough browser-side estimate using characters / 4; exact consumed context is context.last_input_tokens after a model response",
+        context_mode: currentPromptContextModeKey(),
+        injected: !emptyContextSessionEnabled(),
         loaded_notes: estimateTextContext(loadedNotesText),
         sensing_eye_text: estimateTextContext(sensingText),
         search_receipts: estimateTextContext(searchReceiptsText),
@@ -11575,15 +12892,22 @@
     function contextMapSections() {
       const facts = safeLoadMemoryFacts();
       const enabledTools = enabledToolList();
-      const loadedNotesText = formatLoadedNotesForInstructions();
-      const sensingText = formatSensingTextForInstructions();
-      const searchReceiptsText = formatRecentSearchContextForInstructions();
-      const aloneStateText = formatAloneStateForInstructions();
-      const lastUserEchoText = formatLastUserIdleCueForInstructions();
-      const memoryText = formatMemoryForInstructions();
-      const systemText = firstContactModeEnabled() ? firstContactSessionInstructions() : baseSessionInstructionsText();
+      const emptyContext = emptyContextSessionEnabled();
+      const loadedNotesText = emptyContext ? "" : formatLoadedNotesForInstructions();
+      const sensingText = emptyContext ? "" : formatSensingTextForInstructions();
+      const searchReceiptsText = emptyContext ? "" : formatRecentSearchContextForInstructions();
+      const aloneStateText = emptyContext ? "" : formatAloneStateForInstructions();
+      const lastUserEchoText = emptyContext ? "" : formatLastUserIdleCueForInstructions();
+      const memoryText = emptyContext ? "" : formatMemoryForInstructions();
+      const systemText = emptyContext
+        ? configOnlySessionInstructions()
+        : firstContactModeEnabled()
+        ? firstContactSessionInstructions()
+        : baseSessionInstructionsText();
       const embodimentText = formatEmbodimentForInstructions();
-      const conversationText = conversationLines.length
+      const conversationText = emptyContext
+        ? conversationLinesForCurrentPromptContext(Infinity).join("\n")
+        : conversationLines.length
         ? conversationLines.join("\n")
         : String(conversation?.textContent || "");
       const eventsText = eventLogLines.length
@@ -11604,24 +12928,25 @@
         `Brain 2 voice: ${brain2VoiceLabel()}`,
         `Brain 2 person lane: ${brain2PersonFocusLabel()}`,
         `Brain 2 in flight: ${brain2InFlight ? "yes" : "no"}`,
-        brain2NoteCandidates.length
+        !emptyContext && brain2NoteCandidates.length
           ? `Brain 2 advisory notes for Eric:\n${brain2NoteCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
           : "",
-        brain2QuestionCandidates.length
+        !emptyContext && brain2QuestionCandidates.length
           ? `Brain 2 question candidates:\n${brain2QuestionCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
           : "",
-        brain2RevisionCandidates.length
+        !emptyContext && brain2RevisionCandidates.length
           ? `Brain 2 revision candidates:\n${brain2RevisionCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
           : "",
-        recentIdleOutputs.length ? `Recent idle outputs:\n${recentIdleOutputs.slice(-8).join("\n")}` : "",
-        idleUnresolvedContext(),
-        idleCuriositySeeds.length
+        recentIdleOutputsForCurrentPromptContext(8).length ? `Recent idle outputs:\n${recentIdleOutputsForCurrentPromptContext(8).join("\n")}` : "",
+        emptyContext ? "" : idleUnresolvedContext(),
+        !emptyContext && idleCuriositySeeds.length
           ? `Curiosity seeds:\n${idleCuriositySeeds.slice(-8).map((seed) => `- ${seed.label}`).join("\n")}`
           : "",
-        idleSearchLedgerContext(),
-        Object.keys(idleTopicLedger).length ? idleRetiredTopicsContext() : ""
+        emptyContext ? "" : idleSearchLedgerContext(),
+        !emptyContext && Object.keys(idleTopicLedger).length ? idleRetiredTopicsContext() : ""
       ].filter(Boolean).join("\n");
       const telemetryText = [
+        `Context mode: ${currentPromptContextModeLabel()}`,
         `Realtime connected: ${realtimeConnected() ? "yes" : "no"}`,
         `Mic: ${micRuntimeLabel()}`,
         `Eric speaker audio: ${ericAudioRuntimeLabel()}`,
@@ -11638,6 +12963,7 @@
         `Body sensors: ${llmBodySensorTools.checked ? "on" : "off"}`,
         `Chassis tools: ${llmChassisTools.checked ? "on" : "off"}`,
         `Voice tools: ${llmVoiceTools.checked ? "on" : "off"}`,
+        `Mic UI tool: ${llmUiControlTools.checked ? "on" : "off"}`,
         `Memory tools: ${llmMemoryTools.checked ? "on" : "off"}`,
         `Web search: ${llmWebSearchTools.checked ? "on" : "off"}`,
         `Web pages: ${llmWebPageTools.checked ? "on" : "off"}`,
@@ -11651,10 +12977,11 @@
       return [
         {
           name: "System",
-          role: "Injected into conversation on session updates",
+          role: emptyContext ? "Config-only session instructions injected on session updates" : "Injected into conversation on session updates",
           text: systemText,
           details: [
-            `Source: ${firstContactModeEnabled() ? "first contact mode" : baseSessionInstructionSource()}`,
+            `Context mode: ${currentPromptContextModeLabel()}`,
+            `Source: ${emptyContext ? "empty connect config-only wrapper" : firstContactModeEnabled() ? "first contact mode" : baseSessionInstructionSource()}`,
             `Prompt rules: ${baseSessionInstructionCount()}`,
             `Tool definitions available: ${enabledTools.length}`,
             `Voice: ${currentTtsVoice()}`,
@@ -11673,7 +13000,7 @@
         },
         {
           name: "Browser Memory",
-          role: "Injected into conversation when browser facts exist",
+          role: emptyContext ? "Available in browser but omitted by Empty Connect" : "Injected into conversation when browser facts exist",
           text: memoryText,
           details: [
             `Facts: ${facts.length}`,
@@ -11683,12 +13010,16 @@
         },
         {
           name: "Lab Goal",
-          role: labGoalOneShotEnabled()
+          role: emptyContext
+            ? "Available in browser but omitted by Empty Connect"
+            : labGoalOneShotEnabled()
             ? "Session-only one-response launch job"
             : "Session-only background cue for idle",
-          text: labGoalIdleContext() || "No lab goal pinned.",
+          text: emptyContext ? "" : labGoalIdleContext() || "No lab goal pinned.",
           details: [
-            currentLabGoal()
+            emptyContext
+              ? "Omitted by Empty Connect."
+              : currentLabGoal()
               ? (labGoalOneShotEnabled()
                 ? "Goal is active for the next assistant response, then clears."
                 : "Goal biases idle but should not drown out the last user echo.")
@@ -11698,8 +13029,8 @@
         },
         {
           name: "Last User Echo",
-          role: "Temporary strongest soft cue for idle",
-          text: lastUserEchoText || "No recent user words still inside the idle echo window.",
+          role: emptyContext ? "Available in browser but omitted by Empty Connect" : "Temporary strongest soft cue for idle",
+          text: emptyContext ? "" : lastUserEchoText || "No recent user words still inside the idle echo window.",
           details: [
             lastUserText ? `Last user text chars: ${lastUserText.length}` : "No accepted user turn yet.",
             `Echo window: ${Math.round(lastUserIdleEchoMs / 60000)} real minutes`
@@ -11707,7 +13038,7 @@
         },
         {
           name: "Loaded Notes",
-          role: "Pinned into conversation and optionally idle",
+          role: emptyContext ? "Pinned in UI but omitted by Empty Connect" : "Pinned into conversation and optionally idle",
           text: loadedNotesText,
           details: [
             `Loaded files: ${loadedNoteContexts.length}`,
@@ -11720,7 +13051,7 @@
         },
         {
           name: "Sensing Eye",
-          role: "Temporary staged visual/text context; separate from the live camera hardware feed",
+          role: emptyContext ? "Loaded in UI but omitted by Empty Connect" : "Temporary staged visual/text context; separate from the live camera hardware feed",
           text: sensingText,
           details: [
             `Current input: ${sensingInputLabel()}`,
@@ -11732,7 +13063,7 @@
         },
         {
           name: "Search Receipts",
-          role: "Temporary source-labeled web results injected into conversation and idle context",
+          role: emptyContext ? "Available in browser but omitted by Empty Connect" : "Temporary source-labeled web results injected into conversation and idle context",
           text: searchReceiptsText,
           details: [
             `Receipts: ${searchContextReceipts.length}`,
@@ -11745,7 +13076,7 @@
         },
         {
           name: "Alone State",
-          role: "Short runtime ledger injected into conversation and idle context",
+          role: emptyContext ? "Available in browser but omitted by Empty Connect" : "Short runtime ledger injected into conversation and idle context",
           text: aloneStateText,
           details: [
             `Tracked alone activities: ${aloneActivityLog.length}`,
@@ -11755,13 +13086,14 @@
         },
         {
           name: "Conversation",
-          role: "Realtime conversation history; visible pane is the local transcript copy",
+          role: emptyContext ? "Post-empty-connect live conversation only; old visible pane lines are omitted from helper prompts" : "Realtime conversation history; visible pane is the local transcript copy",
           text: conversationText,
           details: [
             `Visible lines: ${countPaneLines(conversation)}`,
             `Tracked conversation lines: ${conversationLines.length}`,
+            emptyContext ? `Post-empty-connect lines: ${conversationLinesForCurrentPromptContext(Infinity).length}` : "",
             `Last user text chars: ${lastUserText.length}`
-          ]
+          ].filter(Boolean)
         },
         {
           name: "Events And Tools",
@@ -11777,7 +13109,7 @@
           role: "Used by idle ponder only, not ordinary replies",
           text: idleSettingsText,
           details: [
-            `Recent idle outputs: ${recentIdleOutputs.length}`,
+            `Recent idle outputs: ${recentIdleOutputsForCurrentPromptContext(8).length}`,
             `Idle log entries: ${idleOutputLog.length}`,
             `Curiosity seeds: ${idleCuriositySeeds.length}`,
             `Ledger topics: ${Object.keys(idleTopicLedger).length}`
@@ -11785,11 +13117,12 @@
         },
         {
           name: "Telemetry",
-          role: "Live browser/page state; selectively injected into idle and available through tools",
+          role: emptyContext ? "Live browser/page state; not pre-injected by Empty Connect except through explicit tools" : "Live browser/page state; selectively injected into idle and available through tools",
           text: telemetryText,
           details: [
             `Connection: ${realtimeConnected() ? "connected" : "disconnected"}`,
             `Mic: ${micRuntimeLabel()}`,
+            `Runtime watch: ${runtimeWatchLabel()}`,
             `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
             `Sensing input: ${sensingInputLabel()}`
           ]
@@ -11807,6 +13140,141 @@
       const totalApproxTokens = sections.reduce((sum, section) => sum + approximateTextTokens(section.text), 0);
       contextMapStatus.textContent = `Scanned ${new Date().toLocaleTimeString()} / about ${totalApproxTokens.toLocaleString()} visible-source tokens`;
       scheduleLogPaneHeightUpdate();
+    }
+
+    function contextPaneSizerKey(section) {
+      return String(section?.name || "context")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "context";
+    }
+
+    function loadContextPanePreviewHeights() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(contextPaneSizerStorageKey) || "{}");
+        contextPanePreviewHeights = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        contextPanePreviewHeights = {};
+      }
+    }
+
+    function saveContextPanePreviewHeights() {
+      try {
+        localStorage.setItem(contextPaneSizerStorageKey, JSON.stringify(contextPanePreviewHeights));
+      } catch {
+        // Ignore private-mode/storage failures; the live resize still works.
+      }
+    }
+
+    function clampContextPanePreviewHeight(height) {
+      return Math.max(contextPanePreviewMinHeight, Math.min(contextPanePreviewMaxHeight, Math.round(Number(height) || contextPanePreviewDefaultHeight)));
+    }
+
+    function contextPanePreviewHeight(section) {
+      const saved = contextPanePreviewHeights[contextPaneSizerKey(section)];
+      return clampContextPanePreviewHeight(saved || contextPanePreviewDefaultHeight);
+    }
+
+    function contextSizerLabel(section, estimate, height) {
+      const parts = [
+        `${estimate.chars.toLocaleString()} chars`,
+        `${estimate.approximate_tokens.toLocaleString()} tok`
+      ];
+      if (Number.isFinite(height)) parts.push(`${Math.round(height)}px`);
+      return parts.join(" / ");
+    }
+
+    function setContextSnippetHeight(section, snippet, sizer, height, { persist = false } = {}) {
+      if (!snippet) return contextPanePreviewDefaultHeight;
+      const next = clampContextPanePreviewHeight(height);
+      const key = contextPaneSizerKey(section);
+      contextPanePreviewHeights[key] = next;
+      snippet.style.setProperty("--context-snippet-height", `${next}px`);
+      sizer?.setAttribute("aria-valuenow", String(next));
+      const estimate = estimateTextContext(section.text);
+      const label = sizer?.querySelector(".context-sizer-label");
+      if (label) label.textContent = contextSizerLabel(section, estimate, next);
+      if (persist) saveContextPanePreviewHeights();
+      return next;
+    }
+
+    function beginContextSnippetResize(event, section, snippet, sizer) {
+      if (!snippet || (typeof event.button === "number" && event.button !== 0)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startY = event.clientY;
+      const startHeight = snippet.getBoundingClientRect().height || contextPanePreviewHeight(section);
+      document.body.classList.add("resizing-context-pane");
+      sizer.setPointerCapture?.(event.pointerId);
+      const onPointerMove = (moveEvent) => {
+        const nextHeight = startHeight + moveEvent.clientY - startY;
+        setContextSnippetHeight(section, snippet, sizer, nextHeight);
+        scheduleLogPaneHeightUpdate();
+      };
+      const onPointerUp = (upEvent) => {
+        document.body.classList.remove("resizing-context-pane");
+        sizer.releasePointerCapture?.(upEvent.pointerId);
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        const height = setContextSnippetHeight(section, snippet, sizer, snippet.getBoundingClientRect().height, { persist: true });
+        recordUiEvent("context pane size", `${section.name} ${height}px`, { section: section.name, height });
+      };
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    }
+
+    function makeContextSizer(section, estimate, snippet = null) {
+      const height = snippet ? contextPanePreviewHeight(section) : null;
+      const sizer = document.createElement("div");
+      sizer.className = snippet ? "context-sizer" : "context-sizer context-sizer-static";
+      sizer.setAttribute("role", snippet ? "separator" : "status");
+      sizer.setAttribute("aria-label", snippet ? `Resize ${section.name} context preview` : `${section.name} context size`);
+      if (snippet) {
+        sizer.tabIndex = 0;
+        sizer.setAttribute("aria-orientation", "horizontal");
+        sizer.setAttribute("aria-valuemin", String(contextPanePreviewMinHeight));
+        sizer.setAttribute("aria-valuemax", String(contextPanePreviewMaxHeight));
+        sizer.setAttribute("aria-valuenow", String(height));
+        sizer.title = "Drag to reveal more or less of this context preview. Double-click to reset.";
+      }
+      const label = document.createElement("span");
+      label.className = "context-sizer-label";
+      label.textContent = contextSizerLabel(section, estimate, height);
+      sizer.appendChild(label);
+      if (!snippet) return sizer;
+      setContextSnippetHeight(section, snippet, sizer, height);
+      sizer.addEventListener("pointerdown", (event) => beginContextSnippetResize(event, section, snippet, sizer));
+      sizer.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const next = setContextSnippetHeight(section, snippet, sizer, contextPanePreviewDefaultHeight, { persist: true });
+        recordUiEvent("context pane size", `${section.name} reset ${next}px`, { section: section.name, height: next });
+      });
+      sizer.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          event.stopPropagation();
+          setContextSnippetHeight(section, snippet, sizer, contextPanePreviewHeight(section) + (event.shiftKey ? 40 : 16), { persist: true });
+          scheduleLogPaneHeightUpdate();
+        } else if (event.key === "ArrowUp") {
+          event.preventDefault();
+          event.stopPropagation();
+          setContextSnippetHeight(section, snippet, sizer, contextPanePreviewHeight(section) - (event.shiftKey ? 40 : 16), { persist: true });
+          scheduleLogPaneHeightUpdate();
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          event.stopPropagation();
+          setContextSnippetHeight(section, snippet, sizer, contextPanePreviewMinHeight, { persist: true });
+          scheduleLogPaneHeightUpdate();
+        } else if (event.key === "End") {
+          event.preventDefault();
+          event.stopPropagation();
+          setContextSnippetHeight(section, snippet, sizer, contextPanePreviewMaxHeight, { persist: true });
+          scheduleLogPaneHeightUpdate();
+        }
+      });
+      return sizer;
     }
 
     function contextMapCard(section) {
@@ -11827,12 +13295,14 @@
       });
       card.append(title, meta, list);
       const snippet = contextSnippet(section.text, { maxChars: contextSnippetLimit(section) });
+      let pre = null;
       if (snippet) {
-        const pre = document.createElement("div");
+        pre = document.createElement("div");
         pre.className = "context-snippet";
         pre.textContent = snippet;
         card.appendChild(pre);
       }
+      card.appendChild(makeContextSizer(section, estimate, pre));
       return card;
     }
 
@@ -11845,7 +13315,7 @@
       const stop = new Set([
         "about", "after", "again", "also", "because", "before", "being", "browser", "could", "current",
         "details", "eric", "exact", "facts", "first", "from", "have", "into", "just", "loaded", "memory",
-        "notes", "robot", "scott", "should", "source", "system", "their", "there", "these", "thing", "think",
+        "notes", "robot", "should", "source", "system", "their", "there", "these", "thing", "think",
         "this", "tools", "until", "using", "value", "when", "where", "which", "while", "with", "would", "your"
       ]);
       const counts = new Map();
@@ -11979,6 +13449,8 @@
       const text = String(prompt || "").replace(/\s+/g, " ").trim();
       if (!text) throw new Error("Missing image prompt");
       const shortTitle = String(title || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      generatedImageStatusState = "generating";
+      generatedImageStatusLabel = shortTitle || "image";
       generatedImageHint.textContent = `Generating ${shortTitle || "image"}...`;
       generatedImageCard.classList.remove("ready");
       generatedImagePreview.classList.remove("ready");
@@ -12002,7 +13474,10 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status === "error") {
+        generatedImageStatusState = "failed";
+        generatedImageStatusLabel = String(result.error || `${response.status} ${response.statusText}`).replace(/\s+/g, " ").trim().slice(0, 120);
         generatedImageHint.textContent = "Image generation failed";
+        updateGeneratedImageButtons();
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       const absoluteUrl = new URL(String(result.url || ""), location.href).href;
@@ -12269,6 +13744,7 @@
       idleInFlight = false;
       brain2InFlight = false;
       reengageInFlight = false;
+      stopGpuWatch({ reason });
       clearUserTurnPending();
       stopPlaybackNow();
       clearAudioQueue();
@@ -12301,7 +13777,8 @@
           session_time: sessionClock?.textContent || "",
           status_lanes: laneIndicatorLabel?.textContent || "",
           record_status: recordingIndicatorLabel?.textContent || "",
-          tool_status: toolIndicatorLabel?.textContent || ""
+          tool_status: toolIndicatorLabel?.textContent || "",
+          runtime_watch: gpuWatchReport("passivation")
         },
         ui_settings: currentUiSettingsSnapshot(),
         browser_memory_facts: safeLoadMemoryFacts(),
@@ -12370,7 +13847,7 @@
         "Use",
         "---",
         "This is Eric's passivated working state from the previous run. Treat it as continuity and orientation, not as live sensor truth.",
-        "When Scott says he is plugging you back in, continue from this state naturally. Do not claim current sights, sounds, tools, or hardware state unless current runtime, current tools, or current user input confirm them.",
+        "When the operator says they are plugging you back in, continue from this state naturally. Do not claim current sights, sounds, tools, or hardware state unless current runtime, current tools, or current user input confirm them.",
         "Previous-run sensing input is stale-session provenance only. Do not call it staged, present, visible, or in-context unless the current runtime state also says a sensing-eye image or text is present.",
         "Previous-run loaded-note names and conversation excerpts are provenance only. Do not claim you freshly read or currently have the full text of a previous note unless it was reloaded in this new session.",
         "If the last user words sound like a job, keep them in mind for a few idle beats and take one small auditable step.",
@@ -12380,6 +13857,7 @@
         `Model: ${packet.runtime.model}`,
         `Session time at passivation: ${packet.runtime.session_time || "unknown"}`,
         `Mic at passivation: ${packet.runtime.mic}`,
+        `Runtime watch at passivation: ${packet.runtime.runtime_watch?.label || "none"}`,
         `Previous-run sensing input: ${packet.sensing.label}`,
         `Last user words: ${packet.last_user.text || "none"}`,
         `Previous-run loaded notes: ${packet.loaded_notes.map((item) => item.filename).join(", ") || "none"}`,
@@ -13120,6 +14598,11 @@
 
     function stageVisionImage() {
       if (!visionImageUrl || visionImageStaged) return;
+      if (emptyContextSessionEnabled()) {
+        visionHint.textContent = `${visionImageName || "image"} - held outside Empty Connect`;
+        updateVisionButtons();
+        return;
+      }
       if (!realtimeConnected()) {
         visionHint.textContent = `${visionImageName || "image"} - connect to stage`;
         updateVisionButtons();
@@ -13204,6 +14687,11 @@
     async function executeTool(name, rawArguments) {
       const args = parseToolArguments(rawArguments);
       if (name === "set_voice") return setVoice(args);
+      if (name === "get_ui_controls") return getUiControls(args);
+      if (name === "set_ui_control") return setUiControl(args);
+      if (name === "start_gpu_watch") return startGpuWatch(args);
+      if (name === "stop_gpu_watch") return stopGpuWatch(args);
+      if (name === "get_gpu_watch_status") return getGpuWatchStatus(args);
       if (name === "set_embodiment") return setEmbodiment(args);
       if (name === "set_robot_mode") return setFaceMode(args);
       if (name === "play_face_beat") return playFaceBeat(args);
@@ -13250,6 +14738,11 @@
     function toolShortName(name) {
       const map = {
         set_voice: "VOICE",
+        get_ui_controls: "UI",
+        set_ui_control: "UI",
+        start_gpu_watch: "WATCH",
+        stop_gpu_watch: "WATCH",
+        get_gpu_watch_status: "WATCH",
         set_embodiment: "BODY",
         set_robot_mode: "MODE",
         play_face_beat: "BEAT",
@@ -13316,6 +14809,11 @@
 
     function toolDetailFromArgs(name, args = {}) {
       if (name === "search_web") return args.query;
+      if (name === "get_ui_controls") return "current settings";
+      if (name === "set_ui_control") return `${args.control || "ui"}=${String(args.value ?? "").slice(0, 48)}`;
+      if (name === "start_gpu_watch") return `${args.style || "eric"} every ${args.cadence_seconds || gpuWatchDefaultCadenceSeconds}s`;
+      if (name === "stop_gpu_watch") return args.reason || "stop";
+      if (name === "get_gpu_watch_status") return runtimeWatchLabel();
       if (name === "read_text_file" || name === "write_text_file" || name === "unpin_note") return args.filename || args.path || args.name;
       if (name === "show_web_page") return args.url;
       if (name === "generate_image") return args.title || args.prompt;
@@ -13453,6 +14951,10 @@
       }
       const actualDelayMs = Math.max(delayMs, gazeRemainingMs, visualRemainingMs);
       faceIdleTimer = setTimeout(() => {
+        if (outputAudioActive()) {
+          scheduleFaceIdle(180);
+          return;
+        }
         cueFaceMode("idle");
       }, actualDelayMs);
       if (actualDelayMs !== delayMs) log(events, `face idle delayed until hold ends: ${Math.round(actualDelayMs)}ms`);
@@ -13641,6 +15143,55 @@
       return `${label} updated.`;
     }
 
+    function uiControlSpokenName(control) {
+      const map = {
+        interrupt_sensitivity: "Interrupt sensitivity"
+      };
+      return map[control] || "UI control";
+    }
+
+    function uiControlFollowupText(result) {
+      if (result?.status === "error") return "I could not change that UI control.";
+      const name = uiControlSpokenName(result?.control);
+      const after = String(result?.after || "updated").trim();
+      return after ? `${name} is now ${after}.` : `${name} updated.`;
+    }
+
+    function uiControlsFollowupInstructions(result) {
+      if (result?.status === "error") return exactSpeechInstruction("I could not inspect mic sensitivity.");
+      return (
+        "Use the get_ui_controls tool output to answer the user's mic sensitivity question compactly. " +
+        "The only exposed UI control right now is interrupt_sensitivity. " +
+        "Do not claim mic sensitivity changed unless set_ui_control succeeded."
+      );
+    }
+
+    function gpuWatchFollowupText(toolName, result) {
+      if (result?.status === "error") return "I could not start that watch.";
+      if (toolName === "stop_gpu_watch") {
+        return result?.status === "idle" ? "I was not watching it." : "I stopped watching it.";
+      }
+      return "";
+    }
+
+    function gpuWatchFollowupInstructions(toolName, result) {
+      if (result?.status === "error") return exactSpeechInstruction("I could not start that watch.");
+      if (toolName === "start_gpu_watch") {
+        return (
+          "Use the start_gpu_watch output to confirm that your GPU/VRAM watch is running in one natural spoken sentence. " +
+          "Include the current GPU percentage and VRAM only if last_sample is available. " +
+          "Do not describe scheduler internals or mention tool JSON."
+        );
+      }
+      if (toolName === "get_gpu_watch_status") {
+        return (
+          "Use the get_gpu_watch_status output to say whether your GPU/VRAM watch is active in one compact spoken sentence. " +
+          "If active, include cadence, time left or until stopped, and the latest sample if present."
+        );
+      }
+      return "";
+    }
+
     function voiceFollowupText(result) {
       if (result?.status === "error") return "I could not change my voice.";
       const voice = String(result?.voice || "Eric");
@@ -13667,6 +15218,12 @@
         beginToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", detail: toolDetailFromArgs(event.name, activityArgs) });
         const result = await executeTool(event.name, activityArgs);
         if (event.name === "set_voice") toolFollowupExactText = voiceFollowupText(result);
+        if (event.name === "set_ui_control") toolFollowupExactText = uiControlFollowupText(result);
+        if (event.name === "get_ui_controls") toolFollowupInstructions = uiControlsFollowupInstructions(result);
+        if (event.name === "start_gpu_watch" || event.name === "get_gpu_watch_status") {
+          toolFollowupInstructions = gpuWatchFollowupInstructions(event.name, result);
+        }
+        if (event.name === "stop_gpu_watch") toolFollowupExactText = gpuWatchFollowupText(event.name, result);
         if (event.name === "set_embodiment") toolFollowupExactText = embodimentFollowupText(result);
         if (event.name === "set_face_animation") {
           toolFollowupExactText = result.enabled === false ? "I will hold my idle face still." : "My idle face animation is back on.";
@@ -13703,7 +15260,7 @@
           item: {
             type: "function_call_output",
             call_id: event.call_id,
-            output: JSON.stringify(["search_web", "get_weather", "get_current_time", "get_brain_status"].includes(event.name) ? result : { status: "ok", result })
+            output: JSON.stringify(["search_web", "get_weather", "get_current_time", "get_brain_status", "get_ui_controls", "start_gpu_watch", "stop_gpu_watch", "get_gpu_watch_status"].includes(event.name) ? result : { status: "ok", result })
           }
         });
         if (event.name === "remember_fact" || event.name === "forget_fact" || event.name === "search_web" || event.name === "unpin_note" || loadedNoteContextDirty) {
@@ -13714,6 +15271,11 @@
       } catch (error) {
         endToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", status: "fail", detail: error.message });
         if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
+        if (event.name === "set_ui_control") toolFollowupExactText = "I could not change that UI control.";
+        if (event.name === "get_ui_controls") toolFollowupExactText = "I could not inspect mic sensitivity.";
+        if (event.name === "start_gpu_watch") toolFollowupExactText = "I could not start that watch.";
+        if (event.name === "stop_gpu_watch") toolFollowupExactText = "I could not stop that watch.";
+        if (event.name === "get_gpu_watch_status") toolFollowupExactText = "I could not inspect that watch.";
         if (event.name === "set_embodiment") toolFollowupExactText = "I could not move there.";
         if (event.name === "set_face_animation") toolFollowupExactText = "I could not change my idle face animation.";
         if (event.name === "paint_face_from_sensing_eye") toolFollowupExactText = "I could not put that image on my face.";
@@ -13821,9 +15383,11 @@
     }
 
     function enabledToolList() {
-      if (firstContactModeEnabled()) return [];
+      if (firstContactModeEnabled() && !emptyContextSessionEnabled()) return [];
       return [
         ...(llmVoiceTools?.checked ? voiceTools : []),
+        ...(llmUiControlTools?.checked ? uiControlTools : []),
+        ...runtimeWatchTools,
         ...(llmBodySensorTools?.checked ? bodySensorTools : []),
         ...(llmTools?.checked ? embodimentTools() : []),
         ...(llmTools?.checked ? faceTools : []),
@@ -13841,6 +15405,7 @@
     }
 
     function idleEnabledToolList({ firstContactActive = firstContactModeEnabled(), performanceActive = performanceModeEnabled() } = {}) {
+      if (emptyContextSessionEnabled()) return [];
       if (firstContactActive || performanceActive) return [];
       return enabledToolList().filter((tool) => idleToolAllowedNames.has(tool.name));
     }
@@ -14408,6 +15973,7 @@
       }
       activeAudioSources.clear();
       if (audioContext) playbackTime = audioContext.currentTime;
+      stopSpeechMouthCue();
     }
 
     function maybeBargeInFromMicPeak(peak) {
@@ -14483,6 +16049,7 @@
       if (event.type === "response.output_audio.delta" && event.delta) {
         cueFaceMode("speaking", 0.72);
         queueAudioDelta(event.delta);
+        cueSpeechMouth(0.72);
         return;
       }
       if (event.type === "response.output_audio.done" || event.type === "response.done") {
@@ -14493,16 +16060,19 @@
         }
         if (event.type === "response.done") {
           const wasIdleInFlight = idleInFlight;
+          const wasGpuWatchInFlight = gpuWatchInFlight;
           const awaitingToolFollowup = toolFollowupNeeded;
           responseActive = false;
           idleInFlight = false;
           idleExhaustionScoredThisResponse = false;
           reengageInFlight = false;
-          if (!awaitingToolFollowup) clearLabGoalAfterOneShotResponse();
-          if (!awaitingToolFollowup) armAssistantUtteranceFinished({ wasIdle: wasIdleInFlight });
+          gpuWatchInFlight = false;
+          if (!awaitingToolFollowup && !wasGpuWatchInFlight) clearLabGoalAfterOneShotResponse();
+          if (!awaitingToolFollowup && !wasGpuWatchInFlight) armAssistantUtteranceFinished({ wasIdle: wasIdleInFlight });
           if (!awaitingToolFollowup && imageToolProtectionEnabled) clearImageToolProtection();
           if (!awaitingToolFollowup && wasIdleInFlight) updateSessionTools({ quiet: true });
-          updateLanePressure({ reason: awaitingToolFollowup ? "B1 waiting for tool followup" : "B1 response done" });
+          if (!awaitingToolFollowup && wasGpuWatchInFlight && gpuWatchRoutine) scheduleGpuWatchTick();
+          updateLanePressure({ reason: awaitingToolFollowup ? "B1 waiting for tool followup" : wasGpuWatchInFlight ? "B1 watch response done" : "B1 response done" });
           updateIdleSchedulerStatus();
         }
         if (!toolFollowupNeeded) scheduleFaceIdle();
@@ -14543,8 +16113,11 @@
         toolMarkupSuppressed = false;
         clearUserTurnPending();
         responseActive = true;
+        resetSpeechMouthCue();
         updateLanePressure({ reason: "B1 response started" });
         cueFaceMode("thinking", 0.45);
+      } else if (event.type === "response.output_audio_transcript.delta") {
+        noteSpeechMouthTextDelta(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.delta") {
         noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
         updateInputDraft(event.delta || "");
@@ -14579,6 +16152,9 @@
           commitIdleAssistantTranscript(event.transcript || "");
           maybeShowIdleMouthAside(event.transcript || "");
         }
+        if (gpuWatchInFlight && gpuWatchRoutine) {
+          gpuWatchRoutine.lastSpoken = String(event.transcript || "").trim().slice(-240);
+        }
         noteAssistantText(event.transcript || "");
         addConversation(`Robot 790: ${event.transcript || ""}`, { touchActivity: false });
       } else if (event.type === "response.output_text.delta") {
@@ -14595,12 +16171,14 @@
         idleInFlight = false;
         idleExhaustionScoredThisResponse = false;
         reengageInFlight = false;
+        gpuWatchInFlight = false;
         assistantFinishPending = false;
         assistantFinishWasIdle = false;
         assistantFinishArmedAt = 0;
         clearAssistantFinishTimer();
         clearUserTurnPending();
         updateLanePressure({ reason: "response error cleared lanes" });
+        if (gpuWatchRoutine) scheduleGpuWatchTick();
         scheduleConversationReengage();
         scheduleIdlePonder();
         log(events, `ERROR ${event.error?.type || ""}: ${event.error?.message || JSON.stringify(event)}`);
@@ -14608,15 +16186,27 @@
       log(events, event.type || JSON.stringify(event));
     }
 
-    async function connect() {
-      if (ws && ws.readyState === WebSocket.OPEN) return;
-      setState("Connecting", "warn");
-      await ensureRuntimeConfigLoaded();
-      await ensurePlayback();
-      ws = new WebSocket(serverUrl.value.trim());
+    async function connect({ emptyContext = false } = {}) {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      setState(emptyContext ? "Empty connecting" : "Connecting", "warn");
+      connectButton.disabled = true;
+      emptyConnectButton.disabled = true;
+      try {
+        await ensureRuntimeConfigLoaded();
+        await ensurePlayback();
+        ws = new WebSocket(serverUrl.value.trim());
+      } catch (error) {
+        setState("Connect failed");
+        connectButton.disabled = false;
+        emptyConnectButton.disabled = false;
+        log(events, `connect error: ${error.message}`);
+        return;
+      }
       ws.addEventListener("open", () => {
-        setState("Connected", "ok");
+        beginRealtimeContextMode({ emptyContext });
+        setState(emptyContext ? "Empty connected" : "Connected", "ok");
         connectButton.disabled = true;
+        emptyConnectButton.disabled = true;
         disconnectButton.disabled = false;
         startMicButton.disabled = false;
         resetMicButton.disabled = false;
@@ -14626,12 +16216,20 @@
         idlePonderNowButton.disabled = false;
         updateTypedInputButtons();
         updateVisionButtons();
-        stageVisionImage();
-        log(events, "connected");
+        if (emptyContext) {
+          if (visionImageUrl) {
+            visionHint.textContent = `${visionImageName || "image"} - held outside Empty Connect`;
+            updateVisionButtons();
+          }
+          log(events, "connected empty context: config-only prompt, startup context omitted");
+        } else {
+          stageVisionImage();
+          log(events, "connected");
+        }
         syncServerPanelToConnection();
         noteConversationActivity();
         updateSessionTools();
-        recordRunSetupSnapshot("realtime open");
+        recordRunSetupSnapshot(emptyContext ? "empty realtime open" : "realtime open");
         updateLanePressure({ reason: "realtime connected" });
         updateIdleSchedulerStatus();
       });
@@ -14663,10 +16261,13 @@
         responseActive = false;
         idleInFlight = false;
         brain2InFlight = false;
+        gpuWatchInFlight = false;
+        if (gpuWatchRoutine) stopGpuWatch({ reason: "realtime disconnected" });
         clearUserTurnPending();
         clearAudioQueue();
         setState("Disconnected");
         connectButton.disabled = false;
+        emptyConnectButton.disabled = false;
         disconnectButton.disabled = true;
         startMicButton.disabled = true;
         stopMicButton.disabled = true;
@@ -14676,6 +16277,7 @@
         faceIdleButton.disabled = true;
         faceBeatButton.disabled = true;
         idlePonderNowButton.disabled = true;
+        clearRealtimeContextMode();
         updateIdleSchedulerStatus();
         updateLanePressure({ reason: "realtime disconnected" });
         updateTypedInputButtons();
@@ -14697,6 +16299,8 @@
       });
       ws.addEventListener("error", () => {
         setState("Socket error");
+        connectButton.disabled = false;
+        emptyConnectButton.disabled = false;
         log(events, "websocket error");
       });
     }
@@ -14721,6 +16325,7 @@
       endIntentionalExitCleanupSoon();
       setState("Restarting realtime", "warn");
       connectButton.disabled = true;
+      emptyConnectButton.disabled = true;
       disconnectButton.disabled = true;
 
       try {
@@ -14739,6 +16344,7 @@
           restartServerButton.disabled = false;
           unloadServerButton.disabled = false;
           connectButton.disabled = false;
+          emptyConnectButton.disabled = false;
           setState("Disconnected");
           log(events, "realtime restart launched; reconnect when ready");
         }, 5000);
@@ -14746,6 +16352,7 @@
         restartServerButton.disabled = false;
         unloadServerButton.disabled = false;
         connectButton.disabled = false;
+        emptyConnectButton.disabled = false;
         setState("Restart failed");
         log(events, `realtime restart error: ${error.message}`);
       }
@@ -14782,6 +16389,7 @@
         log(events, `realtime halt started: pid ${result.pid || "unknown"}`);
         setState("Disconnected");
         connectButton.disabled = false;
+        emptyConnectButton.disabled = false;
         disconnectButton.disabled = true;
         startMicButton.disabled = true;
         stopMicButton.disabled = true;
@@ -14820,6 +16428,7 @@
       endIntentionalExitCleanupSoon();
       setState("Unloading realtime", "warn");
       connectButton.disabled = true;
+      emptyConnectButton.disabled = true;
       disconnectButton.disabled = true;
 
       try {
@@ -14838,6 +16447,7 @@
           restartServerButton.disabled = false;
           unloadServerButton.disabled = false;
           connectButton.disabled = false;
+          emptyConnectButton.disabled = false;
           setState("Unloaded");
           log(events, "realtime backend stopped; LM Studio unload requested");
         }, 4000);
@@ -14845,6 +16455,7 @@
         restartServerButton.disabled = false;
         unloadServerButton.disabled = false;
         connectButton.disabled = false;
+        emptyConnectButton.disabled = false;
         setState("Unload failed");
         log(events, `realtime unload error: ${error.message}`);
       }
@@ -14888,7 +16499,7 @@
         const input = event.inputBuffer.getChannelData(0);
         let peak = 0;
         for (const sample of input) peak = Math.max(peak, Math.abs(sample));
-        level.style.width = `${Math.min(100, peak * 180)}%`;
+        updateMicLevelMeters(peak);
         if (micMutedForNarration || brain2MonitorAudioShouldMuteMic()) return;
         maybeBargeInFromMicPeak(peak);
         const pcm16 = float32ToPcm16(resample(input, micContext.sampleRate, 16000));
@@ -14926,7 +16537,7 @@
       micMutedForNarration = false;
       clearMicFreshnessTimer();
       resetInputAudioBuffer(reason ? `after mic stop: ${reason}` : "after mic stop");
-      level.style.width = "0";
+      updateMicLevelMeters(0);
       startMicButton.disabled = !(ws && ws.readyState === WebSocket.OPEN);
       stopMicButton.disabled = true;
       updateMicMuteButton();
@@ -14948,12 +16559,13 @@
       customModelContext: "Context window requested for the model backend.",
       customModelParallel: "Parallel prediction count for the loaded LM Studio model.",
       connect: "Connect the browser UI to the realtime STS server.",
+      emptyConnect: "Connect with only creature/runtime config and live turns from this socket; omit notes, memory, passivation, sensing-eye input, search receipts, lab goal, and Brain2 carryover.",
       disconnect: "Close the current realtime connection.",
       restartServer: "Restart the local realtime server using the selected model settings.",
       haltRuntime: "Hard-stop only the realtime backend; leave STS, browser-face, and LM Studio loaded.",
-      topHaltRuntime: "Hard-stop only the realtime backend; leave STS, browser-face, and LM Studio loaded.",
       unloadServer: "Disconnect, stop the realtime backend, and unload LM Studio models to reclaim GPU memory.",
       visionDrop: "Drop an image, text file, or markdown note into Eric's sensing eye.",
+      visionPreviewHandle: "Drag to reveal more or less of the staged sensing-eye image; double-click to reset.",
       visionClear: "Clear the currently staged sensing-eye input.",
       visionOpen: "Open the current sensing-eye image in a new tab.",
       visionCameraStart: "Start the browser camera preview.",
@@ -14974,6 +16586,8 @@
       autoAudioRecord: "Automatically start recording when the microphone starts. Turn off for non-recorded test runs.",
       startAudioRecord: "Start recording the current STS session audio/video artifact.",
       stopAudioRecord: "Stop recording and snapshot conversation, events, and Brain 2 panes.",
+      conversationFontSmaller: "Make only the conversation pane text smaller.",
+      conversationFontLarger: "Make only the conversation pane text larger.",
       generatedImageOpen: "Open the latest generated image.",
       generatedImageClear: "Clear the generated-image preview.",
       imageModel: "Image-generation model preference for generate_image.",
@@ -15030,6 +16644,7 @@
       llmBodySensorTools: "Expose read-only body sensor/status tools to the LLM.",
       llmChassisTools: "Expose chassis movement/stop tools to the LLM.",
       llmVoiceTools: "Expose voice-changing tools to the LLM.",
+      llmUiControlTools: "Expose mic interrupt sensitivity to the LLM. Add more UI controls only as needed.",
       llmMemoryTools: "Expose browser memory read/write tools to the LLM.",
       llmWebSearchTools: "Expose web search to the LLM.",
       llmWebPageTools: "Expose browser page-opening tools to the LLM.",
@@ -15122,8 +16737,14 @@
 
     function currentUiSettingsSnapshot() {
       return {
+        connection: {
+          context_mode: currentPromptContextModeKey(),
+          context_mode_label: currentPromptContextModeLabel(),
+          last_connection_context_mode: lastRealtimeContextMode
+        },
         model: modelControlDetails(),
         tools: toolSwitchDetails(),
+        runtime_watch: gpuWatchReport("ui_snapshot"),
         tts: ttsControlDetails(),
         idle: idleControlDetails(),
         brain2: brain2ControlDetails(),
@@ -15137,6 +16758,7 @@
         },
         sensing: {
           input: sensingInputLabel(),
+          preview_height_px: currentSensingEyePreviewHeight(),
           live_camera: visionCameraActive(),
           browser_face_controller: browserFaceControllerActive(),
           face_url: faceUrl?.value || ""
@@ -15164,6 +16786,8 @@
         trigger,
         captured_at: new Date().toISOString(),
         model_stamp: currentModelStamp(),
+        context_mode: currentPromptContextModeKey(),
+        context_mode_label: currentPromptContextModeLabel(),
         runtime_prompt: {
           source: runtimeConfig.base_session_prompt_source || "inline",
           creature_source: runtimeConfig.creature_source || "",
@@ -15174,6 +16798,8 @@
           embodiment_profile_rule: runtimeConfig.embodiment_profile_rule || ""
         },
         startup_context: {
+          injected: !emptyContextSessionEnabled(),
+          omitted_by_empty_connect: emptyContextSessionEnabled(),
           eric_memories_enabled: loadEricMemoriesEnabled(),
           passivated_state_enabled: loadPassivatedEricEnabled(),
           startup_notes: startupNotes,
@@ -15192,8 +16818,11 @@
       const loadedNoteNames = setup.startup_context.loaded_notes.map((item) => item.filename);
       const summary = [
         setup.model_stamp,
+        setup.context_mode_label || realtimeContextModeLabel(setup.context_mode),
         `${enabledToolCount} tools`,
-        `${loadedNoteNames.length} loaded notes`,
+        setup.startup_context.omitted_by_empty_connect
+          ? `${loadedNoteNames.length} loaded notes omitted`
+          : `${loadedNoteNames.length} loaded notes`,
         `startup: ${setup.startup_context.startup_notes.join(", ") || "none"}`,
         `B2 ${brain2VoiceLabel()}`
       ].join(" / ");
@@ -15208,8 +16837,18 @@
     }
 
     connectButton.addEventListener("click", () => {
-      recordUiEvent("realtime connect", "requested", currentUiSettingsSnapshot());
+      recordUiEvent("realtime connect", "requested", {
+        ...currentUiSettingsSnapshot(),
+        requested_context_mode: "normal"
+      });
       connect();
+    });
+    emptyConnectButton.addEventListener("click", () => {
+      recordUiEvent("realtime empty connect", "config-only requested", {
+        ...currentUiSettingsSnapshot(),
+        requested_context_mode: "empty_connect"
+      });
+      connect({ emptyContext: true });
     });
     disconnectButton.addEventListener("click", async () => {
       recordUiEvent("realtime disconnect", "hard stop requested", { connected: realtimeConnected() });
@@ -15401,6 +17040,39 @@
       const file = visionFile.files?.[0];
       prepareSensingInput(file).catch((error) => log(events, `sensing input error: ${error.message}`));
     });
+    visionPreviewHandle?.addEventListener("pointerdown", beginSensingEyePreviewResize);
+    visionPreviewHandle?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    visionPreviewHandle?.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const height = setSensingEyePreviewHeight(sensingEyePreviewDefaultHeight, { persist: true });
+      log(events, `sensing-eye preview height reset ${height}px`);
+    });
+    visionPreviewHandle?.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeSensingEyePreviewHeight(event.shiftKey ? 40 : 16);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeSensingEyePreviewHeight(event.shiftKey ? -40 : -16);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeSensingEyePreviewHeight(sensingEyePreviewMinHeight - currentSensingEyePreviewHeight());
+      } else if (event.key === "End") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeSensingEyePreviewHeight(sensingEyePreviewMaxHeight - currentSensingEyePreviewHeight());
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
     visionClearButton.addEventListener("click", clearVisionImage);
     visionOpenButton?.addEventListener("click", openSensingEyeImage);
     visionPaintFaceButton?.addEventListener("click", () => {
@@ -15489,6 +17161,7 @@
     llmBodySensorTools.addEventListener("change", () => recordToolSwitchChange(`body sensors ${llmBodySensorTools.checked ? "on" : "off"}`));
     llmChassisTools.addEventListener("change", () => recordToolSwitchChange(`chassis ${llmChassisTools.checked ? "on" : "off"}`));
     llmVoiceTools.addEventListener("change", () => recordToolSwitchChange(`voice ${llmVoiceTools.checked ? "on" : "off"}`));
+    llmUiControlTools.addEventListener("change", () => recordToolSwitchChange(`mic UI tool ${llmUiControlTools.checked ? "on" : "off"}`));
     llmMemoryTools.addEventListener("change", () => recordToolSwitchChange(`memory ${llmMemoryTools.checked ? "on" : "off"}`));
     llmWebSearchTools.addEventListener("change", () => recordToolSwitchChange(`web search ${llmWebSearchTools.checked ? "on" : "off"}`));
     llmWebPageTools.addEventListener("change", () => recordToolSwitchChange(`web page ${llmWebPageTools.checked ? "on" : "off"}`));
@@ -15776,6 +17449,12 @@
       recordUiEvent("transcript prosody", currentTranscriptProsodyMode(), { conversation_lines: conversationLines.length });
       log(events, `transcript prosody ${currentTranscriptProsodyMode()}`);
     });
+    conversationFontSmallerButton?.addEventListener("click", () => {
+      nudgeConversationFontSize(-1);
+    });
+    conversationFontLargerButton?.addEventListener("click", () => {
+      nudgeConversationFontSize(1);
+    });
     prosodyKeyButton.addEventListener("click", () => {
       prosodyKeyPanel.hidden = !prosodyKeyPanel.hidden;
       recordUiEvent("prosody key", prosodyKeyPanel.hidden ? "hidden" : "shown", { mode: currentTranscriptProsodyMode() });
@@ -15897,6 +17576,7 @@
     loadModelPreset();
     loadControlSidebarWidth();
     loadControlSidebarState();
+    loadContextPanePreviewHeights();
     loadSettingsPanelState();
     loadMicPanelState();
     syncServerPanelToConnection();
@@ -15910,6 +17590,7 @@
     loadMicDevicePref();
     refreshMicDevices({ quiet: true }).catch(() => {});
     loadInterruptSensitivity();
+    loadSensingEyePreviewHeight();
     loadIdleFastClock();
     loadIdleDrift();
     loadIdleWonder();
@@ -15925,6 +17606,7 @@
     loadToolPrefs();
     loadRunPreset();
     loadLogDisplayControls();
+    loadConversationFontSize();
     applyOperatorDefaultsOnce();
     ensureRuntimeConfigLoaded();
     renderMemory();
@@ -15935,6 +17617,7 @@
     updateGeneratedImageButtons();
     updateAudioRecordButtons();
     updateHeaderClocks();
+    updateTopMicMeter(0);
     updatePassivationButton();
     loadStartupNotes();
     if (contextPanel.open) renderContextMap();

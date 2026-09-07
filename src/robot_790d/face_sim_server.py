@@ -90,6 +90,7 @@ def _default_state() -> dict[str, Any]:
             "talking": False,
             "energy": 0.45,
             "talk_level": 0,
+            "speech": {"active": False, "shape": "closed", "energy": 0.0, "seq": 0},
             "text_active": False,
             "text": "",
             "text_mode": "",
@@ -259,6 +260,7 @@ class FaceSimState:
         self.state["mouth"]["talking"] = False
         self.state["mouth"]["shape"] = "neutral"
         self.state["mouth"]["energy"] = 0.45
+        self.state["mouth"]["speech"] = _inactive_speech_state()
         self._clear_mouth_text()
         self._clear_face_paint()
         target = {"x": 0.0, "y": 0.0, "z": 420.0}
@@ -276,6 +278,7 @@ class FaceSimState:
         self.state["mouth"]["shape"] = "sleep"
         self.state["mouth"]["talking"] = False
         self.state["mouth"]["manual"] = False
+        self.state["mouth"]["speech"] = _inactive_speech_state()
         self._touch()
         return self.snapshot()
 
@@ -320,6 +323,7 @@ class FaceSimState:
         if payload.get("auto") is True:
             mouth["manual"] = False
             mouth["talking"] = False
+            mouth["speech"] = _inactive_speech_state(mouth.get("speech", {}).get("seq", 0))
             self._touch()
             return self.snapshot()
         pose_touched = False
@@ -331,10 +335,15 @@ class FaceSimState:
             pose_touched = True
         if "talking" in payload:
             mouth["talking"] = bool(payload["talking"])
+            if not mouth["talking"] and "speech" not in payload:
+                mouth["speech"] = _inactive_speech_state(mouth.get("speech", {}).get("seq", 0))
             pose_touched = True
         if "energy" in payload:
             mouth["energy"] = _clamp_float(payload["energy"], 0.0, 1.0, 0.45)
             pose_touched = True
+        if isinstance(payload.get("speech"), dict):
+            mouth["speech"] = _speech_state_from_payload(payload["speech"], fallback_energy=mouth.get("energy", 0.45))
+            pose_touched = pose_touched or bool(mouth["speech"]["active"])
         if "text" in payload:
             text = str(payload.get("text") or "")[:180]
             source = _clean_text_source(payload.get("source") or payload.get("text_source") or "eric")
@@ -523,6 +532,38 @@ def _clean_text_source(value: object) -> str:
     if text in {"brain2", "brain_2", "b2", "person_lane", "monitor"}:
         return "brain2"
     return "eric"
+
+
+SPEECH_MOUTH_SHAPES = {"closed", "small", "open", "wide", "round", "teeth"}
+
+
+def _clean_speech_mouth_shape(value: object) -> str:
+    text = _clean_token(value, fallback="open")
+    return text if text in SPEECH_MOUTH_SHAPES else "open"
+
+
+def _inactive_speech_state(seq: object = 0) -> dict[str, Any]:
+    try:
+        safe_seq = int(seq)
+    except (TypeError, ValueError):
+        safe_seq = 0
+    return {"active": False, "shape": "closed", "energy": 0.0, "seq": max(0, safe_seq)}
+
+
+def _speech_state_from_payload(payload: dict[str, Any], fallback_energy: object = 0.45) -> dict[str, Any]:
+    active = bool(payload.get("active", True))
+    if not active:
+        return _inactive_speech_state(payload.get("seq", 0))
+    try:
+        seq = int(payload.get("seq", 0))
+    except (TypeError, ValueError):
+        seq = 0
+    return {
+        "active": True,
+        "shape": _clean_speech_mouth_shape(payload.get("shape")),
+        "energy": _clamp_float(payload.get("energy"), 0.0, 1.0, _clamp_float(fallback_energy, 0.0, 1.0, 0.45)),
+        "seq": max(0, seq),
+    }
 
 
 def _clean_face_paint_target(value: object) -> str:

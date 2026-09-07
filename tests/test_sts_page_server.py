@@ -158,7 +158,7 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
     monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
     result = sts_page_server.mull_second_brain(
         {
-            "conversation": "Scott: I keep seeing it differently on replay.\nRobot 790: The cold pass has teeth.",
+            "conversation": "Operator: I keep seeing it differently on replay.\nRobot 790: The cold pass has teeth.",
             "person_focus": 8,
             "voice_shape": "loud-mid, trailing",
             "recent_brain2": "- mouth: replay changes the room",
@@ -221,7 +221,7 @@ def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
     result = sts_page_server.mull_second_brain(
         {
             "conversation": (
-                "Scott: I think performance mode changed the answer.\n"
+                "Operator: I think performance mode changed the answer.\n"
                 "Robot 790: The spotlight made me tidy."
             ),
             "person_focus": 8,

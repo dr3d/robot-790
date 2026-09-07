@@ -21,7 +21,7 @@ file is missing, but this file is the working source.
 ## Boot Briefs
 
 `notes/boot_eric.txt` is a private local boot brief. Eric can read it with the
-`read_text_file` tool during a run, and Scott can edit or discuss it directly.
+`read_text_file` tool during a run, and the operator can edit or discuss it directly.
 
 Use boot briefs for session orientation, current project direction, embodiment
 notes, and A/B trials. Keep them focused on what Eric is becoming in this lab,

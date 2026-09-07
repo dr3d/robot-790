@@ -82,6 +82,14 @@ evidence of a hidden inner mechanism by themselves.
 : Brain2 or verifier material handed to B1. Advisory blocks should be short,
   structured, late in context, and explicit about `do_next` and `do_not_do`.
 
+`lesson`
+: A receipt-checked pattern from a run that may improve future prompt/tool
+  grammar. Lessons are not browser memory, passivation, or hidden self-change.
+  They are hypotheses to test: get a behavior once, ask Eric what made it work,
+  compare his answer to receipts, replay the candidate, then promote only the
+  true part. Lesson states are `candidate`, `validated`, `promoted`, and
+  `retired`.
+
 `continuity envelope`
 : The wrapper that tells Eric how to own a loaded note: whether it is "my
   continuity," "a world," "Scott's note," "stale history," or "just reference."

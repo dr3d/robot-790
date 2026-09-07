@@ -234,6 +234,9 @@
     let faceRecordObjectUrl = "";
     let faceRecordFilename = "";
     const faceCommandPollMs = 500;
+    const faceSnapshotWidth = 540;
+    const faceSnapshotHeight = 720;
+    const faceSnapshotJpegQuality = 0.86;
     const stsUrlStorageKey = "robot790.faceSim.stsUrl.v1";
     const gpuHistoryLimit = 90;
     const gpuHistoryBucketMs = 1000;
@@ -295,6 +298,30 @@
 
     function timestampLabel() {
       return new Date().toISOString().replace(/[:.]/g, "-").replace("T", "-").replace("Z", "");
+    }
+
+    function browserFaceSnapshot() {
+      const output = document.createElement("canvas");
+      output.width = faceSnapshotWidth;
+      output.height = faceSnapshotHeight;
+      const outputCtx = output.getContext("2d");
+      outputCtx.fillStyle = "#05080b";
+      outputCtx.fillRect(0, 0, output.width, output.height);
+      const sourceWidth = canvas.width || faceSnapshotWidth;
+      const sourceHeight = canvas.height || faceSnapshotHeight;
+      const scale = Math.min(output.width / sourceWidth, output.height / sourceHeight);
+      const width = Math.max(1, Math.round(sourceWidth * scale));
+      const height = Math.max(1, Math.round(sourceHeight * scale));
+      const x = Math.round((output.width - width) / 2);
+      const y = Math.round((output.height - height) / 2);
+      outputCtx.drawImage(canvas, x, y, width, height);
+      return {
+        dataUrl: output.toDataURL("image/jpeg", faceSnapshotJpegQuality),
+        width: output.width,
+        height: output.height,
+        sourceWidth,
+        sourceHeight
+      };
     }
 
     function clockDuration(ms) {
@@ -403,9 +430,16 @@
 
     async function captureFaceToEye({ stsUrl = normalizedStsUrl(), reason = "" } = {}) {
       const targetUrl = new URL("/api/sensing-eye/inbox", normalizedStsUrl(stsUrl));
-      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      const snapshot = browserFaceSnapshot();
+      const imageDataUrl = snapshot.dataUrl;
       const faceState = state ? JSON.parse(JSON.stringify(state)) : {};
-      const filename = `browser-face-${timestampLabel()}.jpg`;
+      faceState.snapshot = {
+        width: snapshot.width,
+        height: snapshot.height,
+        source_width: snapshot.sourceWidth,
+        source_height: snapshot.sourceHeight
+      };
+      const filename = `browser-face-${timestampLabel()}-${snapshot.width}x${snapshot.height}.jpg`;
       setCaptureStatus("sending face to eye...");
       const response = await fetch(targetUrl, {
         method: "POST",
@@ -415,6 +449,7 @@
           filename,
           image_data_url: imageDataUrl,
           reason,
+          snapshot: faceState.snapshot,
           state: faceState
         })
       });
@@ -422,7 +457,7 @@
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
-      setCaptureStatus(`mirrored ${filename}`, "ok");
+      setCaptureStatus(`mirrored ${filename} (${snapshot.width}x${snapshot.height})`, "ok");
       return result;
     }
 
@@ -1311,6 +1346,45 @@
       return "mouth";
     }
 
+    function activeSpeechMouth(mouth) {
+      const speech = mouth?.speech || {};
+      if (!speech.active) return null;
+      const shape = String(speech.shape || "open").toLowerCase();
+      const allowed = new Set(["closed", "small", "open", "wide", "round", "teeth"]);
+      return {
+        shape: allowed.has(shape) ? shape : "open",
+        energy: clamp(Number(speech.energy ?? mouth.energy ?? 0.55) || 0.55, 0, 1),
+        seq: Number(speech.seq || 0)
+      };
+    }
+
+    function speechMouthPose(shape, energy, basePose) {
+      const targets = {
+        closed: { open: 0.03, width: 0.55, curve: 0.08, skew: 0, teeth: 0, tension: 0.20, slant: 0, upperLift: 0 },
+        small: { open: 0.26, width: 0.44, curve: 0.04, skew: 0, teeth: 0, tension: 0.18, slant: 0, upperLift: 0 },
+        open: { open: 0.58, width: 0.52, curve: -0.02, skew: 0, teeth: 0.04, tension: 0.14, slant: 0, upperLift: 0 },
+        wide: { open: 0.34, width: 0.88, curve: 0.10, skew: 0, teeth: 0.12, tension: 0.28, slant: 0, upperLift: 0 },
+        round: { open: 0.66, width: 0.22, curve: -0.06, skew: 0, teeth: 0, tension: 0.04, slant: 0, upperLift: 0 },
+        teeth: { open: 0.18, width: 0.78, curve: 0.02, skew: 0, teeth: 0.82, tension: 0.78, slant: 0, upperLift: 0 }
+      };
+      const target = targets[shape] || targets.open;
+      const mix = clamp(0.72 + energy * 0.18, 0.72, 0.90);
+      const pose = {};
+      for (const key of mouthPoseKeys) {
+        pose[key] = Number(basePose[key] || 0) * (1 - mix) + Number(target[key] || 0) * mix;
+      }
+      pose.curve = Number(basePose.curve || 0) * 0.34 + Number(target.curve || 0) * 0.66;
+      pose.skew = Number(basePose.skew || 0) * 0.28 + Number(target.skew || 0) * 0.72;
+      pose.upperLift = Number(basePose.upperLift || 0) * 0.25 + Number(target.upperLift || 0) * 0.75;
+      return pose;
+    }
+
+    function speechRenderShape(shape) {
+      if (shape === "round") return "o";
+      if (shape === "teeth") return "grimace";
+      return "open";
+    }
+
     function copyMouthPose(pose) {
       return Object.fromEntries(mouthPoseKeys.map((key) => [key, Number(pose[key] || 0)]));
     }
@@ -1836,11 +1910,17 @@
     function drawMouth(t) {
       const mouth = state?.mouth || {};
       const mood = state?.mood || "curious";
-      const shape = mouth.manual ? mouth.shape || "neutral" : mouthShapeForMood(mood);
+      let shape = mouth.manual ? mouth.shape || "neutral" : mouthShapeForMood(mood);
       const talking = Boolean(mouth.talking);
       const energy = Number(mouth.energy || 0.45);
-      const talkLevel = talking ? clamp((0.72 + 0.28 * Math.sin(t * 0.026)) * energy, 0.08, 1) : 0;
-      const targetPose = mouthPoseFor(shape);
+      let talkLevel = talking ? clamp((0.72 + 0.28 * Math.sin(t * 0.026)) * energy, 0.08, 1) : 0;
+      let targetPose = mouthPoseFor(shape);
+      const speech = activeSpeechMouth(mouth);
+      if (speech) {
+        targetPose = speechMouthPose(speech.shape, speech.energy, targetPose);
+        shape = speechRenderShape(speech.shape);
+        talkLevel = 0;
+      }
       const eased = easedPoseForMouth(shape, targetPose, talkLevel, t);
       const pose = eased.pose;
       if ((mouth.style || "human") === "robot") {

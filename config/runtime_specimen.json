@@ -15,7 +15,7 @@
       },
       "observations": {
         "vram_gain_gb": 1.2,
-        "source": "Scott observed after changing KV cache values",
+        "source": "operator observed after changing KV cache values",
         "audit_status": "runtime_load_failed",
         "recommendation": "do not use as Robot 790 default; revert to known-good KV cache and retest only with supported non-legacy modes",
         "rejection_reason": "model did not load cleanly in LM Studio; Q5_0 was reported as legacy, so no valid Eric behavior ear test occurred"
