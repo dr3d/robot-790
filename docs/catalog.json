@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-06 20:58:09",
+    "generated":  "2026-09-07 01:50:27",
     "articles":  [
                      {
                          "title":  "A Working Proposition About Lessons",
@@ -157,6 +157,36 @@
                      }
                  ],
     "logs":  [
+                 {
+                     "title":  "Eye Notes And Recordkeeping 2026 09 07 postmortem",
+                     "source":  "logs/Eye-Notes-And-Recordkeeping-2026-09-07-postmortem.md",
+                     "bytes":  16928,
+                     "modified":  "2026-09-07 01:49"
+                 },
+                 {
+                     "title":  "Empty Connect Boot Eric And Get Go 2026 09 07 postmortem",
+                     "source":  "logs/Empty-Connect-Boot-Eric-And-Get-Go-2026-09-07-postmortem.md",
+                     "bytes":  4201,
+                     "modified":  "2026-09-07 00:54"
+                 },
+                 {
+                     "title":  "Empty Connect Core Memory And Get Go 2026 09 07 postmortem",
+                     "source":  "logs/Empty-Connect-Core-Memory-And-Get-Go-2026-09-07-postmortem.md",
+                     "bytes":  3184,
+                     "modified":  "2026-09-07 00:38"
+                 },
+                 {
+                     "title":  "Empty Connect Passivation 2026 09 07 postmortem",
+                     "source":  "logs/Empty-Connect-Passivation-2026-09-07-postmortem.md",
+                     "bytes":  4899,
+                     "modified":  "2026-09-07 00:31"
+                 },
+                 {
+                     "title":  "Face Gallery And Standing Routine Loop 2026 09 06 postmortem",
+                     "source":  "logs/Face-Gallery-And-Standing-Routine-Loop-2026-09-06-postmortem.md",
+                     "bytes":  9846,
+                     "modified":  "2026-09-06 23:19"
+                 },
                  {
                      "title":  "Eric Iterator And Receipts 2026 09 06 postmortem",
                      "source":  "logs/Eric-Iterator-And-Receipts-2026-09-06-postmortem.md",

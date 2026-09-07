@@ -55,9 +55,9 @@
 //   case MouthShape::Open: return {0.66f, 0.50f, -0.04f, -0.04f, 0.00f, 0.14f, -0.05f, 0.00f};
 //   case MouthShape::O: return {0.82f, 0.20f, -0.08f, 0.00f, 0.00f, 0.02f, 0.00f, 0.00f};
 //   case MouthShape::Wide: return {0.94f, 0.70f, 0.10f, 0.04f, 0.18f, 0.20f, 0.06f, 0.00f};
-//   case MouthShape::Tongue: return {0.78f, 0.82f, 0.84f, 0.05f, 0.04f, 0.04f, 0.02f, 0.00f};
-//   case MouthShape::Frown: return {0.08f, 0.62f, -1.10f, -0.04f, 0.00f, 0.42f, -0.08f, 0.00f};
-//   case MouthShape::Grimace: return {0.24f, 0.84f, -0.18f, 0.03f, 1.00f, 0.98f, 0.03f, 0.00f};
+//   case MouthShape::Tongue: return {0.78f, 0.94f, 0.84f, 0.05f, 0.04f, 0.04f, 0.02f, 0.00f};
+//   case MouthShape::Frown: return {0.08f, 0.62f, -1.45f, -0.04f, 0.00f, 0.44f, -0.08f, 0.00f};
+//   case MouthShape::Grimace: return {0.18f, 0.88f, 0.98f, 0.00f, 0.42f, 0.06f, 0.00f, 0.00f};
 //   case MouthShape::Sneer: return {0.20f, 0.72f, -0.20f, 0.42f, 0.32f, 0.62f, 0.34f, 0.52f};
 //   case MouthShape::Sleep: return {0.03f, 0.42f, -0.12f, 0.00f, 0.00f, 0.08f, 0.00f, 0.00f};
 
@@ -66,16 +66,16 @@
 //   afraid -> MouthShape::O
 //   angry -> MouthShape::Sneer
 //   bashful -> MouthShape::Smile
-//   calculating -> MouthShape::Grimace
+//   calculating -> MouthShape::Neutral
 //   confused -> MouthShape::SmirkLeft
 //   delighted -> MouthShape::BigSmile
-//   focused -> MouthShape::Grimace
+//   focused -> MouthShape::Neutral
 //   glitchy -> MouthShape::Wide
 //   goofy -> MouthShape::SmirkLeft
 //   happy -> MouthShape::Smile
 //   mischief -> MouthShape::SmirkRight
 //   proud -> MouthShape::Smile
-//   robotic -> MouthShape::Grimace
+//   robotic -> MouthShape::Neutral
 //   sad -> MouthShape::Frown
 //   silly -> MouthShape::Tongue
 //   sleep -> MouthShape::Sleep

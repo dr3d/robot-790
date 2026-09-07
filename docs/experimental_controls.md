@@ -56,6 +56,16 @@ ponder, or blocked by a reason such as cooldown, recent user turn, user
 speaking, assistant busy, or pending tool follow-up. It should make pauses
 legible without changing the run's prompt condition.
 
+`Dial 1-2-3` is the current operator language for Eric's activation level.
+Dial 1 is rumination: idle, associative, low-duty. Dial 2 is conversation:
+Eric is engaged with the operator in the normal voice loop. Dial 3 is an
+assigned standing task: Eric is on task at a cadence until the routine ends or
+an interrupt returns him to conversation. Today Dial 3 is partial. GPU/VRAM
+watching is a real repeated sensor routine, and `start_standing_routine` can
+run a repeated speech-only cue such as a joke, question, or compact
+observation. Repeated web, camera, face, file, smart-home, or body-tool chains
+are not wired yet and should not be promised.
+
 `Creature seed` is a first-contact lab selector. It resets to Eric on page
 reload, is recorded in log snapshots, and is meant for comparing thin identity
 seeds such as Eric, Tina, a wall oracle, or a bench tool-being under the same
@@ -129,22 +139,23 @@ as a receipt for the body build Eric is actually running.
 
 ## Exit Controls
 
-`Passivate` is Scott's deliberate save/resume path. It writes the compact
-passivated state note plus the full audit packet, halts idle/Brain2/re-engage
-activity, closes realtime, saves active audio, and snapshots the conversation,
-events, and Brain2 panes. Use it when Eric should wake later with continuity
-from the latest run. It is a Robot 790 operator word, not a promise that every
-live state survived or that Eric can verify old sensor truth without a fresh
-receipt.
+`Passivate` is Scott's deliberate save/resume path. It writes the one-file
+passivated state transcript at `notes/core/passivated_eric_state.txt`, halts
+idle/Brain2/re-engage activity, closes realtime, saves active audio, and
+snapshots the conversation, events, and Brain2 panes. The disk file keeps the
+timestamped transcript; when loaded into Eric's prompt, STS may sweep the
+technical junk and per-turn timestamps into a cleaner context view.
 
-`Disconnect` is a hard stop. It does not overwrite the passivated state. It
-halts the live loop, closes realtime, saves active audio if recording is on, and
-snapshots the panes for review.
+`Disconnect` is the normal graceful stop. It first sweeps the current accepted
+conversation into the passivated state transcript, then halts the live loop,
+closes realtime, saves active audio if recording is on, and snapshots the panes
+for review. If no accepted conversation lines exist, it should leave the prior
+passivated state alone.
 
-`Halt` is the emergency runtime stop. It first tries the same local cleanup as a
-disconnect, then calls the page server to stop only the realtime backend. STS,
-browser-face, and LM Studio stay loaded. Use it when the visible tab no longer
-seems to own the session or Eric keeps talking after Disconnect.
+`Halt` is the emergency runtime stop. It does not promise a new passivated
+checkpoint; it stops the realtime backend while leaving STS, browser-face, and
+LM Studio loaded. Use it when the visible tab no longer seems to own the session
+or Eric keeps talking after Disconnect.
 
 `Restart` and `Unload` are server exits. They save active audio, stop the mic,
 snapshot panes, then perform the backend action.
@@ -153,8 +164,8 @@ snapshot panes, then perform the backend action.
 does not disconnect Eric.
 
 The intended invariant is simple: exits should leave logs, and any active
-recording should be saved when it is turned off. Passivation is special because
-it also writes the latest continuity checkpoint.
+recording should be saved when it is turned off. Passivate and Disconnect are
+special because they also write the latest continuity checkpoint.
 
 `First contact` switches to stripped startup instructions. The selected
 creature seed plus the current conversation is the intended seed; optional

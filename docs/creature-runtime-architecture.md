@@ -49,12 +49,13 @@ Examples:
 - `use_loaded_context`
 - `manage_active_thread`
 - `seal_reconstructable_state`
+- `start_recurring_spoken_task`
 
 The creature may know the machine-language phrase. The embodiment/runtime decides how the verb is executed.
 
 ## Context
 
-Pinned notes, latest thread, passivation packets, sensing-eye input, search receipts, memory facts, Brain2 notes, and UI events are context blocks.
+Pinned notes, latest thread, the passivated state transcript, sensing-eye input, search receipts, memory facts, Brain2 notes, and UI events are context blocks.
 
 The mental model:
 

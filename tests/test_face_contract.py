@@ -32,8 +32,19 @@ def parse_browser_mouth_shapes(source: str) -> list[str]:
 
 
 def parse_browser_mouth_poses(source: str) -> dict[str, dict[str, float]]:
+    mouth_pose_match = re.search(
+        r"function mouthPoseFor\(shape\) \{\s*return \{(?P<body>.*?)\n\s*\}\[shape\] \|\| mouthPoseFor\(\"neutral\"\);",
+        source,
+        re.DOTALL,
+    )
+    assert mouth_pose_match, "browser face canonical mouth pose map not found"
+
     poses: dict[str, dict[str, float]] = {}
-    for match in re.finditer(r"^\s*(?P<shape>[a-z_]+): \{ (?P<body>[^}]+) \},?$", source, re.MULTILINE):
+    for match in re.finditer(
+        r"^\s*(?P<shape>[a-z_]+): \{ (?P<body>[^}]+) \},?$",
+        mouth_pose_match.group("body"),
+        re.MULTILINE,
+    ):
         body = match.group("body")
         values = {
             item.group("field"): float(item.group("value"))

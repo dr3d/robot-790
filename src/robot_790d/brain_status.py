@@ -11,7 +11,7 @@ from typing import Any
 
 DEFAULT_TAIL_BYTES = 2_000_000
 NVIDIA_SMI_CACHE_SECONDS = 2.0
-_NVIDIA_SMI_CACHE: tuple[float, int, dict[str, Any]] | None = None
+_NVIDIA_SMI_CACHE: tuple[float, tuple[Any, Any], dict[str, Any]] | None = None
 
 
 def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
@@ -103,7 +103,7 @@ def get_gpu_status() -> dict[str, Any]:
 def _read_nvidia_smi_gpu_status_cached() -> dict[str, Any]:
     global _NVIDIA_SMI_CACHE
     now = time.monotonic()
-    reader_id = hash((id(_read_nvidia_smi_gpu_status), id(subprocess.run)))
+    reader_id = (_read_nvidia_smi_gpu_status, subprocess.run)
     if _NVIDIA_SMI_CACHE is not None:
         sampled_at, cached_reader_id, cached_status = _NVIDIA_SMI_CACHE
         if cached_reader_id == reader_id and now - sampled_at < NVIDIA_SMI_CACHE_SECONDS:

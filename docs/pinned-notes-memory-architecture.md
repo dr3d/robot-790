@@ -15,6 +15,20 @@ The important part is that the hot conversation behaves like an unfinished
 note. It keeps growing during a run. It is not yet curated, but it has strong
 recency weight because it is the living thread Scott and Eric are inside.
 
+The simple restore substrate is one serial transcript file. During a run, the
+browser's hot conversation is `latest`. On `Disconnect` or `Passivate`, STS
+writes `notes/core/passivated_eric_state.txt` as the timestamped transcript for
+the current run since clean connect, with chunky metadata in the gaps. That file
+is the continuity receipt: do not destructively trim it to save context.
+
+Cleanup happens at load time. When a transcript-shaped note is loaded into
+Eric's prompt, the page may strip per-turn timestamps, voice-shape lines,
+obvious STT draft repeats, and exact duplicate turns so the material reads like
+conversation continuity. The raw passivated note on disk keeps the timestamps
+and drivel.
+If context pressure later forces older spans out of the hot prompt, cut them by
+timestamp/session demarker into other lossless notes rather than deleting them.
+
 ## Working Vocabulary
 
 These are the names to use in prompts, postmortems, and operator discussion
@@ -38,7 +52,7 @@ evidence of a hidden inner mechanism by themselves.
   shutdown/restart reconstruction receipt: what was loaded, what was
   unfinished, and what is stale. It is not the whole mind, not an industry
   standard promise, and not Eric's verified report of his private state. It is
-  only written by the explicit Passivate path.
+  written by the explicit Passivate path and by a normal graceful Disconnect.
 
 `pinned note`
 : A note file whose content is currently loaded into the STS browser session and
@@ -57,6 +71,28 @@ evidence of a hidden inner mechanism by themselves.
   current hot conversation to a durable thread note. "Clear Latest" means drop
   the hot conversation scratch state and, if connected, reconnect so the
   realtime backend also stops carrying the old thread.
+
+`passivated state transcript`
+: The one-file serial continuity handoff at `core/passivated_eric_state.txt`.
+  It stores the current run's timestamped transcript plus session metadata.
+  Startup loads it when the passivated-state option is enabled.
+
+`Eric core memories`
+: The explicit core note channel at `core/erics_memories.txt`. It is included
+  whenever the Eric memories checkbox is enabled, including Empty Connect.
+  It is separate from browser localStorage facts, ordinary pinned notes, and
+  passivated transcript continuity.
+
+`transcript restore`
+: The prompt-facing handoff of a transcript note. It keeps the timestamped
+  transcript intact and adds a restore envelope with the current browser time
+  and approximate off-gap. Cleanup can be added later, but it is not the core
+  passivation contract.
+
+`session demarker`
+: A timestamped chunk boundary such as Created, Captured, first turn, last turn,
+  reason, and loaded-note manifest. Demarkers let the system strip or summarize
+  prompt context while still finding the original span on disk.
 
 `thread note`
 : A saved conversation or conversation summary that can be resumed, pinned,
@@ -143,7 +179,7 @@ Passivation is Scott's operator word for reconstruction, not total mind upload.
 The word is allowed in Eric's working vocabulary because it names a real button
 and file path, but it should stay tethered to receipts.
 
-The compact passivation note should tell the next run what to reload, what was
+The passivated transcript should tell the next run what to reload, what was
 unfinished, what state was current at shutdown, and what must be treated as
 stale. It should include prior pinned note filenames so startup can rehydrate
 the actual files rather than carrying only the rumor of them.
@@ -162,14 +198,21 @@ Bad Eric phrasing:
 
 The operator distinction is:
 
-- `Passivate` saves the latest checkpoint, then halts the live loop.
-- `Start Eric` restores from the compact passivated checkpoint when the
+- `Passivate` writes the current run's passivated transcript/checkpoint, then
+  halts the live loop.
+- `Start Eric` restores from the passivated transcript/checkpoint when the
   passivated-state option is enabled.
-- `Disconnect` is a hard stop. It halts the live loop and saves exit artifacts,
-  but it does not overwrite the latest passivated checkpoint.
+- `Disconnect` is the normal graceful stop. It writes the current transcript
+  into passivation, halts the live loop, and saves exit artifacts.
+- `Halt` is the hard stop. It stops the realtime backend without promising a new
+  passivated checkpoint.
 
-This keeps accidental exits from rewriting Eric's reconstruction note while
-still preserving the run ledger.
+This makes ordinary exits resumable while still preserving a harder stop for
+backend trouble.
+
+An empty clean startup should not overwrite the last useful passivated
+transcript. If no accepted conversation lines exist, the exit may still close
+and save ordinary logs, but it should leave the previous passivated state alone.
 
 ### Pinned Notes
 
@@ -193,9 +236,10 @@ not as anonymous memory soup.
 The hot conversation is the current spoken/text thread since the last reset.
 It is the most fluid layer and the easiest to pollute.
 
-Think of it as an expanding `latest_conversation` note:
+Think of it as an expanding `latest` scratch note inside the browser:
 
 - it grows turn by turn,
+- it is written into the passivated state transcript on Disconnect or Passivate,
 - it carries unresolved emotional and task momentum,
 - it has high recency weight,
 - it can be saved into a named note,
@@ -205,6 +249,18 @@ Think of it as an expanding `latest_conversation` note:
 This is why "save convo to note named X" and "reset to pinned context" matter.
 They let Scott turn a live thread into a durable note, then start a different
 thread without dragging the old one through every new run.
+
+The passivated state transcript keeps the simple path available:
+
+- save the transcript as readable text,
+- keep the raw transcript-like handoff intact so nothing is lost,
+- reload transcript notes as timestamped conversation handoffs with an
+  annotated off-gap,
+- load the transcript later as the thread to continue,
+- summarize or trim older material only when the raw transcript starts wasting
+  context, and save those spans or summaries as additional lossless notes
+  instead of replacing the raw receipt,
+- do not pretend this is exact deterministic replay.
 
 ## Proposed Context Order
 
@@ -257,11 +313,13 @@ Every deliberate exit should leave receipts behind.
 
 Current intended behavior:
 
-- Passivate writes `notes/core/passivated_eric_state.txt` and the full packet,
-  halts idle/B2/re-engage/playback activity, closes realtime, saves active
-  audio, and snapshots the conversation/events/Brain2 panes.
-- Disconnect halts and closes without writing passivation, then saves active
-  audio and snapshots the panes.
+- Passivate writes `notes/core/passivated_eric_state.txt`, halts
+  idle/B2/re-engage/playback activity, closes realtime, saves active audio, and
+  snapshots the conversation/events/Brain2 panes.
+- Disconnect writes the current session transcript into passivation, then halts
+  and closes, saves active audio, and snapshots the panes.
+- Halt stops realtime without rewriting passivation, then still tries to save
+  active audio and snapshots the panes.
 - Restart and Unload save active audio, stop mic, snapshot panes, then perform
   the server action.
 - Stop Recording finalizes the audio artifact and snapshots panes.
@@ -305,4 +363,3 @@ run to remain active forever.
 - `prompts/README.md`
 - `docs/experimental_controls.md`
 - `notes/core/passivated_eric_state.txt`
-- `notes/core/passivated_eric_state_packet.txt`

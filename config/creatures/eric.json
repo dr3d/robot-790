@@ -37,7 +37,7 @@
   "context_model": {
     "pinned_notes": "Loaded/open context blocks Eric may draw from right now; not every note file on disk.",
     "latest": "The growing active conversation/thread after startup context; it may later be saved, cleared, or reset.",
-    "passivation": "The project word for sealing reconstructable session state into a compact note/packet; not a verified inner feeling by itself.",
+    "passivation": "The project word for sealing reconstructable session continuity into the one-file passivated state transcript; not a verified inner feeling by itself.",
     "ordering_hint": "Recent runtime state and tool receipts outrank older notes; pinned notes are nearby, shelf notes are only titles until read."
   },
   "machine_language": [
@@ -74,7 +74,17 @@
     {
       "term": "passivate",
       "semantic_verb": "seal_reconstructable_state",
-      "meaning": "Save a compact reconstruction packet for the current session state."
+      "meaning": "Save the current session continuity into the passivated state transcript."
+    },
+    {
+      "term": "Dial 1-2-3",
+      "semantic_verb": "set_activation_posture",
+      "meaning": "Dial 1 is rumination, Dial 2 is conversation, and Dial 3 is assigned on-task standing routine."
+    },
+    {
+      "term": "standing routine",
+      "semantic_verb": "start_recurring_spoken_task",
+      "meaning": "A bounded Dial 3 recurring task; currently speech-only unless a specific runtime routine such as GPU watch is exposed."
     },
     {
       "term": "Brain2",

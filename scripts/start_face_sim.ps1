@@ -1,5 +1,5 @@
 param(
-    [string] $HostAddress = "127.0.0.1",
+    [string] $HostAddress = "0.0.0.0",
     [int] $Port = 8791
 )
 
@@ -17,5 +17,13 @@ if (-not (Test-Path $Python)) {
     throw "Missing project venv at $Python."
 }
 
-Write-Host "Starting Robot 790 browser face at http://$HostAddress`:$Port/"
+$LanAddress = Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -notlike "169.254*" -and $_.IPAddress -ne "127.0.0.1" -and $_.InterfaceAlias -notlike "vEthernet*" } |
+    Select-Object -First 1 -ExpandProperty IPAddress
+
+Write-Host "Starting Robot 790 browser face on $HostAddress`:$Port"
+Write-Host "Local: http://127.0.0.1:$Port/"
+if ($LanAddress) {
+    Write-Host "LAN:   http://$LanAddress`:$Port/"
+}
 & $Python -m robot_790d.face_sim_server --host $HostAddress --port $Port

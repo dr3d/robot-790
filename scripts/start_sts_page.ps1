@@ -1,4 +1,5 @@
 param(
+    [string] $HostAddress = "0.0.0.0",
     [int] $Port = 8790
 )
 
@@ -21,5 +22,13 @@ if (-not (Test-Path $PageRoot)) {
     throw "Missing STS page folder at $PageRoot."
 }
 
-Write-Host "Starting Robot 790 STS page at http://127.0.0.1:$Port/"
-& $Python -m robot_790d.sts_page_server --host 127.0.0.1 --port $Port --directory $PageRoot
+$LanAddress = Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -notlike "169.254*" -and $_.IPAddress -ne "127.0.0.1" -and $_.InterfaceAlias -notlike "vEthernet*" } |
+    Select-Object -First 1 -ExpandProperty IPAddress
+
+Write-Host "Starting Robot 790 STS page on $HostAddress`:$Port"
+Write-Host "Local: http://127.0.0.1:$Port/"
+if ($LanAddress) {
+    Write-Host "LAN:   http://$LanAddress`:$Port/"
+}
+& $Python -m robot_790d.sts_page_server --host $HostAddress --port $Port --directory $PageRoot

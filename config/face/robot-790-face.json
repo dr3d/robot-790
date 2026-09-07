@@ -82,20 +82,20 @@
       "tongue": {
         "cppName": "Tongue",
         "aliases": ["silly"],
-        "pose": { "open": 0.78, "width": 0.82, "curve": 0.84, "skew": 0.05, "teeth": 0.04, "tension": 0.04, "slant": 0.02, "upperLift": 0 },
+        "pose": { "open": 0.78, "width": 0.94, "curve": 0.84, "skew": 0.05, "teeth": 0.04, "tension": 0.04, "slant": 0.02, "upperLift": 0 },
         "topology": "mouth",
         "renderHints": { "tongue": true }
       },
       "frown": {
         "cppName": "Frown",
         "aliases": ["sad"],
-        "pose": { "open": 0.08, "width": 0.62, "curve": -1.1, "skew": -0.04, "teeth": 0, "tension": 0.42, "slant": -0.08, "upperLift": 0 },
+        "pose": { "open": 0.08, "width": 0.62, "curve": -1.45, "skew": -0.04, "teeth": 0, "tension": 0.44, "slant": -0.08, "upperLift": 0 },
         "topology": "mouth"
       },
       "grimace": {
         "cppName": "Grimace",
         "aliases": ["teeth", "tense"],
-        "pose": { "open": 0.24, "width": 0.84, "curve": -0.18, "skew": 0.03, "teeth": 1, "tension": 0.98, "slant": 0.03, "upperLift": 0 },
+        "pose": { "open": 0.18, "width": 0.88, "curve": 0.98, "skew": 0, "teeth": 0.42, "tension": 0.06, "slant": 0, "upperLift": 0 },
         "topology": "mouth",
         "renderHints": { "teethGrid": true }
       },
@@ -131,9 +131,9 @@
       "sleepy": "frown",
       "sad": "frown",
       "sleep": "sleep",
-      "focused": "grimace",
-      "robotic": "grimace",
-      "calculating": "grimace",
+      "focused": "neutral",
+      "robotic": "neutral",
+      "calculating": "neutral",
       "glitchy": "wide"
     }
   },

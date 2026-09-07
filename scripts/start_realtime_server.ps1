@@ -1,5 +1,5 @@
 param(
-    [string] $HostAddress = "127.0.0.1",
+    [string] $HostAddress = "0.0.0.0",
     [int] $Port = 8765,
     [int] $NumPipelines = 4,
     [int] $StreamBatchSentences = 1,
@@ -17,6 +17,14 @@ if (-not (Test-Path $Python)) {
 
 $env:PYTHONIOENCODING = "utf-8"
 
-Write-Host "Starting Robot 790 realtime server at ws://$HostAddress`:$Port/v1/realtime with $NumPipelines pipeline(s)"
+$LanAddress = Get-NetIPAddress -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -notlike "169.254*" -and $_.IPAddress -ne "127.0.0.1" -and $_.InterfaceAlias -notlike "vEthernet*" } |
+    Select-Object -First 1 -ExpandProperty IPAddress
+
+Write-Host "Starting Robot 790 realtime server on $HostAddress`:$Port with $NumPipelines pipeline(s)"
+Write-Host "Local: ws://127.0.0.1:$Port/v1/realtime"
+if ($LanAddress) {
+    Write-Host "LAN:   ws://$LanAddress`:$Port/v1/realtime"
+}
 Write-Host "Streaming TTS in $StreamBatchSentences sentence batch(es)"
 & $Python -m robot_790d.realtime_entry --mode realtime --ws_host $HostAddress --ws_port $Port --num_pipelines $NumPipelines --stream_batch_sentences $StreamBatchSentences @ExtraArgs

@@ -1,3 +1,5 @@
+import json
+
 from robot_790d import sts_page_server
 
 
@@ -387,6 +389,73 @@ def test_sensing_eye_inbox_poll_reports_cursor_without_replaying_stale_item(tmp_
     assert result["latest_seq"] == pushed["seq"]
     assert sts_page_server.poll_sensing_eye_inbox(after=int(pushed["seq"]))["item"] is None
     sts_page_server.clear_sensing_eye_inbox(repo_root=tmp_path)
+
+
+def test_sensing_eye_image_list_returns_durable_visual_notes(tmp_path) -> None:
+    sts_page_server.push_sensing_eye_image(
+        {
+            "filename": "first eye.jpg",
+            "image_data_url": "data:image/jpeg;base64,Zmlyc3Q=",
+        },
+        repo_root=tmp_path,
+    )
+    sts_page_server.push_sensing_eye_image(
+        {
+            "filename": "second eye.jpg",
+            "image_data_url": "data:image/jpeg;base64,c2Vjb25k",
+            "source": "operator drop",
+            "reason": "self portrait",
+            "memory_context": {
+                "last_user_text": "put the cyan self portrait in your face",
+                "nearby_transcript": "You: now you have it in your sensing eye",
+            },
+        },
+        repo_root=tmp_path,
+    )
+
+    result = sts_page_server.list_sensing_eye_images(limit=5, repo_root=tmp_path)
+    metadata_path = tmp_path / "logs" / "sensing-eye" / "second-eye.jpg.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+    assert result["status"] == "ok"
+    filenames = [item["filename"] for item in result["files"]]
+    assert filenames == ["second-eye.jpg", "first-eye.jpg"]
+    assert "latest-sensing-eye.jpg" not in filenames
+    assert result["files"][0]["url"] == "/sensing-eye/second-eye.jpg"
+    assert result["files"][0]["source"] == "operator drop"
+    assert result["files"][0]["reason"] == "self portrait"
+    assert result["files"][0]["last_user_text"] == "put the cyan self portrait in your face"
+    assert result["files"][0]["nearby_transcript"] == "You: now you have it in your sensing eye"
+    assert metadata["memory_context"]["last_user_text"] == "put the cyan self portrait in your face"
+
+
+def test_sensing_eye_text_save_and_list_share_eye_folder(tmp_path) -> None:
+    result = sts_page_server.save_sensing_eye_text(
+        {
+            "filename": "operator paste.md",
+            "content": "# Useful visible words\nThis came through the eye.",
+            "source": "operator paste",
+            "memory_context": {
+                "last_user_text": "read that pasted lab note",
+                "nearby_transcript": "You: dropping a note into the sensing eye",
+            },
+        },
+        repo_root=tmp_path,
+    )
+
+    saved_path = tmp_path / "logs" / "sensing-eye" / "operator-paste.md"
+    latest_path = tmp_path / "logs" / "sensing-eye" / "latest-sensing-eye.txt"
+    listed = sts_page_server.list_sensing_eye_images(limit=5, repo_root=tmp_path)
+
+    assert result["status"] == "ok"
+    assert result["saved_filename"] == "operator-paste.md"
+    assert saved_path.read_text(encoding="utf-8").startswith("# Useful visible words")
+    assert latest_path.exists()
+    assert listed["files"][0]["kind"] == "text"
+    assert listed["files"][0]["filename"] == "operator-paste.md"
+    assert listed["files"][0]["url"] == "/sensing-eye/operator-paste.md"
+    assert listed["files"][0]["source"] == "operator paste"
+    assert listed["files"][0]["last_user_text"] == "read that pasted lab note"
 
 
 def test_sensing_eye_inbox_rejects_non_image_data_url() -> None:

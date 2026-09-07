@@ -25,6 +25,7 @@ from robot_790d.brain_status import get_brain_status, get_gpu_status
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
+from robot_790d.passivation import extract_passivated_session_notes
 from robot_790d.smart_home import control_smart_home_device
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
@@ -59,6 +60,7 @@ SENSING_EYE_INBOX_LOCK = threading.Lock()
 SENSING_EYE_INBOX_LATEST: dict[str, object] | None = None
 SENSING_EYE_INBOX_SEQ = 0
 MAX_SENSING_EYE_DATA_URL_CHARS = 8 * 1024 * 1024
+MAX_SENSING_EYE_TEXT_CHARS = 1 * 1024 * 1024
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
@@ -111,6 +113,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/operator/poll":
             self._handle_operator_poll(parsed.query)
             return
+        if parsed.path == "/api/sensing-eye/list":
+            self._handle_sensing_eye_list(parsed.query)
+            return
         if parsed.path == "/api/sensing-eye/inbox":
             self._handle_sensing_eye_inbox_poll(parsed.query)
             return
@@ -120,6 +125,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         parsed = urlsplit(self.path)
         if parsed.path == "/api/notes/write":
             self._handle_note_write()
+            return
+        if parsed.path == "/api/passivation/extract-session-notes":
+            self._handle_passivation_extract_session_notes()
             return
         if parsed.path == "/api/logs/record":
             self._handle_log_record()
@@ -156,6 +164,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/sensing-eye/inbox":
             self._handle_sensing_eye_inbox_push()
+            return
+        if parsed.path == "/api/sensing-eye/text":
+            self._handle_sensing_eye_text_save()
             return
         self._send_json(404, {"status": "error", "error": "Unknown API endpoint."})
 
@@ -217,6 +228,11 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         after = _int_param(params, "after", 0)
         self._send_json(200, poll_sensing_eye_inbox(after=after))
 
+    def _handle_sensing_eye_list(self, query_string: str) -> None:
+        params = parse_qs(query_string)
+        limit = _int_param(params, "limit", 5)
+        self._send_json(200, list_sensing_eye_images(limit=limit))
+
     def _handle_sensing_eye_inbox_push(self) -> None:
         try:
             payload = self._read_json_body()
@@ -224,6 +240,14 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 result = clear_sensing_eye_inbox()
             else:
                 result = push_sensing_eye_image(payload)
+        except ValueError as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_sensing_eye_text_save(self) -> None:
+        try:
+            result = save_sensing_eye_text(self._read_json_body())
         except ValueError as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
@@ -275,6 +299,20 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 "characters": len(note.content),
             },
         )
+
+    def _handle_passivation_extract_session_notes(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = extract_passivated_session_notes(
+                None,
+                source_filename=str(payload.get("source_filename") or "core/passivated_eric_state.txt"),
+                output_dir=str(payload.get("output_dir") or "sessions"),
+                overwrite=bool(payload.get("overwrite") or False),
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
 
     def _handle_log_record(self) -> None:
         try:
@@ -1050,6 +1088,18 @@ def push_sensing_eye_image(payload: dict[str, Any], repo_root: Path | None = Non
         f"{source.replace(' ', '-')}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.jpg"
     )
     saved_path = _save_sensing_eye_image(data_url, filename, repo_root)
+    memory_context = _sensing_eye_memory_context(payload)
+    if saved_path:
+        _write_sensing_eye_metadata(
+            saved_path,
+            {
+                "kind": "image",
+                "source": source,
+                "filename": filename,
+                "reason": str(payload.get("reason") or "").strip()[:160],
+                "memory_context": memory_context,
+            },
+        )
     state = payload.get("state") if isinstance(payload.get("state"), dict) else {}
     with SENSING_EYE_INBOX_LOCK:
         SENSING_EYE_INBOX_SEQ += 1
@@ -1063,6 +1113,7 @@ def push_sensing_eye_image(payload: dict[str, Any], repo_root: Path | None = Non
             "saved_filename": saved_path.name if saved_path else "",
             "saved_url": f"{SENSING_EYE_IMAGE_URL_PREFIX}{saved_path.name}" if saved_path else "",
             "reason": str(payload.get("reason") or "").strip()[:160],
+            "memory_context": memory_context,
             "state": state,
         }
         SENSING_EYE_INBOX_LATEST = item
@@ -1108,6 +1159,96 @@ def clear_sensing_eye_inbox(repo_root: Path | None = None) -> dict[str, object]:
         "tool": "clear_sensing_eye_inbox",
         "latest_seq": latest_seq,
         "cleared_files": [str(path) for path in cleared_files],
+    }
+
+
+def save_sensing_eye_text(payload: dict[str, Any], repo_root: Path | None = None) -> dict[str, object]:
+    if not isinstance(payload, dict):
+        raise ValueError("Sensing-eye text body must be an object.")
+    content = str(payload.get("content") or payload.get("text") or "")
+    if not content.strip():
+        raise ValueError("Missing sensing-eye text content.")
+    if len(content) > MAX_SENSING_EYE_TEXT_CHARS:
+        raise ValueError("Sensing-eye text is too large.")
+    source = (
+        re.sub(r"[^A-Za-z0-9_. -]+", " ", str(payload.get("source") or "operator_text")).strip()[:80]
+        or "operator_text"
+    )
+    filename = _safe_sensing_eye_text_filename(str(payload.get("filename") or "")) or (
+        f"{source.replace(' ', '-')}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
+    )
+    saved_path = _save_sensing_eye_text(content, filename, repo_root)
+    memory_context = _sensing_eye_memory_context(payload)
+    _write_sensing_eye_metadata(
+        saved_path,
+        {
+            "kind": "text",
+            "source": source,
+            "filename": filename,
+            "memory_context": memory_context,
+        },
+    )
+    return {
+        "status": "ok",
+        "tool": "save_sensing_eye_text",
+        "source": source,
+        "filename": filename,
+        "saved_path": str(saved_path),
+        "saved_filename": saved_path.name,
+        "saved_url": f"{SENSING_EYE_IMAGE_URL_PREFIX}{saved_path.name}",
+        "characters": len(content),
+        "memory_context": memory_context,
+    }
+
+
+def list_sensing_eye_images(limit: int = 5, repo_root: Path | None = None) -> dict[str, object]:
+    safe_limit = max(1, min(25, int(limit or 5)))
+    root = repo_root or Path(__file__).resolve().parents[2]
+    out_dir = root / "logs" / "sensing-eye"
+    files: list[dict[str, object]] = []
+    if out_dir.is_dir():
+        for path in out_dir.iterdir():
+            if not path.is_file():
+                continue
+            if path.name.startswith("latest-sensing-eye."):
+                continue
+            suffix = path.suffix.lower()
+            kind = "image" if suffix in {".jpg", ".jpeg", ".png", ".webp"} else "text" if suffix in {
+                ".txt",
+                ".md",
+                ".markdown",
+            } else ""
+            if not kind:
+                continue
+            stat = path.stat()
+            metadata = _read_sensing_eye_metadata(path)
+            memory_context = metadata.get("memory_context") if isinstance(metadata.get("memory_context"), dict) else {}
+            files.append(
+                {
+                    "filename": path.name,
+                    "url": f"{SENSING_EYE_IMAGE_URL_PREFIX}{path.name}",
+                    "kind": kind,
+                    "source": str(metadata.get("source") or "sensing-eye filesystem"),
+                    "reason": str(metadata.get("reason") or ""),
+                    "last_user_text": str(memory_context.get("last_user_text") or ""),
+                    "nearby_transcript": str(memory_context.get("nearby_transcript") or ""),
+                    "mime_type": mimetypes.guess_type(path.name)[0] or (
+                        "text/plain" if kind == "text" else "application/octet-stream"
+                    ),
+                    "size_bytes": stat.st_size,
+                    "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+                    "_sort_mtime": stat.st_mtime,
+                }
+            )
+    files.sort(key=lambda item: float(item.get("_sort_mtime") or 0), reverse=True)
+    for item in files:
+        item.pop("_sort_mtime", None)
+    return {
+        "status": "ok",
+        "tool": "list_sensing_eye_images",
+        "directory": str(out_dir),
+        "count": len(files),
+        "files": files[:safe_limit],
     }
 
 
@@ -2491,7 +2632,7 @@ def _safe_media_filename(filename: str) -> str:
 def sensing_eye_image_path(filename: str, repo_root: Path | None = None) -> Path:
     safe_name = _safe_media_filename(filename)
     if not safe_name:
-        raise ValueError("Sensing-eye image filename is required.")
+        raise ValueError("Sensing-eye filename is required.")
     root = repo_root or Path(__file__).resolve().parents[2]
     return root / "logs" / "sensing-eye" / safe_name
 
@@ -2506,6 +2647,44 @@ def _clear_latest_sensing_eye_aliases(repo_root: Path | None = None) -> list[Pat
         path.unlink()
         cleared.append(path)
     return cleared
+
+
+def _sensing_eye_metadata_path(path: Path) -> Path:
+    return path.with_name(f"{path.name}.json")
+
+
+def _sensing_eye_memory_context(payload: dict[str, Any]) -> dict[str, str]:
+    raw = payload.get("memory_context")
+    if not isinstance(raw, dict):
+        raw = {}
+    return {
+        "last_user_text": str(raw.get("last_user_text") or "").strip()[:500],
+        "nearby_transcript": str(raw.get("nearby_transcript") or "").strip()[:1600],
+    }
+
+
+def _write_sensing_eye_metadata(path: Path, metadata: dict[str, Any]) -> None:
+    payload = {
+        "kind": str(metadata.get("kind") or "").strip()[:24],
+        "source": str(metadata.get("source") or "").strip()[:80],
+        "filename": str(metadata.get("filename") or path.name).strip()[:240],
+        "reason": str(metadata.get("reason") or "").strip()[:160],
+        "memory_context": _sensing_eye_memory_context(metadata),
+        "metadata_version": 1,
+        "written_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    _sensing_eye_metadata_path(path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _read_sensing_eye_metadata(path: Path) -> dict[str, Any]:
+    metadata_path = _sensing_eye_metadata_path(path)
+    if not metadata_path.is_file():
+        return {}
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _save_sensing_eye_image(data_url: str, filename: str, repo_root: Path | None = None) -> Path | None:
@@ -2529,6 +2708,30 @@ def _save_sensing_eye_image(data_url: str, filename: str, repo_root: Path | None
     out_path.write_bytes(image_bytes)
     latest_path = out_dir / f"latest-sensing-eye.{extension}"
     shutil.copyfile(out_path, latest_path)
+    return out_path
+
+
+def _safe_sensing_eye_text_filename(filename: str) -> str:
+    safe_name = _safe_media_filename(filename)
+    if not safe_name:
+        return ""
+    suffix = Path(safe_name).suffix.lower()
+    if suffix not in {".txt", ".md", ".markdown"}:
+        safe_name = f"{Path(safe_name).stem or safe_name}.txt"
+    return safe_name
+
+
+def _save_sensing_eye_text(content: str, filename: str, repo_root: Path | None = None) -> Path:
+    safe_name = _safe_sensing_eye_text_filename(filename)
+    if not safe_name:
+        safe_name = f"sensing-eye-text-{datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
+    repo_root = repo_root or Path(__file__).resolve().parents[2]
+    out_dir = repo_root / "logs" / "sensing-eye"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = sensing_eye_image_path(safe_name, repo_root)
+    out_path.write_text(content, encoding="utf-8")
+    latest_path = out_dir / "latest-sensing-eye.txt"
+    latest_path.write_text(content, encoding="utf-8")
     return out_path
 
 

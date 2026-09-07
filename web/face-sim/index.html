@@ -14,8 +14,8 @@
       --muted: #8fa2ad;
       --accent: #5eead4;
       --face-native-aspect: 0.75;
-      --face-touchscreen-x-scale: 0.9;
-      --face-display-max-width: 648px;
+      --face-touchscreen-x-scale: 1;
+      --face-display-max-width: 720px;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -48,7 +48,7 @@
       width: min(100%, calc((100dvh - 16px) * var(--face-native-aspect) * var(--face-touchscreen-x-scale)), var(--face-display-max-width));
       min-width: 0;
       max-width: var(--face-display-max-width);
-      aspect-ratio: 27 / 40;
+      aspect-ratio: 3 / 4;
       border: 1px solid rgba(136, 164, 178, 0.18);
       background: #030508;
       box-shadow: 0 24px 90px rgba(0, 0, 0, 0.62);
@@ -234,6 +234,7 @@
     let faceRecordObjectUrl = "";
     let faceRecordFilename = "";
     const faceCommandPollMs = 500;
+    const faceRenderXScale = 0.9;
     const faceSnapshotWidth = 540;
     const faceSnapshotHeight = 720;
     const faceSnapshotJpegQuality = 0.86;
@@ -280,8 +281,29 @@
       syncControls();
     }
 
+    function isLoopbackHost(hostname) {
+      const host = String(hostname || "").toLowerCase();
+      return host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]";
+    }
+
+    function defaultStsUrl() {
+      const host = location.hostname || "127.0.0.1";
+      return `http://${host}:8790/`;
+    }
+
     function normalizedStsUrl(value = stsUrlInput?.value) {
-      return String(value || "http://127.0.0.1:8790/").trim().replace(/\/?$/, "/");
+      const raw = String(value || defaultStsUrl()).trim().replace(/\/?$/, "/");
+      if (isLoopbackHost(location.hostname)) return raw;
+      try {
+        const url = new URL(raw);
+        if (isLoopbackHost(url.hostname)) {
+          url.hostname = location.hostname;
+          return url.toString().replace(/\/?$/, "/");
+        }
+      } catch {
+        return raw;
+      }
+      return raw;
     }
 
     function setCaptureStatus(text, kind = "") {
@@ -621,7 +643,8 @@
       if (document.activeElement !== styleSelect) styleSelect.value = state.style || "robot";
       if (document.activeElement !== eyeModeSelect) eyeModeSelect.value = state.eye_mode || "normal";
       const mode = state.eye_mode && state.eye_mode !== "normal" ? ` / ${state.eye_mode}` : "";
-      summary.textContent = `${state.mood || "?"} / ${state.mouth?.shape || "?"}${mode} / ${state.autonomous ? "idle" : "manual"}`;
+      const renderedShape = renderedMouthShape(state.mouth || {}, state.mood || "curious");
+      summary.textContent = `${state.mood || "?"} / ${renderedShape}${mode} / ${state.autonomous ? "idle" : "manual"}`;
       stateText.textContent = JSON.stringify(state, null, 2);
     }
 
@@ -901,14 +924,14 @@
         : statusState === "ok"
         ? "#c8f6df"
         : "rgba(211, 218, 228, 0.88)";
-      ctx.font = "800 13px ui-monospace, SFMono-Regular, Consolas, monospace";
+      ctx.font = "900 18px ui-monospace, SFMono-Regular, Consolas, monospace";
       ctx.textAlign = "left";
       let clippedStatus = statusLine || "tools: idle";
       const maxStatusW = w - 28;
       while (clippedStatus.length > 12 && ctx.measureText(clippedStatus).width > maxStatusW) {
         clippedStatus = `${clippedStatus.slice(0, -2)}...`;
       }
-      ctx.fillText(clippedStatus, x + 14, y + h + 15);
+      ctx.fillText(clippedStatus, x + 14, y + h + 23);
       ctx.restore();
     }
 
@@ -1317,9 +1340,13 @@
       if (["confused", "goofy"].includes(mood)) return "smirk_left";
       if (["sleepy", "sad"].includes(mood)) return "frown";
       if (mood === "sleep") return "sleep";
-      if (["focused", "robotic", "calculating"].includes(mood)) return "grimace";
+      if (["focused", "robotic", "calculating"].includes(mood)) return "neutral";
       if (mood === "glitchy") return "wide";
       return "neutral";
+    }
+
+    function baseMouthShape(mouth, mood) {
+      return mouth?.manual ? mouth.shape || "neutral" : mouthShapeForMood(mood);
     }
 
     function mouthPoseFor(shape) {
@@ -1331,9 +1358,9 @@
         open: { open: 0.66, width: 0.50, curve: -0.04, skew: -0.04, teeth: 0, tension: 0.14, slant: -0.05, upperLift: 0 },
         o: { open: 0.82, width: 0.20, curve: -0.08, skew: 0, teeth: 0, tension: 0.02, slant: 0, upperLift: 0 },
         wide: { open: 0.94, width: 0.70, curve: 0.10, skew: 0.04, teeth: 0.18, tension: 0.20, slant: 0.06, upperLift: 0 },
-        tongue: { open: 0.78, width: 0.82, curve: 0.84, skew: 0.05, teeth: 0.04, tension: 0.04, slant: 0.02, upperLift: 0 },
-        frown: { open: 0.08, width: 0.62, curve: -1.10, skew: -0.04, teeth: 0, tension: 0.42, slant: -0.08, upperLift: 0 },
-        grimace: { open: 0.24, width: 0.84, curve: -0.18, skew: 0.03, teeth: 1, tension: 0.98, slant: 0.03, upperLift: 0 },
+        tongue: { open: 0.78, width: 0.94, curve: 0.84, skew: 0.05, teeth: 0.04, tension: 0.04, slant: 0.02, upperLift: 0 },
+        frown: { open: 0.08, width: 0.62, curve: -1.45, skew: -0.04, teeth: 0, tension: 0.44, slant: -0.08, upperLift: 0 },
+        grimace: { open: 0.18, width: 0.88, curve: 0.98, skew: 0, teeth: 0.42, tension: 0.06, slant: 0, upperLift: 0 },
         sneer: { open: 0.20, width: 0.72, curve: -0.20, skew: 0.42, teeth: 0.32, tension: 0.62, slant: 0.34, upperLift: 0.52 },
         sleep: { open: 0.03, width: 0.42, curve: -0.12, skew: 0, teeth: 0, tension: 0.08, slant: 0, upperLift: 0 },
         neutral: { open: 0.07, width: 0.54, curve: 0.02, skew: -0.03, teeth: 0, tension: 0.16, slant: 0.02, upperLift: 0 }
@@ -1383,6 +1410,11 @@
       if (shape === "round") return "o";
       if (shape === "teeth") return "grimace";
       return "open";
+    }
+
+    function renderedMouthShape(mouth, mood) {
+      const speech = activeSpeechMouth(mouth);
+      return speech ? speechRenderShape(speech.shape) : baseMouthShape(mouth, mood);
     }
 
     function copyMouthPose(pose) {
@@ -1438,6 +1470,29 @@
       for (let tx = x + 28; tx < x + w - 14; tx += 36) {
         ctx.moveTo(tx, y + 2);
         ctx.lineTo(tx, y + teethH - 4);
+      }
+      ctx.stroke();
+    }
+
+    function drawClenchedMouthTeeth(cx, cy, w, h, amount) {
+      if (amount <= 0.01 || h < 14 || w < 48) return;
+      const teethH = clamp(h * (0.20 + amount * 0.08), 8, 16);
+      const x = cx - w / 2;
+      const topY = cy - teethH - 1;
+      const bottomY = cy + 1;
+      ctx.strokeStyle = "#7e6862";
+      ctx.lineWidth = 1.4;
+      drawRoundRect(x, topY, w, teethH, 5, "#eee4c6");
+      drawRoundRect(x, bottomY, w, teethH, 5, "#eee4c6");
+      ctx.beginPath();
+      ctx.moveTo(x + 5, cy);
+      ctx.lineTo(x + w - 5, cy);
+      const toothStep = clamp(w / 8, 24, 34);
+      for (let tx = x + toothStep; tx < x + w - toothStep / 2; tx += toothStep) {
+        ctx.moveTo(tx, topY + 2);
+        ctx.lineTo(tx, topY + teethH - 3);
+        ctx.moveTo(tx + toothStep / 2, bottomY + 2);
+        ctx.lineTo(tx + toothStep / 2, bottomY + teethH - 3);
       }
       ctx.stroke();
     }
@@ -1671,10 +1726,12 @@
       drawEllipse(cx + mouthW / 10 + asym / 4, lowerCenterCy - lipH / 5, mouthW / 3 + 6, Math.max(5, lipH / 7), mixColor(lip, lipHi, 0.50));
 
       drawEllipse(cx + asym / 3, cy + asym / 12, cavityW / 2, Math.max(3, cavityH / 2), cavity);
-      if (shape === "tongue") {
+      if (shape === "grimace") {
+        drawClenchedMouthTeeth(cx + asym / 3, cy + asym / 12, cavityW - 44, Math.max(26, cavityH + 12), 0.95);
+      } else if (shape === "tongue") {
         const tongueY = cy + cavityH / 2 + lipH / 5;
-        drawEllipse(cx + asym / 5, tongueY, cavityW / 4.8, Math.max(18, cavityH / 3.2), "#c94f68");
-        drawEllipse(cx + asym / 5, tongueY + 14, cavityW / 5.8, Math.max(12, cavityH / 4), "#e07586");
+        drawEllipse(cx + asym / 5, tongueY, cavityW / 3.7, Math.max(18, cavityH / 3.2), "#c94f68");
+        drawEllipse(cx + asym / 5, tongueY + 14, cavityW / 4.7, Math.max(12, cavityH / 4), "#e07586");
         ctx.strokeStyle = "#9d3048";
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -1692,9 +1749,9 @@
         ctx.stroke();
       }
 
-      const teethAmount = Math.max(pose.teeth, pose.open > 0.34 ? clamp((pose.open - 0.30) * 1.2, 0, 0.42) : 0);
+      const teethAmount = shape === "grimace" ? 0 : Math.max(pose.teeth, pose.open > 0.34 ? clamp((pose.open - 0.30) * 1.2, 0, 0.42) : 0);
       drawMouthTeeth(cx + asym / 3 - cavityW / 2 + 18, cy + asym / 12 - cavityH / 2 + 2, cavityW - 36, cavityH, teethAmount);
-      if ((shape === "grimace" || shape === "big_smile") && cavityW > 92) {
+      if (shape === "big_smile" && cavityW > 92) {
         const gumY = cy + asym / 12 + Math.max(4, cavityH / 7);
         ctx.strokeStyle = "#ccbeaa";
         ctx.lineWidth = 2;
@@ -1746,13 +1803,13 @@
         ctx.moveTo(rightX - 20, rightCornerY - 6);
         ctx.lineTo(rightX - 48, rightCornerY - 18);
         ctx.stroke();
-      } else if (shape === "frown" || shape === "grimace") {
+      } else if (shape === "frown") {
         ctx.strokeStyle = lipLo;
         ctx.beginPath();
-        ctx.moveTo(leftX + 24, leftCornerY + 4);
-        ctx.lineTo(leftX + 54, leftCornerY + (shape === "frown" ? 22 : 18));
-        ctx.moveTo(rightX - 24, rightCornerY + 4);
-        ctx.lineTo(rightX - 54, rightCornerY + (shape === "frown" ? 22 : 18));
+        ctx.moveTo(leftX + 22, leftCornerY + 3);
+        ctx.lineTo(leftX + 66, leftCornerY + 34);
+        ctx.moveTo(rightX - 22, rightCornerY + 3);
+        ctx.lineTo(rightX - 66, rightCornerY + 34);
         ctx.stroke();
       }
     }
@@ -1785,7 +1842,7 @@
         else if (shape === "open") shapeLevel = 0.18 + 0.64 * (1 - Math.abs(pos));
         else if (shape === "wide") shapeLevel = 0.52 + 0.26 * (1 - Math.abs(pos) * 0.35);
         else if (shape === "frown") shapeLevel = 0.34 - 0.18 * Math.abs(pos);
-        else if (shape === "grimace") shapeLevel = 0.34 + 0.04 * (i % 2 ? 1 : -1);
+        else if (shape === "grimace") shapeLevel = 0.46 + 0.08 * (i % 2 ? 1 : -1);
         else if (shape === "sneer") shapeLevel = 0.16 + 0.50 * side + 0.10 * (i % 2 ? 1 : 0);
         else if (shape === "sleep") shapeLevel = 0.07;
         else if (shape === "neutral") shapeLevel = 0.16 + 0.08 * (1 - Math.abs(pos));
@@ -1910,7 +1967,7 @@
     function drawMouth(t) {
       const mouth = state?.mouth || {};
       const mood = state?.mood || "curious";
-      let shape = mouth.manual ? mouth.shape || "neutral" : mouthShapeForMood(mood);
+      let shape = baseMouthShape(mouth, mood);
       const talking = Boolean(mouth.talking);
       const energy = Number(mouth.energy || 0.45);
       let talkLevel = talking ? clamp((0.72 + 0.28 * Math.sin(t * 0.026)) * energy, 0.08, 1) : 0;
@@ -1933,16 +1990,17 @@
 
     function drawNose(t) {
       const mood = state?.mood || "curious";
+      const mouthShape = renderedMouthShape(state?.mouth || {}, mood);
       const director = state?.director && state.director !== "sim" ? state.director : "none";
       const color = state?.status_tint_override ? state?.status_tint || colorForMood(mood) : colorForMood(mood);
       const pulse = 0.5 + Math.sin(t * 0.0017) * 0.5;
       const glow = 0.35 + 0.65 * (pulse * pulse * (3 - 2 * pulse));
       const cx = 360;
-      const cy = faceLayout.statusY + faceLayout.statusH / 2;
+      const cy = faceLayout.statusY + faceLayout.statusH / 2 - 6;
       ctx.save();
       // The browser pane is intentionally narrowed; compensate so the nose reads round on screen.
-      const rimRy = 127;
-      const rimRx = 151;
+      const rimRy = 124;
+      const rimRx = 148;
       const glowLayers = [
         [42, 0.035],
         [30, 0.055],
@@ -1978,7 +2036,7 @@
       ctx.fillText(mood.slice(0, 12), cx, cy - 50);
       ctx.fillStyle = "#91d6e2";
       ctx.font = "34px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.fillText(String(state?.mouth?.shape || "neutral").slice(0, 12), cx, cy - 6);
+      ctx.fillText(String(mouthShape || "neutral").slice(0, 12), cx, cy - 6);
       ctx.fillStyle = "#b4e0d6";
       ctx.font = "34px ui-monospace, SFMono-Regular, Consolas, monospace";
       ctx.fillText(String(director).slice(0, 12), cx, cy + 34);
@@ -2018,9 +2076,9 @@
       ctx.globalAlpha = facePaint.opacity;
       if (facePaint.target === "nose") {
         const cx = 360;
-        const cy = faceLayout.statusY + faceLayout.statusH / 2;
-        const rx = 118;
-        const ry = 96;
+        const cy = faceLayout.statusY + faceLayout.statusH / 2 - 6;
+        const rx = 115;
+        const ry = 93;
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.clip();
@@ -2063,6 +2121,10 @@
       bg.addColorStop(1, "#020407");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(faceLayout.width / 2, 0);
+      ctx.scale(faceRenderXScale, 1);
+      ctx.translate(-faceLayout.width / 2, 0);
       ctx.fillStyle = "rgba(94, 234, 212, 0.04)";
       ctx.beginPath();
       ctx.ellipse(360, 520, 314, 386, 0, 0, Math.PI * 2);
@@ -2074,6 +2136,7 @@
       drawMouth(t);
       drawNose(t);
       drawFacePaint(t);
+      ctx.restore();
       if (!state || performance.now() - lastStateAt > 1200) {
         ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
         ctx.font = "18px ui-monospace, SFMono-Regular, Consolas, monospace";

@@ -747,9 +747,9 @@ MouthPose mouthPoseFor(MouthShape shape) {
     case MouthShape::Open: return {0.66f, 0.50f, -0.04f, -0.04f, 0.0f, 0.14f, -0.05f, 0.0f};
     case MouthShape::O: return {0.82f, 0.20f, -0.08f, 0.0f, 0.0f, 0.02f, 0.0f, 0.0f};
     case MouthShape::Wide: return {0.94f, 0.70f, 0.10f, 0.04f, 0.18f, 0.20f, 0.06f, 0.0f};
-    case MouthShape::Tongue: return {0.78f, 0.82f, 0.84f, 0.05f, 0.04f, 0.04f, 0.02f, 0.0f};
-    case MouthShape::Frown: return {0.08f, 0.62f, -1.10f, -0.04f, 0.0f, 0.42f, -0.08f, 0.0f};
-    case MouthShape::Grimace: return {0.24f, 0.84f, -0.18f, 0.03f, 1.0f, 0.98f, 0.03f, 0.0f};
+    case MouthShape::Tongue: return {0.78f, 0.94f, 0.84f, 0.05f, 0.04f, 0.04f, 0.02f, 0.0f};
+    case MouthShape::Frown: return {0.08f, 0.62f, -1.45f, -0.04f, 0.0f, 0.44f, -0.08f, 0.0f};
+    case MouthShape::Grimace: return {0.18f, 0.88f, 0.98f, 0.0f, 0.42f, 0.06f, 0.0f, 0.0f};
     case MouthShape::Sneer: return {0.20f, 0.72f, -0.20f, 0.42f, 0.32f, 0.62f, 0.34f, 0.52f};
     case MouthShape::Sleep: return {0.03f, 0.42f, -0.12f, 0.0f, 0.0f, 0.08f, 0.0f, 0.0f};
     case MouthShape::Neutral:
@@ -797,7 +797,7 @@ MouthShape mouthShapeForMood(Mood mood) {
       return MouthShape::Sleep;
     case Mood::Focused:
     case Mood::Robotic:
-      return MouthShape::Grimace;
+      return MouthShape::Neutral;
     case Mood::Bored:
       return MouthShape::Neutral;
     case Mood::Bashful:
@@ -2304,6 +2304,24 @@ void drawMouthTeeth(int16_t x, int16_t y, int16_t w, int16_t h, float amount) {
   }
 }
 
+void drawClenchedMouthTeeth(GFXcanvas16 &target, int16_t cx, int16_t cy, int16_t w, int16_t h, float amount) {
+  if (amount <= 0.01f || h < 14 || w < 48) return;
+  const int16_t teethH = int16_t(clampf(float(h) * (0.20f + amount * 0.08f), 8.0f, 16.0f));
+  const int16_t x = cx - w / 2;
+  const int16_t topY = cy - teethH - 1;
+  const int16_t bottomY = cy + 1;
+  const uint16_t enamel = rgb(238, 228, 198);
+  const uint16_t line = rgb(126, 104, 98);
+  target.fillRoundRect(x, topY, w, teethH, 5, enamel);
+  target.fillRoundRect(x, bottomY, w, teethH, 5, enamel);
+  target.drawFastHLine(x + 5, cy, w - 10, line);
+  const int16_t toothStep = maxi16(24, min(int16_t(34), int16_t(w / 8)));
+  for (int16_t tx = x + toothStep; tx < x + w - toothStep / 2; tx += toothStep) {
+    target.drawFastVLine(tx, topY + 2, teethH - 4, line);
+    target.drawFastVLine(tx + toothStep / 2, bottomY + 2, teethH - 4, line);
+  }
+}
+
 void drawMouthTongue(int16_t cx, int16_t y, int16_t rx, int16_t ry) {
   if (rx < 14 || ry < 4) return;
   const uint16_t tongue = rgb(162, 54, 72);
@@ -2457,10 +2475,12 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now) {
   fillEllipse(frame, cx + w / 10 + asym / 4, lowerCenterCy - lipH / 5, w / 3 + 6, maxi16(5, lipH / 7), mixColor(lip, lipHi, 0.50f));
 
   fillEllipse(frame, cx + asym / 3, cy + asym / 12, cavityW / 2, maxi16(3, cavityH / 2), cavity);
-  if (shape == MouthShape::Tongue) {
+  if (shape == MouthShape::Grimace) {
+    drawClenchedMouthTeeth(frame, cx + asym / 3, cy + asym / 12, cavityW - 44, maxi16(26, cavityH + 12), 0.95f);
+  } else if (shape == MouthShape::Tongue) {
     const int16_t tongueY = cy + cavityH / 2 + lipH / 5;
-    fillEllipse(frame, cx + asym / 5, tongueY, cavityW / 5, maxi16(12, cavityH / 3), rgb(201, 79, 104));
-    fillEllipse(frame, cx + asym / 5, tongueY + 14, cavityW / 6, maxi16(9, cavityH / 4), rgb(224, 117, 134));
+    fillEllipse(frame, cx + asym / 5, tongueY, cavityW / 4, maxi16(12, cavityH / 3), rgb(201, 79, 104));
+    fillEllipse(frame, cx + asym / 5, tongueY + 14, cavityW / 5, maxi16(9, cavityH / 4), rgb(224, 117, 134));
     frame.drawLine(cx + asym / 5, tongueY - maxi16(5, cavityH / 8),
                    cx + asym / 5, tongueY + maxi16(14, cavityH / 4), rgb(157, 48, 72));
   } else if (cavityH > 16) {
@@ -2469,9 +2489,9 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now) {
     frame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 10, cy + asym / 12, cavityW - 20, rgb(28, 2, 12));
   }
 
-  const float teethAmount = max(pose.teeth, pose.open > 0.34f ? clampf((pose.open - 0.30f) * 1.2f, 0.0f, 0.42f) : 0.0f);
+  const float teethAmount = shape == MouthShape::Grimace ? 0.0f : max(pose.teeth, pose.open > 0.34f ? clampf((pose.open - 0.30f) * 1.2f, 0.0f, 0.42f) : 0.0f);
   drawMouthTeeth(cx + asym / 3 - cavityW / 2 + 18, cy + asym / 12 - cavityH / 2 + 2, cavityW - 36, cavityH, teethAmount);
-  if ((shape == MouthShape::Grimace || shape == MouthShape::BigSmile) && cavityW > 92) {
+  if (shape == MouthShape::BigSmile && cavityW > 92) {
     const int16_t gumY = cy + asym / 12 + maxi16(4, cavityH / 7);
     frame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 24, gumY, cavityW - 48, rgb(204, 190, 170));
     for (int16_t tx = cx + asym / 3 - cavityW / 2 + 40; tx < cx + asym / 3 + cavityW / 2 - 36; tx += 30) {
@@ -2503,11 +2523,8 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now) {
     frame.drawLine(leftX + 20, leftCornerY - 6, leftX + 48, leftCornerY - 18, lipHi);
     frame.drawLine(rightX - 20, rightCornerY - 6, rightX - 48, rightCornerY - 18, lipHi);
   } else if (shape == MouthShape::Frown) {
-    frame.drawLine(leftX + 26, leftCornerY + 4, leftX + 58, leftCornerY + 22, lipLo);
-    frame.drawLine(rightX - 26, rightCornerY + 4, rightX - 58, rightCornerY + 22, lipLo);
-  } else if (shape == MouthShape::Grimace) {
-    frame.drawLine(leftX + 18, leftCornerY - 3, leftX + 34, leftCornerY + 18, lipLo);
-    frame.drawLine(rightX - 18, rightCornerY - 3, rightX - 34, rightCornerY + 18, lipLo);
+    frame.drawLine(leftX + 22, leftCornerY + 3, leftX + 66, leftCornerY + 34, lipLo);
+    frame.drawLine(rightX - 22, rightCornerY + 3, rightX - 66, rightCornerY + 34, lipLo);
   }
   frame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 12, topCy - lipH / 3 + asym / 10, maxi16(20, cavityW / 3), lipHi);
   frame.drawFastHLine(cx + asym / 4 - cavityW / 4, bottomCy + lipH / 3 - asym / 12, maxi16(20, cavityW / 2), lipLo);
@@ -2560,7 +2577,7 @@ void renderRobotMouth(MouthShape shape, MouthPose pose, uint32_t now) {
         shapeLevel = 0.34f - 0.18f * fabsf(pos);
         break;
       case MouthShape::Grimace:
-        shapeLevel = 0.34f + 0.04f * ((i % 2) ? 1.0f : -1.0f);
+        shapeLevel = 0.46f + 0.08f * ((i % 2) ? 1.0f : -1.0f);
         break;
       case MouthShape::Sneer:
         shapeLevel = 0.16f + 0.50f * side + 0.10f * ((i % 2) ? 1.0f : 0.0f);
@@ -2887,7 +2904,7 @@ void renderAuxMouthMirror(uint32_t now) {
           shapeLevel = 0.34f - 0.18f * fabsf(pos);
           break;
         case MouthShape::Grimace:
-          shapeLevel = 0.34f + 0.04f * ((i % 2) ? 1.0f : -1.0f);
+          shapeLevel = 0.46f + 0.08f * ((i % 2) ? 1.0f : -1.0f);
           break;
         case MouthShape::Sneer:
           shapeLevel = 0.16f + 0.50f * side + 0.10f * ((i % 2) ? 1.0f : 0.0f);
@@ -3061,10 +3078,12 @@ void renderAuxMouthMirror(uint32_t now) {
       fillEllipse(auxMouthFrame, cx + w / 10 + asym / 4, lowerCenterCy - lipH / 5 - yOffset, w / 3 + 6, maxi16(5, lipH / 7), mixColor(lip, lipHi, 0.50f));
 
       fillEllipse(auxMouthFrame, cx + asym / 3, cy + asym / 12 - yOffset, cavityW / 2, maxi16(3, cavityH / 2), cavity);
-      if (shape == MouthShape::Tongue) {
+      if (shape == MouthShape::Grimace) {
+        drawClenchedMouthTeeth(auxMouthFrame, cx + asym / 3, cy + asym / 12 - yOffset, cavityW - 44, maxi16(26, cavityH + 12), 0.95f);
+      } else if (shape == MouthShape::Tongue) {
         const int16_t tongueY = cy + cavityH / 2 + lipH / 5;
-        fillEllipse(auxMouthFrame, cx + asym / 5, tongueY - yOffset, cavityW / 5, maxi16(12, cavityH / 3), rgb(201, 79, 104));
-        fillEllipse(auxMouthFrame, cx + asym / 5, tongueY + 14 - yOffset, cavityW / 6, maxi16(9, cavityH / 4), rgb(224, 117, 134));
+        fillEllipse(auxMouthFrame, cx + asym / 5, tongueY - yOffset, cavityW / 4, maxi16(12, cavityH / 3), rgb(201, 79, 104));
+        fillEllipse(auxMouthFrame, cx + asym / 5, tongueY + 14 - yOffset, cavityW / 5, maxi16(9, cavityH / 4), rgb(224, 117, 134));
         auxMouthFrame.drawLine(cx + asym / 5, tongueY - maxi16(5, cavityH / 8) - yOffset,
                                cx + asym / 5, tongueY + maxi16(14, cavityH / 4) - yOffset, rgb(157, 48, 72));
       } else if (cavityH > 16) {
@@ -3081,7 +3100,7 @@ void renderAuxMouthMirror(uint32_t now) {
         auxMouthFrame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 10, cy + asym / 12 - yOffset, cavityW - 20, rgb(28, 2, 12));
       }
 
-      const float teethAmount = max(pose.teeth, pose.open > 0.34f ? clampf((pose.open - 0.30f) * 1.2f, 0.0f, 0.42f) : 0.0f);
+      const float teethAmount = shape == MouthShape::Grimace ? 0.0f : max(pose.teeth, pose.open > 0.34f ? clampf((pose.open - 0.30f) * 1.2f, 0.0f, 0.42f) : 0.0f);
       if (teethAmount > 0.01f && cavityH >= 12 && cavityW >= 36) {
         const int16_t teethX = cx + asym / 3 - cavityW / 2 + 18;
         const int16_t teethY = cy + asym / 12 - cavityH / 2 + 2 - yOffset;
@@ -3093,7 +3112,7 @@ void renderAuxMouthMirror(uint32_t now) {
           auxMouthFrame.drawFastVLine(tx, teethY + 2, teethH - 4, rgb(126, 104, 98));
         }
       }
-      if ((shape == MouthShape::Grimace || shape == MouthShape::BigSmile) && cavityW > 92) {
+      if (shape == MouthShape::BigSmile && cavityW > 92) {
         const int16_t gumY = cy + asym / 12 + maxi16(4, cavityH / 7) - yOffset;
         auxMouthFrame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 24, gumY, cavityW - 48, rgb(204, 190, 170));
         for (int16_t tx = cx + asym / 3 - cavityW / 2 + 40; tx < cx + asym / 3 + cavityW / 2 - 36; tx += 30) {
@@ -3125,11 +3144,8 @@ void renderAuxMouthMirror(uint32_t now) {
         auxMouthFrame.drawLine(leftX + 20, leftCornerY - 6 - yOffset, leftX + 48, leftCornerY - 18 - yOffset, lipHi);
         auxMouthFrame.drawLine(rightX - 20, rightCornerY - 6 - yOffset, rightX - 48, rightCornerY - 18 - yOffset, lipHi);
       } else if (shape == MouthShape::Frown) {
-        auxMouthFrame.drawLine(leftX + 26, leftCornerY + 4 - yOffset, leftX + 58, leftCornerY + 22 - yOffset, lipLo);
-        auxMouthFrame.drawLine(rightX - 26, rightCornerY + 4 - yOffset, rightX - 58, rightCornerY + 22 - yOffset, lipLo);
-      } else if (shape == MouthShape::Grimace) {
-        auxMouthFrame.drawLine(leftX + 18, leftCornerY - 3 - yOffset, leftX + 34, leftCornerY + 18 - yOffset, lipLo);
-        auxMouthFrame.drawLine(rightX - 18, rightCornerY - 3 - yOffset, rightX - 34, rightCornerY + 18 - yOffset, lipLo);
+        auxMouthFrame.drawLine(leftX + 22, leftCornerY + 3 - yOffset, leftX + 66, leftCornerY + 34 - yOffset, lipLo);
+        auxMouthFrame.drawLine(rightX - 22, rightCornerY + 3 - yOffset, rightX - 66, rightCornerY + 34 - yOffset, lipLo);
       }
       auxMouthFrame.drawFastHLine(cx + asym / 3 - cavityW / 2 + 12, topCy - lipH / 3 + asym / 10 - yOffset, maxi16(20, cavityW / 3), lipHi);
       auxMouthFrame.drawFastHLine(cx + asym / 4 - cavityW / 4, bottomCy + lipH / 3 - asym / 12 - yOffset, maxi16(20, cavityW / 2), lipLo);
