@@ -5868,6 +5868,65 @@
       return result;
     }
 
+    async function resolveContinuitySessionForLoad(sessionFilename = "") {
+      const name = String(sessionFilename || "").trim();
+      return name
+        ? fetchContinuitySessionMetadata(name)
+        : fetchCurrentContinuitySession();
+    }
+
+    function continuityLoadReferenceIssues(current) {
+      const issues = [];
+      const parentFilename = String(current?.parent_session_filename || "").trim();
+      const parentStatus = String(current?.parent_session_status || "").trim().toLowerCase();
+      if (parentFilename && parentStatus && parentStatus !== "available" && parentStatus !== "none") {
+        issues.push({ kind: "parent lineage", filename: parentFilename, status: parentStatus });
+      }
+      for (const receipt of Array.isArray(current?.pinned_notes) ? current.pinned_notes : []) {
+        const filename = String(receipt?.filename || "").trim();
+        if (!filename || String(receipt?.current_status || "").toLowerCase() !== "missing") continue;
+        issues.push({
+          kind: receipt?.status === "missing" ? "pinned context unavailable at save" : "pinned context",
+          filename,
+          status: "missing"
+        });
+      }
+      return issues;
+    }
+
+    async function confirmContinuitySessionLoad(current, { source = "Connect" } = {}) {
+      const issues = continuityLoadReferenceIssues(current);
+      if (!issues.length) return issues;
+      const filename = String(current?.session_filename || "selected session").trim();
+      const shown = issues.slice(0, 10).map((item) => `- ${item.kind}: ${item.filename}`);
+      if (issues.length > shown.length) shown.push(`- and ${issues.length - shown.length} more missing reference(s)`);
+      const proceed = window.confirm([
+        `${source} found ${issues.length} unresolved saved reference${issues.length === 1 ? "" : "s"}.`,
+        "",
+        `Session: ${filename}`,
+        ...shown,
+        "",
+        "OK: load the session with available context only.",
+        "Cancel: keep the current browser context unchanged."
+      ].join("\n"));
+      if (proceed) {
+        log(events, `session load proceeding with unresolved references: ${issues.map((item) => item.filename).join(", ")}`);
+        recordUiEvent("session load proceeded with unresolved references", filename, {
+          source,
+          unresolved_references: issues
+        });
+        return issues;
+      }
+      log(events, `session load canceled for unresolved references: ${issues.map((item) => item.filename).join(", ")}`);
+      recordUiEvent("session load canceled for unresolved references", filename, {
+        source,
+        unresolved_references: issues
+      });
+      const error = new Error("Session load canceled; current browser context was left unchanged.");
+      error.code = "continuity_load_canceled";
+      throw error;
+    }
+
     async function archiveContinuitySession(filename) {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Choose a session note first.");
@@ -5928,10 +5987,13 @@
       return selectContinuitySession(latest, { refresh: false });
     }
 
-    async function loadCurrentContinuitySession({ source = "continuity", sessionFilename = "" } = {}) {
-      const current = sessionFilename
-        ? await fetchContinuitySessionMetadata(sessionFilename)
-        : await fetchCurrentContinuitySession();
+    async function loadCurrentContinuitySession({
+      source = "continuity",
+      sessionFilename = "",
+      sessionMetadata = null,
+      preflightComplete = false
+    } = {}) {
+      const current = sessionMetadata || await resolveContinuitySessionForLoad(sessionFilename);
       if (current.status === "unavailable") {
         currentContinuitySessionFilename = "";
         continuityParentForCurrentRun = "";
@@ -5939,6 +6001,7 @@
       }
       const filename = String(current.session_filename || "").trim();
       if (!filename) throw new Error("No session note was selected.");
+      if (!preflightComplete) await confirmContinuitySessionLoad(current, { source });
       currentContinuitySessionFilename = filename;
       let sessionResult = null;
       try {
@@ -5997,14 +6060,7 @@
     }
 
     async function loadLatestContinuitySession({ source = "Connect" } = {}) {
-      const selected = await selectLatestContinuitySession();
-      if (!selected) {
-        currentContinuitySessionFilename = "";
-        continuityParentForCurrentRun = "";
-        log(events, "no session note yet");
-        return null;
-      }
-      return loadCurrentContinuitySession({ source, sessionFilename: selected.session_filename || "" });
+      return loadCurrentContinuitySession({ source });
     }
 
     function handleEricMemoriesPrefChange() {
@@ -6327,13 +6383,17 @@
 
     function loadedNoteRestoreEnvelope(item) {
       if (!loadedNoteLooksLikeSessionNote(item?.content || "")) return "";
-      const created = continuityCreatedAt(item?.content || "");
+      const content = String(item?.content || "");
+      const createdLabel = (content.match(/^Created:\s*(.+)$/mi) || [])[1]?.trim() || "";
+      const created = continuityCreatedAt(content);
       const now = new Date();
       const lines = [
         "Restore envelope:",
         `- Current browser time at prompt assembly: ${now.toLocaleString()}.`
       ];
       if (created) {
+        lines.push(`- Authoritative session save timestamp: ${createdLabel || created.toISOString()}.`);
+        lines.push("- If asked when this session was saved, answer from that Created timestamp. Do not infer it from transcript turns or say the note lacks a date.");
         lines.push(`- Session note was created: ${created.toLocaleString()}.`);
         lines.push(`- Approximate off-gap since that session: ${shortDuration(Math.max(0, now.getTime() - created.getTime()))}.`);
       } else {
@@ -16339,11 +16399,10 @@
           load_continuity_session: Boolean(currentContinuitySessionFilename)
         });
         log(events, `session note restore requested from ${currentContinuitySessionFilename || "no session note"}`);
-        if (!realtimeConnected()) {
-          connect();
-        }
+        if (!realtimeConnected()) connect({ continuityAlreadyLoaded: true });
       } catch (error) {
-        log(events, `session note restore error: ${error.message}`);
+        if (error?.code === "continuity_load_canceled") setState("Load canceled");
+        log(events, `session note restore ${error?.code === "continuity_load_canceled" ? "canceled" : "error"}: ${error.message}`);
       } finally {
         continuitySaveBusy = false;
         updateSaveAndHaltButton();
@@ -19298,8 +19357,6 @@
       if (!previous?.filename) {
         throw new Error("The current session note has no earlier timestamped session.");
       }
-      currentContinuitySessionFilename = previous.filename;
-      renderContinuitySessionSelect(previous.filename);
       return {
         status: "ok",
         tool: "rewind_continuity_session",
@@ -19310,6 +19367,8 @@
     }
 
     async function loadPreviousContinuityContext(sessionFilename) {
+      const sessionMetadata = await resolveContinuitySessionForLoad(sessionFilename);
+      await confirmContinuitySessionLoad(sessionMetadata, { source: "Connect Previous" });
       clearHotConversationState({ reason: "Connect Previous branch rewind" });
       clearSensingEyeState({ source: "connect_previous", reason: "restore pre-gap state" });
       // The restored note begins a new browser run without transport timing from branch A.
@@ -19336,7 +19395,12 @@
           await readTextFile({ filename });
         }
       }
-      await loadCurrentContinuitySession({ source: "Connect Previous", sessionFilename });
+      await loadCurrentContinuitySession({
+        source: "Connect Previous",
+        sessionFilename,
+        sessionMetadata,
+        preflightComplete: true
+      });
       loadedNoteContextDirty = false;
       updateLoadedNoteControls();
       renderMemory();
@@ -19344,7 +19408,14 @@
       if (contextPanel?.open) renderContextMap();
     }
 
-    async function loadFreshContinuityContext({ source = "Connect", sessionFilename = "", reason = "continuity connect" } = {}) {
+    async function loadFreshContinuityContext({
+      source = "Connect",
+      sessionFilename = "",
+      sessionMetadata = null,
+      reason = "continuity connect"
+    } = {}) {
+      const current = sessionMetadata || await resolveContinuitySessionForLoad(sessionFilename);
+      if (current.status !== "unavailable") await confirmContinuitySessionLoad(current, { source });
       clearHotConversationState({ reason });
       clearSensingEyeState({ source: "continuity_connect", reason });
       inputAudioTranscriptionPending = false;
@@ -19364,9 +19435,12 @@
       reengageInFlight = false;
       loadedNoteContexts = [];
       loadedNoteContextDirty = true;
-      const result = sessionFilename
-        ? await loadCurrentContinuitySession({ source, sessionFilename })
-        : await loadLatestContinuitySession({ source });
+      const result = await loadCurrentContinuitySession({
+        source,
+        sessionFilename,
+        sessionMetadata: current,
+        preflightComplete: true
+      });
       loadedNoteContextDirty = false;
       updateLoadedNoteControls();
       renderMemory();
@@ -19392,9 +19466,9 @@
         log(events, `Connect Previous restored session: ${rewind.restored_session_filename}`);
         await connect({ restoredPrevious: true, continuityAlreadyLoaded: true });
       } catch (error) {
-        setState("Previous unavailable");
+        setState(error?.code === "continuity_load_canceled" ? "Load canceled" : "Previous unavailable");
         setConnectionButtonsDisabled(false);
-        log(events, `Connect Previous error: ${error.message}`);
+        log(events, `Connect Previous ${error?.code === "continuity_load_canceled" ? "canceled" : "error"}: ${error.message}`);
       }
     }
 
@@ -19402,12 +19476,18 @@
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         throw new Error("Disconnect before connecting a selected session.");
       }
-      const selected = await selectContinuitySession(filename);
-      await loadFreshContinuityContext({
-        source,
-        sessionFilename: selected.session_filename || "",
-        reason: source.toLowerCase()
-      });
+      const selected = await fetchContinuitySessionMetadata(filename);
+      try {
+        await loadFreshContinuityContext({
+          source,
+          sessionFilename: selected.session_filename || "",
+          sessionMetadata: selected,
+          reason: source.toLowerCase()
+        });
+      } catch (error) {
+        if (error?.code === "continuity_load_canceled") setState("Load canceled");
+        throw error;
+      }
       recordUiEvent("realtime connect selected", selected.session_filename || "", {
         ...currentUiSettingsSnapshot(),
         requested_context_mode: "selected",
@@ -19470,9 +19550,9 @@
         sessionGeneration = realtimeSessionGeneration;
         ws = socket;
       } catch (error) {
-        setState("Connect failed");
+        setState(error?.code === "continuity_load_canceled" ? "Load canceled" : "Connect failed");
         setConnectionButtonsDisabled(false);
-        log(events, `connect error: ${error.message}`);
+        log(events, `${error?.code === "continuity_load_canceled" ? "connect canceled" : "connect error"}: ${error.message}`);
         return;
       }
       socket.addEventListener("open", () => {

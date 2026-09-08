@@ -9,6 +9,37 @@ const facePage = fs.readFileSync(path.join(__dirname, '../web/face-sim/index.htm
 const sessionMapPage = fs.readFileSync(path.join(__dirname, '../web/sts/session-map.html'), 'utf8').replace(/\r\n/g, '\n');
 const runtimeConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/runtime.json'), 'utf8'));
 
+test('session map reuses the STS diamond-metal texture and title family', () => {
+  const texture = 'assets/diamond-plate.avif';
+  assert.ok(page.includes(`url("${texture}")`));
+  assert.ok(sessionMapPage.includes(`url("${texture}")`));
+  assert.ok(fs.existsSync(path.join(__dirname, '../web/sts', texture)));
+  assert.match(sessionMapPage, /background-size: auto, auto, 190px 190px, auto/);
+  assert.match(sessionMapPage, /font-family: "Arial Black", "Segoe UI Black", Impact, system-ui, sans-serif/);
+  assert.match(sessionMapPage, /@media \(max-width: 560px\)/);
+  assert.match(sessionMapPage, /grid-template-areas:\s*"title status"\s*"toolbar toolbar"/);
+  assert.match(sessionMapPage, /<header>[\s\S]*?<div class="toolbar">[\s\S]*?<\/div>\s*<\/header>/);
+  assert.doesNotMatch(sessionMapPage, /height: calc\(100vh - 113px\)/);
+  assert.match(sessionMapPage, /rgba\(var\(--accent\), 0\.21\)/);
+  assert.match(sessionMapPage, /rgba\(var\(--accent\), 0\.11\) 35%/);
+});
+
+test('browser face stays shrinkable and centered without a resize script', () => {
+  assert.match(facePage, /html, body\s*\{[^}]*min-width: 0/);
+  assert.match(facePage, /\.stage\s*\{[^}]*place-items: center;[^}]*min-width: 0/);
+  assert.match(facePage, /canvas\s*\{[^}]*width: min\([^}]*min-width: 0/);
+  assert.doesNotMatch(facePage, /resizeTo\(|ResizeObserver/);
+});
+
+test('face launcher uses a compact app window without altering the browser profile', () => {
+  const launcher = fs.readFileSync(path.join(__dirname, '../scripts/open_browser_face.ps1'), 'utf8');
+  assert.match(launcher, /\[int\]\$Width = 320/);
+  assert.match(launcher, /\[int\]\$Height = 480/);
+  assert.match(launcher, /--app=\$Url/);
+  assert.match(launcher, /--window-size=\$Width,\$Height/);
+  assert.doesNotMatch(launcher, /--user-data-dir|--disable-web-security/);
+});
+
 test('the shipped page scripts compile', () => {
   const scripts = Array.from(page.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/g), match => match[1]);
   assert.ok(scripts.length > 0);
@@ -28,7 +59,8 @@ test('Connect Previous follows the prior timestamped continuity session', () => 
   assert.match(page, /const previous = continuitySessions\[currentIndex \+ 1\]/);
   assert.match(page, /\/api\/continuity\/save/);
   assert.match(page, /async function loadPreviousContinuityContext\(sessionFilename\)/);
-  assert.match(page, /await loadCurrentContinuitySession\(\{ source: "Connect Previous", sessionFilename \}\)/);
+  assert.match(page, /await confirmContinuitySessionLoad\(sessionMetadata, \{ source: "Connect Previous" \}\)/);
+  assert.match(page, /preflightComplete: true/);
   assert.match(page, /continuityParentForCurrentRun/);
 });
 
@@ -80,6 +112,26 @@ test('session restore wrapper marks old fresh-boot claims as stale', () => {
   assert.match(page, /trust the current run setup, current loaded-note list, current runtime truth/);
   assert.match(page, /current run now vs\. remembered prior run then/);
   assert.match(page, /Do not say you have only core notes or no session note just because an older transcript contains that old line/);
+});
+
+test('session restore wrapper makes the Created header the authoritative save time', () => {
+  const context = loadFunctions(['loadedNoteLooksLikeSessionNote', 'continuityCreatedAt', 'loadedNoteRestoreEnvelope'], {
+    shortDuration: () => 'one hour',
+  });
+  const envelope = context.loadedNoteRestoreEnvelope({
+    content: [
+      'STS Session Note',
+      '================',
+      'Created: 2026-09-08T09:20:22-04:00',
+      'Transcript Since Clean Connect',
+      '------------------------------',
+      '[9:20:22 AM] You: Hello.',
+    ].join('\n'),
+  });
+
+  assert.match(envelope, /Authoritative session save timestamp: 2026-09-08T09:20:22-04:00/);
+  assert.match(envelope, /answer from that Created timestamp/);
+  assert.match(envelope, /Do not infer it from transcript turns or say the note lacks a date/);
 });
 
 test('blank sensing-eye recall skips the already-current newest note', () => {
@@ -177,6 +229,9 @@ test('continuity restore replaces stale browser pins with the selected session r
     'noteFilenameInSet',
     'continuityPinnedNoteFilenames',
     'fetchContinuitySessionMetadata',
+    'resolveContinuitySessionForLoad',
+    'continuityLoadReferenceIssues',
+    'confirmContinuitySessionLoad',
     'setLoadedNoteContextsForContinuity',
     'loadCurrentContinuitySession',
   ], {
@@ -228,6 +283,59 @@ test('continuity restore replaces stale browser pins with the selected session r
     ['shared.txt', 'NEW DISK CONTENT'],
   ]);
   assert.deepEqual(Array.from(result.restored_pinned_notes), ['shared.txt']);
+});
+
+test('continuity load preflight exposes missing lineage and lets the operator cancel before reset', async () => {
+  const events = [];
+  const choices = [];
+  const context = loadFunctions([
+    'continuityLoadReferenceIssues', 'confirmContinuitySessionLoad',
+  ], {
+    window: { confirm: message => { choices.push(message); return false; } },
+    log: () => {},
+    events: {},
+    recordUiEvent: (...args) => events.push(args),
+  });
+  const session = {
+    session_filename: 'sessions/child.txt',
+    parent_session_filename: 'sessions/parent.txt',
+    parent_session_status: 'missing',
+    pinned_notes: [
+      { filename: 'sessions/parent.txt', status: 'ok', current_status: 'missing' },
+      { filename: 'core/still-here.txt', status: 'ok', current_status: 'match' },
+    ],
+  };
+
+  assert.deepEqual(
+    Array.from(context.continuityLoadReferenceIssues(session), item => [item.kind, item.filename]),
+    [
+      ['parent lineage', 'sessions/parent.txt'],
+      ['pinned context', 'sessions/parent.txt'],
+    ],
+  );
+  await assert.rejects(
+    context.confirmContinuitySessionLoad(session, { source: 'Connect Selected' }),
+    error => error.code === 'continuity_load_canceled',
+  );
+  assert.match(choices[0], /Cancel: keep the current browser context unchanged\./);
+  assert.equal(events[0][0], 'session load canceled for unresolved references');
+
+  context.window.confirm = () => true;
+  const accepted = await context.confirmContinuitySessionLoad(session, { source: 'Connect Selected' });
+  assert.equal(accepted.length, 2);
+  assert.equal(events[1][0], 'session load proceeded with unresolved references');
+});
+
+test('continuity load preflight happens before fresh or previous context is cleared', () => {
+  const freshStart = page.indexOf('    async function loadFreshContinuityContext(');
+  const freshEnd = page.indexOf('\n    }\n', freshStart);
+  const fresh = page.slice(freshStart, freshEnd);
+  assert.ok(fresh.indexOf('await confirmContinuitySessionLoad') < fresh.indexOf('clearHotConversationState'));
+
+  const previousStart = page.indexOf('    async function loadPreviousContinuityContext(');
+  const previousEnd = page.indexOf('\n    }\n', previousStart);
+  const previous = page.slice(previousStart, previousEnd);
+  assert.ok(previous.indexOf('await confirmContinuitySessionLoad') < previous.indexOf('clearHotConversationState'));
 });
 
 test('stale async tool results cannot write into a newer realtime session', async () => {

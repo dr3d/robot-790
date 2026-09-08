@@ -35,6 +35,7 @@ def test_continuity_session_saves_pinned_environment_and_becomes_latest(tmp_path
     assert result["session_filename"] == "sessions/session-20260907-160000.txt"
     session = read_note_file(tmp_path, result["session_filename"])
     assert "STS Session Note" in session.content
+    assert "Created: 9/7/2026, 4:00:00 PM" in session.content
     assert "- core/erics_memories.txt" in session.content
     assert "sha256:" in session.content
     assert current_continuity_session(tmp_path)["session_filename"] == result["session_filename"]
@@ -156,6 +157,30 @@ def test_archive_continuity_session_moves_note_out_of_active_list(tmp_path: Path
     sessions = list_continuity_sessions(tmp_path)["sessions"]
     assert [session["filename"] for session in sessions] == [older["session_filename"]]
     assert current_continuity_session(tmp_path)["session_filename"] == older["session_filename"]
+
+
+def test_selected_session_reports_missing_parent_after_parent_is_archived(tmp_path: Path) -> None:
+    parent = save_continuity_session(
+        "Session Demarcation\n-------------------\nParent.",
+        [],
+        tmp_path,
+        created_label="9/7/2026, 4:00:00 PM",
+        filename_timestamp="20260907-160000",
+    )
+    child = save_continuity_session(
+        "Session Demarcation\n-------------------\nChild.",
+        [parent["session_filename"]],
+        tmp_path,
+        parent_session_filename=parent["session_filename"],
+        created_label="9/7/2026, 5:00:00 PM",
+        filename_timestamp="20260907-170000",
+    )
+
+    archive_continuity_session(parent["session_filename"], tmp_path)
+    selected = select_continuity_session(child["session_filename"], tmp_path)
+
+    assert selected["parent_session_status"] == "missing"
+    assert selected["pinned_notes"][0]["current_status"] == "missing"
 
 
 def test_archive_continuity_session_refuses_only_active_session(tmp_path: Path) -> None:

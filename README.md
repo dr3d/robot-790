@@ -275,6 +275,18 @@ Start the default browser face in another PowerShell window:
 Open `http://127.0.0.1:8791/` for the face. Run each foreground server in its
 own terminal; the page alone does not start the face or realtime worker.
 
+For a compact face window without Chrome/Edge's normal tab strip:
+
+```powershell
+.\scripts\open_browser_face.ps1
+```
+
+This opens an app window at 320 x 480; resize it normally, or pass `-Width` and
+`-Height`. The face stays centered and scales to fit. Its page already allows
+zero minimum width, but CSS cannot lower the browser's own window-frame minimum.
+Close the old face tab when switching to this window to avoid duplicate face
+command consumers. Use `-Url` to open a different local or apartment face address.
+
 Optional Reachy Mini body adapter:
 
 ```powershell
@@ -302,6 +314,8 @@ ws://127.0.0.1:8765/v1/realtime
 
 The page, face, and realtime launchers default to localhost. For apartment-only
 HTTPS access with microphone/camera support, see [STS LAN setup](scripts/sts-lan.md).
+For the day-to-day commands and addresses, see the
+[Operator Cheat Sheet](scripts/operator-cheatsheet.md).
 
 If Ctrl-C does not stop a stuck process, use:
 

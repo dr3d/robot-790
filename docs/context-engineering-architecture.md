@@ -143,7 +143,11 @@ The dependency-spec analogy applies specifically to session notes. Ordinary
 notes need not carry dependency metadata. The current loader reads the selected
 session and its direct pinned-file list from disk; it does not recursively
 resolve every dependency of every note. The descriptor requires those files to
-remain available. Choosing representations per dependency is future work.
+remain available. Before clearing the browser's current context, STS checks the
+selected note's direct parent and pins. If a saved reference is unresolved, it
+names the missing links and lets the operator either proceed with the available
+context or cancel the reload unchanged. Choosing representations per dependency
+is future work.
 
 The filename carries two kinds of information:
 
@@ -381,7 +385,10 @@ lossless compression.
 Pins and parent references currently use literal filenames. Captioning or
 archiving a note does not automatically update its descendants or a running
 browser's parent reference. An archived file is preserved on disk, but a note
-that still names its old path can fail to load or save. This is an open
+that still names its old path has an unresolved reference. The reload preflight
+shows that direct parent or pin and offers a deliberate partial load or cancel;
+it does not invent the missing content or repair the graph. A live session that
+names a moved file as its save parent can still fail to save. This is an open
 engineering issue, not automatic graph repair.
 
 Save-time hashes describe disk contents, which may differ from the browser's

@@ -1,7 +1,7 @@
 param(
   [string]$Url = "http://127.0.0.1:8791/",
-  [int]$Width = 560,
-  [int]$Height = 800,
+  [int]$Width = 320,
+  [int]$Height = 480,
   [int]$X = 40,
   [int]$Y = 80
 )

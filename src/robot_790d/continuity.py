@@ -52,6 +52,9 @@ def current_continuity_session(
         "selection": "latest",
         "session_filename": session.filename,
         "parent_session_filename": metadata["parent_session_filename"],
+        "parent_session_status": _continuity_session_reference_status(
+            instance_path, metadata["parent_session_filename"]
+        ),
         "pinned_notes": [_receipt_with_current_state(instance_path, receipt) for receipt in receipts],
         "created": metadata["created"],
     }
@@ -115,6 +118,9 @@ def select_continuity_session(
         "selection": "explicit",
         "session_filename": note.filename,
         "parent_session_filename": metadata["parent_session_filename"],
+        "parent_session_status": _continuity_session_reference_status(
+            instance_path, metadata["parent_session_filename"]
+        ),
         "pinned_notes": [_receipt_with_current_state(instance_path, receipt) for receipt in receipts],
         "created": metadata["created"],
     }
@@ -391,6 +397,21 @@ def _receipt_with_current_state(
     else:
         payload["current_status"] = "changed"
     return payload
+
+
+def _continuity_session_reference_status(
+    instance_path: str | Path | None,
+    filename: str,
+) -> str:
+    if not filename:
+        return "none"
+    try:
+        note = read_note_file(instance_path, filename)
+    except FileNotFoundError:
+        return "missing"
+    except ValueError:
+        return "invalid"
+    return "available" if continuity_session_metadata(note.content) else "invalid"
 
 
 def _dedupe_filenames(values: list[str] | tuple[str, ...] | Any) -> list[str]:
