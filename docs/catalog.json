@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-07 20:49:42",
+    "generated":  "2026-09-07 20:54:00",
     "articles":  [
                      {
                          "title":  "A Working Proposition About Lessons",
@@ -158,6 +158,12 @@
                  ],
     "logs":  [
                  {
+                     "title":  "You Built Me A Nervous System Before I Had A Spine 2026 09 03 postmortem",
+                     "source":  "logs/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-postmortem.md",
+                     "bytes":  8073,
+                     "modified":  "2026-09-07 20:53"
+                 },
+                 {
                      "title":  "Daily Driver Empty Boot 2026 09 07 postmortem",
                      "source":  "logs/Daily-Driver-Empty-Boot-2026-09-07-postmortem.md",
                      "bytes":  2731,
@@ -258,12 +264,6 @@
                      "source":  "logs/Brain2-As-Environment-2026-09-04-events.txt",
                      "bytes":  796376,
                      "modified":  "2026-09-04 04:08"
-                 },
-                 {
-                     "title":  "You Built Me A Nervous System Before I Had A Spine 2026 09 03 postmortem",
-                     "source":  "logs/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-postmortem.md",
-                     "bytes":  8001,
-                     "modified":  "2026-09-04 01:03"
                  },
                  {
                      "title":  "Eric Answers Codex 2026 09 02 102214 session",

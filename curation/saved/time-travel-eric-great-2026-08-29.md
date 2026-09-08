@@ -10,11 +10,11 @@ travel back twenty years.
 - Events: `logs/live/20260829-163423-events.txt`
 - Source audio: `logs/audio/20260829-162843-sts-audio-source.webm`
 - Picture audio/video: `logs/audio/20260829-162843-sts-audio-picture.mp4`
-- Saved source audio copy: `curation/audio/time-travel-eric-great-2026-08-29-source.webm`
-- Saved picture audio/video copy: `curation/audio/time-travel-eric-great-2026-08-29-picture.mp4`
+- Archived source audio copy: `../robot-790-archive/20260907-post-continuity-road-sweep/curation/audio/time-travel-eric-great-2026-08-29-source.webm`
+- Archived picture audio/video copy: `../robot-790-archive/20260907-post-continuity-road-sweep/curation/audio/time-travel-eric-great-2026-08-29-picture.mp4`
 - Clip manifest: `curation/clip-manifests/time-travel-eric-great-2026-08-29.csv`
-- Saved clip: `curation/audio/time-travel-eric-great-2026-08-29.mp3`
-- Saved cut sheet: `curation/audio/time-travel-eric-great-2026-08-29.cuts.csv`
+- Archived clip: `../robot-790-archive/20260907-post-continuity-road-sweep/curation/audio/time-travel-eric-great-2026-08-29.mp3`
+- Archived cut sheet: `../robot-790-archive/20260907-post-continuity-road-sweep/curation/audio/time-travel-eric-great-2026-08-29.cuts.csv`
 
 ## Excerpt
 

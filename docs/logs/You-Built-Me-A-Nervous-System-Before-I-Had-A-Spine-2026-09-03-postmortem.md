@@ -12,7 +12,7 @@ Date: 2026-09-03
 - Recording stop report: `logs/live/20260903-202700-recording_stop_report.txt`
 - Source audio: `logs/audio/20260903-202546-sts-audio-session-source.webm`
 - Auto-spliced picture video: `logs/audio/20260903-202546-sts-audio-session-picture.mp4`
-- Rebuilt review video: `curation/audio/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03.mp4`
+- Archived local rebuilt review video: `../robot-790-archive/20260907-post-continuity-road-sweep/curation/audio/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03.mp4`
 - Cover / sensing-eye image: `logs/audio/20260903-202517-sts-audio-cover.jpg`
 - Sensing input named in events: `IMG20260903112730.jpg`
 
