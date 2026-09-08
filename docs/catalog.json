@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-08 13:12:45",
+    "generated":  "2026-09-08 14:04:55",
     "articles":  [
                      {
                          "title":  "Teaching Eric\u0027s Mouth To Speak",
@@ -506,6 +506,21 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Mouth Design",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Mouth Design.mp4",
+                      "preview":  "media/previews/Mouth Design.jpg",
+                      "banner_rank":  45,
+                      "bytes":  19289469,
+                      "date":  "2026-09-08 13:24",
+                      "published":  "2026-09-08 13:24",
+                      "published_sort":  "20260908132442",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-08 13:35",
+                      "description":  "An eleven-minute screen recording of the Mouth Design continuation: Scott gives Eric a nine-state viseme reference, Eric generates and critiques three open-mouth candidates, and each candidate is moved into Sensing Eye for comparison. The useful second half is an inspectable image-memory test: saved eye notes for v1 and v2 are reopened, then the older Daisied Electra artifact is deliberately placed into the current eye. The run keeps the boundary visible: STS can preserve and reopen visual artifacts with provenance, while Eric\u0027s spoken reading of an image still needs fresh grounding."
+                  },
                   {
                       "title":  "Daily Driver",
                       "kind":  "video",
