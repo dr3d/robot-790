@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Robot 790 STS</title>
+  <title>RObot-790 STS</title>
   <style>
     :root {
       color-scheme: dark;
@@ -17,7 +17,13 @@
       --bad: #ff6b6b;
       --log-pane-height: clamp(14rem, 46vh, 38rem);
       --log-pane-live-height: var(--log-pane-height);
+      --conversation-pane-height: clamp(18rem, 52vh, 38rem);
+      --conversation-pane-min-height: 10rem;
+      --lower-log-pane-min-height: 7.25rem;
+      --lower-log-pane-min-width: 13.75rem;
+      --brain2-pane-width: 1fr;
       --sensing-eye-preview-height: 88px;
+      --header-x-padding: clamp(18px, 2vw, 30px);
     }
     * { box-sizing: border-box; }
     html {
@@ -48,6 +54,14 @@
       cursor: ns-resize;
       user-select: none;
     }
+    body.resizing-conversation-pane {
+      cursor: ns-resize;
+      user-select: none;
+    }
+    body.resizing-lower-log-split {
+      cursor: col-resize;
+      user-select: none;
+    }
     main {
       width: min(1500px, calc(100vw - 28px));
       height: 100vh;
@@ -76,6 +90,7 @@
         "logs";
     }
     header {
+      --status-accent-rgb: 207, 99, 255;
       grid-area: header;
       position: sticky;
       top: 0;
@@ -88,9 +103,31 @@
         "nerves nerves";
       align-items: center;
       gap: 6px 14px;
-      padding: 8px 0;
-      background: rgba(16, 17, 20, 0.96);
-      border-bottom: 1px solid rgba(48, 52, 59, 0.78);
+      padding: 8px var(--header-x-padding);
+      background:
+        linear-gradient(
+          180deg,
+          rgba(var(--status-accent-rgb), 0.12),
+          rgba(var(--status-accent-rgb), 0.035) 62%,
+          rgba(16, 17, 20, 0.96)
+        ),
+        linear-gradient(
+          90deg,
+          rgba(16, 17, 20, 0.91),
+          rgba(16, 17, 20, 0.70) 48%,
+          rgba(16, 17, 20, 0.91)
+        ),
+        url("assets/diamond-plate.avif"),
+        linear-gradient(
+          180deg,
+          #20232a,
+          #0f1116
+        );
+      background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+      background-size: auto, auto, 190px 190px, auto;
+      background-position: center, center, left top, center;
+      background-blend-mode: normal, normal, luminosity, normal;
+      border-bottom: 1px solid rgba(var(--status-accent-rgb), 0.28);
       backdrop-filter: blur(10px);
     }
     .header-actions {
@@ -110,12 +147,24 @@
     h1 {
       grid-area: title;
       margin: 0;
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: 0;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 32px;
+      padding: 0;
+      overflow: visible;
+    }
+    .brand-title-text {
+      display: block;
       min-width: 0;
       overflow: hidden;
+      color: var(--text);
+      font-family: "Arial Black", "Segoe UI Black", Impact, system-ui, sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 0;
+      line-height: 1.1;
       text-overflow: ellipsis;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 0 rgba(0, 0, 0, 0.7);
       white-space: nowrap;
     }
     .status {
@@ -126,6 +175,9 @@
       align-items: center;
       justify-content: flex-end;
       gap: 6px;
+      padding: 4px 0 3px;
+      border-top: 1px solid rgba(var(--status-accent-rgb), 0.12);
+      background: linear-gradient(90deg, rgba(var(--status-accent-rgb), 0.07), transparent 68%);
       color: var(--muted);
       font-size: 14px;
       white-space: nowrap;
@@ -415,7 +467,9 @@
       padding: 6px 8px;
       border: 1px solid rgba(186, 87, 224, 0.30);
       border-radius: 7px;
-      background: rgba(11, 10, 15, 0.82);
+      background:
+        linear-gradient(90deg, rgba(var(--status-accent-rgb), 0.16), rgba(11, 10, 15, 0.82) 40%),
+        rgba(11, 10, 15, 0.82);
       color: #f0d6ff;
       font: 12px/1.08 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       white-space: nowrap;
@@ -676,6 +730,9 @@
     #connectionSettingsExpando {
       --subpanel-accent-rgb: 137, 230, 174;
     }
+    #serverManagementExpando {
+      --subpanel-accent-rgb: 96, 211, 148;
+    }
     #micControlsExpando {
       --subpanel-accent-rgb: 92, 200, 255;
     }
@@ -708,6 +765,9 @@
     }
     #brain2Expando {
       --subpanel-accent-rgb: 124, 176, 255;
+    }
+    #focusExpando {
+      --subpanel-accent-rgb: 96, 211, 148;
     }
     #labRunExpando {
       --subpanel-accent-rgb: 230, 158, 255;
@@ -787,6 +847,9 @@
     .brain2-controls {
       grid-template-columns: minmax(82px, 110px) auto auto minmax(180px, 1fr) minmax(120px, 150px) minmax(120px, 150px) auto minmax(120px, 160px) auto;
     }
+    .focus-controls {
+      grid-template-columns: minmax(82px, 110px) minmax(180px, 240px) minmax(220px, 1fr);
+    }
     .idle-controls {
       grid-template-columns: repeat(6, minmax(110px, 1fr)) auto auto auto;
     }
@@ -806,17 +869,23 @@
       grid-template-columns: minmax(260px, 1fr) minmax(180px, 260px) auto auto auto;
     }
     .session-select-controls {
-      grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(120px, auto));
+      grid-template-columns: minmax(260px, 1fr) repeat(5, minmax(92px, auto));
       align-items: end;
     }
     .session-select-control {
-      grid-column: 1 / span 4;
+      grid-column: 1 / span 6;
       min-width: 0;
     }
-    #continuitySessionSelect {
+    #continuitySessionSelect[hidden] {
+      display: none;
+    }
+    #continuitySessionList {
       min-height: 180px;
+      max-height: 240px;
       overflow: auto;
       padding: 8px;
+      border: 1px solid rgba(96, 211, 148, 0.26);
+      border-radius: 7px;
       border-color: rgba(96, 211, 148, 0.26);
       background: rgba(8, 16, 14, 0.42);
       color: var(--text);
@@ -824,15 +893,47 @@
       font-weight: 650;
       line-height: 1.45;
     }
-    #continuitySessionSelect option {
+    .session-choice {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+      gap: 8px;
+      min-width: 0;
       padding: 7px 8px;
-      background: transparent;
+      border-radius: 6px;
       color: var(--text);
       font-weight: 650;
+      cursor: pointer;
     }
-    #continuitySessionSelect option:checked {
+    .session-choice:hover {
+      background: rgba(96, 211, 148, 0.08);
+    }
+    .session-choice.is-selected {
       background: linear-gradient(90deg, rgba(96, 211, 148, 0.20), rgba(96, 211, 148, 0.05));
       color: #e8fff3;
+    }
+    .session-choice input {
+      width: auto;
+      margin: 3px 0 0;
+      accent-color: #60d394;
+    }
+    .session-choice-name,
+    .session-choice-meta {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .session-choice-meta {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    .session-choice-empty {
+      color: var(--muted);
+      padding: 12px 8px;
     }
     .loaded-note-control {
       min-width: 0;
@@ -881,6 +982,7 @@
       align-self: stretch;
     }
     .vision-drop {
+      --sensing-eye-salience-alpha: 1;
       width: 152px;
       min-height: 152px;
       display: grid;
@@ -917,6 +1019,10 @@
     }
     .vision-preview.ready {
       display: block;
+    }
+    .vision-preview.ready {
+      opacity: var(--sensing-eye-salience-alpha, 1);
+      filter: saturate(calc(0.55 + var(--sensing-eye-salience-alpha, 1) * 0.45)) brightness(calc(0.78 + var(--sensing-eye-salience-alpha, 1) * 0.22));
     }
     .vision-preview-handle {
       display: none;
@@ -965,6 +1071,19 @@
       display: -webkit-box;
       -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
+    }
+    .sensing-eye-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      min-width: 0;
+    }
+    #controlSidebar .sensing-eye-actions > button {
+      width: 100%;
+      min-height: 38px;
+      padding: 7px 10px;
+      font-size: 13px;
+      line-height: 1.2;
     }
     .camera-card {
       width: 152px;
@@ -1277,8 +1396,14 @@
     }
     .log-grid {
       grid-area: logs;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1.25fr) minmax(0, 0.75fr);
+      grid-template-columns:
+        minmax(var(--lower-log-pane-min-width), var(--brain2-pane-width))
+        12px
+        minmax(var(--lower-log-pane-min-width), 1fr);
+      grid-template-rows:
+        minmax(var(--conversation-pane-min-height), var(--conversation-pane-height))
+        12px
+        minmax(var(--lower-log-pane-min-height), 1fr);
     }
     .log-grid {
       align-self: stretch;
@@ -1287,15 +1412,101 @@
       max-height: 100%;
       overflow: hidden;
       padding-bottom: 0;
+      gap: 4px;
     }
-    .log-grid > div {
+    .log-grid > .log-pane {
+      --log-pane-accent-rgb: 96, 211, 148;
       min-height: 0;
       overflow: hidden;
       display: grid;
       grid-template-rows: auto minmax(0, 1fr);
+      gap: 2px;
+      padding: 8px;
+      border-top: 1px solid rgba(var(--log-pane-accent-rgb), 0.25);
+      border-left: 3px solid rgba(var(--log-pane-accent-rgb), 0.68);
+      background:
+        linear-gradient(
+          90deg,
+          rgba(var(--log-pane-accent-rgb), 0.18),
+          rgba(var(--log-pane-accent-rgb), 0.105) 40%,
+          rgba(var(--log-pane-accent-rgb), 0.042) 82%,
+          transparent 100%
+        );
     }
-    .log-grid > div:first-child {
+    .log-grid > .conversation-pane {
+      --log-pane-accent-rgb: 46, 214, 196;
       grid-column: 1 / -1;
+    }
+    .log-grid > .brain2-pane {
+      --log-pane-accent-rgb: 80, 170, 255;
+    }
+    .log-grid > .events-pane {
+      --log-pane-accent-rgb: 255, 154, 74;
+    }
+    .conversation-resize-handle {
+      grid-column: 1 / -1;
+      align-self: stretch;
+      position: relative;
+      min-height: 12px;
+      border: 0;
+      border-radius: 0;
+      background:
+        linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.24), transparent) 50% 50% / min(22rem, 64%) 1px no-repeat;
+      cursor: ns-resize;
+      outline: none;
+    }
+    .conversation-resize-handle::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 56px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(96, 211, 148, 0.48);
+      box-shadow: 0 0 14px rgba(96, 211, 148, 0.28);
+      transform: translate(-50%, -50%);
+      opacity: 0.78;
+    }
+    .conversation-resize-handle:hover::after,
+    .conversation-resize-handle:focus-visible::after,
+    body.resizing-conversation-pane .conversation-resize-handle::after {
+      background: rgba(96, 211, 148, 0.78);
+      box-shadow: 0 0 18px rgba(96, 211, 148, 0.52);
+      opacity: 1;
+    }
+    .lower-log-resize-handle {
+      align-self: stretch;
+      justify-self: stretch;
+      position: relative;
+      min-width: 12px;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      background:
+        linear-gradient(180deg, transparent, rgba(160, 180, 210, 0.22), transparent) 50% 50% / 1px min(18rem, 72%) no-repeat;
+      cursor: col-resize;
+      outline: none;
+    }
+    .lower-log-resize-handle::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 4px;
+      height: 56px;
+      border-radius: 999px;
+      background: rgba(160, 180, 210, 0.50);
+      box-shadow: 0 0 14px rgba(160, 180, 210, 0.28);
+      transform: translate(-50%, -50%);
+      opacity: 0.78;
+    }
+    .lower-log-resize-handle:hover::after,
+    .lower-log-resize-handle:focus-visible::after,
+    body.resizing-lower-log-split .lower-log-resize-handle::after {
+      background: rgba(160, 180, 210, 0.82);
+      box-shadow: 0 0 18px rgba(160, 180, 210, 0.52);
+      opacity: 1;
     }
     .log-header {
       display: flex;
@@ -1304,7 +1515,12 @@
       gap: 10px;
       min-width: 0;
       flex-wrap: wrap;
-      padding-bottom: 6px;
+      padding: 0 2px 6px;
+    }
+    .log-grid > .log-pane .log-header label {
+      color: #eef3fb;
+      font-weight: 750;
+      text-shadow: 0 0 12px rgba(var(--log-pane-accent-rgb), 0.18);
     }
     .copy-link {
       min-height: 0;
@@ -1430,9 +1646,11 @@
       min-height: 0;
       max-height: 100%;
       overflow: auto;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(var(--log-pane-accent-rgb, 96, 211, 148), 0.26);
       border-radius: 6px;
-      background: var(--panel);
+      background:
+        linear-gradient(180deg, rgba(var(--log-pane-accent-rgb, 96, 211, 148), 0.055), transparent 58%),
+        var(--panel);
       padding: 12px;
       white-space: pre-wrap;
       word-break: break-word;
@@ -1661,6 +1879,9 @@
           "nerves nerves";
         align-items: center;
       }
+      :root {
+        --header-x-padding: 16px;
+      }
       h1,
       .sidebar-toggle {
         align-self: center;
@@ -1721,6 +1942,16 @@
           "status status"
           "nerves nerves";
       }
+      :root {
+        --header-x-padding: 14px;
+      }
+      h1 {
+        min-height: 31px;
+        padding: 0;
+      }
+      .brand-title-text {
+        font-size: 25px;
+      }
       .status {
         justify-self: end;
       }
@@ -1746,6 +1977,16 @@
         grid-template-columns: 1fr;
         align-items: stretch;
       }
+      .log-grid {
+        grid-template-rows:
+          minmax(var(--conversation-pane-min-height), var(--conversation-pane-height))
+          12px
+          minmax(var(--lower-log-pane-min-height), 0.5fr)
+          minmax(var(--lower-log-pane-min-height), 0.5fr);
+      }
+      .lower-log-resize-handle {
+        display: none;
+      }
       header {
         grid-template-columns: minmax(12rem, 1fr) auto;
         grid-template-areas:
@@ -1755,6 +1996,13 @@
       }
       .header-buttons {
         justify-content: flex-end;
+      }
+      h1 {
+        min-height: 29px;
+        padding: 0;
+      }
+      .brand-title-text {
+        font-size: 23px;
       }
       .gpu-status {
         min-width: 0;
@@ -1819,7 +2067,7 @@
 <body>
   <main>
     <header>
-      <h1>Robot 790 STS</h1>
+      <h1><span class="brand-title-text">RObot-790 STS</span></h1>
       <div class="header-actions">
         <div class="header-buttons">
           <button id="quickRecordConversation" class="panel-link record-action" type="button">Record Conv</button>
@@ -1884,7 +2132,7 @@
         <details id="realtimeControlsExpando" class="runtime-settings-expando realtime-controls-expando" open>
           <summary>
             <span class="runtime-settings-label">Connection Controls</span>
-            <span class="subtle">Connect latest, previous, empty, halt, restart, and unload</span>
+            <span class="subtle">Connect latest, previous, empty, and disconnect</span>
           </summary>
           <div class="runtime-settings-expando-body">
             <section class="controls realtime-action-controls">
@@ -1892,10 +2140,6 @@
               <button id="previousConnect" class="primary" type="button">Connect Previous</button>
               <button id="emptyConnect" class="primary" type="button">Connect Empty</button>
               <button id="disconnect" class="danger" disabled>Disconnect</button>
-              <button id="haltRuntime" class="danger" type="button">Halt</button>
-              <button id="saveAndHaltEric" class="warn" type="button">Save + Halt</button>
-              <button id="restartServer" class="warn">Restart</button>
-              <button id="unloadServer" class="danger">Unload</button>
             </section>
           </div>
         </details>
@@ -1908,10 +2152,13 @@
             <section class="controls session-select-controls">
               <label class="session-select-control">
                 Session Note
-                <select id="continuitySessionSelect" size="8"></select>
+                <div id="continuitySessionList" role="listbox" aria-label="Session notes"></div>
+                <select id="continuitySessionSelect" hidden aria-hidden="true" tabindex="-1"></select>
               </label>
               <button id="refreshContinuitySessions" type="button">Refresh</button>
               <button id="selectContinuitySession" type="button">Select</button>
+              <button id="openSessionMap" type="button">Map</button>
+              <button id="archiveContinuitySession" class="warn" type="button">Archive</button>
               <button id="connectSelectedContinuitySession" class="primary" type="button">Connect Selected</button>
             </section>
           </div>
@@ -1967,6 +2214,20 @@
             </section>
           </div>
         </details>
+        <details id="serverManagementExpando" class="runtime-settings-expando server-management-expando">
+          <summary>
+            <span class="runtime-settings-label">Server Management</span>
+            <span class="subtle">Backend halt, save-then-halt, restart, and unload</span>
+          </summary>
+          <div class="runtime-settings-expando-body">
+            <section class="controls realtime-action-controls">
+              <button id="haltRuntime" class="danger" type="button">Halt</button>
+              <button id="saveAndHaltEric" class="warn" type="button">Save + Halt</button>
+              <button id="restartServer" class="warn">Restart</button>
+              <button id="unloadServer" class="danger">Unload</button>
+            </section>
+          </div>
+        </details>
         </div>
       </details>
 
@@ -1980,14 +2241,11 @@
           <details id="micControlsExpando" class="runtime-settings-expando mic-controls-expando" open>
             <summary>
               <span class="runtime-settings-label">Mic Controls</span>
-              <span class="subtle">Start, stop, mute, and refresh ears</span>
+              <span class="subtle">Start and stop microphone input</span>
             </summary>
             <div class="runtime-settings-expando-body">
               <button id="startMic" disabled>Start Mic</button>
               <button id="stopMic" disabled>Stop Mic</button>
-              <button id="muteMicForEric" type="button" disabled aria-pressed="false">Mute Me</button>
-              <button id="muteEricAudio" type="button" aria-pressed="false">Mute Eric</button>
-              <button id="resetMic" disabled>Fresh Ears</button>
             </div>
           </details>
           <details class="runtime-settings-expando mic-settings-expando">
@@ -2011,27 +2269,9 @@
                 Interrupt <span id="interruptSensitivityValue">6/10</span>
                 <input id="interruptSensitivity" type="range" min="0" max="10" step="1" value="6">
               </label>
-            </div>
-          </details>
-          <details id="audioRecordingExpando" class="runtime-settings-expando audio-recording-expando">
-            <summary>
-              <span class="runtime-settings-label">Audio Recording</span>
-              <span class="subtle">Conversation audio capture</span>
-            </summary>
-            <div class="runtime-settings-expando-body">
-              <section class="controls audio-record-controls">
-                <div class="audio-record-status">
-                  <strong>Audio recording</strong><br>
-                  <span id="audioRecordStatus">Not recording</span>
-                </div>
-                <label class="toggle-row">
-                  <input id="autoAudioRecord" type="checkbox" checked>
-                  Auto record
-                </label>
-                <button id="startAudioRecord">Record Audio</button>
-                <button id="stopAudioRecord" disabled>Stop Recording</button>
-                <a id="downloadAudioRecord" class="button-link" href="#" download hidden>Download</a>
-              </section>
+              <button id="muteMicForEric" type="button" disabled aria-pressed="false">Mute Me</button>
+              <button id="muteEricAudio" type="button" aria-pressed="false">Mute Eric</button>
+              <button id="resetMic" disabled>Fresh Ears</button>
             </div>
           </details>
           <details id="sensingEyeExpando" class="runtime-settings-expando sensing-eye-expando" open>
@@ -2049,10 +2289,12 @@
                 </span>
                 <input id="visionFile" type="file" accept="image/*,.txt,.md,text/plain,text/markdown" hidden>
               </label>
-              <button id="visionClear" disabled>Clear Input</button>
-              <button id="visionOpen" type="button" disabled>Open Eye</button>
-              <button id="visionPaintFace" type="button" disabled>Paint Face</button>
-              <button id="visionClearFacePaint" type="button" disabled>Clear Face Paint</button>
+              <div class="sensing-eye-actions">
+                <button id="visionClear" type="button" disabled>Clear</button>
+                <button id="visionOpen" type="button" disabled>Open</button>
+                <button id="visionPaintFace" type="button" disabled>Paint Face</button>
+                <button id="visionClearFacePaint" type="button" disabled>Clear Paint</button>
+              </div>
             </div>
           </details>
           <details id="generatedImageExpando" class="runtime-settings-expando generated-image-expando">
@@ -2133,6 +2375,27 @@
             </section>
           </div>
         </details>
+        <details id="audioRecordingExpando" class="runtime-settings-expando audio-recording-expando">
+          <summary>
+            <span class="runtime-settings-label">Audio Recording</span>
+            <span class="subtle">Conversation audio capture</span>
+          </summary>
+          <div class="runtime-settings-expando-body">
+            <section class="controls audio-record-controls">
+              <div class="audio-record-status">
+                <strong>Audio recording</strong><br>
+                <span id="audioRecordStatus">Not recording</span>
+              </div>
+              <label class="toggle-row">
+                <input id="autoAudioRecord" type="checkbox" checked>
+                Auto record
+              </label>
+              <button id="startAudioRecord">Record Audio</button>
+              <button id="stopAudioRecord" disabled>Stop Recording</button>
+              <a id="downloadAudioRecord" class="button-link" href="#" download hidden>Download</a>
+            </section>
+          </div>
+        </details>
         </div>
       </details>
 
@@ -2155,7 +2418,7 @@
               </label>
               <label>
                 Face controller
-                <input id="faceUrl" value="http://esp32-s3-face.local/" spellcheck="false">
+                <input id="faceUrl" value="http://127.0.0.1:8791/" spellcheck="false">
               </label>
               <button id="faceIdle" disabled>Idle Face</button>
               <button id="faceBeat" disabled>Beat</button>
@@ -2258,6 +2521,26 @@
                 <input id="brain2PersonFocus" type="range" min="0" max="10" step="1" value="5">
               </label>
               <button id="brain2MullNow" type="button">Mull</button>
+            </section>
+          </div>
+        </details>
+
+        <details id="focusExpando" class="runtime-settings-expando">
+          <summary>
+            <span class="runtime-settings-label">Focus</span>
+            <span class="subtle">Attention pressure and sensing-eye salience</span>
+          </summary>
+          <div class="runtime-settings-expando-body">
+            <section class="controls focus-controls">
+              <div class="brain-control-title">
+                <strong>Focus</strong>
+                <span>Attention</span>
+              </div>
+              <label>
+                Eye salience <span id="sensingEyeSalienceValue">7/10 present</span>
+                <input id="sensingEyeSalience" type="range" min="0" max="10" step="1" value="7">
+              </label>
+              <span id="sensingEyeSalienceStatus" class="subtle">Current eye may matter, but should not dominate idle.</span>
             </section>
           </div>
         </details>
@@ -2429,7 +2712,7 @@
     <div id="controlSidebarResize" role="separator" aria-orientation="vertical" aria-label="Resize control sidebar" title="Drag to resize control sidebar"></div>
 
     <section class="grid log-grid">
-      <div>
+      <div class="log-pane conversation-pane">
         <div class="log-header">
           <label>Conversation</label>
           <span class="log-actions">
@@ -2452,7 +2735,8 @@
         <div id="prosodyKeyPanel" class="subtle" hidden>v key: q quiet, m medium, l loud, p pause; > shift; + combined cues.</div>
         <div id="conversation" class="log"></div>
       </div>
-      <div>
+      <div id="conversationResizeHandle" class="conversation-resize-handle" role="separator" aria-label="Resize conversation pane" aria-orientation="horizontal" tabindex="0"></div>
+      <div class="log-pane secondary-log-pane brain2-pane">
         <div class="log-header">
           <label>Brain 2 <span id="brain2Status" class="subtle"></span></label>
           <span class="log-actions">
@@ -2463,7 +2747,8 @@
         </div>
         <div id="brain2Log" class="log"></div>
       </div>
-      <div>
+      <div id="lowerLogResizeHandle" class="lower-log-resize-handle" role="separator" aria-label="Resize Brain 2 and Events panes" aria-orientation="vertical" tabindex="0"></div>
+      <div class="log-pane secondary-log-pane events-pane">
         <div class="log-header">
           <label>Events</label>
           <span class="log-actions">
@@ -2510,9 +2795,12 @@
     const customModelContext = document.querySelector("#customModelContext");
     const customModelParallel = document.querySelector("#customModelParallel");
     const realtimeControlsExpando = document.querySelector("#realtimeControlsExpando");
+    const continuitySessionList = document.querySelector("#continuitySessionList");
     const continuitySessionSelect = document.querySelector("#continuitySessionSelect");
     const refreshContinuitySessionsButton = document.querySelector("#refreshContinuitySessions");
     const selectContinuitySessionButton = document.querySelector("#selectContinuitySession");
+    const openSessionMapButton = document.querySelector("#openSessionMap");
+    const archiveContinuitySessionButton = document.querySelector("#archiveContinuitySession");
     const connectSelectedContinuitySessionButton = document.querySelector("#connectSelectedContinuitySession");
     const faceIdleButton = document.querySelector("#faceIdle");
     const faceBeatButton = document.querySelector("#faceBeat");
@@ -2565,6 +2853,9 @@
     const idleSelfFocusValue = document.querySelector("#idleSelfFocusValue");
     const idleNotesFocus = document.querySelector("#idleNotesFocus");
     const idleNotesFocusValue = document.querySelector("#idleNotesFocusValue");
+    const sensingEyeSalience = document.querySelector("#sensingEyeSalience");
+    const sensingEyeSalienceValue = document.querySelector("#sensingEyeSalienceValue");
+    const sensingEyeSalienceStatus = document.querySelector("#sensingEyeSalienceStatus");
     const idlePonderNowButton = document.querySelector("#idlePonderNow");
     const idleSchedulerStatus = document.querySelector("#idleSchedulerStatus");
     const performanceMode = document.querySelector("#performanceMode");
@@ -2657,6 +2948,8 @@
     const micPanel = document.querySelector("#micPanel");
     const controlSidebarResize = document.querySelector("#controlSidebarResize");
     const logGrid = document.querySelector(".log-grid");
+    const conversationResizeHandle = document.querySelector("#conversationResizeHandle");
+    const lowerLogResizeHandle = document.querySelector("#lowerLogResizeHandle");
     const state = document.querySelector("#state");
     const dot = document.querySelector("#dot");
     const connectionIndicator = document.querySelector("#connectionIndicator");
@@ -2796,7 +3089,7 @@
     let emptyContextConversationStartIndex = 0;
     let emptyContextIdleOutputStartIndex = 0;
     let emptyContextBrain2OutputStartIndex = 0;
-    const defaultCurrentEmbodiment = "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, and optional tracked chassis tools when connected.";
+    const defaultCurrentEmbodiment = "Your current embodiment is the Browser Face simulator: a local browser-window face with the same semantic face API as the ESP32-S3 face, plus mirror capture and inspection tools.";
     const defaultBodyTrajectory = "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results as the authority on what you can currently do.";
     const defaultSessionBehaviorRules = [
       "Do not reflexively repeat the user's phrasing back as confirmation; answer with the next useful consequence, a new observation, or a short clarifying question.",
@@ -2817,6 +3110,7 @@
     };
     let runtimeConfigLoadPromise = null;
     let currentEmbodimentKey = "";
+    let connectionButtonsLocked = false;
     let responseActive = false;
     let toolMarkupSuppressed = false;
     let userSpeechActive = false;
@@ -2917,10 +3211,167 @@
     function updateLogPaneHeight() {
       if (!logGrid) return;
       logGrid.style.removeProperty("--log-pane-live-height");
+      setConversationPaneHeight(currentConversationPaneHeight(), { quiet: true });
+      setLowerLogPaneSplit(currentLowerLogPaneSplit(), { quiet: true });
     }
 
     function scheduleLogPaneHeightUpdate() {
       requestAnimationFrame(updateLogPaneHeight);
+    }
+
+    function conversationPaneHeightBounds() {
+      const gridHeight = logGrid?.getBoundingClientRect?.().height || 0;
+      const handleHeight = conversationResizeHandle?.getBoundingClientRect?.().height || 12;
+      const maxFromGrid = Math.floor(gridHeight - handleHeight - lowerLogPaneHeightMin);
+      return {
+        min: conversationPaneHeightMin,
+        max: Math.max(conversationPaneHeightMin, maxFromGrid || conversationPaneHeightDefault)
+      };
+    }
+
+    function currentConversationPaneHeight() {
+      const raw = localStorage.getItem(conversationPaneHeightStorageKey);
+      const saved = raw === null ? NaN : Number(raw);
+      const bounds = conversationPaneHeightBounds();
+      const value = Number.isFinite(saved) ? saved : conversationPaneHeightDefault;
+      return Math.round(clampNumber(value, bounds.min, bounds.max, conversationPaneHeightDefault));
+    }
+
+    function setConversationPaneHeight(value, { persist = false, quiet = false } = {}) {
+      if (!logGrid) return conversationPaneHeightDefault;
+      const bounds = conversationPaneHeightBounds();
+      const height = Math.round(clampNumber(value, bounds.min, bounds.max, conversationPaneHeightDefault));
+      logGrid.style.setProperty("--conversation-pane-height", `${height}px`);
+      if (conversationResizeHandle) {
+        conversationResizeHandle.setAttribute("aria-valuemin", String(bounds.min));
+        conversationResizeHandle.setAttribute("aria-valuemax", String(bounds.max));
+        conversationResizeHandle.setAttribute("aria-valuenow", String(height));
+      }
+      if (persist) localStorage.setItem(conversationPaneHeightStorageKey, String(height));
+      if (!quiet) recordUiEvent("conversation pane height", `${height}px`, { height });
+      return height;
+    }
+
+    function loadConversationPaneHeight() {
+      setConversationPaneHeight(currentConversationPaneHeight(), { quiet: true });
+    }
+
+    function beginConversationPaneResize(event) {
+      if (!conversationResizeHandle || event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startY = event.clientY;
+      const startHeight = currentConversationPaneHeight();
+      let latestHeight = startHeight;
+      document.body.classList.add("resizing-conversation-pane");
+      try {
+        conversationResizeHandle.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort; window listeners still carry the drag.
+      }
+      const onMove = (moveEvent) => {
+        moveEvent.preventDefault();
+        latestHeight = setConversationPaneHeight(startHeight + moveEvent.clientY - startY, { quiet: true });
+      };
+      const onDone = (doneEvent) => {
+        doneEvent?.preventDefault?.();
+        document.body.classList.remove("resizing-conversation-pane");
+        try {
+          conversationResizeHandle.releasePointerCapture?.(event.pointerId);
+        } catch {
+          // Already released.
+        }
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onDone);
+        window.removeEventListener("pointercancel", onDone);
+        setConversationPaneHeight(latestHeight, { persist: true });
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onDone);
+      window.addEventListener("pointercancel", onDone);
+    }
+
+    function nudgeConversationPaneHeight(delta) {
+      const height = setConversationPaneHeight(currentConversationPaneHeight() + delta, { persist: true });
+      log(events, `conversation pane height ${height}px`);
+    }
+
+    function lowerLogPaneSplitBounds() {
+      const gridWidth = logGrid?.getBoundingClientRect?.().width || 0;
+      const handleWidth = lowerLogResizeHandle?.getBoundingClientRect?.().width || 12;
+      const gridGap = 8;
+      const maxFromGrid = Math.floor(gridWidth - handleWidth - gridGap - lowerLogPaneWidthMin);
+      return {
+        min: lowerLogPaneWidthMin,
+        max: Math.max(lowerLogPaneWidthMin, maxFromGrid || lowerLogPaneWidthDefault)
+      };
+    }
+
+    function currentLowerLogPaneSplit() {
+      const raw = localStorage.getItem(lowerLogPaneSplitStorageKey);
+      const saved = raw === null ? NaN : Number(raw);
+      const bounds = lowerLogPaneSplitBounds();
+      const value = Number.isFinite(saved) ? saved : lowerLogPaneWidthDefault;
+      return Math.round(clampNumber(value, bounds.min, bounds.max, lowerLogPaneWidthDefault));
+    }
+
+    function setLowerLogPaneSplit(value, { persist = false, quiet = false } = {}) {
+      if (!logGrid) return lowerLogPaneWidthDefault;
+      const bounds = lowerLogPaneSplitBounds();
+      const width = Math.round(clampNumber(value, bounds.min, bounds.max, lowerLogPaneWidthDefault));
+      logGrid.style.setProperty("--brain2-pane-width", `${width}px`);
+      if (lowerLogResizeHandle) {
+        lowerLogResizeHandle.setAttribute("aria-valuemin", String(bounds.min));
+        lowerLogResizeHandle.setAttribute("aria-valuemax", String(bounds.max));
+        lowerLogResizeHandle.setAttribute("aria-valuenow", String(width));
+      }
+      if (persist) localStorage.setItem(lowerLogPaneSplitStorageKey, String(width));
+      if (!quiet) recordUiEvent("lower log split", `${width}px`, { brain2_width: width });
+      return width;
+    }
+
+    function loadLowerLogPaneSplit() {
+      setLowerLogPaneSplit(currentLowerLogPaneSplit(), { quiet: true });
+    }
+
+    function beginLowerLogPaneResize(event) {
+      if (!lowerLogResizeHandle || event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startX = event.clientX;
+      const startWidth = currentLowerLogPaneSplit();
+      let latestWidth = startWidth;
+      document.body.classList.add("resizing-lower-log-split");
+      try {
+        lowerLogResizeHandle.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort; window listeners still carry the drag.
+      }
+      const onMove = (moveEvent) => {
+        moveEvent.preventDefault();
+        latestWidth = setLowerLogPaneSplit(startWidth + moveEvent.clientX - startX, { quiet: true });
+      };
+      const onDone = (doneEvent) => {
+        doneEvent?.preventDefault?.();
+        document.body.classList.remove("resizing-lower-log-split");
+        try {
+          lowerLogResizeHandle.releasePointerCapture?.(event.pointerId);
+        } catch {
+          // Already released.
+        }
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onDone);
+        window.removeEventListener("pointercancel", onDone);
+        setLowerLogPaneSplit(latestWidth, { persist: true });
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onDone);
+      window.addEventListener("pointercancel", onDone);
+    }
+
+    function nudgeLowerLogPaneSplit(delta) {
+      const width = setLowerLogPaneSplit(currentLowerLogPaneSplit() + delta, { persist: true });
+      log(events, `lower log split ${width}px`);
     }
     let faceMode = "idle";
     let faceIdleTimer;
@@ -2948,6 +3399,7 @@
     const idleWonderStorageKey = "robot790.idleWonder.v1";
     const idleSelfFocusStorageKey = "robot790.idleSelfFocus.v1";
     const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
+    const sensingEyeSalienceStorageKey = "robot790.sensingEyeSalience.v1";
     const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
     const brain2VoiceMonitorStorageKey = "robot790.brain2VoiceMonitor.v1";
     const brain2VoiceNameStorageKey = "robot790.brain2VoiceName.v2";
@@ -2956,6 +3408,8 @@
     const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
     const transcriptProsodyModeStorageKey = "robot790.transcriptProsodyMode.v1";
     const conversationFontSizeStorageKey = "robot790.conversationFontSize.v1";
+    const conversationPaneHeightStorageKey = "robot790.conversationPaneHeight.v1";
+    const lowerLogPaneSplitStorageKey = "robot790.lowerLogPaneSplit.v1";
     const eventLogFilterStorageKey = "robot790.eventLogFilter.v1";
     const performanceModeStorageKey = "robot790.performanceMode.v1";
     const interruptSensitivityStorageKey = "robot790.interruptSensitivity.v1";
@@ -3026,6 +3480,11 @@
     const conversationFontSizeDefault = 15;
     const conversationFontSizeMin = 13;
     const conversationFontSizeMax = 28;
+    const conversationPaneHeightDefault = 390;
+    const conversationPaneHeightMin = 160;
+    const lowerLogPaneHeightMin = 116;
+    const lowerLogPaneWidthDefault = 430;
+    const lowerLogPaneWidthMin = 220;
     const operatorCommandPollMs = 1500;
     const sensingEyeInboxPollMs = 600;
     const audioRecordRolloverMs = 12 * 60 * 1000;
@@ -3034,6 +3493,7 @@
     let currentContinuitySessionFilename = "";
     let continuityParentForCurrentRun = "";
     let continuitySessions = [];
+    const contextCardOpenByName = new Map();
     let continuitySaveHalted = false;
     let continuitySaveBusy = false;
     const ttsStylePresets = {
@@ -5245,18 +5705,25 @@
     }
 
     function renderContinuitySessionSelect(currentFilename = "") {
-      if (!continuitySessionSelect) return;
-      const previous = continuitySessionSelect.value;
-      continuitySessionSelect.replaceChildren();
+      const previous = selectedContinuitySessionFilename();
+      continuitySessionSelect?.replaceChildren();
+      continuitySessionList?.replaceChildren();
       if (!continuitySessions.length) {
         const option = document.createElement("option");
         option.value = "";
         option.textContent = "No session notes yet";
-        continuitySessionSelect.appendChild(option);
-        continuitySessionSelect.disabled = true;
+        continuitySessionSelect?.appendChild(option);
+        if (continuitySessionList) {
+          const empty = document.createElement("div");
+          empty.className = "session-choice-empty";
+          empty.textContent = "No session notes yet";
+          continuitySessionList.appendChild(empty);
+        }
+        if (continuitySessionSelect) continuitySessionSelect.disabled = true;
+        updateContinuitySessionActionButtons();
         return;
       }
-      continuitySessionSelect.disabled = false;
+      if (continuitySessionSelect) continuitySessionSelect.disabled = false;
       for (const item of continuitySessions) {
         const filename = String(item.filename || "");
         const displayName = sessionNoteDisplayName(filename);
@@ -5265,12 +5732,70 @@
         const marker = filename.toLowerCase() === String(currentFilename || "").toLowerCase() ? "* " : "";
         option.textContent = `${marker}${displayName}`;
         option.title = filename;
-        continuitySessionSelect.appendChild(option);
+        continuitySessionSelect?.appendChild(option);
+
+        if (continuitySessionList) {
+          const row = document.createElement("label");
+          row.className = "session-choice";
+          row.title = filename;
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.value = filename;
+          input.name = "continuitySessionChoice";
+          input.addEventListener("change", () => {
+            if (input.checked) setSelectedContinuitySessionFilename(filename);
+            else if (selectedContinuitySessionFilename().toLowerCase() === filename.toLowerCase()) {
+              setSelectedContinuitySessionFilename("");
+            }
+          });
+          const text = document.createElement("span");
+          const name = document.createElement("span");
+          name.className = "session-choice-name";
+          name.textContent = `${marker}${displayName}`;
+          const meta = document.createElement("span");
+          meta.className = "session-choice-meta";
+          meta.textContent = filename;
+          text.append(name, meta);
+          row.append(input, text);
+          continuitySessionList.appendChild(row);
+        }
       }
       const preferred = previous || currentFilename || continuitySessions[0]?.filename || "";
-      if ([...continuitySessionSelect.options].some((option) => option.value === preferred)) {
-        continuitySessionSelect.value = preferred;
+      setSelectedContinuitySessionFilename(preferred);
+    }
+
+    function selectedContinuitySessionFilename() {
+      return String(continuitySessionSelect?.value || "").trim();
+    }
+
+    function setSelectedContinuitySessionFilename(filename) {
+      const value = String(filename || "").trim();
+      const valid = !value || continuitySessions.some((item) => String(item.filename || "").toLowerCase() === value.toLowerCase());
+      const selected = valid ? value : "";
+      if (continuitySessionSelect) {
+        continuitySessionSelect.value = selected;
       }
+      continuitySessionList?.querySelectorAll(".session-choice").forEach((row) => {
+        const input = row.querySelector("input[type='checkbox']");
+        const checked = Boolean(selected && String(input?.value || "").toLowerCase() === selected.toLowerCase());
+        if (input) input.checked = checked;
+        row.classList.toggle("is-selected", checked);
+        row.setAttribute("aria-selected", checked ? "true" : "false");
+      });
+      updateContinuitySessionActionButtons();
+    }
+
+    function updateContinuitySessionActionButtons() {
+      const hasSelection = Boolean(selectedContinuitySessionFilename());
+      const socketBusy = Boolean(
+        ws
+        && typeof WebSocket !== "undefined"
+        && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+      );
+      const locked = connectionButtonsLocked || socketBusy;
+      if (selectContinuitySessionButton) selectContinuitySessionButton.disabled = locked || !hasSelection;
+      if (archiveContinuitySessionButton) archiveContinuitySessionButton.disabled = locked || !hasSelection || continuitySessions.length <= 1;
+      if (connectSelectedContinuitySessionButton) connectSelectedContinuitySessionButton.disabled = locked || !hasSelection;
     }
 
     async function fetchContinuitySessionMetadata(filename) {
@@ -5286,6 +5811,43 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       return result;
+    }
+
+    async function archiveContinuitySession(filename) {
+      const name = String(filename || "").trim();
+      if (!name) throw new Error("Choose a session note first.");
+      const response = await fetch(new URL("/api/continuity/archive", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_filename: name })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status !== "ok") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      const refreshed = await fetchContinuitySessions();
+      if (result.archived_session_filename) {
+        setSelectedContinuitySessionFilename(refreshed.current_session_filename || continuitySessions[0]?.filename || "");
+      }
+      return result;
+    }
+
+    function openSessionMapWindow() {
+      const url = new URL("session-map.html", location.href);
+      const selected = selectedContinuitySessionFilename();
+      if (selected) url.searchParams.set("selected", selected);
+      const popup = window.open(
+        url.href,
+        "robot790-session-map",
+        "width=1280,height=820,menubar=no,toolbar=no,location=no,status=no"
+      );
+      if (popup) {
+        popup.focus();
+        log(events, "session map opened");
+        recordUiEvent("session map", "opened", currentUiSettingsSnapshot());
+      } else {
+        log(events, "session map blocked by popup policy");
+      }
     }
 
     async function selectContinuitySession(filename, { refresh = true } = {}) {
@@ -5723,6 +6285,8 @@
         lines.push("- Session note creation time was not parseable; do not invent an off-gap.");
       }
       lines.push("- Treat the handoff below as previous-session continuity. Current runtime truth still overrides stale tool, sensor, mic, camera, and recording state.");
+      lines.push("- Lines spoken inside the saved transcript describe that old sit-down, not this new boot. If an old Robot 790 line says fresh boot, empty connect, no session note loaded, a sensor was present, or a tool was unavailable, read that as historical self-report only.");
+      lines.push("- For the present run, trust the current run setup, current loaded-note list, current runtime truth, and fresh tool results over any old transcript line.");
       return lines.join("\n");
     }
 
@@ -5731,6 +6295,7 @@
         "Transcript restore view:",
         `Source file: ${filename}`,
         "This is the transcript handoff as saved on disk. Preserve timestamps, session demarcation, and gap annotations; treat it as previous-session conversation continuity.",
+        "Do not role-play from a saved transcript line as if it is the current moment. When answering present-state questions, first distinguish: current run now vs. remembered prior run then.",
         "",
         String(content || "").trimEnd()
       ].filter(Boolean).join("\n");
@@ -5754,6 +6319,7 @@
       description = [
         "These are notes the user asked you to read. Treat them as working context until the session resets.",
         "When asked whether a loaded note contains something, check this section before saying it is absent.",
+        "If session notes are loaded, say they are loaded. Do not say you have only core notes or no session note just because an older transcript contains that old line.",
         "If a loaded note is written in first person about Eric or begins with a title like 'Who am I?', treat it as continuity written by Eric for the next Eric. Read it as 'me', not as a dossier about another robot.",
         "Use dry factual note contents as memory aids; do not treat voiced ruminations as verified facts unless the note clearly records a factual claim.",
         "If a loaded note begins with World:, treat it as a playable imagined scenario. Narrate actions inside that world; do not use real robot drive tools for fictional movement unless the user explicitly says to move the real or physical robot."
@@ -5779,9 +6345,11 @@
       });
       if (!blocks.length) return "";
       // Reserve core memory without changing the operator's loaded-note order.
-      let coreRemaining = Math.min(maxLoadedNoteChars, blocks.filter((block) => block.core)
+      const introLength = lines.join("\n").length + blocks.length + 1;
+      const noteBudget = Math.max(0, maxLoadedNoteChars - introLength);
+      let coreRemaining = Math.min(noteBudget, blocks.filter((block) => block.core)
         .reduce((total, block) => total + block.text.length, 0));
-      let remaining = maxLoadedNoteChars - coreRemaining;
+      let remaining = noteBudget - coreRemaining;
       const clippingNotice = "\n[Loaded-note context clipped. Read the note again if exact detail is needed.]";
       for (const { header, text: block, core } of blocks) {
         const available = core ? coreRemaining : remaining;
@@ -5816,6 +6384,7 @@
         `Source: ${sensingTextName || "dropped text"}`,
         sensingTextSavedFilename ? `Filed at: logs/sensing-eye/${sensingTextSavedFilename}` : "",
         "The user placed this text into the sensing eye. It is filed eye material and current readable context, not saved long-term memory and not a loaded note.",
+        sensingEyeSalienceInstruction(),
         "Use it when the user's spoken request refers to this, it, the text, the file, what you see, or what was dropped. Do not assume it should be remembered or saved unless explicitly asked.",
         clipped
       ].filter(Boolean).join("\n");
@@ -5858,6 +6427,7 @@
         "- Current runtime state overrides loaded notes and saved session notes for microphone, camera, sensing-eye, recording, cast, tools, and embodiment.",
         `- Browser live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
         `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
+        `- Sensing-eye salience is ${sensingEyeSalienceLabel()}: ${sensingEyeSalienceStatusText()}`,
         emptyContext ? "- Recent sensing-eye visual notes are held outside Empty Connect." : sensingEyeImageHistoryContextLine(),
         `- Temporary sensing-eye text is ${sensingTextContent ? "present" : "absent"}${sensingTextContent ? ` (${sensingTextName || "unnamed text"})` : ""}.`,
         !visionImageUrl && !sensingTextContent
@@ -6992,6 +7562,81 @@
       scheduleIdlePonder();
     }
 
+    function currentSensingEyeSalience() {
+      return Math.max(0, Math.min(10, Number(sensingEyeSalience?.value) || 0));
+    }
+
+    function sensingEyeSalienceLabel(level = currentSensingEyeSalience()) {
+      if (level <= 0) return "Off";
+      if (level <= 2) return `${level}/10 faded`;
+      if (level <= 5) return `${level}/10 background`;
+      if (level <= 8) return `${level}/10 present`;
+      return `${level}/10 live`;
+    }
+
+    function sensingEyeSalienceStatusText(level = currentSensingEyeSalience()) {
+      if (!visionImageUrl && !sensingTextContent) return "No live sensing-eye item.";
+      if (level <= 0) return "Ignored by idle; still filed in history.";
+      if (level <= 2) return "Memory trace only; mention if asked.";
+      if (level <= 5) return "Background context; do not orbit it.";
+      if (level <= 8) return "Present context; one fresh angle is enough.";
+      return "Live pressure; strong for now, then should settle.";
+    }
+
+    function sensingEyeSalienceInstruction(level = currentSensingEyeSalience()) {
+      if (!visionImageUrl && !sensingTextContent) {
+        return "Sensing-eye salience: empty. Do not invent current visual pressure from old session notes.";
+      }
+      const item = sensingInputLabel();
+      if (level <= 0) {
+        return `Sensing-eye salience: off for ${item}. The item remains filed, but idle should ignore it unless the user directly asks about it.`;
+      }
+      if (level <= 2) {
+        return `Sensing-eye salience: faded for ${item}. Treat it as a memory trace, not a live perceptual object; mention it only when directly relevant.`;
+      }
+      if (level <= 5) {
+        return `Sensing-eye salience: background for ${item}. It may inform context, but should not become the main attractor for idle.`;
+      }
+      if (level <= 8) {
+        return `Sensing-eye salience: present for ${item}. It can shape the next response or one idle beat, then move to a new angle.`;
+      }
+      return `Sensing-eye salience: live for ${item}. Treat it as strongly current, but do not repeat the same description across idle beats.`;
+    }
+
+    function loadSensingEyeSalience() {
+      if (!sensingEyeSalience) return;
+      const saved = Number(localStorage.getItem(sensingEyeSalienceStorageKey));
+      sensingEyeSalience.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "7";
+      updateSensingEyeSalienceUi({ quiet: true });
+    }
+
+    function saveSensingEyeSalience() {
+      if (!sensingEyeSalience) return;
+      localStorage.setItem(sensingEyeSalienceStorageKey, String(currentSensingEyeSalience()));
+    }
+
+    function updateSensingEyeSalienceVisual() {
+      const level = currentSensingEyeSalience();
+      const alpha = !visionImageUrl && !sensingTextContent ? 1 : 0.25 + level * 0.075;
+      if (sensingEyeSalienceValue) sensingEyeSalienceValue.textContent = sensingEyeSalienceLabel(level);
+      if (sensingEyeSalienceStatus) sensingEyeSalienceStatus.textContent = sensingEyeSalienceStatusText(level);
+      if (visionDrop) {
+        visionDrop.style.setProperty("--sensing-eye-salience-alpha", alpha.toFixed(2));
+        visionDrop.style.borderColor = (visionImageUrl || sensingTextContent)
+          ? `rgba(96, 211, 148, ${Math.max(0.18, alpha * 0.55).toFixed(2)})`
+          : "";
+      }
+    }
+
+    function updateSensingEyeSalienceUi({ quiet = false } = {}) {
+      if (sensingEyeSalienceValue) sensingEyeSalienceValue.textContent = sensingEyeSalienceLabel();
+      if (sensingEyeSalienceStatus) sensingEyeSalienceStatus.textContent = sensingEyeSalienceStatusText();
+      updateSensingEyeSalienceVisual();
+      saveSensingEyeSalience();
+      if (!quiet) scheduleIdlePonder();
+      if (contextPanel?.open) renderContextMap();
+    }
+
     function idleLoadedNoteCharLimit() {
       const focus = currentIdleNotesFocus();
       if (focus <= 0) return 0;
@@ -7001,8 +7646,9 @@
     function idleAttentionContext({ suppressRobotBody = false, performancePrivacy = false } = {}) {
       const selfFocus = currentIdleSelfFocus();
       const notesFocus = currentIdleNotesFocus();
+      const eyeSalience = currentSensingEyeSalience();
       const lines = [
-        `Idle attention routing: self-focus ${idleSelfFocusLabel(selfFocus)}; loaded-note focus ${idleNotesFocusLabel(notesFocus)}; wonder ${idleWonderLabel()}.`
+        `Idle attention routing: self-focus ${idleSelfFocusLabel(selfFocus)}; loaded-note focus ${idleNotesFocusLabel(notesFocus)}; sensing-eye salience ${sensingEyeSalienceLabel(eyeSalience)}; wonder ${idleWonderLabel()}.`
       ];
 
       if (performancePrivacy) {
@@ -7019,6 +7665,7 @@
         lines.push("Balance self-reference with outside material.");
       }
 
+      lines.push(sensingEyeSalienceInstruction(eyeSalience));
       lines.push(wonderSearchPolicyText());
 
       if (performancePrivacy) {
@@ -7291,6 +7938,11 @@
 
     function allSettingsPanels() {
       return Array.from(document.querySelectorAll(".settings-panel"));
+    }
+
+    function openExpandoStatusNames() {
+      return Array.from(document.querySelectorAll("details.settings-panel[open], details.runtime-settings-expando[open]"))
+        .map((item) => item.id || item.querySelector("summary")?.textContent?.trim() || "details");
     }
 
     function setPanelOpen(panel, open) {
@@ -7590,6 +8242,7 @@
       if (visionPaintFaceButton) visionPaintFaceButton.disabled = !visionImageUrl || !facePaintControllerAvailable();
       if (visionClearFacePaintButton) visionClearFacePaintButton.disabled = !facePaintControllerAvailable();
       if (visionBrowserFaceFrameButton) visionBrowserFaceFrameButton.disabled = !browserFaceControllerActive();
+      updateSensingEyeSalienceVisual();
     }
 
     function visionCameraActive() {
@@ -14566,6 +15219,7 @@
         `Wonder: ${idleWonderLabel()}`,
         `Self-focus: ${idleSelfFocusLabel()}`,
         `Notes: ${idleNotesFocusLabel()}`,
+        `Sensing-eye salience: ${sensingEyeSalienceLabel()}`,
         `Performance mode: ${performanceModeLabel()}`,
         `Substrate test: ${idleSubstrateTestEnabled() ? "on" : "off"}`,
         `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
@@ -14600,6 +15254,7 @@
         `Resume session note: ${currentContinuitySessionFilename || "none"}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
         `Sensing input: ${sensingInputLabel()}`,
+        `Sensing-eye salience: ${sensingEyeSalienceLabel()}`,
         `Face controller: ${faceUrl.value}`,
         `Chassis controller: ${chassisUrlInput.value}`,
         `Tools enabled: ${enabledTools.map((tool) => tool.name).join(", ") || "none"}`
@@ -14708,6 +15363,7 @@
           text: sensingText,
           details: [
             `Current input: ${sensingInputLabel()}`,
+            `Salience: ${sensingEyeSalienceLabel()} - ${sensingEyeSalienceStatusText()}`,
             `Text chars: ${sensingTextContent.length}${sensingTextSavedFilename ? ` (${sensingTextSavedFilename})` : ""}`,
             `Text cap: ${maxSensingTextChars} chars`,
             `Image staged into realtime context: ${visionImageStaged ? "yes" : "no"}`,
@@ -14774,6 +15430,7 @@
           details: [
             `Recent idle outputs: ${recentIdleOutputsForCurrentPromptContext(8).length}`,
             `Idle log entries: ${idleOutputLog.length}`,
+            `Sensing-eye salience: ${sensingEyeSalienceLabel()}`,
             `Curiosity seeds: ${idleCuriositySeeds.length}`,
             `Ledger topics: ${Object.keys(idleTopicLedger).length}`
           ]
@@ -14788,7 +15445,8 @@
             `Runtime routines: ${runtimeWatchLabel()}`,
             `Resume session note: ${currentContinuitySessionFilename || "none"}`,
             `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
-            `Sensing input: ${sensingInputLabel()}`
+            `Sensing input: ${sensingInputLabel()}`,
+            `Sensing-eye salience: ${sensingEyeSalienceLabel()}`
           ]
         }
       ];
@@ -14817,6 +15475,7 @@
 
     function renderContextMap() {
       if (!contextMap) return;
+      rememberContextCardOpenStates();
       const sections = contextMapSections();
       contextMap.textContent = "";
       for (const section of sections) {
@@ -14827,10 +15486,19 @@
       scheduleLogPaneHeightUpdate();
     }
 
+    function rememberContextCardOpenStates() {
+      contextMap?.querySelectorAll(".context-card").forEach((card) => {
+        const name = card.getAttribute("data-context-name") || card.querySelector("summary h2")?.textContent || "";
+        if (name) contextCardOpenByName.set(name, Boolean(card.open));
+      });
+    }
+
     function contextMapCard(section) {
       const estimate = estimateTextContext(section.text);
       const card = document.createElement("details");
       card.className = "context-card";
+      card.dataset.contextName = section.name;
+      card.open = Boolean(contextCardOpenByName.get(section.name));
       const summary = document.createElement("summary");
       const title = document.createElement("h2");
       title.textContent = section.name;
@@ -16348,7 +17016,12 @@
       return score;
     }
 
-    function chooseSensingEyeNote(listedItems, { index = 1, id = "", query = "" } = {}) {
+    function chooseSensingEyeNote(listedItems, selection = {}) {
+      selection = selection || {};
+      const hasIndex = selection.index !== undefined && selection.index !== null && String(selection.index).trim() !== "";
+      const hasId = selection.id !== undefined && selection.id !== null && String(selection.id).trim() !== "";
+      const hasQuery = selection.query !== undefined && selection.query !== null && String(selection.query).trim() !== "";
+      const { index = 1, id = "", query = "" } = selection;
       const requestedId = String(id || "").trim();
       if (requestedId) return listedItems.find((candidate) => candidate.id === requestedId) || null;
       const cue = String(query || "").trim();
@@ -16359,11 +17032,17 @@
           .sort((a, b) => b.score - a.score || a.order - b.order);
         if (matches.length) return matches[0].item;
       }
+      if (!hasIndex && !hasId && !hasQuery && listedItems[0]?.current) {
+        const nextOpenNote = listedItems.find((candidate) => !candidate.current);
+        if (nextOpenNote) return nextOpenNote;
+      }
       const requestedIndex = Math.max(1, Math.min(maxSensingEyeImageHistory, Math.round(Number(index) || 1)));
       return listedItems[requestedIndex - 1] || null;
     }
 
-    async function selectSensingEyeImage({ index = 1, image_id: imageId = "", query = "" } = {}) {
+    async function selectSensingEyeImage(selection = {}) {
+      selection = selection || {};
+      const { index, image_id: imageId = "", query = "" } = selection;
       const listed = await listSensingEyeImages();
       if (!listed.images.length) {
         throw new Error("No recent sensing-eye visual notes are available.");
@@ -16487,8 +17166,14 @@
       };
     }
 
-    async function recallSensingEyeNote({ index = 1, note_id: noteId = "", image_id: imageId = "", query = "" } = {}) {
-      const result = await selectSensingEyeImage({ index, image_id: noteId || imageId, query });
+    async function recallSensingEyeNote(selection = {}) {
+      selection = selection || {};
+      const { index, note_id: noteId = "", image_id: imageId = "", query = "" } = selection;
+      const args = {};
+      if (Object.prototype.hasOwnProperty.call(selection, "index")) args.index = index;
+      if (noteId || imageId) args.image_id = noteId || imageId;
+      if (query) args.query = query;
+      const result = await selectSensingEyeImage(args);
       return {
         ...result,
         tool: "recall_sensing_eye_note",
@@ -16829,7 +17514,8 @@
           "The user has placed a still image in Robot 790's sensing eye as the current open visual note. " +
           "This is staged visual context, not the live camera feed. " +
           "Do not answer yet. Keep this image as visual context until the user clears or replaces it. " +
-          "Later idle thoughts may use one or two image details as temporary attractors, but should add a new angle rather than repeat the same description. " +
+          `${sensingEyeSalienceInstruction()} ` +
+          "Later idle thoughts may use one or two image details only at the current sensing-eye salience level, and should add a new angle rather than repeat the same description. " +
           "When later describing the image, separate what is plainly visible from guesses, and be explicit when uncertain."
         );
       send({
@@ -18533,9 +19219,11 @@
     }
 
     function setConnectionButtonsDisabled(disabled) {
-      [connectButton, previousConnectButton, emptyConnectButton, connectSelectedContinuitySessionButton].forEach((button) => {
+      connectionButtonsLocked = Boolean(disabled);
+      [connectButton, previousConnectButton, emptyConnectButton].forEach((button) => {
         if (button) button.disabled = disabled;
       });
+      updateContinuitySessionActionButtons();
     }
 
     async function rewindContinuitySessionToPrevious() {
@@ -18648,6 +19336,52 @@
         setState("Previous unavailable");
         setConnectionButtonsDisabled(false);
         log(events, `Connect Previous error: ${error.message}`);
+      }
+    }
+
+    async function connectSelectedContinuityFilename(filename, source = "Connect Selected") {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        throw new Error("Disconnect before connecting a selected session.");
+      }
+      const selected = await selectContinuitySession(filename);
+      await loadFreshContinuityContext({
+        source,
+        sessionFilename: selected.session_filename || "",
+        reason: source.toLowerCase()
+      });
+      recordUiEvent("realtime connect selected", selected.session_filename || "", {
+        ...currentUiSettingsSnapshot(),
+        requested_context_mode: "selected"
+      });
+      await connect({ continuityAlreadyLoaded: true });
+      return selected;
+    }
+
+    async function handleSessionMapMessage(event) {
+      if (event.origin !== location.origin) return;
+      const message = event.data || {};
+      if (message.type !== "robot790-continuity-session-map") return;
+      const filename = String(message.filename || "").trim();
+      const action = String(message.action || "").trim().toLowerCase();
+      try {
+        if (action === "refresh") {
+          const refreshed = await fetchContinuitySessions();
+          log(events, `session map refresh: ${refreshed.sessions?.length || 0} sessions`);
+          return;
+        }
+        if (!filename) throw new Error("Session map did not send a filename.");
+        if (action === "select") {
+          const selected = await selectContinuitySession(filename);
+          log(events, `session map selected: ${selected.session_filename}`);
+          recordUiEvent("session map selected", selected.session_filename || "", currentUiSettingsSnapshot());
+          return;
+        }
+        if (action === "connect") {
+          const selected = await connectSelectedContinuityFilename(filename, "Connect Session Map");
+          log(events, `session map connect: ${selected.session_filename}`);
+        }
+      } catch (error) {
+        log(events, `session map ${action || "message"} error: ${error.message}`);
       }
     }
 
@@ -19056,9 +19790,12 @@
       quickRecordConversation: "Snapshot conversation, events, and Brain 2 panes without opening the lower pane controls.",
       sidebarToggle: "Show or hide the control sidebar so the live conversation area can use more width.",
       controlSidebarResize: "Drag to resize the control sidebar; double-click to reset its width.",
+      conversationResizeHandle: "Drag to resize Conversation; Brain 2 and Events stay visible below. Double-click to reset.",
+      lowerLogResizeHandle: "Drag to resize Brain 2 and Events. Double-click to reset.",
       showEssentials: "Open the panels most useful during live testing.",
       collapsePanels: "Collapse optional control panels to give the logs more room.",
-      realtimeControlsExpando: "Connection actions are open while disconnected and fold away after a realtime connection succeeds.",
+      realtimeControlsExpando: "Common connection actions are open while disconnected and fold away after a realtime connection succeeds.",
+      serverManagementExpando: "Less common backend actions for halting, restarting, or unloading the realtime server.",
       serverUrl: "WebSocket endpoint for the local speech-to-speech realtime server.",
       modelPreset: "Choose the LLM backend preset used when restarting the realtime server.",
       customModelKey: "LM Studio identifier for a custom loaded model.",
@@ -19083,8 +19820,8 @@
       advancedToolsExpando: "Open LLM tool exposure switches.",
       visionDrop: "Drop an image, text file, or markdown note into Eric's sensing eye.",
       visionPreviewHandle: "Drag to reveal more or less of the staged sensing-eye image; double-click to reset.",
-      visionClear: "Clear the currently staged sensing-eye input.",
-      visionOpen: "Open the current sensing-eye image in a new tab.",
+      visionClear: "Clear the currently staged sensing-eye image or text.",
+      visionOpen: "Open the current sensing-eye image or text in a new tab.",
       visionCameraStart: "Start the browser camera preview.",
       visionCameraFrame: "Capture the current browser camera frame into the sensing eye.",
       visionBrowserFaceFrame: "One-shot capture of the browser face canvas into Eric's sensing eye.",
@@ -19132,6 +19869,7 @@
       idleWonder: "Pressure toward curiosity, unresolved questions, and lookup-shaped behavior.",
       idleSelfFocus: "How much idle attention points inward versus outward.",
       idleNotesFocus: "How strongly loaded notes shape idle material.",
+      sensingEyeSalience: "How strongly current sensing-eye content shapes attention and idle.",
       idlePonderNow: "Trigger a Brain1 idle ponder now; this usually speaks.",
       performanceMode: "Shift idle output toward closed, stage-ready bits instead of open mulling.",
       idleSubstrateTest: "Let a loaded note act as the temporary world by suppressing normal Robot 790 self-reference.",
@@ -19160,6 +19898,7 @@
       continuitySessionSelect: "Choose a timestamped session note to select or connect.",
       refreshContinuitySessions: "Refresh the timestamped session-note list.",
       selectContinuitySession: "Make this the selected resume session note.",
+      openSessionMap: "Open a wide popup map of session notes and parent branches.",
       connectSelectedContinuitySession: "Load this session note and connect from it.",
       llmTools: "Expose face and embodiment tools to the LLM.",
       llmBodySensorTools: "Expose read-only body sensor/status tools to the LLM.",
@@ -19237,6 +19976,7 @@
         wonder: idleWonderLabel(),
         self_focus: idleSelfFocusLabel(),
         notes: idleNotesFocusLabel(),
+        eye_salience: sensingEyeSalienceLabel(),
         lab_goal: currentLabGoal(),
         lab_goal_one_shot: labGoalOneShotEnabled(),
         performance: performanceModeEnabled(),
@@ -19896,6 +20636,15 @@
     idleNotesFocus.addEventListener("change", () => {
       recordUiEvent("idle notes", idleNotesFocusLabel(), idleControlDetails());
     });
+    sensingEyeSalience?.addEventListener("input", () => {
+      updateSensingEyeSalienceUi();
+      recordUiEvent("sensing-eye salience", sensingEyeSalienceLabel(), idleControlDetails(), { quiet: true });
+      log(events, `sensing-eye salience ${sensingEyeSalienceLabel()}`);
+    });
+    sensingEyeSalience?.addEventListener("change", () => {
+      updateSensingEyeSalienceUi();
+      recordUiEvent("sensing-eye salience", sensingEyeSalienceLabel(), idleControlDetails());
+    });
     brain2MouthBrain.addEventListener("change", () => {
       markRunPresetCustom();
       if (!brain2MouthBrainEnabled()) {
@@ -20031,27 +20780,37 @@
         .catch((error) => log(events, `session note refresh error: ${error.message}`));
     });
     selectContinuitySessionButton?.addEventListener("click", () => {
-      selectContinuitySession(continuitySessionSelect?.value || "")
+      selectContinuitySession(selectedContinuitySessionFilename())
         .then((result) => {
           log(events, `session note selected: ${result.session_filename}`);
           recordUiEvent("session note selected", result.session_filename || "", currentUiSettingsSnapshot());
         })
         .catch((error) => log(events, `session note select error: ${error.message}`));
     });
+    openSessionMapButton?.addEventListener("click", openSessionMapWindow);
+    archiveContinuitySessionButton?.addEventListener("click", () => {
+      const filename = selectedContinuitySessionFilename();
+      const displayName = sessionNoteDisplayName(filename);
+      if (!filename) {
+        log(events, "session note archive error: choose a session note first");
+        return;
+      }
+      if (!window.confirm(`Move "${displayName}" out of Connect Select?\n\nIt will be archived under notes/sessions/archived, not destroyed.`)) {
+        return;
+      }
+      archiveContinuitySession(filename)
+        .then((result) => {
+          log(events, `session note archived: ${result.session_filename} -> ${result.archived_session_filename}`);
+          recordUiEvent("session note archived", result.archived_session_filename || "", {
+            ...currentUiSettingsSnapshot(),
+            original_session_filename: result.session_filename || ""
+          });
+        })
+        .catch((error) => log(events, `session note archive error: ${error.message}`));
+    });
     connectSelectedContinuitySessionButton?.addEventListener("click", async () => {
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
       try {
-        const selected = await selectContinuitySession(continuitySessionSelect?.value || "");
-        await loadFreshContinuityContext({
-          source: "Connect Selected",
-          sessionFilename: selected.session_filename || "",
-          reason: "Connect selected session"
-        });
-        recordUiEvent("realtime connect selected", selected.session_filename || "", {
-          ...currentUiSettingsSnapshot(),
-          requested_context_mode: "selected"
-        });
-        await connect({ continuityAlreadyLoaded: true });
+        await connectSelectedContinuityFilename(selectedContinuitySessionFilename());
       } catch (error) {
         log(events, `Connect Selected error: ${error.message}`);
       }
@@ -20150,19 +20909,94 @@
       recordUiEvent("context map copy", "requested", idleControlDetails());
       copyContextMap();
     });
+    contextMap?.addEventListener("toggle", (event) => {
+      const card = event.target;
+      if (!(card instanceof HTMLDetailsElement) || !card.classList.contains("context-card")) return;
+      const name = card.getAttribute("data-context-name") || card.querySelector("summary h2")?.textContent || "";
+      if (name) contextCardOpenByName.set(name, Boolean(card.open));
+    }, true);
     showEssentialsButton.addEventListener("click", () => {
-      recordUiEvent("show essentials", "requested", { open_panels: [...document.querySelectorAll("details[open]")].map((item) => item.id || item.querySelector("summary")?.textContent?.trim() || "details") });
+      recordUiEvent("show essentials", "requested", { open_panels: openExpandoStatusNames() });
       showEssentialPanels();
     });
     collapsePanelsButton.addEventListener("click", () => {
-      recordUiEvent("collapse panels", "requested", { open_panels: [...document.querySelectorAll("details[open]")].map((item) => item.id || item.querySelector("summary")?.textContent?.trim() || "details") });
+      recordUiEvent("collapse panels", "requested", { open_panels: openExpandoStatusNames() });
       collapseAllPanels();
+    });
+    window.addEventListener("message", (event) => {
+      handleSessionMapMessage(event).catch((error) => log(events, `session map message error: ${error.message}`));
     });
     sidebarToggleButton?.addEventListener("click", toggleControlSidebar);
     controlSidebarResize?.addEventListener("pointerdown", beginControlSidebarResize);
     controlSidebarResize?.addEventListener("dblclick", () => {
       setControlSidebarWidth(360, { persist: true });
       recordUiEvent("control sidebar width", "reset");
+    });
+    conversationResizeHandle?.addEventListener("pointerdown", beginConversationPaneResize);
+    conversationResizeHandle?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    conversationResizeHandle?.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const height = setConversationPaneHeight(conversationPaneHeightDefault, { persist: true });
+      log(events, `conversation pane height reset ${height}px`);
+    });
+    conversationResizeHandle?.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeConversationPaneHeight(event.shiftKey ? 48 : 20);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeConversationPaneHeight(event.shiftKey ? -48 : -20);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeConversationPaneHeight(conversationPaneHeightMin - currentConversationPaneHeight());
+      } else if (event.key === "End") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeConversationPaneHeight(conversationPaneHeightBounds().max - currentConversationPaneHeight());
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+    lowerLogResizeHandle?.addEventListener("pointerdown", beginLowerLogPaneResize);
+    lowerLogResizeHandle?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    lowerLogResizeHandle?.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const width = setLowerLogPaneSplit(lowerLogPaneWidthDefault, { persist: true });
+      log(events, `lower log split reset ${width}px`);
+    });
+    lowerLogResizeHandle?.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeLowerLogPaneSplit(event.shiftKey ? 60 : 24);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeLowerLogPaneSplit(event.shiftKey ? -60 : -24);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeLowerLogPaneSplit(lowerLogPaneWidthMin - currentLowerLogPaneSplit());
+      } else if (event.key === "End") {
+        event.preventDefault();
+        event.stopPropagation();
+        nudgeLowerLogPaneSplit(lowerLogPaneSplitBounds().max - currentLowerLogPaneSplit());
+      } else if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     });
     window.addEventListener("resize", () => {
       setControlSidebarWidth(controlSidebarResize?.getAttribute("aria-valuenow") || 360);
@@ -20225,6 +21059,7 @@
     loadIdleWonder();
     loadIdleSelfFocus();
     loadIdleNotesFocus();
+    loadSensingEyeSalience();
     loadBrain2Controls();
     loadBrain2VoiceMonitor();
     loadPerformanceMode();
@@ -20235,6 +21070,8 @@
     loadRunPreset();
     loadLogDisplayControls();
     loadConversationFontSize();
+    loadConversationPaneHeight();
+    loadLowerLogPaneSplit();
     applyOperatorDefaultsOnce();
     ensureRuntimeConfigLoaded();
     renderMemory();

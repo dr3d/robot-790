@@ -14,7 +14,7 @@
       --muted: #8fa2ad;
       --accent: #5eead4;
       --face-native-aspect: 0.75;
-      --face-touchscreen-x-scale: 1;
+      --face-touchscreen-x-scale: 0.9;
       --face-display-max-width: 720px;
     }
     * { box-sizing: border-box; }
@@ -931,13 +931,24 @@
         : "rgba(211, 218, 228, 0.88)";
       ctx.font = "900 18px ui-monospace, SFMono-Regular, Consolas, monospace";
       ctx.textAlign = "left";
-      let clippedStatus = statusLine || "tools: idle";
-      const maxStatusW = w - 28;
-      while (clippedStatus.length > 12 && ctx.measureText(clippedStatus).width > maxStatusW) {
-        clippedStatus = `${clippedStatus.slice(0, -2)}...`;
-      }
+      const clippedStatus = fitCanvasText(statusLine || "tools: idle", w - 28, 12);
       ctx.fillText(clippedStatus, x + 14, y + h + 23);
       ctx.restore();
+    }
+
+    function fitCanvasText(text, maxWidth, minLength = 8) {
+      let clipped = String(text || "");
+      if (!Number.isFinite(maxWidth) || maxWidth <= 0) return "";
+      if (ctx.measureText(clipped).width <= maxWidth) return clipped;
+      const floor = Math.max(1, Math.min(minLength, clipped.length));
+      while (clipped.length > floor && ctx.measureText(`${clipped}...`).width > maxWidth) {
+        clipped = clipped.slice(0, -1);
+      }
+      if (ctx.measureText(`${clipped}...`).width <= maxWidth) return `${clipped}...`;
+      while (clipped.length > 1 && ctx.measureText(`${clipped}...`).width > maxWidth) {
+        clipped = clipped.slice(0, -1);
+      }
+      return clipped ? `${clipped}...` : "";
     }
 
     function drawEllipse(x, y, rx, ry, fill, stroke = "", width = 1) {
@@ -2035,9 +2046,9 @@
       const cx = 360;
       const cy = faceLayout.statusY + faceLayout.statusH / 2 - 26;
       ctx.save();
-      // Keep the status nose deliberately taller than wide in the browser face.
+      // Keep the status nose as a compact oval in the browser face.
       const rimRy = 124;
-      const rimRx = 148 * 0.8;
+      const rimRx = 148 * 0.88;
       const glowLayers = [
         [42, 0.035],
         [30, 0.055],

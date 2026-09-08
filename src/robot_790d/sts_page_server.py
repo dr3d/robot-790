@@ -23,6 +23,7 @@ import httpx
 
 from robot_790d.brain_status import get_brain_status, get_gpu_status
 from robot_790d.continuity import (
+    archive_continuity_session,
     current_continuity_session,
     list_continuity_sessions,
     rewind_continuity_session,
@@ -40,8 +41,8 @@ AUDIO_RECORDING_URL_PREFIX = "/recorded-audio/"
 SENSING_EYE_IMAGE_URL_PREFIX = "/sensing-eye/"
 MIN_AUDIO_RECORDING_CHUNK_SECONDS = 30.0
 DEFAULT_CURRENT_EMBODIMENT = (
-    "Your current embodiment is a local ESP32-driven face: eye displays, mouth display, voice, "
-    "and optional tracked chassis tools when connected."
+    "Your current embodiment is the Browser Face simulator: a local browser-window face with the "
+    "same semantic face API as the ESP32-S3 face, plus mirror capture and inspection tools."
 )
 DEFAULT_BODY_TRAJECTORY = (
     "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results "
@@ -146,6 +147,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/continuity/select":
             self._handle_continuity_select()
+            return
+        if parsed.path == "/api/continuity/archive":
+            self._handle_continuity_archive()
             return
         if parsed.path == "/api/logs/record":
             self._handle_log_record()
@@ -362,6 +366,15 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             result = select_continuity_session(str(payload.get("session_filename") or payload.get("filename") or ""))
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_continuity_archive(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = archive_continuity_session(str(payload.get("session_filename") or payload.get("filename") or ""))
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return

@@ -6,11 +6,20 @@ const vm = require('node:vm');
 
 const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf8').replace(/\r\n/g, '\n');
 const facePage = fs.readFileSync(path.join(__dirname, '../web/face-sim/index.html'), 'utf8').replace(/\r\n/g, '\n');
+const sessionMapPage = fs.readFileSync(path.join(__dirname, '../web/sts/session-map.html'), 'utf8').replace(/\r\n/g, '\n');
+const runtimeConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/runtime.json'), 'utf8'));
 
 test('the shipped page scripts compile', () => {
   const scripts = Array.from(page.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/g), match => match[1]);
   assert.ok(scripts.length > 0);
   scripts.forEach((source, index) => new vm.Script(source, { filename: `sts-inline-${index}.js` }));
+});
+
+test('STS boots toward Browser Face as the default embodiment', () => {
+  assert.equal(runtimeConfig.default_embodiment, 'browser_face');
+  assert.match(runtimeConfig.current_embodiment, /Browser Face simulator/);
+  assert.match(page, /<input id="faceUrl" value="http:\/\/127\.0\.0\.1:8791\/"/);
+  assert.match(page, /defaultCurrentEmbodiment = "Your current embodiment is the Browser Face simulator:/);
 });
 
 test('Connect Previous follows the prior timestamped continuity session', () => {
@@ -21,6 +30,72 @@ test('Connect Previous follows the prior timestamped continuity session', () => 
   assert.match(page, /async function loadPreviousContinuityContext\(sessionFilename\)/);
   assert.match(page, /await loadCurrentContinuitySession\(\{ source: "Connect Previous", sessionFilename \}\)/);
   assert.match(page, /continuityParentForCurrentRun/);
+});
+
+test('Connect Select exposes one-item checklist management and archive', () => {
+  assert.match(page, /id="continuitySessionList" role="listbox"/);
+  assert.match(page, /<select id="continuitySessionSelect" hidden/);
+  assert.match(page, /id="openSessionMap"[^>]*>Map<\/button>/);
+  assert.match(page, /id="archiveContinuitySession"[^>]*>Archive<\/button>/);
+  assert.match(page, /function setSelectedContinuitySessionFilename\(filename\)/);
+  assert.match(page, /querySelectorAll\(['"]\.session-choice['"]\)/);
+  assert.match(page, /\/api\/continuity\/archive/);
+  assert.match(page, /function openSessionMapWindow\(\)/);
+  assert.match(page, /function handleSessionMapMessage\(event\)/);
+  assert.match(page, /robot790-continuity-session-map/);
+  assert.match(page, /const refreshed = await fetchContinuitySessions\(\)/);
+  assert.match(page, /notes\/sessions\/archived/);
+});
+
+test('session map page ships as a standalone chooser', () => {
+  assert.match(sessionMapPage, /RObot-790 Session Map/);
+  assert.match(sessionMapPage, /\/api\/continuity\/sessions/);
+  assert.match(sessionMapPage, /\/api\/continuity\/archive/);
+  assert.match(sessionMapPage, /robot790-continuity-session-map/);
+  const scripts = Array.from(sessionMapPage.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/g), match => match[1]);
+  assert.ok(scripts.length);
+  scripts.forEach((source, index) => new vm.Script(source, { filename: `session-map-inline-${index}.js` }));
+});
+
+test('Context Map cards keep their own open state out of panel status', () => {
+  assert.match(page, /const contextCardOpenByName = new Map\(\)/);
+  assert.match(page, /function rememberContextCardOpenStates\(\)/);
+  assert.match(page, /card\.dataset\.contextName = section\.name/);
+  assert.match(page, /card\.open = Boolean\(contextCardOpenByName\.get\(section\.name\)\)/);
+  assert.match(page, /function openExpandoStatusNames\(\)/);
+  assert.match(page, /details\.settings-panel\[open\], details\.runtime-settings-expando\[open\]/);
+  assert.doesNotMatch(page, /document\.querySelectorAll\("details\[open\]"\)/);
+});
+
+test('session restore wrapper marks old fresh-boot claims as stale', () => {
+  assert.match(page, /old Robot 790 line says fresh boot, empty connect, no session note loaded/);
+  assert.match(page, /trust the current run setup, current loaded-note list, current runtime truth/);
+  assert.match(page, /current run now vs\. remembered prior run then/);
+  assert.match(page, /Do not say you have only core notes or no session note just because an older transcript contains that old line/);
+});
+
+test('blank sensing-eye recall skips the already-current newest note', () => {
+  const context = loadFunctions(['sensingEyeNoteQueryScore', 'chooseSensingEyeNote'], {
+    maxSensingEyeImageHistory: 5,
+  });
+  const notes = [
+    { index: 1, id: 'eye-current', name: 'study.jpg', current: true },
+    { index: 2, id: 'eye-next', name: 'daisied-electra.jpg', current: false },
+    { index: 3, id: 'eye-old', name: 'sleeping-in-bed.jpg', current: false },
+  ];
+
+  assert.equal(context.chooseSensingEyeNote(notes).id, 'eye-next');
+  assert.equal(context.chooseSensingEyeNote(notes, { index: 1 }).id, 'eye-current');
+  assert.equal(context.chooseSensingEyeNote(notes, { query: 'sleeping' }).id, 'eye-old');
+});
+
+test('Robot Controls exposes sensing-eye salience focus dial', () => {
+  assert.match(page, /id="focusExpando"/);
+  assert.match(page, /id="sensingEyeSalience" type="range" min="0" max="10"/);
+  assert.match(page, /function sensingEyeSalienceInstruction/);
+  assert.match(page, /sensing-eye salience/);
+  assert.match(page, /Sensing-eye salience is/);
+  assert.match(page, /loadSensingEyeSalience\(\)/);
 });
 
 test('continuity pin receipts preserve every named dependency', () => {
@@ -410,6 +485,11 @@ test('browser face scripts compile', () => {
   const scripts = Array.from(facePage.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/g), match => match[1]);
   assert.ok(scripts.length);
   scripts.forEach(source => new vm.Script(source));
+});
+
+test('browser face status text clipping cannot grow in a render loop', () => {
+  assert.match(facePage, /function fitCanvasText\(text, maxWidth/);
+  assert.doesNotMatch(facePage, /while\s*\([^)]*measureText[\s\S]*?slice\(0,\s*-2\)[\s\S]*?\.\.\./);
 });
 
 for (const origin of ['http://127.0.0.1:8791', 'http://192.168.0.150:8791', 'https://192.168.0.150:8791', 'https://power:8791']) {

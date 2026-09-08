@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from robot_790d.note_files import (
+    delete_note_file,
     find_existing_note_path,
     list_note_files,
     read_note_file,
@@ -17,6 +18,7 @@ from robot_790d.note_files import (
 CONTINUITY_SESSION_HEADER = "STS Session Note"
 LEGACY_CONTINUITY_SESSION_HEADERS = ("Robot 790 Session Note", "Robot 790 Continuity Session")
 DEFAULT_CONTINUITY_SESSION_DIR = "sessions"
+ARCHIVED_CONTINUITY_SESSION_DIR = "sessions/archived"
 
 
 @dataclass(frozen=True)
@@ -115,6 +117,40 @@ def select_continuity_session(
         "parent_session_filename": metadata["parent_session_filename"],
         "pinned_notes": [_receipt_with_current_state(instance_path, receipt) for receipt in receipts],
         "created": metadata["created"],
+    }
+
+
+def archive_continuity_session(
+    session_filename: str,
+    instance_path: str | Path | None = None,
+) -> dict[str, object]:
+    filename = _normalize_session_filename(instance_path, session_filename)
+    if not filename:
+        raise ValueError("No session note filename was provided.")
+
+    sessions = list_continuity_sessions(instance_path)["sessions"]
+    active_filenames = {str(session["filename"]).lower() for session in sessions}
+    if filename.lower() not in active_filenames:
+        raise ValueError(f"{filename} is not an active session note.")
+    if len(sessions) <= 1:
+        raise ValueError("Cannot archive the only active session note.")
+
+    note = read_note_file(instance_path, filename)
+    metadata = continuity_session_metadata(note.content)
+    if not metadata:
+        raise ValueError(f"{note.filename} is not a session note.")
+
+    archived_filename = _unique_archived_session_filename(instance_path, note.filename)
+    archived = write_note_file(instance_path, archived_filename, note.content)
+    delete_note_file(instance_path, note.filename)
+    refreshed = list_continuity_sessions(instance_path)
+    return {
+        "status": "ok",
+        "tool": "archive_continuity_session",
+        "session_filename": note.filename,
+        "archived_session_filename": archived.filename,
+        "current_session_filename": refreshed["current_session_filename"],
+        "sessions": refreshed["sessions"],
     }
 
 
@@ -231,7 +267,7 @@ def format_continuity_session_note(
         "",
         "How This Run Got Here",
         "-----------------------",
-        f"- Loaded session note: {session_filename}",
+        f"- Saved session note: {session_filename}",
         f"- Parent session note: {parent_session_filename or 'none'}",
         "- Pinned notes expected at boot are listed below with save-time receipts.",
         "",
@@ -386,6 +422,22 @@ def _unique_continuity_session_filename(
         if not path.exists():
             return filename
     raise ValueError("Could not find an unused session-note filename.")
+
+
+def _unique_archived_session_filename(instance_path: str | Path | None, filename: str) -> str:
+    source_name = Path(str(filename).replace("\\", "/")).name
+    source_path = Path(source_name)
+    stem = source_path.stem or "session"
+    suffix = source_path.suffix or ".txt"
+    for extra in ["", *[f"-{index:02d}" for index in range(2, 100)]]:
+        candidate = f"{ARCHIVED_CONTINUITY_SESSION_DIR}/{stem}{extra}{suffix}"
+        try:
+            path = find_existing_note_path(candidate, instance_path)
+        except ValueError:
+            continue
+        if not path.exists():
+            return candidate
+    raise ValueError("Could not find an unused archived session-note filename.")
 
 
 def safe_note_folder(value: str) -> str:

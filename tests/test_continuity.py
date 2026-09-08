@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from robot_790d.continuity import (
+    archive_continuity_session,
     current_continuity_session,
     list_continuity_sessions,
     rewind_continuity_session,
@@ -128,3 +129,47 @@ def test_captioned_session_note_names_are_listed_and_selectable(tmp_path: Path) 
     assert captioned in [session["filename"] for session in sessions]
     selected = select_continuity_session(captioned, tmp_path)
     assert selected["session_filename"] == captioned
+
+
+def test_archive_continuity_session_moves_note_out_of_active_list(tmp_path: Path) -> None:
+    older = save_continuity_session(
+        "Session Demarcation\n-------------------\nOlder.",
+        [],
+        tmp_path,
+        created_label="9/7/2026, 4:00:00 PM",
+        filename_timestamp="20260907-160000",
+    )
+    newer = save_continuity_session(
+        "Session Demarcation\n-------------------\nNewer.",
+        [older["session_filename"]],
+        tmp_path,
+        parent_session_filename=older["session_filename"],
+        created_label="9/7/2026, 5:00:00 PM",
+        filename_timestamp="20260907-170000",
+    )
+
+    result = archive_continuity_session(newer["session_filename"], tmp_path)
+
+    assert result["session_filename"] == newer["session_filename"]
+    assert result["archived_session_filename"] == "sessions/archived/session-20260907-170000.txt"
+    assert read_note_file(tmp_path, result["archived_session_filename"]).content
+    sessions = list_continuity_sessions(tmp_path)["sessions"]
+    assert [session["filename"] for session in sessions] == [older["session_filename"]]
+    assert current_continuity_session(tmp_path)["session_filename"] == older["session_filename"]
+
+
+def test_archive_continuity_session_refuses_only_active_session(tmp_path: Path) -> None:
+    saved = save_continuity_session(
+        "Session Demarcation\n-------------------\nOnly.",
+        [],
+        tmp_path,
+        created_label="9/7/2026, 4:00:00 PM",
+        filename_timestamp="20260907-160000",
+    )
+
+    try:
+        archive_continuity_session(saved["session_filename"], tmp_path)
+    except ValueError as exc:
+        assert "only active session" in str(exc)
+    else:
+        raise AssertionError("Expected archiving the only active session to fail.")
