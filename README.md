@@ -93,7 +93,8 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
-- `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`.
+- `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
+  plus `session-map.html` for wide session-note selection and lineage preview.
 - `src/robot_790d`: Python helpers, local page APIs, realtime entrypoint
   patches, tools, memory, notes, weather, web search, Cast media, image
   generation, and smart-home proxy support.
@@ -161,6 +162,8 @@ voices, third-party code, and media assets carry their own licenses.
   images, audio, and video.
 - [Receipts And Open Questions](docs/evidence_map.md): working map of project
   observations, receipts, and open tests.
+- [Prosody And Mouth](docs/prosody-and-mouth.md): input prosody, transcript
+  tags, speech-mouth cues, and why those embodiment hints matter.
 - [Experimental Controls](docs/experimental_controls.md): STS run dials,
   interactions, and evolving presets for repeatable experiments.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,

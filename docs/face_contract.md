@@ -44,3 +44,8 @@ The generated files live in `config/face/generated/`. For now they are a
 checked-in contract and migration aid. The next step is wiring the browser and
 firmware tables to these generated outputs so new faces can inherit vocabulary
 and pose intent instead of becoming hand-copied forks.
+
+For the spoken-loop side of the face, see
+[`prosody-and-mouth.md`](prosody-and-mouth.md). That note covers input prosody,
+transcript tags, speech-mouth cues, and the way live mouth motion is blended
+into the expressive mouth contract.

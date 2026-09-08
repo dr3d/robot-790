@@ -89,6 +89,10 @@ feel like the world of the run.
 `Brain 2 mouth` allows the second lane to write short private asides to the
 mouth display. Brain 2 still does not get the speaking voice.
 
+`Transcript prosody` controls whether conversation snapshots include the
+operator's compact or full input-prosody tags. The mechanism and its limits are
+documented in [`prosody-and-mouth.md`](prosody-and-mouth.md).
+
 `Brain 2 voice` reads surfaced Brain 2 mouth lines through the browser's local
 speech-synthesis voice. This is a quiet monitor channel for the operator, not
 Eric's main spoken voice. Use `B2 voice` to pick a browser timbre and `B2
@@ -165,6 +169,33 @@ does not disconnect Eric.
 The intended invariant is simple: exits should leave logs, and any active
 recording should be saved when it is turned off. Save + Halt and Disconnect are
 special because they also write a new timestamped continuity session note.
+
+## Connect Select And Session Map
+
+`Connect Select` is the narrow in-panel chooser for session notes. It is useful
+for quick selection, quick archive, and ordinary daily operation.
+
+The `Map` button opens `web/sts/session-map.html`, a wider helper view for
+session-note work. The map shows the active session notes, a simple lineage
+graph from each note's `Parent session` receipt, and a preview of the selected
+note. It is meant for moments when long captions, forks, and older runs need
+room.
+
+The map can be used in two ways:
+
+- Opened from STS as a popup, it can send `Select In STS` or `Connect In STS`
+  back to the main tab.
+- Opened directly at `http://127.0.0.1:8790/session-map.html`, it still works
+  as an isolated read/preview surface, but it may not have an STS opener to
+  control.
+
+Archiving from the map uses the same backend action as the side panel: the note
+is moved under `notes/sessions/archived/` and removed from the active chooser.
+It is not destroyed.
+
+The map is not a second continuity system. It adds no secret state and no
+pointer file. It is only a visual/indexing helper over the existing session
+notes, filenames, timestamps, and parent-session receipts.
 
 `First contact` switches to stripped startup instructions. The selected
 creature seed plus the current conversation is the intended seed; optional

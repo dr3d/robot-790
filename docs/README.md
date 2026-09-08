@@ -27,7 +27,9 @@ opened directly as a `file://` URL.
 - `logs/`: curated public transcript excerpts, not raw private logs.
 - `media/`: compressed public images, audio, and video.
 - `context-engineering-architecture.md`: session-note, pinned-note, latest, and
-  runtime-truth architecture.
+  runtime-truth architecture, including the standalone session-map chooser.
+- `prosody-and-mouth.md`: input prosody, transcript tags, speech-mouth motion,
+  and why those cues help the live loop.
 - `evidence_map.md`: working map of project observations, receipts, and open
   tests.
 - `face_contract.md`: face vocabulary, skin inheritance, and renderer contract.

@@ -147,6 +147,46 @@ If there are no accepted conversation lines, Disconnect can close without
 writing a new session note. If the session-note write fails, Disconnect should
 not pretend the run was saved.
 
+## Session Map
+
+`web/sts/session-map.html` is a standalone operator helper for choosing,
+previewing, and understanding session notes.
+
+It exists because the right mental model is wider than the side panel. A
+session list is not only a dropdown; it is a small lineage map. If Scott loads
+an older Daily Driver note, talks, and disconnects, that creates a new child
+session from that point. If he later loads another older note and disconnects,
+that creates another branch. The graph does not create the branch. The saved
+session note and its `Parent session` line do.
+
+The map intentionally uses only the existing session-note substrate:
+
+- `/api/continuity/sessions` for the active note list,
+- `/api/notes/read` for the selected note preview,
+- `/api/continuity/select` for explicit selection,
+- `/api/continuity/archive` for moving notes out of the active selector.
+
+It does not add a database, pointer file, hidden bookmark, or alternate
+continuity state. The lineage graph is reconstructed from ordinary filenames
+and parent-session receipts already stored in each note.
+
+The main STS page has a `Map` button inside `Connect Select`. From there the
+operator can open the map as a popup. If the map was opened by STS, it can send
+messages back to the opener:
+
+- `Select In STS`: make the clicked session the selected resume note.
+- `Connect In STS`: ask STS to load and connect from the clicked session.
+- `Archive`: move the selected note under `notes/sessions/archived/`, then ask
+  STS to refresh its selector.
+
+If the page is opened directly, it still works as an isolated read/preview
+surface. In that mode there may be no opener to receive a selection message.
+
+The safety invariant is that `session-map.html` is a user helper, not the
+authority. The authority remains the session-note files and the continuity API.
+If the graph looks wrong, inspect the selected note's `Parent session` line
+first.
+
 ## What Gets Saved
 
 A session note should contain:
