@@ -1,0 +1,10 @@
+{
+  "created": "2026-09-08T13:14:17",
+  "filename": "20260908-131417-openai-eric-s-open-mouth-viseme-v2.png",
+  "provider": "openai",
+  "model": "gpt-image-1-mini",
+  "prompt": "A single robot mouth in a wide open \"OH\" viseme shape, but softer and more organic than the previous attempt. The opening is an oval wider than tall, not a perfect circle. The lips have subtle warm color—faint pinkish or coral tint on the upper and lower lip edges—so it reads as a face rather than metal hardware. No metallic rim, no space-hatch look. Instead: smooth rounded lip contours with gentle shading, a hint of upper lip curvature, slight downward curve at the corners so it looks like an expressive mouth mid-speech. Clean vector style on dark background, isolated mouth only, no eyes or nose.",
+  "revised_prompt": "",
+  "size": "1024x1024",
+  "quality": "low"
+}

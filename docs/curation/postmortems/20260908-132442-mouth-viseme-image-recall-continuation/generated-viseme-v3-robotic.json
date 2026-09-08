@@ -1,0 +1,10 @@
+{
+  "created": "2026-09-08T13:15:32",
+  "filename": "20260908-131532-openai-eric-s-open-mouth-viseme-v3-robotic.png",
+  "provider": "openai",
+  "model": "gpt-image-1-mini",
+  "prompt": "A single robot mouth in a wide open \"OH\" viseme shape, designed to look distinctly robotic rather than human. The opening is an oval wider than tall. The upper lip is nearly flat or only very slightly curved—minimal top-lip curve so it doesn't read as a human smile line. The lower lip has gentle curvature but not excessive. Clean geometric edges with subtle panel seams suggesting animatronic construction, but no metallic space-hatch look. Soft warm tint on the lip edges for readability against dark background. Isolated mouth only, no eyes or nose, centered in frame.",
+  "revised_prompt": "",
+  "size": "1024x1024",
+  "quality": "low"
+}

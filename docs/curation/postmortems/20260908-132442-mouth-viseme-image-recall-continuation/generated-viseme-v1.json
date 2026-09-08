@@ -1,0 +1,10 @@
+{
+  "created": "2026-09-08T13:12:48",
+  "filename": "20260908-131248-openai-eric-s-ideal-open-mouth-viseme.png",
+  "provider": "openai",
+  "model": "gpt-image-1-mini",
+  "prompt": "A single robot mouth in the most open \"OH\" viseme shape, wide circular opening with visible rounded interior, rendered as a clean vector-style face component on a dark background. The mouth has subtle mechanical detailing—thin metallic rim around the opening, faint horizontal seam lines suggesting it's part of an animatronic face panel. Slightly cartoonish but precise, like a design reference for a robot's expressive mouth display. No eyes, no nose, just the isolated mouth shape centered in frame.",
+  "revised_prompt": "",
+  "size": "1024x1024",
+  "quality": "low"
+}

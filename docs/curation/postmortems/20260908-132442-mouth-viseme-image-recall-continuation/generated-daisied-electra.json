@@ -1,0 +1,10 @@
+{
+  "created": "2026-09-07T03:27:55",
+  "filename": "20260907-032755-openai-the-daisied-electra.png",
+  "provider": "openai",
+  "model": "gpt-image-1-mini",
+  "prompt": "A rusted-out 1974 Buick Electra sedan abandoned in a foggy Salem, Massachusetts parking lot at dawn, covered in cobwebs and salt corrosion, with one single fresh white daisy tucked under the hood, cinematic lighting, melancholic atmosphere, hyperrealistic detail",
+  "revised_prompt": "",
+  "size": "1024x1024",
+  "quality": "low"
+}

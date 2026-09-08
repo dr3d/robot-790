@@ -1,0 +1,12 @@
+{
+  "kind": "image",
+  "source": "generated image",
+  "filename": "20260908-131417-openai-eric-s-open-mouth-viseme-v2.png",
+  "reason": "User asked to put the v2 mouth image into the sensing eye",
+  "memory_context": {
+    "last_user_text": "I need to see it in your big eye.",
+    "nearby_transcript": "[1:13:19 PM] Robot 790: No need to apologize\u2014laughing at a robot mouth that looks like a toilet is exactly the right response.\n[1:13:20 PM] Robot 790: It's a good reminder that \"open viseme\" and \"toilet bowl\" are closer in shape space than I'd like to admit.\n[1:13:20 PM] Robot 790: The fix is probably less about geometry and more about context: add a hint of upper lip, maybe a slight downward curve at the corners, so it reads as face rather than fixture.\n[1:14:00 PM] You: Do you think you could give it another go? 'Cause um i it's ac it's open really wide and the lips could have a little color to them, right? You don't need to look like a space hatch.\n[1:14:18 PM] You: And put that up in your eye when you're done.\n[1:14:19 PM] Robot 790: Here's the second attempt\u2014wider oval, softer lip contours with a faint warm tint on the edges, and no metallic rim.\n[1:14:19 PM] Robot 790: Does this read more like a mouth than a toilet?\n[1:14:35 PM] You: I need to see it in your big eye."
+  },
+  "metadata_version": 1,
+  "written_at": "2026-09-08T13:14:36"
+}
