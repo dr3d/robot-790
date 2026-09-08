@@ -12,7 +12,8 @@
     "article": "docs/articles/time-and-space-both-live.md",
     "audio_source": "docs/media/raw-video/Why_robots_need_physical_stakes_to_live.m4a"
   },
-  "cover_note": "Uses the existing Robot-embodiment image as an interim cover; replace it when the intended generated-image cover is available.",
+  "cover_source": "logs/generated-images/20260907-032857-openai-the-rainy-arcade.png",
+  "cover_note": "Uses the Rainy Arcade generated image: a neon cabinet alone in a wet night street.",
   "links": {
     "video": "https://dr3d.github.io/robot-790/media/videos/Time-And-Space-Both-Live-Listening-Companion.mp4",
     "media_shelf": "https://dr3d.github.io/robot-790/#media",

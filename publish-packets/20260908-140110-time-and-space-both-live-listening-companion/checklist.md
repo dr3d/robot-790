@@ -8,14 +8,13 @@
 - Audio source: retained locally at docs/media/raw-video/Why_robots_need_physical_stakes_to_live.m4a
 - Source article: docs/articles/time-and-space-both-live.md
 - Docs catalog: rebuilt before publication
-- Cover source: existing docs/media/images/Robot-embodiment.jpg used as an interim image
+- Cover source: logs/generated-images/20260907-032857-openai-the-rainy-arcade.png
 
 Review before posting:
 
 - Keep "listening companion" and "interpretation" in the platform copy.
 - Do not describe it as a live run, transcript, or independent evidence.
 - Mention NotebookLM only once as production provenance, not as the subject.
-- Replace the interim cover if the intended generated-image source is recovered.
 - Record any final platform URL in manifest.json after posting.
 
 Scott keeps final platform judgment. This packet is the tray, not the autoposter.

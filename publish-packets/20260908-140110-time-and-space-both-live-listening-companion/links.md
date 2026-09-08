@@ -9,3 +9,4 @@
 - Local cover: docs/media/previews/Time-And-Space-Both-Live-Listening-Companion.jpg
 - Local article: docs/articles/time-and-space-both-live.md
 - Local original audio: docs/media/raw-video/Why_robots_need_physical_stakes_to_live.m4a
+- Local cover source: logs/generated-images/20260907-032857-openai-the-rainy-arcade.png
