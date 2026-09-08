@@ -257,6 +257,24 @@ function Get-MediaDescription {
     return ""
 }
 
+function Get-MediaTitle {
+    param([string]$Source, [System.IO.FileInfo]$File)
+    if ($null -ne $mediaNotes) {
+        $candidates = @($Source, $File.Name)
+        foreach ($candidate in $candidates) {
+            $entry = $mediaNotes.PSObject.Properties[$candidate]
+            if (-not $entry -or $entry.Value -is [string]) {
+                continue
+            }
+            $title = $entry.Value.PSObject.Properties["title"]
+            if ($title -and $title.Value) {
+                return ([string]$title.Value).Trim()
+            }
+        }
+    }
+    return Get-FriendlyMediaTitle $File
+}
+
 function Get-MediaArtifactMoment {
     param([string]$Source, [System.IO.FileInfo]$File)
 
@@ -380,7 +398,7 @@ if ($mediaSearchDirs.Count -gt 0) {
             $mediaDate = $moment.value
             $description = Get-MediaDescription $source $_
             $item = [ordered]@{
-                title = Get-FriendlyMediaTitle $_
+                title = Get-MediaTitle $source $_
                 kind = $kind
                 role = $role
                 source = $source

@@ -102,8 +102,12 @@ test('public catalog shelves carry canonical publication times and sort newest f
 test('media metadata preserves the current recording time when a filename is reused', () => {
   const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
   const dailyDriver = catalog.media.find(item => item.source === 'media/videos/Daily-Driver.mp4');
+  const listeningCompanion = catalog.media.find(
+    item => item.source === 'media/videos/Time-And-Space-Both-Live-Listening-Companion.mp4',
+  );
   assert.equal(dailyDriver.published, '2026-09-07 19:02');
   assert.equal(dailyDriver.published_source, 'metadata');
+  assert.equal(listeningCompanion.title, 'Time And Space, Both Live: A Listening Companion');
 });
 
 test('public page sorts every shelf using canonical publication time', () => {

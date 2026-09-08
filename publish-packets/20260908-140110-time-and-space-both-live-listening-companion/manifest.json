@@ -1,0 +1,45 @@
+{
+  "id": "20260908-140110-time-and-space-both-live-listening-companion",
+  "title": "Time And Space, Both Live: A Listening Companion",
+  "date": "2026-09-08",
+  "duration_seconds": 1346,
+  "status": "draft",
+  "posture": "listening companion, interpretation not live-run evidence, mechanism-visible, no consciousness claim",
+  "provenance": "Audio generated through NotebookLM from the article Time And Space, Both Live. It is a companion interpretation, not a transcript or a primary run artifact.",
+  "assets": {
+    "video": "docs/media/videos/Time-And-Space-Both-Live-Listening-Companion.mp4",
+    "cover": "docs/media/previews/Time-And-Space-Both-Live-Listening-Companion.jpg",
+    "article": "docs/articles/time-and-space-both-live.md",
+    "audio_source": "docs/media/raw-video/Why_robots_need_physical_stakes_to_live.m4a"
+  },
+  "cover_note": "Uses the existing Robot-embodiment image as an interim cover; replace it when the intended generated-image cover is available.",
+  "links": {
+    "video": "https://dr3d.github.io/robot-790/media/videos/Time-And-Space-Both-Live-Listening-Companion.mp4",
+    "media_shelf": "https://dr3d.github.io/robot-790/#media",
+    "article": "https://dr3d.github.io/robot-790/articles/time-and-space-both-live.md",
+    "project": "https://dr3d.github.io/robot-790/",
+    "github": "https://github.com/dr3d/robot-790"
+  },
+  "platforms": {
+    "youtube": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "instagram": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "reddit": {
+      "ready": true,
+      "posted": false,
+      "url": ""
+    },
+    "github_docs": {
+      "ready": true,
+      "posted": false,
+      "url": "https://dr3d.github.io/robot-790/#media"
+    }
+  }
+}
