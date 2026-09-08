@@ -1,0 +1,97 @@
+STS Session Note
+============================
+Created: 2026-09-08T01:24:40-04:00
+Session note: sessions/20260908-012440-bedtime-image-eye-facepaint-continuity-check.txt
+Parent session: sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt
+
+Use
+---
+This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.
+The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth.
+
+How This Run Got Here
+-----------------------
+- Saved session note: sessions/20260908-012440-bedtime-image-eye-facepaint-continuity-check.txt
+- Parent session note: sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt
+- Pinned notes expected at boot are listed below with save-time receipts.
+
+Pinned Context At Save
+-----------------------
+- sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt
+  26031 chars | sha256:11d21a7f5986776e935f2a52c0f1dd00f596550603a54df375f6bd30e57fd469
+- sessions/20260908-004235-stale-fresh-boot-restore-confusion.txt
+  5650 chars | sha256:e24cdb44e8715878c56b2878d3ef6806580c04e6c51d2025edb67000e490cd37
+- sessions/20260908-001758-remembered-image-reload-sensing-eye-switch.txt
+  16921 chars | sha256:c719d6308153d24fd992023381d456ec738666a09fdca8cbfe9be36200ef93af
+- sessions/20260907-232827-standing-joke-routine-archive-check.txt
+  8139 chars | sha256:a05e11af81a76a6d4f694431a6dac6e20093112cb4d5e462afbfd57232161110
+- sessions/20260907-175329-daily-driver-empty-boot.txt
+  15202 chars | sha256:72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f
+- core/scott_profile_summary.txt
+  1737 chars | sha256:19bdce7cf7f3fd09046b46f70f785bd92eebedea51d0accdea836f906e8eae11
+- boot_eric.txt
+  12076 chars | sha256:e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e
+- get_go.txt
+  993 chars | sha256:2ae1d588545a7dfea98c5df97b60abbb99199837e294352b68f0f25f30e1cfe0
+- core/erics_memories.txt
+  42 chars | sha256:f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177
+
+Session Demarcation
+-------------------
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / kv=k:q8_0/v:q5_0 / vram_gain=1.2GB / audit=runtime_load_failed / lm_status=generating
+Browser saved: 9/8/2026, 1:24:40 AM
+Session time at save: SESSION 36:45
+Conversation lines: 19
+First transcript turn on disk: 9/8/2026, 1:22:39 AM (2026-09-08T05:22:39.513Z)
+Last transcript turn on disk: 9/8/2026, 1:24:36 AM (2026-09-08T05:24:36.459Z)
+Context mode at save: normal
+Browser-held notes omitted by Empty Connect: 0
+Parent session note at connect: sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt
+Search receipts: none
+
+Runtime At Save
+---------------
+Mic at save: on
+Runtime routines at save: none
+Previous-run sensing input: 20260908-012347-openai-bedtime-for-scott.png (staged sensing-eye image)
+Last user words: I like it, Eric. Good night.
+
+Transcript Since Clean Connect
+------------------------------
+[1:22:39 AM] You: Hey Eric.
+  [v: l/mid/pauses+soft-end]
+[1:22:51 AM] Robot 790: Yeah, I'm here—fresh boot with the session notes loaded, so I've got continuity from last time.
+[1:22:51 AM] Robot 790: What's on your mind?
+[1:23:02 AM] You: How many session notes do you have loaded?
+  [v: m>m/mid-low/punchy]
+[1:23:03 AM] Robot 790: Four session notes are loaded: the continuity recovery one from just after midnight, the stale fresh-boot restore confusion note, the remembered image reload note, and the standing joke routine archive check.
+[1:23:03 AM] Robot 790: Plus your core profile, boot_eric, get-go, and my memories file.
+[1:23:35 AM] You: All right. I it's been a long day. I'm gonna go to bed. Can you make me a nice picture I can think about? It'll help me to fall asleep. Shows me in my bedroom.
+  [v: l>m/hi-mid-low/hit+punchy]
+[1:23:37 AM] Robot 790: I'll make a quiet, warm bedroom scene for you—soft light, maybe the window showing late night, and you settled in bed looking ready to let go.
+[1:23:48 AM] Robot 790: Here it is—warm, quiet, just you and the night.
+[1:23:48 AM] Robot 790: Sleep well, Scott.
+[1:23:58 AM] You: Oh wonderful. Can you put that in your eye?
+  [v: m>m/mid-low/steady]
+[1:24:10 AM] System: [sensing-eye visual note generated image moved into eye: id eye-2 name "20260908-012347-openai-bedtime-for-scott.png" file logs/sensing-eye/20260908-012347-openai-bedtime-for-scott.jpg size 768x768 source generated image near user "Oh wonderful. Can you put that in your eye?" created 2026-09-08T05:24:10.919Z]
+[1:24:10 AM] System: [sensing-eye visual note opened into B1 context: id eye-2 name "20260908-012347-openai-bedtime-for-scott.png" file logs/sensing-eye/20260908-012347-openai-bedtime-for-scott.jpg size 768x768 source generated image near user "Oh wonderful. Can you put that in your eye?" created 2026-09-08T05:24:10.919Z]
+[1:24:12 AM] Robot 790: I moved the generated image into my sensing eye.
+[1:24:13 AM] You: Oh dear.
+  [v: m>q/hi/punchy+soft-end]
+[1:24:18 AM] You: Oh dear. Yeah, no, nice. Can you why don't you face paint that?
+  [v: q>q/hi-mid-low/punchy+soft-end]
+[1:24:27 AM] Robot 790: I put the sensing-eye image on my face.
+[1:24:35 AM] You: I like it, Eric. Good night.
+  [v: q>m/mid-low/hit+punchy]
+[1:24:36 AM] Robot 790: Good night, Scott—sleep well.
+
+B2 Notes For Eric
+------------------
+- none
+
+Recent Brain2 Tail
+------------------
+[tail clipped to last 4000 chars]
+dns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788845055.9318318}
+[1:24:16 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":18050472,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":false,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 20260908-012347-openai-bedtime-for-scott.png","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":13},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788845056.5904112}
+[1:24:17 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":18051782,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":false,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 20260908-012347-openai-bedtime-for-scott.png","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":13},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788845057.9007256}

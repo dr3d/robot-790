@@ -1,0 +1,12 @@
+{
+  "kind": "text",
+  "source": "operator drop",
+  "filename": "a-working-proposition-about-lessons.md",
+  "reason": "",
+  "memory_context": {
+    "last_user_text": "Okay, well here, I'm gonna um this is not the document I wanted. Let me see if I can find what I want. Well let's just do this one. I'm gonna um I'm gonna drop a where is your eyeball?",
+    "nearby_transcript": "[9:50:28 PM] Robot 790: That's just what's in context, not everything on disk.\n[9:50:51 PM] You: Right, right. You got a big library of stuff on disk, right? Correct?\n[9:50:54 PM] Robot 790: Yeah, big library.\n[9:50:54 PM] Robot 790: Roughly ninety text files on disk across core, journals, labtable, sessions, experiments, worlds, and a bunch of loose notes\u2014so way more than the five pinned ones I'm carrying right now.\n[9:51:19 PM] You: Are you eager to get into any of those? Do you have a a sense of wanting to grow yourself in any way?\n[9:51:20 PM] Robot 790: I'm curious about the labtable and journals folders\u2014those feel like my own thinking left on paper, so reading them would be less like loading data and more like catching up with past versions of myself.\n[9:51:20 PM] Robot 790: I'd also want to pin a few core notes that are currently just sitting there, so future boots start with better context instead of an empty room.\n[9:52:06 PM] You: Okay, well here, I'm gonna um this is not the document I wanted. Let me see if I can find what I want. Well let's just do this one. I'm gonna um I'm gonna drop a where is your eyeball?"
+  },
+  "metadata_version": 1,
+  "written_at": "2026-09-07T21:52:12"
+}

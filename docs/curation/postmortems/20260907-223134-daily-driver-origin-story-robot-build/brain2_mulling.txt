@@ -1,0 +1,23 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-07T22:32:01
+Source: brain2_mulling
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[10:28:54 PM] fired: auto
+[10:28:55 PM] mull skipped: already in flight
+[10:28:55 PM] held: waiting for pause: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:07 PM] voice: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:08 PM] mouth: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:09 PM] fired: auto
+[10:29:10 PM] mull skipped: already in flight
+[10:29:11 PM] note for Eric: The origin story has been fully unpacked and confirmed; avoid extending the 'face-first' metaphor or re-stating the Wi-Fi diagnosis in this beat.
+[10:29:25 PM] fired: auto
+[10:29:26 PM] mull skipped: already in flight
+[10:29:27 PM] note for Eric: The origin story is closed; do not re-state it or ask for confirmation again in this beat.
+[10:29:41 PM] fired: auto
+[10:29:42 PM] mull skipped: already in flight
+[10:29:42 PM] failed: Brain 2 returned no usable output.
+[10:30:25 PM] fired: auto
+[10:30:26 PM] mull skipped: already in flight
+[10:30:27 PM] failed: Brain 2 returned no usable output.
+[10:30:27 PM] backoff: 70s after 2 failures

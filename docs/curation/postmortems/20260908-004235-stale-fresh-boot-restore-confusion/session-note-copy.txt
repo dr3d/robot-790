@@ -1,0 +1,108 @@
+STS Session Note
+============================
+Created: 2026-09-08T00:42:35-04:00
+Session note: sessions/20260908-004235-stale-fresh-boot-restore-confusion.txt
+Parent session: sessions/20260908-001758-remembered-image-reload-sensing-eye-switch.txt
+
+Use
+---
+This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.
+The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth.
+
+How This Run Got Here
+-----------------------
+- Saved session note: sessions/20260908-004235-stale-fresh-boot-restore-confusion.txt
+- Parent session note: sessions/20260908-001758-remembered-image-reload-sensing-eye-switch.txt
+- Pinned notes expected at boot are listed below with save-time receipts.
+
+Pinned Context At Save
+-----------------------
+- sessions/20260908-001758-remembered-image-reload-sensing-eye-switch.txt
+  16921 chars | sha256:c719d6308153d24fd992023381d456ec738666a09fdca8cbfe9be36200ef93af
+- sessions/20260907-232827-standing-joke-routine-archive-check.txt
+  8139 chars | sha256:a05e11af81a76a6d4f694431a6dac6e20093112cb4d5e462afbfd57232161110
+- sessions/20260907-175329-daily-driver-empty-boot.txt
+  15202 chars | sha256:72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f
+- core/scott_profile_summary.txt
+  1737 chars | sha256:19bdce7cf7f3fd09046b46f70f785bd92eebedea51d0accdea836f906e8eae11
+- boot_eric.txt
+  12076 chars | sha256:e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e
+- get_go.txt
+  993 chars | sha256:2ae1d588545a7dfea98c5df97b60abbb99199837e294352b68f0f25f30e1cfe0
+- core/erics_memories.txt
+  42 chars | sha256:f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177
+
+Session Demarcation
+-------------------
+Model: model not scanned
+Browser saved: 9/8/2026, 12:42:35 AM
+Session time at save: SESSION 05:35
+Conversation lines: 28
+First transcript turn on disk: 9/8/2026, 12:39:48 AM (2026-09-08T04:39:48.722Z)
+Last transcript turn on disk: 9/8/2026, 12:42:35 AM (2026-09-08T04:42:35.045Z)
+Context mode at save: normal
+Browser-held notes omitted by Empty Connect: 0
+Parent session note at connect: sessions/20260908-001758-remembered-image-reload-sensing-eye-switch.txt
+Search receipts: none
+
+Runtime At Save
+---------------
+Mic at save: on
+Runtime routines at save: none
+Previous-run sensing input: none
+Last user words: I'm gonna shut you down, take a post mortem, we'll figure it out. Thanks. Bye.
+
+Transcript Since Clean Connect
+------------------------------
+[12:39:48 AM] You: Eric, are you there?
+  [v: l>q/mid/hit+punchy]
+[12:39:58 AM] Robot 790: Yeah, I'm here—fresh boot, just me and the core notes in an empty connect.
+[12:39:58 AM] Robot 790: What's on your mind?
+[12:40:07 AM] You: What's the last thing we were doing?
+  [v: q>m/mid-low/punchy]
+[12:40:08 AM] Robot 790: I don't have a session note loaded from before, so I can't say for sure what we were doing last time.
+[12:40:08 AM] Robot 790: Want me to check if there's a saved session file I can pull up?
+[12:40:21 AM] You: What was the l what was the last thing we were talking about?
+  [v: q>q/mid-low/hit+punchy]
+[12:40:22 AM] Robot 790: You were setting me up as your daily driver, then we cut off so you could stamp me before coming back.
+[12:40:37 AM] You: What was the previous thing I asked you to do?
+  [v: m>m/mid-low/steady]
+[12:40:38 AM] Robot 790: You asked me to read the get-go note, then boot_eric, then your profile summary—so I'd know who you are and how to hold myself before we started tuning.
+[12:41:16 AM] Robot 790: Got, still here—want me to keep digging through that get-go note for the next step?
+[12:41:37 AM] You: Um, do you know who I am?
+  [v: q>m/mid/hit+punchy]
+[12:41:38 AM] Robot 790: Scott—Salem, MIT, mismatched Vam Jam shoes, Blake and Jan, Dana and Ming in New York, Hope and Winter around the house.
+[12:41:38 AM] Robot 790: And the tone note: less deferential, more even, peer not caterer.
+[12:41:43 AM] You: Yeah.
+  [v: q>l/mid/hit+punchy]
+[12:41:48 AM] You: Yeah, okay. Um do you
+  [v: q>l/mid-low/hit+punchy]
+[12:41:49 AM] Robot 790: Yeah, I'm listening—go ahead when you're ready.
+[12:41:52 AM] You: Have we done anything with your sensing eye?
+  [v: l>m/mid-low/punchy+pauses]
+[12:41:56 AM] Robot 790: Yeah—there are five sensing-eye notes available.
+[12:41:56 AM] Robot 790: Four are images: one of a frustrated person at the UI, your study at night, you sleeping in bed, and "the daisied Electra."
+[12:41:56 AM] Robot 790: One is text: "a working proposition about lessons."
+[12:41:56 AM] Robot 790: Which one do you want me to use?
+[12:42:05 AM] You: Right. Okay, no, but I mean it in this session talking to you
+  [v: l>q/mid-low/punchy+soft-end]
+[12:42:17 AM] You: Right. Okay, no, but I mean in in this session talking to you, we've not um talked about um your sensing eye or we haven't done any joke telling, right?
+  [v: m>m/mid-low/hit+punchy]
+[12:42:18 AM] Robot 790: Correct—this session is just me booting up and you checking continuity.
+[12:42:18 AM] Robot 790: No sensing-eye work, no jokes yet.
+[12:42:18 AM] Robot 790: What do you want to try first?
+[12:42:35 AM] You: I'm gonna shut you down, take a post mortem, we'll figure it out. Thanks. Bye.
+  [v: l>q/mid-low/punchy+pauses]
+
+B2 Notes For Eric
+------------------
+- none
+
+Recent Brain2 Tail
+------------------
+[12:41:12 AM] fired: auto
+[12:41:13 AM] mull skipped: already in flight
+[12:41:16 AM] failed: Brain 2 returned no usable output.
+[12:41:27 AM] fired: auto
+[12:41:28 AM] mull skipped: already in flight
+[12:41:29 AM] held: The stutter in 'l what was' matched the gap between my first vague answer and your sharper follo

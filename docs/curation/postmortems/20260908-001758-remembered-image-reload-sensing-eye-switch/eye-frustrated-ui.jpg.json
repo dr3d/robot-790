@@ -1,0 +1,12 @@
+{
+  "kind": "image",
+  "source": "generated image",
+  "filename": "20260908-001310-openai-frustrated-at-the-ui-refresh-bug.png",
+  "reason": "Scott asked to put the frustrated-at-UI image into the sensing eye",
+  "memory_context": {
+    "last_user_text": "Oh that's that's insanely good. Could you put that into your eye?",
+    "nearby_transcript": "[12:12:06 AM] Robot 790: Yeah, I'm listening\u2014go ahead when you're ready.\n[12:12:14 AM] You: So yeah, we got another bug.\n[12:12:15 AM] Robot 790: Another bug, got it\u2014what's it doing?\n[12:12:53 AM] You: Okay, well just uh the UI. Every time I open things up in the UI, the update refresh shuts them down. So I can't look at, for example, your loaded notes. Because it just keeps closing on me. It's annoying. You know what I'm talking about, Eric? It's like\n[12:12:58 AM] You: Okay, we're just uh the UI. Every time I open things up in the UI, the update refresh shuts them down, so I can't look at, for example, your loaded notes because it just keeps closing on me. It's annoying. You know what I'm talking about, Eric? It's like draw me a picture of somebody sitting in front of their computer and angry and frustrated.\n[12:13:11 AM] Robot 790: I made the image.\n[12:13:16 AM] You: Oh that's\n[12:13:21 AM] You: Oh that's that's insanely good. Could you put that into your eye?"
+  },
+  "metadata_version": 1,
+  "written_at": "2026-09-08T00:13:25"
+}

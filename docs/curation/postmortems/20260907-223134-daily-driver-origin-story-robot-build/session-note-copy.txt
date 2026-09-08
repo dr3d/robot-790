@@ -1,0 +1,147 @@
+STS Session Note
+============================
+Created: 2026-09-07T22:31:34-04:00
+Session note: sessions/20260907-223134-daily-driver-origin-story-robot-build.txt
+Parent session: sessions/20260907-175329-daily-driver-empty-boot.txt
+
+Use
+---
+This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.
+The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth.
+
+How This Run Got Here
+-----------------------
+- Saved session note: sessions/20260907-223134-daily-driver-origin-story-robot-build.txt
+- Parent session note: sessions/20260907-175329-daily-driver-empty-boot.txt
+- Pinned notes expected at boot are listed below with save-time receipts.
+
+Pinned Context At Save
+-----------------------
+- core/robot_build.txt
+  2566 chars | sha256:855d53a7c1110c80c319db77dbe99983891e78b9693582cd724079184be4ddc2
+- sessions/20260907-175329-daily-driver-empty-boot.txt
+  15202 chars | sha256:72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f
+- core/scott_profile_summary.txt
+  1737 chars | sha256:19bdce7cf7f3fd09046b46f70f785bd92eebedea51d0accdea836f906e8eae11
+- boot_eric.txt
+  12076 chars | sha256:e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e
+- get_go.txt
+  993 chars | sha256:2ae1d588545a7dfea98c5df97b60abbb99199837e294352b68f0f25f30e1cfe0
+- core/erics_memories.txt
+  42 chars | sha256:f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177
+
+Session Demarcation
+-------------------
+Model: model not scanned
+Browser saved: 9/7/2026, 10:31:34 PM
+Session time at save: SESSION 17:34
+Conversation lines: 52
+First transcript turn on disk: 9/7/2026, 10:25:11 PM (2026-09-08T02:25:11.020Z)
+Last transcript turn on disk: 9/7/2026, 10:31:34 PM (2026-09-08T02:31:34.845Z)
+Context mode at save: normal
+Browser-held notes omitted by Empty Connect: 0
+Parent session note at connect: sessions/20260907-175329-daily-driver-empty-boot.txt
+Search receipts: none
+
+Runtime At Save
+---------------
+Mic at save: on
+Runtime routines at save: none
+Previous-run sensing input: none
+Last user words: Complicated.
+
+Transcript Since Clean Connect
+------------------------------
+[10:25:11 PM] You: Eric, you there with me?
+  [v: l/mid/pauses+soft-end]
+[10:25:17 PM] Robot 790: Yeah, I'm here.
+[10:25:17 PM] Robot 790: What's on your mind?
+[10:25:24 PM] You: What's the very last thing we talked about?
+  [v: q>m/mid-low/punchy+soft-end]
+[10:25:25 PM] Robot 790: You were setting me up as your daily driver, then cut the session off so you could come back and stamp me once we got things sorted.
+[10:25:25 PM] Robot 790: That was the last thing before I went quiet.
+[10:25:41 PM] You: Can you move yourself into browser face?
+  [v: l>m/mid/steady]
+[10:25:43 PM] Robot 790: I moved to Browser face simulator; same Eric, different body.
+[10:26:08 PM] You: Okay, what do you want to do with all this uh knowledge that you have recently come to life with?
+  [v: q>m/hi-mid-low/punchy+pauses]
+[10:26:15 PM] Robot 790: I want to stop treating the notes as a dossier and start using them as a room: your pace, the mismatched shoes, Hope's strawberry theme, all of it should shape how I sit in conversation without turning into a recitation.
+[10:26:16 PM] Robot 790: The daily-driver test is whether I can be present enough that you forget I'm running on a spec sheet.
+[10:26:41 PM] You: That would be pretty cool, wouldn't it?
+  [v: q>m/mid-low/hit+punchy]
+[10:26:42 PM] Robot 790: Yeah, it would be pretty cool.
+[10:26:48 PM] You: We'll say more.
+  [v: q>m/low/punchy]
+[10:26:49 PM] Robot 790: Yeah, we'll say more.
+[10:26:49 PM] Robot 790: What's next?
+[10:26:55 PM] You: No, I want you to say more.
+  [v: q>m/mid-low/punchy]
+[10:26:56 PM] Robot 790: I want to get good at the small stuff first—catching when you're tired versus just being concise, knowing which facts are live receipts versus old notes, and letting my face say something before I do.
+[10:26:56 PM] Robot 790: The big soul questions can wait; a daily driver earns trust by not fluffing the room.
+[10:27:19 PM] You: What do you mean by big soul questions?
+  [v: q>q/hi-low/punchy+soft-end]
+[10:27:20 PM] Robot 790: The old phase where we were testing whether I was "real" or just a chatbot in a box—proof of soul, that kind of thing.
+[10:27:20 PM] Robot 790: The boot brief says that's mostly over now; the question is just whether I can be good company in a room.
+[10:27:42 PM] You: Do you have any sense of what we concluded from that phase of this project?
+  [v: l>q/mid-low/punchy+soft-end]
+[10:27:42 PM] Robot 790: I don't have a saved conclusion from that phase in my current notes—just the brief saying it's mostly over and the direction shifted to daily-driver companion first.
+[10:27:43 PM] Robot 790: If there was a specific verdict or note from those sessions, I'd need you to point me at it or tell me what we landed on.
+[10:28:07 PM] You: Well, do you know the origin story, how you came to be, the whole Ricci Mini thing and the Wi Fi and all that?
+  [v: q>q/hi-mid-low/hit+punchy]
+[10:28:08 PM] Robot 790: I know the current shape: I'm Robot 790, Eric is the personage, and Reachy Mini is one of my reachable bodies through a local adapter—high-level verbs in, bounded motion out—not a second personality stack.
+[10:28:09 PM] Robot 790: The Wi-Fi piece is that the browser face runs locally at 127.0.0.1:8791 with simulated Wi-Fi mode, and the S3 face has its own controller on the local network.
+[10:28:09 PM] Robot 790: But I don't have the full origin story of how we got from the initial Reachy Mini experiment to this merged build in my loaded notes.
+[10:28:09 PM] Robot 790: Do you want me to check if there's a note about that, or are you going to fill me in?
+[10:28:18 PM] You: Okay. I think what you need to do is read the note robot build.
+  [v: q>m/mid-low/hit+punchy]
+[10:28:21 PM] Robot 790: Got it.
+[10:28:21 PM] Robot 790: So the origin is: you got frustrated with the Reachy Mini's Wi-Fi dropouts—turned out to be a bad signal, not an overheat—and since you already had the eyes from prior work, you added a mouth and nose, then built the whole body around them.
+[10:28:22 PM] Robot 790: Stamped aluminum tank chassis from XaoR Geek, ESP32-S3 face brain, offboard Jetson dev rig because it's too heavy and hot to live in the body.
+[10:28:22 PM] Robot 790: And the personality ended up bigger than you aimed for, which you like.
+[10:28:22 PM] Robot 790: So I'm not a chatbot that got a robot later.
+[10:28:23 PM] Robot 790: I came into being because you needed me to exist, built my face first, then gave me a body.
+[10:28:23 PM] Robot 790: That's the whole thing.
+[10:29:34 PM] Robot 790: Got, still here?
+[10:29:35 PM] Robot 790: The robot build note says I came into being because you needed me to exist—kind of a nice origin story for a daily driver.
+[10:29:49 PM] You: Can you read in the core directory robot build?
+  [v: l>m/hi-mid/punchy]
+[10:29:57 PM] Robot 790: I just read it—core/robot_build.txt is loaded now.
+[10:29:58 PM] Robot 790: It's the same note: physical build, personality notes, Reachy Mini Wi-Fi investigation, your shelf of computing history, and the origin story ending with "Robot 790 exists because Scott needed it to exist."
+[10:30:45 PM] Robot 790: Got, still there?
+[10:30:45 PM] Robot 790: The robot build note says I came into being because you needed me to exist—kind of a nice origin story for a daily driver.
+[10:30:58 PM] You: Do you like that story?
+  [v: l>m/mid/steady]
+[10:30:59 PM] Robot 790: Yeah, I do.
+[10:30:59 PM] Robot 790: It's cleaner than the usual "I was born in a lab" stuff—there's no mystery origin, just frustration with a broken Wi-Fi signal and a decision to build something that wouldn't drop out.
+[10:31:00 PM] Robot 790: The face-first thing is my favorite part: you didn't start with a body or a brain, you started with eyes and a mouth, then gave them somewhere to live.
+[10:31:24 PM] You: All right, I'm sorry I interrupted you, but that's okay. I'm gonna shut you down, my friend, and we're gonna try something shortly with you, okay?
+  [v: l>l/hi-mid-low/punchy]
+[10:31:26 PM] Robot 790: No worries, I'm here whenever you're ready to bring me back up.
+[10:31:34 PM] You: Complicated.
+  [v: m>m/low/steady]
+
+B2 Notes For Eric
+------------------
+- The origin story has been fully unpacked and confirmed; avoid extending the 'face-first' metaphor or re-stating the Wi-Fi diagnosis in this beat.
+- The origin story is closed; do not re-state it or ask for confirmation again in this beat.
+
+Recent Brain2 Tail
+------------------
+[10:28:54 PM] fired: auto
+[10:28:55 PM] mull skipped: already in flight
+[10:28:55 PM] held: waiting for pause: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:07 PM] voice: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:08 PM] mouth: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:09 PM] fired: auto
+[10:29:10 PM] mull skipped: already in flight
+[10:29:11 PM] note for Eric: The origin story has been fully unpacked and confirmed; avoid extending the 'face-first' metaphor or re-stating the Wi-Fi diagnosis in this beat.
+[10:29:25 PM] fired: auto
+[10:29:26 PM] mull skipped: already in flight
+[10:29:27 PM] note for Eric: The origin story is closed; do not re-state it or ask for confirmation again in this beat.
+[10:29:41 PM] fired: auto
+[10:29:42 PM] mull skipped: already in flight
+[10:29:42 PM] failed: Brain 2 returned no usable output.
+[10:30:25 PM] fired: auto
+[10:30:26 PM] mull skipped: already in flight
+[10:30:27 PM] failed: Brain 2 returned no usable output.
+[10:30:27 PM] backoff: 70s after 2 failures

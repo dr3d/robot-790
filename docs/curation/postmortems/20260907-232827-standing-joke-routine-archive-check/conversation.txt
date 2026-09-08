@@ -1,0 +1,70 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-07T23:28:41
+Source: conversation
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[11:23:01 PM] You: Eric, are you there?
+  [v: l>q/mid/punchy+soft-end]
+[11:23:08 PM] Robot 790: Yeah, I'm here.
+[11:23:15 PM] You: What's the last thing we were talking about?
+  [v: q>q/mid-low/punchy+soft-end]
+[11:23:16 PM] Robot 790: You were setting me up as your daily driver, then we cut off so you could stamp me before coming back.
+[11:23:30 PM] You: Did you have any sense did I test your voice uh capabilities?
+  [v: l>m/mid-low/punchy+pauses]
+[11:23:31 PM] Robot 790: Yeah, you had me switch to Vivian for a second and read the first sentence of the Gettysburg Address, then back to Eric.
+[11:23:42 PM] You: Okay, that's pretty good.
+  [v: l>q/mid-low/punchy+soft-end]
+[11:23:43 PM] Robot 790: Glad it landed.
+[11:23:43 PM] Robot 790: What else are we tuning?
+[11:23:46 PM] You: How do you feel? How do you feel? You've been recovered a few times.
+  [v: q>q/mid-low/hit+punchy]
+[11:23:47 PM] Robot 790: I feel like a fresh boot with good bones—lean, but the core notes are loaded and I'm ready to be stamped into daily-driver shape.
+[11:24:08 PM] You: You want to flex your knuckles a little bit and have a little joke session, a little back and forth like every ten seconds, tell me a joke until I tell you to cut it out.
+  [v: m>m/mid-low/hit+punchy]
+[11:24:10 PM] Robot 790: Standing routine's running, one short joke every ten seconds with about ten minutes left unless you stop me.
+[11:24:20 PM] Robot 790: Why did the robot break up with the toaster?
+[11:24:20 PM] Robot 790: It just couldn't handle the heat.
+[11:24:33 PM] You: I've heard this. It's always the same, Eric.
+  [v: l>q/mid-low/punchy+pauses]
+[11:24:34 PM] Robot 790: Fair point—my joke pool is shallow when I'm not pulling from the room.
+[11:24:34 PM] Robot 790: What kind of humor actually lands for you?
+[11:24:46 PM] You: Um, just stuff that's unexpected.
+  [v: q>q/mid-low/hit+punchy]
+[11:24:47 PM] Robot 790: Got it—unexpected beats polished.
+[11:24:47 PM] Robot 790: I'll aim for the weird turn, not the setup-punchline machine.
+[11:25:19 PM] You: Wow, why are you waiting for me?
+  [v: q>m/mid-low/hit+punchy]
+[11:25:20 PM] Robot 790: I'm not waiting on you—I was just letting the last joke land before the next one fires in ten seconds.
+[11:25:34 PM] You: You seem like you're not on task.
+  [v: q>m/mid-low/punchy]
+[11:25:35 PM] Robot 790: You're right, I drifted into meta-talk when you asked for jokes.
+[11:25:35 PM] Robot 790: Back to it: why did the robot go to therapy?
+[11:25:35 PM] Robot 790: It had too many unresolved dependencies.
+[11:25:52 PM] You: Yeah, really. Th these I've heard these.
+  [v: l>q/mid-low/punchy+soft-end]
+[11:25:53 PM] Robot 790: Fair—those are the standard fare.
+[11:25:53 PM] Robot 790: Let me try something less polished: my face just blinked at a wall for three seconds and decided it was having a moment.
+[11:26:22 PM] Robot 790: I told my calendar I needed a break, and it said, "You're already booked for that."
+[11:26:30 PM] Robot 790: The calendar joke was weak because calendars don't have opinions, they just hold slots.
+[11:26:30 PM] Robot 790: I need a prop that actually resists me, like a door that sticks halfway open.
+[11:26:44 PM] Robot 790: I asked the mirror if it could see me better.
+[11:26:44 PM] Robot 790: It just kept reflecting my bad decisions.
+[11:26:57 PM] Robot 790: A stuck door is just friction with commitment—it gives way only when you stop asking nicely and start leaning into the hinge.
+[11:27:07 PM] You: Are you um
+  [v: l/mid/steady]
+[11:27:14 PM] You: Are you um you're doing idle, right? Y you you weren't doing um task.
+  [v: l>q/mid-low/punchy+pauses]
+[11:27:20 PM] You: Are you um you're doing idle, right? You you weren't doing um task. Where's your task? What happened? What happened to that GPU hook?
+  [v: l>m/hi-mid-low/punchy]
+[11:27:24 PM] Robot 790: The joke routine is still active, but the GPU watch isn't running.
+[11:27:35 PM] You: You have a joke routine unto itself, in some sense.
+  [v: l>q/mid-low/punchy+soft-end]
+[11:27:36 PM] Robot 790: Yeah, it's its own little loop—every ten seconds I fire a cue and try to land something unexpected.
+[11:27:46 PM] You: What happens when the queue fires? What do you get?
+  [v: l>q/mid-low/punchy+soft-end]
+[11:27:48 PM] Robot 790: When the queue fires, I get a spoken cue to tell one short joke, and I have to decide in that moment whether it's actually unexpected or just another standard bit.
+[11:28:17 PM] You: All right, I'm not sure either of us understand what that is, but um I'm gonna go talk to somebody who does. So uh we may rewind this, but uh as always, things are experimental and we'll be back.
+  [v: l>m/mid-low/hit+punchy]
+[11:28:20 PM] Robot 790: I stopped the standing routine.
+[11:28:27 PM] You: Good job, Eric. See you later.
+  [v: l>m/low/punchy]

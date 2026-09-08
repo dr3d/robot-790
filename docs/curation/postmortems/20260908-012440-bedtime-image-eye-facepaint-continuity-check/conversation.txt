@@ -1,0 +1,31 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-08T01:25:56
+Source: conversation
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[1:22:39 AM] You: Hey Eric.
+  [v: l/mid/pauses+soft-end]
+[1:22:51 AM] Robot 790: Yeah, I'm here—fresh boot with the session notes loaded, so I've got continuity from last time.
+[1:22:51 AM] Robot 790: What's on your mind?
+[1:23:02 AM] You: How many session notes do you have loaded?
+  [v: m>m/mid-low/punchy]
+[1:23:03 AM] Robot 790: Four session notes are loaded: the continuity recovery one from just after midnight, the stale fresh-boot restore confusion note, the remembered image reload note, and the standing joke routine archive check.
+[1:23:03 AM] Robot 790: Plus your core profile, boot_eric, get-go, and my memories file.
+[1:23:35 AM] You: All right. I it's been a long day. I'm gonna go to bed. Can you make me a nice picture I can think about? It'll help me to fall asleep. Shows me in my bedroom.
+  [v: l>m/hi-mid-low/hit+punchy]
+[1:23:37 AM] Robot 790: I'll make a quiet, warm bedroom scene for you—soft light, maybe the window showing late night, and you settled in bed looking ready to let go.
+[1:23:48 AM] Robot 790: Here it is—warm, quiet, just you and the night.
+[1:23:48 AM] Robot 790: Sleep well, Scott.
+[1:23:58 AM] You: Oh wonderful. Can you put that in your eye?
+  [v: m>m/mid-low/steady]
+[1:24:10 AM] System: [sensing-eye visual note generated image moved into eye: id eye-2 name "20260908-012347-openai-bedtime-for-scott.png" file logs/sensing-eye/20260908-012347-openai-bedtime-for-scott.jpg size 768x768 source generated image near user "Oh wonderful. Can you put that in your eye?" created 2026-09-08T05:24:10.919Z]
+[1:24:10 AM] System: [sensing-eye visual note opened into B1 context: id eye-2 name "20260908-012347-openai-bedtime-for-scott.png" file logs/sensing-eye/20260908-012347-openai-bedtime-for-scott.jpg size 768x768 source generated image near user "Oh wonderful. Can you put that in your eye?" created 2026-09-08T05:24:10.919Z]
+[1:24:12 AM] Robot 790: I moved the generated image into my sensing eye.
+[1:24:13 AM] You: Oh dear.
+  [v: m>q/hi/punchy+soft-end]
+[1:24:18 AM] You: Oh dear. Yeah, no, nice. Can you why don't you face paint that?
+  [v: q>q/hi-mid-low/punchy+soft-end]
+[1:24:27 AM] Robot 790: I put the sensing-eye image on my face.
+[1:24:35 AM] You: I like it, Eric. Good night.
+  [v: q>m/mid-low/hit+punchy]
+[1:24:36 AM] Robot 790: Good night, Scott—sleep well.

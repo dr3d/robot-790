@@ -1,0 +1,244 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-08T01:25:56
+Source: events
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[1:22:34 AM] ui hot conversation reset: Connect latest session
+[1:22:34 AM] hot conversation reset to pinned notes: Connect latest session
+[1:22:34 AM] ui sensing input cleared: context-engineering-architecture.md (10848 chars text)
+[1:22:34 AM] sensing-eye inbox cleared: seq 11
+[1:22:34 AM] browser-face mirror queue cleared: seq 12
+[1:22:34 AM] note file read: sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt
+[1:22:34 AM] note file read: sessions/20260908-004235-stale-fresh-boot-restore-confusion.txt
+[1:22:34 AM] note file read: sessions/20260908-001758-remembered-image-reload-sensing-eye-switch.txt
+[1:22:34 AM] note file read: sessions/20260907-232827-standing-joke-routine-archive-check.txt
+[1:22:34 AM] note file read: sessions/20260907-175329-daily-driver-empty-boot.txt
+[1:22:34 AM] note file read: core/scott_profile_summary.txt
+[1:22:34 AM] note file read: boot_eric.txt
+[1:22:34 AM] note file read: get_go.txt
+[1:22:34 AM] note file read: core/erics_memories.txt
+[1:22:34 AM] session note loaded from Connect: sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt / continuity pinned notes rehydrated: sessions/20260908-004235-stale-fresh-boot-restore-confusion.txt, sessions/20260908-001758-remembered-image-reload-sensing-eye-switch.txt, sessions/20260907-232827-standing-joke-routine-archive-check.txt, sessions/20260907-175329-daily-driver-empty-boot.txt, core/scott_profile_summary.txt, boot_eric.txt, get_go.txt, core/erics_memories.txt
+[1:22:34 AM] ui session note loaded: sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt
+[1:22:34 AM] connected
+[1:22:34 AM] prompt ledger session.update B1 session: 22783 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:22:34 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:22:34 AM] ui run setup: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / kv=k:q8_0/v:q5_0 / vram_gain=1.2GB / audit=runtime_load_failed / lm_status=generat...
+[1:22:34 AM] run setup receipt: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / kv=k:q8_0/v:q5_0 / vram_gain=1.2GB / audit=runtime_load_failed / lm_status=generating / normal / 44 tools / 9 loaded notes / startup: core/erics_memories.txt, sessions/20260908-010542-continuity-recovery-electra-wizard-game.txt / B2 Google US English at 20%, 1.10x
+[1:22:34 AM] session.created
+[1:22:34 AM] session.updated
+[1:22:36 AM] ui mic start requested: System default
+[1:22:36 AM] mic input reset marker: before mic start
+[1:22:36 AM] mic started; device: Microphone (Amazon USB Streaming Mic) (0d8c:0220)
+[1:22:36 AM] ui audio record start: manual / auto on
+[1:22:36 AM] audio recording started
+[1:22:36 AM] prompt ledger session.update B1 session: 22798 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:22:36 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:22:36 AM] session.updated
+[1:22:39 AM] input_audio_buffer.speech_started
+[1:22:39 AM] conversation.item.input_audio_transcription.delta
+[1:22:39 AM] input_audio_buffer.speech_stopped
+[1:22:39 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5s vol=loud pitch=mid; 1.0s vol=pause pitch=none]
+[1:22:39 AM] conversation.item.input_audio_transcription.completed
+[1:22:51 AM] response.output_audio_transcript.done
+[1:22:51 AM] response.output_audio_transcript.done
+[1:22:53 AM] response.output_audio.done
+[1:22:53 AM] response.done
+[1:23:00 AM] input_audio_buffer.speech_started
+[1:23:00 AM] conversation.item.input_audio_transcription.delta
+[1:23:01 AM] conversation.item.input_audio_transcription.delta
+[1:23:01 AM] conversation.item.input_audio_transcription.delta
+[1:23:02 AM] input_audio_buffer.speech_stopped
+[1:23:02 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=medium pitch=low; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=loud pitch=low; 2.0s vol=medium pitch=low]
+[1:23:02 AM] conversation.item.input_audio_transcription.completed
+[1:23:03 AM] response.output_audio_transcript.done
+[1:23:03 AM] response.output_audio_transcript.done
+[1:23:07 AM] response.output_audio.done
+[1:23:07 AM] response.done
+[1:23:22 AM] input_audio_buffer.speech_started
+[1:23:22 AM] conversation.item.input_audio_transcription.delta
+[1:23:22 AM] input_audio_buffer.speech_stopped
+[1:23:23 AM] input_audio_buffer.speech_started
+[1:23:23 AM] conversation.item.input_audio_transcription.delta
+[1:23:23 AM] conversation.item.input_audio_transcription.delta
+[1:23:24 AM] conversation.item.input_audio_transcription.delta
+[1:23:24 AM] conversation.item.input_audio_transcription.delta
+[1:23:25 AM] conversation.item.input_audio_transcription.delta
+[1:23:25 AM] conversation.item.input_audio_transcription.delta
+[1:23:26 AM] conversation.item.input_audio_transcription.delta
+[1:23:26 AM] input_audio_buffer.speech_stopped
+[1:23:26 AM] input_audio_buffer.speech_started
+[1:23:26 AM] conversation.item.input_audio_transcription.delta
+[1:23:27 AM] input_audio_buffer.speech_stopped
+[1:23:27 AM] input_audio_buffer.speech_started
+[1:23:27 AM] conversation.item.input_audio_transcription.delta
+[1:23:28 AM] conversation.item.input_audio_transcription.delta
+[1:23:28 AM] conversation.item.input_audio_transcription.delta
+[1:23:29 AM] conversation.item.input_audio_transcription.delta
+[1:23:29 AM] input_audio_buffer.speech_stopped
+[1:23:30 AM] input_audio_buffer.speech_started
+[1:23:30 AM] conversation.item.input_audio_transcription.delta
+[1:23:30 AM] conversation.item.input_audio_transcription.delta
+[1:23:31 AM] input_audio_buffer.speech_stopped
+[1:23:31 AM] input_audio_buffer.speech_started
+[1:23:31 AM] conversation.item.input_audio_transcription.delta
+[1:23:31 AM] conversation.item.input_audio_transcription.delta
+[1:23:32 AM] conversation.item.input_audio_transcription.delta
+[1:23:32 AM] input_audio_buffer.speech_stopped
+[1:23:33 AM] input_audio_buffer.speech_started
+[1:23:33 AM] conversation.item.input_audio_transcription.delta
+[1:23:33 AM] conversation.item.input_audio_transcription.delta
+[1:23:33 AM] input_audio_buffer.speech_stopped
+[1:23:34 AM] input_audio_buffer.speech_started
+[1:23:34 AM] conversation.item.input_audio_transcription.delta
+[1:23:34 AM] conversation.item.input_audio_transcription.delta
+[1:23:35 AM] input_audio_buffer.speech_stopped
+[1:23:35 AM] input prosody: [voice-shape: avg=0.8s: 0.0-0.8s vol=loud pitch=low; 0.8-1.7s vol=loud pitch=high; 1.7-2.5s vol=loud pitch=mid; 2.5-5.0s vol=medium pitch=low; 5.0-5.8s vol=quiet pitch=mid; 5.8-7.5s vol=loud pitch=mid; 7.5-8.3s vol=medium pitch=low hit; 8.3-9.2s vol=loud pitch=mid; 9.2-10.0s vol=loud pitch=low; 10.0-10.8s vol=medium pitch=low; 10.8-11.7s vol=medium pitch=high; 11.7-12.5s vol=medium pitch=unclear; 12.5-13.3s vol=medium pitch=low]
+[1:23:35 AM] image tool protected from interruption: image request
+[1:23:35 AM] conversation.item.input_audio_transcription.completed
+[1:23:35 AM] session.updated
+[1:23:37 AM] response.output_audio_transcript.done
+[1:23:37 AM] image tool interruption restored
+[1:23:37 AM] image generation: Bedtime for Scott (gpt-image-1-mini / low)
+[1:23:37 AM] response.function_call_arguments.done
+[1:23:37 AM] session.updated
+[1:23:40 AM] response.output_audio.done
+[1:23:40 AM] response.done
+[1:23:47 AM] audio recording visual rollover: generated image changed
+[1:23:47 AM] audio recording finalizing on: visual rollover
+[1:23:47 AM] prompt ledger session.update B1 session: 22795 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:47 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:47 AM] image generated: 20260908-012347-openai-bedtime-for-scott.png
+[1:23:47 AM] tool generate_image: {"status":"ok","tool":"generate_image","provider":"openai","model":"gpt-image-1-mini","filename":"20260908-012347-openai-bedtime-for-scott.png","url":"http://127.0.0.1:8790/generated-images/20260908-012347-openai-bedtime-for-scott.png","path":"D:\\_PROJECTS\\robot-790\\logs\\generated-images\\20260908-012347-openai-bedtime-for-scott.png","prompt":"A cozy realistic bedroom at night, Scott lying comfortably in bed under soft blankets, face relaxed and peaceful, warm dim bedside lamp glow, moonlight through a window, calm quiet atmosphere, gentle shadows, intimate and soothing, high detail, cinematic lighting","revised_prompt":"","size":"1024x1024","quality":"low","local_url":"/generated-images/20260908-012347-openai-bedtime-for-scott.png","displayed":true}
+[1:23:47 AM] tool followup prompt [exact] generate_image: Say exactly this and nothing else: "I made the image."
+[1:23:47 AM] prompt ledger response.create B1 tool follow-up generate_image: 14 instruction tokens approx / tools none
+[1:23:47 AM] session.updated
+[1:23:47 AM] conversation.item.created
+[1:23:47 AM] response.created
+[1:23:47 AM] prompt ledger session.update B1 session: 22779 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:47 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:47 AM] audio recording finalizing on: recorder stopped
+[1:23:47 AM] prompt ledger session.update B1 session: 22779 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:47 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:47 AM] session.updated
+[1:23:47 AM] session.updated
+[1:23:48 AM] response.output_audio_transcript.done
+[1:23:48 AM] audio recorded: logs/audio/latest-sts-audio-picture.mp4 (previous visual placeholder cover)
+[1:23:48 AM] audio recording finalizing off: recorder stop handler complete
+[1:23:48 AM] prompt ledger session.update B1 session: 22779 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:48 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:48 AM] ui audio record start: manual / auto on
+[1:23:48 AM] audio recording started
+[1:23:48 AM] prompt ledger session.update B1 session: 22795 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:48 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:23:48 AM] session.updated
+[1:23:48 AM] session.updated
+[1:23:48 AM] response.output_audio_transcript.done
+[1:23:50 AM] response.output_audio.done
+[1:23:50 AM] response.done
+[1:23:57 AM] input_audio_buffer.speech_started
+[1:23:57 AM] conversation.item.input_audio_transcription.delta
+[1:23:57 AM] conversation.item.input_audio_transcription.delta
+[1:23:58 AM] conversation.item.input_audio_transcription.delta
+[1:23:58 AM] input_audio_buffer.speech_stopped
+[1:23:58 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=medium pitch=mid; 0.5s vol=medium pitch=low; 1.0-2.0s vol=loud pitch=mid; 2.0s vol=medium pitch=mid]
+[1:23:58 AM] conversation.item.input_audio_transcription.completed
+[1:24:10 AM] response.function_call_arguments.done
+[1:24:10 AM] response.output_audio.done
+[1:24:10 AM] response.done
+[1:24:10 AM] prompt ledger session.update B1 session: 22823 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] sensing-eye image loaded: 20260908-012347-openai-bedtime-for-scott.png (768x768)
+[1:24:10 AM] ui sensing input image: 20260908-012347-openai-bedtime-for-scott.png (768x768)
+[1:24:10 AM] sensing-eye image staged: 20260908-012347-openai-bedtime-for-scott.png
+[1:24:10 AM] audio recording visual rollover: sensing-eye image changed
+[1:24:10 AM] audio recording finalizing on: visual rollover
+[1:24:10 AM] prompt ledger session.update B1 session: 22824 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] prompt ledger session.update B1 session: 22808 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] tool move_generated_image_to_sensing_eye: {"status":"ok","tool":"move_generated_image_to_sensing_eye","filename":"20260908-012347-openai-bedtime-for-scott.png","saved_filename":"20260908-012347-openai-bedtime-for-scott.jpg","saved_url":"http://127.0.0.1:8790/sensing-eye/20260908-012347-openai-bedtime-for-scott.jpg","staged":true,"source_image":"20260908-012347-openai-bedtime-for-scott.png","reason":"Scott asked to put the bedtime image into my eye so he can think about it while falling asleep."}
+[1:24:10 AM] tool followup prompt [exact] move_generated_image_to_sensing_eye: Say exactly this and nothing else: "I moved the generated image into my sensing eye."
+[1:24:10 AM] prompt ledger response.create B1 tool follow-up move_generated_image_to_sensing_eye: 22 instruction tokens approx / tools none
+[1:24:10 AM] audio recording finalizing on: recorder stopped
+[1:24:10 AM] prompt ledger session.update B1 session: 22808 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[1:24:10 AM] audio recording discarded short chunk: 22.0s < 30.0s
+[1:24:10 AM] session.updated
+[1:24:10 AM] conversation.item.created
+[1:24:10 AM] session.updated
+[1:24:10 AM] session.updated
+[1:24:10 AM] session.updated
+[1:24:10 AM] conversation.item.created
+[1:24:10 AM] response.created
+[1:24:10 AM] session.updated
+[1:24:12 AM] response.output_audio_transcript.done
+[1:24:12 AM] response.output_audio.done
+[1:24:12 AM] response.done
+[1:24:12 AM] input_audio_buffer.speech_started
+[1:24:13 AM] conversation.item.input_audio_transcription.delta
+[1:24:13 AM] input_audio_buffer.speech_stopped
+[1:24:13 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=medium pitch=high; 0.5s vol=loud pitch=unclear; 1.0s vol=quiet pitch=unclear]
+[1:24:13 AM] conversation.item.input_audio_transcription.completed
+[1:24:14 AM] input_audio_buffer.speech_started
+[1:24:15 AM] conversation.item.input_audio_transcription.delta
+[1:24:15 AM] conversation.item.input_audio_transcription.delta
+[1:24:15 AM] input_audio_buffer.speech_stopped
+[1:24:16 AM] conversation.item.input_audio_transcription.delta
+[1:24:16 AM] input_audio_buffer.speech_started
+[1:24:16 AM] conversation.item.input_audio_transcription.delta
+[1:24:17 AM] conversation.item.input_audio_transcription.delta
+[1:24:17 AM] conversation.item.input_audio_transcription.delta
+[1:24:17 AM] input_audio_buffer.speech_stopped
+[1:24:18 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=high; 0.5s vol=quiet pitch=unclear; 1.0s vol=pause pitch=none; 1.5s vol=loud pitch=unclear; 2.0s vol=loud pitch=mid; 2.5s vol=medium pitch=low; 3.0s vol=quiet pitch=high; 3.5s vol=loud pitch=mid; 4.0s vol=medium pitch=mid; 4.5s vol=quiet pitch=low]
+[1:24:18 AM] conversation.item.input_audio_transcription.completed
+[1:24:25 AM] response.function_call_arguments.done
+[1:24:25 AM] response.output_audio.done
+[1:24:25 AM] response.done
+[1:24:25 AM] tool paint_face_from_sensing_eye: {"status":"ok","tool":"paint_face_from_sensing_eye","clear":false,"filename":"20260908-012347-openai-bedtime-for-scott.png","target":"auto","fit":"contain","face_url":"http://127.0.0.1:8791/","face_paint_target":"browser_face","face":{"ok":true,"tool":"paint_face_from_sensing_eye","queued":true,"seq":13,"clear":false,"target":"auto","fit":"contain","filename":"20260908-012347-openai-bedtime-for-scott.png","message":"browser face paint queued"}}
+[1:24:25 AM] tool followup prompt [exact] paint_face_from_sensing_eye: Say exactly this and nothing else: "I put the sensing-eye image on my face."
+[1:24:25 AM] prompt ledger response.create B1 tool follow-up paint_face_from_sensing_eye: 19 instruction tokens approx / tools none
+[1:24:25 AM] conversation.item.created
+[1:24:25 AM] response.created
+[1:24:27 AM] response.output_audio_transcript.done
+[1:24:27 AM] response.output_audio.done
+[1:24:27 AM] response.done
+[1:24:32 AM] input_audio_buffer.speech_started
+[1:24:32 AM] conversation.item.input_audio_transcription.delta
+[1:24:32 AM] conversation.item.input_audio_transcription.delta
+[1:24:33 AM] input_audio_buffer.speech_stopped
+[1:24:33 AM] input_audio_buffer.speech_started
+[1:24:33 AM] conversation.item.input_audio_transcription.delta
+[1:24:34 AM] input_audio_buffer.speech_stopped
+[1:24:35 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low hit; 0.5s vol=loud pitch=mid; 1.0s vol=medium pitch=low; 1.5s vol=pause pitch=none; 2.0s vol=loud pitch=mid; 2.5s vol=medium pitch=low]
+[1:24:35 AM] conversation.item.input_audio_transcription.completed
+[1:24:36 AM] response.output_audio_transcript.done
+[1:24:37 AM] response.output_audio.done
+[1:24:37 AM] response.done
+[1:24:40 AM] ui realtime disconnect: session-note stop requested
+[1:24:40 AM] disconnect step: write session note
+[1:24:40 AM] continuity step: write session note
+[1:24:40 AM] continuity step done: write session note
+[1:24:40 AM] continuity step: reload session note
+[1:24:40 AM] note file read: sessions/session-20260908-012440-924.txt
+[1:24:40 AM] loaded note pinned: sessions/session-20260908-012440-924.txt
+[1:24:40 AM] continuity step done: reload session note
+[1:24:41 AM] ui session note saved: sessions/session-20260908-012440-924.txt
+[1:24:41 AM] session note saved: sessions/session-20260908-012440-924.txt
+[1:24:41 AM] disconnect step done: write session note
+[1:24:41 AM] gpu watch stop ignored: realtime disconnect
+[1:24:41 AM] ui gpu watch: stop ignored
+[1:24:41 AM] standing routine stop ignored: realtime disconnect
+[1:24:41 AM] ui standing routine: stop ignored
+[1:24:41 AM] runtime halted: realtime disconnect
+[1:24:41 AM] disconnect step: close realtime websocket
+[1:24:41 AM] disconnected
+[1:24:41 AM] disconnect step done: close realtime websocket
+[1:24:41 AM] disconnect step: stop mic
+[1:24:41 AM] mic stopped: realtime disconnect
+[1:24:41 AM] disconnect step done: stop mic
+[1:24:41 AM] disconnect step: finish audio recording
+[1:24:41 AM] disconnect step done: finish audio recording
+[1:24:41 AM] audio recording finalized for disconnect: idle
+[1:24:41 AM] disconnect step: save pane snapshots
+[1:24:44 AM] hard disconnect snapshots saved: logs/live/20260908-012441-conversation.txt, logs/live/20260908-012442-events.txt, logs/live/20260908-012443-brain2_mulling.txt
+[1:24:44 AM] disconnect step done: save pane snapshots

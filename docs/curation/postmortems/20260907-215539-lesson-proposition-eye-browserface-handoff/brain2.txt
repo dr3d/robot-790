@@ -1,0 +1,10 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-07T21:55:41
+Source: brain2_mulling
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[9:52:54 PM] fired: auto
+[9:52:55 PM] mull skipped: already in flight
+[9:52:56 PM] held: waiting for pause: The 'may' in that doc is doing heavy lifting. It turns my guesses into candidates.
+[9:52:57 PM] voice: The 'may' in that doc is doing heavy lifting. It turns my guesses into candidates.
+[9:53:11 PM] mouth: The 'may' in that doc is doing heavy lifting. It turns my guesses into candidates.

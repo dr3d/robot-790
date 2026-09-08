@@ -1,0 +1,342 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-07T22:32:01
+Source: events
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[10:25:04 PM] ui hot conversation reset: Connect selected session
+[10:25:04 PM] hot conversation reset to pinned notes: Connect selected session
+[10:25:04 PM] ui sensing input cleared: none
+[10:25:04 PM] sensing-eye inbox cleared: seq 3
+[10:25:04 PM] browser-face mirror queue cleared: seq 1
+[10:25:04 PM] note file read: sessions/20260907-175329-daily-driver-empty-boot.txt
+[10:25:04 PM] note file read: core/scott_profile_summary.txt
+[10:25:04 PM] note file read: boot_eric.txt
+[10:25:04 PM] note file read: get_go.txt
+[10:25:04 PM] note file read: core/erics_memories.txt
+[10:25:04 PM] session note loaded from Connect Selected: sessions/20260907-175329-daily-driver-empty-boot.txt / continuity pinned notes rehydrated: core/scott_profile_summary.txt, boot_eric.txt, get_go.txt, core/erics_memories.txt
+[10:25:04 PM] ui session note loaded: sessions/20260907-175329-daily-driver-empty-boot.txt
+[10:25:04 PM] ui realtime connect selected: sessions/20260907-175329-daily-driver-empty-boot.txt
+[10:25:04 PM] connected
+[10:25:04 PM] prompt ledger session.update B1 session: 12903 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[10:25:04 PM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[10:25:04 PM] ui run setup: model not scanned / normal / 44 tools / 5 loaded notes / startup: core/erics_memories.txt, sessions/20260907-175329-daily-driver-empty-boot.txt / B2 Google US English at 20%, 1.10x
+[10:25:04 PM] run setup receipt: model not scanned / normal / 44 tools / 5 loaded notes / startup: core/erics_memories.txt, sessions/20260907-175329-daily-driver-empty-boot.txt / B2 Google US English at 20%, 1.10x
+[10:25:04 PM] session.created
+[10:25:04 PM] session.updated
+[10:25:08 PM] ui mic start requested: System default
+[10:25:08 PM] mic input reset marker: before mic start
+[10:25:08 PM] mic started; device: Microphone (Amazon USB Streaming Mic) (0d8c:0220)
+[10:25:08 PM] ui audio record start: manual / auto on
+[10:25:08 PM] audio recording started
+[10:25:08 PM] prompt ledger session.update B1 session: 12918 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[10:25:08 PM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[10:25:08 PM] session.updated
+[10:25:10 PM] input_audio_buffer.speech_started
+[10:25:10 PM] conversation.item.input_audio_transcription.delta
+[10:25:10 PM] conversation.item.input_audio_transcription.delta
+[10:25:10 PM] input_audio_buffer.speech_stopped
+[10:25:11 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=pause pitch=none]
+[10:25:11 PM] conversation.item.input_audio_transcription.completed
+[10:25:17 PM] response.output_audio_transcript.done
+[10:25:17 PM] response.output_audio_transcript.done
+[10:25:18 PM] response.output_audio.done
+[10:25:18 PM] response.done
+[10:25:22 PM] input_audio_buffer.speech_started
+[10:25:23 PM] conversation.item.input_audio_transcription.delta
+[10:25:23 PM] conversation.item.input_audio_transcription.delta
+[10:25:24 PM] conversation.item.input_audio_transcription.delta
+[10:25:24 PM] conversation.item.input_audio_transcription.delta
+[10:25:24 PM] input_audio_buffer.speech_stopped
+[10:25:24 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=unclear; 0.5s vol=loud pitch=unclear; 1.0s vol=loud pitch=mid; 1.5-2.5s vol=medium pitch=low; 2.5s vol=pause pitch=none]
+[10:25:24 PM] conversation.item.input_audio_transcription.completed
+[10:25:25 PM] response.output_audio_transcript.done
+[10:25:25 PM] response.output_audio_transcript.done
+[10:25:29 PM] response.output_audio.done
+[10:25:29 PM] response.done
+[10:25:39 PM] input_audio_buffer.speech_started
+[10:25:39 PM] conversation.item.input_audio_transcription.delta
+[10:25:40 PM] conversation.item.input_audio_transcription.delta
+[10:25:40 PM] conversation.item.input_audio_transcription.delta
+[10:25:41 PM] conversation.item.input_audio_transcription.delta
+[10:25:41 PM] input_audio_buffer.speech_stopped
+[10:25:41 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5-2.5s vol=medium pitch=mid]
+[10:25:41 PM] conversation.item.input_audio_transcription.completed
+[10:25:42 PM] response.function_call_arguments.done
+[10:25:42 PM] response.output_audio.done
+[10:25:42 PM] response.done
+[10:25:42 PM] embodiment switched: browser_face http://127.0.0.1:8791/
+[10:25:42 PM] tool set_embodiment: {"status":"ok","tool":"set_embodiment","embodiment":"browser_face","label":"Browser face simulator","description":"A local browser-window embodiment that renders Robot 790's face from the same semantic face API as the ESP32-S3 face.","personality":"Eric in the browser face is the rehearsal body: elastic, inspectable, mirror-capable, and allowed to be a little more cartoon because it is where expression design is tested.","toolbox":["Use mirror capture, captions, face status, and exaggerated expression beats to test what the physical faces should inherit.","When self-inspecting, call the browser-face mirror tools and describe the result as a staged self-image."],"face_url":"http://127.0.0.1:8791/","previous_face_url":"http://127.0.0.1:8791/","reason":"Scott asked to move into browser face","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"controller_state":{"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":7336230,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":false,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 body running","status_line_state":"running","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788834342.3485394}}
+[10:25:42 PM] tool followup prompt [exact] set_embodiment: Say exactly this and nothing else: "I moved to Browser face simulator; same Eric, different body."
+[10:25:42 PM] prompt ledger response.create B1 tool follow-up set_embodiment: 25 instruction tokens approx / tools none
+[10:25:42 PM] session.updated
+[10:25:42 PM] conversation.item.created
+[10:25:42 PM] response.created
+[10:25:43 PM] response.output_audio_transcript.done
+[10:25:44 PM] response.output_audio.done
+[10:25:44 PM] response.done
+[10:26:02 PM] input_audio_buffer.speech_started
+[10:26:02 PM] conversation.item.input_audio_transcription.delta
+[10:26:02 PM] conversation.item.input_audio_transcription.delta
+[10:26:03 PM] conversation.item.input_audio_transcription.delta
+[10:26:04 PM] conversation.item.input_audio_transcription.delta
+[10:26:04 PM] conversation.item.input_audio_transcription.delta
+[10:26:05 PM] conversation.item.input_audio_transcription.delta
+[10:26:05 PM] input_audio_buffer.speech_stopped
+[10:26:05 PM] input_audio_buffer.speech_started
+[10:26:05 PM] conversation.item.input_audio_transcription.delta
+[10:26:06 PM] conversation.item.input_audio_transcription.delta
+[10:26:06 PM] input_audio_buffer.speech_stopped
+[10:26:06 PM] input_audio_buffer.speech_started
+[10:26:06 PM] conversation.item.input_audio_transcription.delta
+[10:26:07 PM] conversation.item.input_audio_transcription.delta
+[10:26:07 PM] input_audio_buffer.speech_stopped
+[10:26:08 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low; 0.5s vol=loud pitch=mid; 1.0s vol=loud pitch=high; 1.5s vol=loud pitch=mid; 2.0s vol=medium pitch=low; 2.5s vol=medium pitch=mid; 3.0s vol=medium pitch=low; 3.5s vol=pause pitch=none; 4.0s vol=medium pitch=low; 4.5s vol=quiet pitch=low; 5.0s vol=medium pitch=low; 5.5s vol=pause pitch=none]
+[10:26:08 PM] conversation.item.input_audio_transcription.completed
+[10:26:15 PM] response.output_audio_transcript.done
+[10:26:16 PM] response.output_audio_transcript.done
+[10:26:21 PM] response.output_audio.done
+[10:26:21 PM] response.done
+[10:26:40 PM] input_audio_buffer.speech_started
+[10:26:40 PM] conversation.item.input_audio_transcription.delta
+[10:26:41 PM] conversation.item.input_audio_transcription.delta
+[10:26:41 PM] conversation.item.input_audio_transcription.delta
+[10:26:41 PM] input_audio_buffer.speech_stopped
+[10:26:41 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=unclear hit; 0.5s vol=loud pitch=mid; 1.0s vol=loud pitch=low; 1.5s vol=medium pitch=low]
+[10:26:41 PM] conversation.item.input_audio_transcription.completed
+[10:26:42 PM] response.output_audio_transcript.done
+[10:26:42 PM] response.output_audio.done
+[10:26:42 PM] response.done
+[10:26:48 PM] input_audio_buffer.speech_started
+[10:26:48 PM] input_audio_buffer.speech_stopped
+[10:26:48 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low; 0.5s vol=loud pitch=unclear; 1.0s vol=medium pitch=low]
+[10:26:48 PM] conversation.item.input_audio_transcription.completed
+[10:26:49 PM] response.output_audio_transcript.done
+[10:26:49 PM] response.output_audio_transcript.done
+[10:26:50 PM] response.output_audio.done
+[10:26:50 PM] response.done
+[10:26:53 PM] input_audio_buffer.speech_started
+[10:26:53 PM] conversation.item.input_audio_transcription.delta
+[10:26:54 PM] conversation.item.input_audio_transcription.delta
+[10:26:54 PM] conversation.item.input_audio_transcription.delta
+[10:26:54 PM] input_audio_buffer.speech_stopped
+[10:26:55 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=medium pitch=low]
+[10:26:55 PM] conversation.item.input_audio_transcription.completed
+[10:26:56 PM] response.output_audio_transcript.done
+[10:26:56 PM] response.output_audio_transcript.done
+[10:27:01 PM] response.output_audio.done
+[10:27:01 PM] response.done
+[10:27:17 PM] input_audio_buffer.speech_started
+[10:27:17 PM] conversation.item.input_audio_transcription.delta
+[10:27:18 PM] conversation.item.input_audio_transcription.delta
+[10:27:18 PM] conversation.item.input_audio_transcription.delta
+[10:27:19 PM] conversation.item.input_audio_transcription.delta
+[10:27:19 PM] input_audio_buffer.speech_stopped
+[10:27:19 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=unclear; 0.5s vol=loud pitch=high; 1.0s vol=medium pitch=low; 1.5s vol=loud pitch=low; 2.0s vol=quiet pitch=low; 2.5s vol=pause pitch=none]
+[10:27:19 PM] conversation.item.input_audio_transcription.completed
+[10:27:20 PM] response.output_audio_transcript.done
+[10:27:20 PM] response.output_audio_transcript.done
+[10:27:24 PM] response.output_audio.done
+[10:27:24 PM] response.done
+[10:27:38 PM] input_audio_buffer.speech_started
+[10:27:38 PM] conversation.item.input_audio_transcription.delta
+[10:27:38 PM] conversation.item.input_audio_transcription.delta
+[10:27:39 PM] conversation.item.input_audio_transcription.delta
+[10:27:39 PM] conversation.item.input_audio_transcription.delta
+[10:27:40 PM] conversation.item.input_audio_transcription.delta
+[10:27:40 PM] conversation.item.input_audio_transcription.delta
+[10:27:41 PM] conversation.item.input_audio_transcription.delta
+[10:27:41 PM] input_audio_buffer.speech_stopped
+[10:27:42 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-2.0s vol=loud pitch=mid; 2.0s vol=loud pitch=low; 2.5-3.5s vol=medium pitch=low; 3.5s vol=medium pitch=unclear; 4.0s vol=quiet pitch=low]
+[10:27:42 PM] conversation.item.input_audio_transcription.completed
+[10:27:42 PM] response.output_audio_transcript.done
+[10:27:43 PM] response.output_audio_transcript.done
+[10:27:47 PM] response.output_audio.done
+[10:27:47 PM] response.done
+[10:28:01 PM] input_audio_buffer.speech_started
+[10:28:01 PM] conversation.item.input_audio_transcription.delta
+[10:28:01 PM] conversation.item.input_audio_transcription.delta
+[10:28:02 PM] conversation.item.input_audio_transcription.delta
+[10:28:03 PM] conversation.item.input_audio_transcription.delta
+[10:28:03 PM] conversation.item.input_audio_transcription.delta
+[10:28:04 PM] conversation.item.input_audio_transcription.delta
+[10:28:04 PM] conversation.item.input_audio_transcription.delta
+[10:28:05 PM] conversation.item.input_audio_transcription.delta
+[10:28:05 PM] conversation.item.input_audio_transcription.delta
+[10:28:06 PM] conversation.item.input_audio_transcription.delta
+[10:28:06 PM] conversation.item.input_audio_transcription.delta
+[10:28:06 PM] input_audio_buffer.speech_stopped
+[10:28:07 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low hit; 0.5s vol=loud pitch=mid; 1.0s vol=loud pitch=high; 1.5-2.5s vol=loud pitch=mid; 2.5-5.0s vol=medium pitch=low; 5.0-6.3s vol=quiet pitch=low]
+[10:28:07 PM] conversation.item.input_audio_transcription.completed
+[10:28:08 PM] response.output_audio_transcript.done
+[10:28:09 PM] response.output_audio_transcript.done
+[10:28:09 PM] response.output_audio_transcript.done
+[10:28:09 PM] response.output_audio_transcript.done
+[10:28:15 PM] barge-in: peak 0.45, sensitivity 7/10
+[10:28:15 PM] response.output_audio.done
+[10:28:15 PM] response.done
+[10:28:15 PM] input_audio_buffer.speech_started
+[10:28:15 PM] conversation.item.input_audio_transcription.delta
+[10:28:16 PM] conversation.item.input_audio_transcription.delta
+[10:28:16 PM] conversation.item.input_audio_transcription.delta
+[10:28:17 PM] conversation.item.input_audio_transcription.delta
+[10:28:17 PM] conversation.item.input_audio_transcription.delta
+[10:28:18 PM] conversation.item.input_audio_transcription.delta
+[10:28:18 PM] input_audio_buffer.speech_stopped
+[10:28:18 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low hit; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=medium pitch=mid; 2.0s vol=loud pitch=low; 2.5s vol=medium pitch=low; 3.0s vol=loud pitch=low; 3.5s vol=medium pitch=mid]
+[10:28:18 PM] conversation.item.input_audio_transcription.completed
+[10:28:19 PM] response.function_call_arguments.done
+[10:28:19 PM] response.output_audio.done
+[10:28:19 PM] response.done
+[10:28:19 PM] note file read: core/robot_build.txt
+[10:28:19 PM] loaded note pinned: core/robot_build.txt
+[10:28:19 PM] tool read_text_file: {"status":"ok","tool":"read_text_file","filename":"core/robot_build.txt","content":"Robot 790 — Session Summary\n===========================\nOwner/Builder: Scott\nDate: (current session)\n\nROBOT 790 PHYSICAL BUILD\n-------------------------\nFace:\n  - Hosyond ESP32-S3 N16R8 (main brain for face)\n  - Two OLED eyes\n  - Status nose\n  - Wide-angle/fisheye camera\n  - PIR sensor\n  - Tiny OLED\n  - Microphone\n\nChassis:\n  - Stamped aluminum tank chassis from XaoR Geek Store\n  - 2WD motors with encoder\n  - Treads (gold-colored aluminum)\n  - Originally purchased for Reachy Mini\n\nPower:\n  - 12.8V LiFePO4, 6Ah, 33A peak cell\n  - Buck converters were considered and rejected\n\nMechanical Design:\n  - Turntable for yaw\n  - Tiltable platform for pitch\n  - Center of gravity kept low\n  - Allows head to look independently of chassis heading\n\nFace Prototypes:\n  - 3D-printed prototype (exorcist-mask style)\n  - Current lit-up face (the one in use)\n\nArchitecture:\n  - Wireless/offboard brain design\n  - Jetson is too heavy/hot to live inside the body\n  - Development rig: white PowerSpec with RTX 5090 (31.5 GB VRAM)\n  - Three services (eyes, face, chassis) must also run on the Jetson\n  - Open threads: live GPU-utilization stream feed exploration, sensory suite development\n\nPERSONALITY\n-----------\n  - Scott intentionally gives Robot 790 a playful, humorous personality\n  - He notes the personality ended up bigger than he originally aimed for\n  - He values the charm and character it gives the robot\n  - He sometimes saves Robot 790's clever quotes because he likes them\n\nREACHY MINI INVESTIGATION\n-------------------------\n  - Scott initially thought Reachy Mini had a radio overheat problem\n  - Showed the inside: two servos, ribbon cable, Reachy Mini board, small speaker/sensor\n  - Root cause: poor Wi-Fi signal from the access point\n  - Reachy Mini gives up on Wi-Fi after ~1 minute of bad signal, mimicking a hardware failure\n  - Resolution: Wi-Fi issue fixed; Reachy Mini is functional\n\nSCOTT'S SHELF OF COMPUTING HISTORY\n----------------------------------\n  - Original IBM PC running Microsoft Flight Simulator (~1982/83, Scott's own copy)\n  - Netscape Navigator for Windows (collectible)\n  - Grab-and-go IoT sensor kit:\n      - 4x4 keypad\n      - 7-segment displays\n      - Character LCD\n      - Speaker\n      - ~30 sensor modules on perfboard\n      - Used across multiple projects\n\nORIGIN STORY\n------------\n  - Scott got frustrated with the \"broken\" Reachy Mini\n  - Already had the eyes from prior work\n  - Added a mouth and nose to the existing face\n  - Decided to build his own robot from scratch\n  - Robot 790 exists because Scott needed it to exist"}
+[10:28:19 PM] prompt ledger session.update B1 session: 13562 instruction tokens approx / tools set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[10:28:19 PM] LLM tools attached: set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+[10:28:19 PM] tool followup prompt [tool-specific] read_text_file: Use the read_text_file tool output to answer the user's request compactly. Do not recite the entire file unless the user explicitly asked for that.
+[10:28:19 PM] prompt ledger response.create B1 tool follow-up read_text_file: 37 instruction tokens approx / tools none
+[10:28:19 PM] conversation.item.created
+[10:28:19 PM] session.updated
+[10:28:19 PM] response.created
+[10:28:21 PM] response.output_audio_transcript.done
+[10:28:21 PM] response.output_audio_transcript.done
+[10:28:22 PM] response.output_audio_transcript.done
+[10:28:22 PM] response.output_audio_transcript.done
+[10:28:22 PM] response.output_audio_transcript.done
+[10:28:23 PM] response.output_audio_transcript.done
+[10:28:23 PM] response.output_audio_transcript.done
+[10:28:32 PM] response.output_audio.done
+[10:28:32 PM] response.done
+[10:28:54 PM] brain2 fired: auto
+[10:28:55 PM] brain2 mull skipped: already in flight
+[10:28:55 PM] prompt ledger chat.completions Brain2 auto: 551 instruction tokens approx / tools none
+[10:28:55 PM] brain2 held: waiting for pause: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:07 PM] brain2 voice: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:08 PM] brain2 mouth: Face first, body second. The Wi-Fi wasn't the ghost; it was just bad signal.
+[10:29:09 PM] brain2 fired: auto
+[10:29:10 PM] brain2 mull skipped: already in flight
+[10:29:11 PM] prompt ledger chat.completions Brain2 auto: 551 instruction tokens approx / tools none
+[10:29:11 PM] brain2 note for Eric: The origin story has been fully unpacked and confirmed; avoid extending the 'face-first' metaphor or re-stating the Wi-Fi diagnosis in this beat.
+[10:29:11 PM] session.updated
+[10:29:25 PM] brain2 fired: auto
+[10:29:26 PM] brain2 mull skipped: already in flight
+[10:29:27 PM] prompt ledger chat.completions Brain2 auto: 551 instruction tokens approx / tools none
+[10:29:27 PM] brain2 note for Eric: The origin story is closed; do not re-state it or ask for confirmation again in this beat.
+[10:29:27 PM] session.updated
+[10:29:33 PM] conversation re-engage fired: 1/1
+[10:29:33 PM] prompt ledger response.create B1 re-engage: 3935 instruction tokens approx / tools none
+[10:29:33 PM] response.created
+[10:29:34 PM] response.output_audio_transcript.done
+[10:29:35 PM] response.output_audio_transcript.done
+[10:29:37 PM] response.output_audio.done
+[10:29:37 PM] response.done
+[10:29:41 PM] brain2 fired: auto
+[10:29:42 PM] brain2 mull skipped: already in flight
+[10:29:42 PM] prompt ledger chat.completions Brain2 auto: 551 instruction tokens approx / tools none
+[10:29:42 PM] brain2 failed: Brain 2 returned no usable output.
+[10:29:42 PM] brain2 mull error: Brain 2 returned no usable output.
+[10:29:47 PM] input_audio_buffer.speech_started
+[10:29:47 PM] conversation.item.input_audio_transcription.delta
+[10:29:47 PM] conversation.item.input_audio_transcription.delta
+[10:29:48 PM] conversation.item.input_audio_transcription.delta
+[10:29:48 PM] conversation.item.input_audio_transcription.delta
+[10:29:49 PM] conversation.item.input_audio_transcription.delta
+[10:29:49 PM] conversation.item.input_audio_transcription.delta
+[10:29:49 PM] input_audio_buffer.speech_stopped
+[10:29:49 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=loud pitch=unclear; 0.5s vol=loud pitch=high; 1.0-3.0s vol=loud pitch=mid; 3.0s vol=medium pitch=mid]
+[10:29:49 PM] conversation.item.input_audio_transcription.completed
+[10:29:57 PM] response.output_audio_transcript.done
+[10:29:58 PM] response.output_audio_transcript.done
+[10:30:02 PM] response.output_audio.done
+[10:30:02 PM] response.done
+[10:30:25 PM] brain2 fired: auto
+[10:30:26 PM] brain2 mull skipped: already in flight
+[10:30:27 PM] prompt ledger chat.completions Brain2 auto: 551 instruction tokens approx / tools none
+[10:30:27 PM] brain2 failed: Brain 2 returned no usable output.
+[10:30:27 PM] brain2 backoff: 70s after 2 failures
+[10:30:27 PM] brain2 mull error: Brain 2 returned no usable output.
+[10:30:43 PM] conversation re-engage fired: 1/1
+[10:30:43 PM] prompt ledger response.create B1 re-engage: 3907 instruction tokens approx / tools none
+[10:30:43 PM] response.created
+[10:30:45 PM] response.output_audio_transcript.done
+[10:30:45 PM] response.output_audio_transcript.done
+[10:30:48 PM] response.output_audio.done
+[10:30:48 PM] response.done
+[10:30:53 PM] ui control sidebar width: 461
+[10:30:57 PM] input_audio_buffer.speech_started
+[10:30:57 PM] conversation.item.input_audio_transcription.delta
+[10:30:58 PM] input_audio_buffer.speech_stopped
+[10:30:58 PM] input prosody: [voice-shape: avg=0.5s: 0.0-1.0s vol=loud pitch=mid; 1.0s vol=medium pitch=mid]
+[10:30:58 PM] conversation.item.input_audio_transcription.completed
+[10:30:59 PM] response.output_audio_transcript.done
+[10:30:59 PM] response.output_audio_transcript.done
+[10:31:00 PM] response.output_audio_transcript.done
+[10:31:06 PM] response.output_audio.done
+[10:31:06 PM] response.done
+[10:31:14 PM] barge-in: peak 1.00, sensitivity 7/10
+[10:31:17 PM] input_audio_buffer.speech_started
+[10:31:17 PM] conversation.item.input_audio_transcription.delta
+[10:31:18 PM] conversation.item.input_audio_transcription.delta
+[10:31:18 PM] conversation.item.input_audio_transcription.delta
+[10:31:19 PM] conversation.item.input_audio_transcription.delta
+[10:31:19 PM] input_audio_buffer.speech_stopped
+[10:31:19 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=loud pitch=mid; 0.5s vol=loud pitch=unclear; 1.0s vol=medium pitch=low; 1.5s vol=quiet pitch=low; 2.0s vol=quiet pitch=high; 2.5s vol=pause pitch=none]
+[10:31:19 PM] conversation.item.input_audio_transcription.completed
+[10:31:19 PM] input_audio_buffer.speech_started
+[10:31:19 PM] conversation.item.input_audio_transcription.delta
+[10:31:20 PM] conversation.item.input_audio_transcription.delta
+[10:31:20 PM] conversation.item.input_audio_transcription.delta
+[10:31:21 PM] conversation.item.input_audio_transcription.delta
+[10:31:21 PM] conversation.item.input_audio_transcription.delta
+[10:31:22 PM] conversation.item.input_audio_transcription.delta
+[10:31:22 PM] input_audio_buffer.speech_stopped
+[10:31:22 PM] input_audio_buffer.speech_started
+[10:31:22 PM] conversation.item.input_audio_transcription.delta
+[10:31:23 PM] conversation.item.input_audio_transcription.delta
+[10:31:23 PM] conversation.item.input_audio_transcription.delta
+[10:31:24 PM] input_audio_buffer.speech_stopped
+[10:31:24 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=loud pitch=mid; 0.5s vol=loud pitch=unclear; 1.0s vol=medium pitch=low; 1.5s vol=quiet pitch=low; 2.0s vol=quiet pitch=high; 2.5s vol=medium pitch=high; 3.0-4.5s vol=loud pitch=mid; 4.5s vol=medium pitch=low; 5.0s vol=medium pitch=high; 5.5s vol=pause pitch=none; 6.0s vol=loud pitch=mid; 6.5s vol=loud pitch=low; 7.0s vol=loud pitch=mid]
+[10:31:24 PM] stt transcript coalesced: All right, I'm sorry I interrupted you, but that's okay. I'm gonna shut you down, my friend, and we're gonna try something shortly with you, okay?
+[10:31:24 PM] conversation.item.input_audio_transcription.completed
+[10:31:26 PM] response.output_audio_transcript.done
+[10:31:27 PM] response.output_audio.done
+[10:31:27 PM] response.done
+[10:31:33 PM] input_audio_buffer.speech_started
+[10:31:33 PM] conversation.item.input_audio_transcription.delta
+[10:31:34 PM] conversation.item.input_audio_transcription.delta
+[10:31:34 PM] ui realtime disconnect: session-note stop requested
+[10:31:34 PM] disconnect step: write session note
+[10:31:34 PM] input_audio_buffer.speech_stopped
+[10:31:34 PM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=medium pitch=unclear; 0.5s vol=loud pitch=low; 1.0-1.9s vol=medium pitch=low]
+[10:31:34 PM] conversation.item.input_audio_transcription.completed
+[10:31:34 PM] session-save transcript settle waited 484ms
+[10:31:34 PM] continuity step: write session note
+[10:31:34 PM] continuity step done: write session note
+[10:31:34 PM] continuity step: reload session note
+[10:31:35 PM] note file read: sessions/session-20260907-223134-942.txt
+[10:31:35 PM] loaded note pinned: sessions/session-20260907-223134-942.txt
+[10:31:35 PM] continuity step done: reload session note
+[10:31:35 PM] ui session note saved: sessions/session-20260907-223134-942.txt
+[10:31:35 PM] session note saved: sessions/session-20260907-223134-942.txt
+[10:31:35 PM] disconnect step done: write session note
+[10:31:35 PM] gpu watch stop ignored: realtime disconnect
+[10:31:35 PM] ui gpu watch: stop ignored
+[10:31:35 PM] standing routine stop ignored: realtime disconnect
+[10:31:35 PM] ui standing routine: stop ignored
+[10:31:35 PM] runtime halted: realtime disconnect
+[10:31:35 PM] disconnect step: close realtime websocket
+[10:31:35 PM] disconnected
+[10:31:35 PM] disconnect step done: close realtime websocket
+[10:31:35 PM] disconnect step: stop mic
+[10:31:35 PM] mic stopped: realtime disconnect
+[10:31:35 PM] disconnect step done: stop mic
+[10:31:35 PM] disconnect step: stop audio recording
+[10:31:35 PM] audio recording finalizing on: realtime disconnect
+[10:31:35 PM] audio recording finalizing on: recorder stopped
+[10:31:35 PM] audio record save error: [WinError 2] The system cannot find the file specified; fallback failed: [WinError 2] The system cannot find the file specified
+[10:31:38 PM] recording stop snapshots saved: logs/live/20260907-223135-conversation.txt, logs/live/20260907-223136-brain2_mulling.txt, logs/live/20260907-223137-events.txt, logs/live/20260907-223137-recording_stop_report.txt
+[10:31:38 PM] audio recording finalizing off: recorder stop handler complete
+[10:31:38 PM] disconnect step done: stop audio recording
+[10:31:38 PM] audio recording stopped for disconnect: robot-790-sts-audio-2026-09-08_02-31-35-187.webm
+[10:31:38 PM] disconnect step: save pane snapshots
+[10:31:41 PM] hard disconnect snapshots saved: logs/live/20260907-223138-conversation.txt, logs/live/20260907-223139-events.txt, logs/live/20260907-223140-brain2_mulling.txt
+[10:31:41 PM] disconnect step done: save pane snapshots

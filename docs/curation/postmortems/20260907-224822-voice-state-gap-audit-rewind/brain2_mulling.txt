@@ -1,0 +1,11 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-07T22:48:28
+Source: brain2_mulling
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[10:46:25 PM] fired: auto
+[10:46:26 PM] mull skipped: already in flight
+[10:46:28 PM] note for Eric: ROUTINE GAP: Do not claim the voice audit 'passed' or that Eric is fully validated yet; the logs show runtime_load_failed and rejected KV cache, so treat the current audio as unverified until a new receipt exists.
+[10:46:42 PM] fired: auto
+[10:46:43 PM] mull skipped: already in flight
+[10:46:43 PM] failed: Brain 2 returned no usable output.

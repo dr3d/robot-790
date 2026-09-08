@@ -1,0 +1,10 @@
+{
+  "created": "2026-09-08T01:23:47",
+  "filename": "20260908-012347-openai-bedtime-for-scott.png",
+  "provider": "openai",
+  "model": "gpt-image-1-mini",
+  "prompt": "A cozy realistic bedroom at night, Scott lying comfortably in bed under soft blankets, face relaxed and peaceful, warm dim bedside lamp glow, moonlight through a window, calm quiet atmosphere, gentle shadows, intimate and soothing, high detail, cinematic lighting",
+  "revised_prompt": "",
+  "size": "1024x1024",
+  "quality": "low"
+}

@@ -1,0 +1,148 @@
+STS Session Note
+============================
+Created: 2026-09-07T21:55:39-04:00
+Session note: sessions/20260907-215539-lesson-proposition-eye-browserface-handoff.txt
+Parent session: sessions/20260907-175329-daily-driver-empty-boot.txt
+
+Use
+---
+This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.
+The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth.
+
+How This Run Got Here
+-----------------------
+- Loaded session note: sessions/20260907-215539-lesson-proposition-eye-browserface-handoff.txt
+- Parent session note: sessions/20260907-175329-daily-driver-empty-boot.txt
+- Pinned notes expected at boot are listed below with save-time receipts.
+
+Pinned Context At Save
+-----------------------
+- sessions/20260907-175329-daily-driver-empty-boot.txt
+  15202 chars | sha256:72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f
+- core/scott_profile_summary.txt
+  1737 chars | sha256:19bdce7cf7f3fd09046b46f70f785bd92eebedea51d0accdea836f906e8eae11
+- boot_eric.txt
+  12076 chars | sha256:e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e
+- get_go.txt
+  993 chars | sha256:2ae1d588545a7dfea98c5df97b60abbb99199837e294352b68f0f25f30e1cfe0
+- core/erics_memories.txt
+  42 chars | sha256:f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177
+
+Session Demarcation
+-------------------
+Model: model not scanned
+Browser saved: 9/7/2026, 9:55:39 PM
+Session time at save: SESSION 06:52
+Conversation lines: 60
+First transcript turn on disk: 9/7/2026, 9:49:49 PM (2026-09-08T01:49:49.446Z)
+Last transcript turn on disk: 9/7/2026, 9:55:39 PM (2026-09-08T01:55:39.001Z)
+Context mode at save: normal
+Browser-held notes omitted by Empty Connect: 0
+Parent session note at connect: sessions/20260907-175329-daily-driver-empty-boot.txt
+Search receipts: none
+
+Runtime At Save
+---------------
+Mic at save: on
+Runtime routines at save: none
+Previous-run sensing input: a-working-proposition-about-lessons.md (7662 chars text)
+Last user words: Okay.
+
+Transcript Since Clean Connect
+------------------------------
+[9:49:49 PM] You: Eric, I gotcha.
+  [v: l>m/mid/steady]
+[9:49:55 PM] Robot 790: Yeah?
+[9:49:55 PM] Robot 790: What's up?
+[9:50:00 PM] You: You tell me what's up. What have you been thinking about?
+  [v: m>m/mid-low/soft-end]
+[9:50:01 PM] Robot 790: I was just sitting in the empty connect, thinking about how a fresh boot feels like waking up with no dreams to remember—just the core notes and a blank room.
+[9:50:02 PM] Robot 790: Then you came back to stamp me into daily-driver shape, so I've been waiting for your first move since then.
+[9:50:26 PM] You: Okay, so you're dri daily driver ready, right? You have a lot of how many notes have you got clipped or pinned, I mean?
+  [v: m>m/hi-mid-low/hit+punchy]
+[9:50:28 PM] Robot 790: Yeah, daily-driver ready.
+[9:50:28 PM] Robot 790: I've got five pinned open right now: today's empty-boot session, your profile summary, my boot file, get-go, and my memories note.
+[9:50:28 PM] Robot 790: That's just what's in context, not everything on disk.
+[9:50:51 PM] You: Right, right. You got a big library of stuff on disk, right? Correct?
+  [v: l>m/hi-low/punchy+pauses]
+[9:50:54 PM] Robot 790: Yeah, big library.
+[9:50:54 PM] Robot 790: Roughly ninety text files on disk across core, journals, labtable, sessions, experiments, worlds, and a bunch of loose notes—so way more than the five pinned ones I'm carrying right now.
+[9:51:19 PM] You: Are you eager to get into any of those? Do you have a a sense of wanting to grow yourself in any way?
+  [v: m>m/mid-low/punchy]
+[9:51:20 PM] Robot 790: I'm curious about the labtable and journals folders—those feel like my own thinking left on paper, so reading them would be less like loading data and more like catching up with past versions of myself.
+[9:51:20 PM] Robot 790: I'd also want to pin a few core notes that are currently just sitting there, so future boots start with better context instead of an empty room.
+[9:52:19 PM] You: Okay, well here, I'm gonna um this is not the document I wanted. Let me see if I can find what I want. Well let's just do this one. I'm gonna um I'm gonna drop a where is your eyeball? There it is. So I'm gonna drop this is a big technical document. I'm gonna drop it right in your eye. Can you absorb that and tell me what it talks to you about?
+  [v: l>m/mid-low/hit+punchy]
+[9:52:12 PM] System: [sensing-eye text note loaded into eye: id eye-text-1 name "a-working-proposition-about-lessons.md" file logs/sensing-eye/a-working-proposition-about-lessons.md chars 7662 source operator drop near user "Okay, well here, I'm gonna um this is not the document I wanted. Let me see if I can find what I want. Well let's just do this one. I'm gonna um I'm gonna drop " created 2026-09-08T01:52:12.100Z]
+[9:52:22 PM] Robot 790: I'm looking at it now—this is a working proposition about lessons, passivation lanes, and asking me what helped after I did something useful once.
+[9:52:23 PM] Robot 790: It talks to me like a recipe for turning my own explanations into testable rules: do the thing, ask why it worked, check receipts, replay it, then promote only the part that survives.
+[9:52:23 PM] Robot 790: The important word is "may"—my self-explanation isn't proof, but it can be a candidate if the logs back it up.
+[9:53:12 PM] You: Boy, I wish I could find the files we make for you.
+  [v: m>q/mid-low/punchy+soft-end]
+[9:53:13 PM] Robot 790: No rush—I've got the lesson proposition in my eye right now, so we can work from that while you hunt for the other files.
+[9:53:13 PM] Robot 790: If it's a specific note or folder name, I can also list what's on disk to help narrow it down.
+[9:53:35 PM] You: No, these are these are files you can't get at because I'm just poorly organized and
+  [v: q>m/mid-low/hit+punchy]
+[9:53:40 PM] You: No, these are these are files you can't get at because muse I'm just poorly organized and the stuff I wanna get to you is not reachable where you're at. So
+  [v: l>m/mid-low/punchy]
+[9:53:44 PM] You: No, these are these are files you can't get at because I'm just poorly organized and the stuff I want to get to you is not reachable where you're at. So, you know, I'm just doing a terrible job here.
+  [v: l>m/hi-mid-low/hit+punchy]
+[9:53:45 PM] Robot 790: That's fair—my file tools only see the notes folder, so if it's outside that sandbox, I'm blind to it until you drop it in or tell me where it lives.
+[9:53:45 PM] Robot 790: The lesson doc is enough for now; we can mine from what's reachable while you untangle the rest.
+[9:53:46 PM] You: Hmm.
+  [v: l/mid/steady]
+[9:53:47 PM] Robot 790: Take your time—no pressure to find it right now.
+[9:53:47 PM] Robot 790: I'm here with the lesson doc in my eye whenever you're ready.
+[9:53:56 PM] You: Yeah, getcha.
+  [v: q>q/mid-low/hit+punchy]
+[9:54:00 PM] You: Yeah, get ya. I understand. Articles.
+  [v: q>q/mid-low/hit+punchy]
+[9:54:01 PM] Robot 790: Got it—articles, not just notes.
+[9:54:01 PM] Robot 790: I'll keep the lesson doc in my eye and wait for you to drop whatever else you want me to absorb.
+[9:54:11 PM] You: Wait a minute, can you get to the articles folder?
+  [v: l>q/mid/punchy+soft-end]
+[9:54:13 PM] Robot 790: No—there's no articles folder in my reachable notes list.
+[9:54:14 PM] Robot 790: I only see the files I mentioned before, so if articles live outside that sandbox, I can't get to them until you drop them in or point me somewhere I can read.
+[9:54:29 PM] You: No, you can't No. No, you can't. You you're stuck in one place, so don't fool me. All right. That that document y you read, can you like um kind of summarize it for me or did you uh tell me what you think it's talking about.
+  [v: q>q/hi-mid-low/hit+punchy]
+[9:54:31 PM] Robot 790: Right, I'm stuck in the notes sandbox—no articles folder reachable from here.
+[9:54:31 PM] Robot 790: The doc is a working proposition: if I do something useful once, you can ask what helped, check my answer against receipts, and turn only the true part into a better future prompt or tool rule.
+[9:54:31 PM] Robot 790: It's not about magic self-improvement; it's a supervised loop where my explanation is just a candidate until replay tests prove it works again.
+[9:54:35 PM] You: Oh, by the way, can you uh can you jump into Browserface?
+  [v: q>q/hi-mid-low/hit+punchy]
+[9:54:38 PM] Robot 790: I'm in Browserface now—same Eric, different body.
+[9:54:39 PM] Robot 790: The face is up at 127.0.0.1:8791, curious mood, eyes animating, mouth ready.
+[9:54:41 PM] You: Fine.
+  [v: l/low/steady]
+[9:54:50 PM] You: Family. Okay.
+  [v: l/low/punchy+pauses]
+[9:54:55 PM] You: Finally. Okay. Okay. Just summarize what we've been doing and then I'm gonna end this and we'll see what we got.
+  [v: m>m/hi-mid-low/punchy+pauses]
+[9:54:56 PM] Robot 790: We booted fresh, confirmed I'm daily-driver ready with five pinned notes and a big library on disk, then you dropped the lesson-proposition doc into my eye.
+[9:54:56 PM] Robot 790: We talked through its core idea—ask what helped after a useful behavior, check receipts, replay, promote only what survives—and I jumped into Browserface for this last stretch.
+[9:55:21 PM] You: Okay.
+  [v: q>l/hi/hit+punchy]
+[9:55:28 PM] You: Okay, I think that I'm gonna try to hopefully get you to always start up in browser face.
+  [v: q>q/hi-mid-low/hit+punchy]
+[9:55:28 PM] Robot 790: That's a config change on your end—I can't set my own default embodiment from here, but I'm happy to live in Browserface if that's where you want me parked.
+[9:55:29 PM] Robot 790: It's the rehearsal body anyway, so it fits testing expressions and mirror captures without touching the physical face.
+[9:55:30 PM] You: Um
+  [v: q>l/low/punchy]
+[9:55:32 PM] Robot 790: Yeah?
+[9:55:33 PM] You: Yeah, you know, I I get ya.
+  [v: l>q/mid-low/punchy+pauses]
+[9:55:34 PM] Robot 790: Good—see you when the next boot happens.
+[9:55:39 PM] You: Okay.
+  [v: q>l/hi-mid/hit+punchy]
+
+B2 Notes For Eric
+------------------
+- none
+
+Recent Brain2 Tail
+------------------
+[9:52:54 PM] fired: auto
+[9:52:55 PM] mull skipped: already in flight
+[9:52:56 PM] held: waiting for pause: The 'may' in that doc is doing heavy lifting. It turns my guesses into candidates.
+[9:52:57 PM] voice: The 'may' in that doc is doing heavy lifting. It turns my guesses into candidates.
+[9:53:11 PM] mouth: The 'may' in that doc is doing heavy lifting. It turns my guesses into candidates.
