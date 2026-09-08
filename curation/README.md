@@ -3,6 +3,16 @@
 This folder is a staging area for mining Robot 790 runs before anything is
 promoted to `docs/`.
 
+The current engineering assessment is maintained in
+[Engineering Status](../docs/engineering-status.md). Superseded engineering
+snapshots and duplicate promoted drafts have been removed from the working tree;
+their previous versions remain in Git history. Session postmortems remain
+historical evidence, not a list of present-day bugs.
+
+This folder is tracked, so it is a review staging area rather than a privacy
+boundary. Keep private live captures in ignored `logs/` and `notes/` until a
+publication decision has been made.
+
 The usual workflow:
 
 1. Record a conversation or idle run from the STS page.

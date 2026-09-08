@@ -158,6 +158,10 @@ voices, third-party code, and media assets carry their own licenses.
 
 - [Public Page](docs/index.md): GitHub Pages landing page and article shelf.
 - [Docs Folder](docs/README.md): how the static site is organized.
+- [Engineering Status](docs/engineering-status.md): current guarantees, known
+  limits, verification commands, and the remaining reliability work.
+- [Context Engineering](docs/context-engineering-architecture.md): session
+  dependencies, pins, connection choices, and the proposed note representations.
 - [Public Media](docs/media/README.md): compression and publishing rules for
   images, audio, and video.
 - [Receipts And Open Questions](docs/evidence_map.md): working map of project
@@ -233,11 +237,12 @@ automatically. The real `.env` file is ignored by git.
 
 ## Daily STS Startup
 
-The usual all-local STS setup has three moving parts:
+The usual all-local STS setup has four moving parts:
 
 1. LM Studio serving an OpenAI-compatible chat endpoint on `127.0.0.1:1234`.
 2. Robot 790 realtime STS server on `127.0.0.1:8765`.
 3. Robot 790 browser page on `127.0.0.1:8790`.
+4. Browser Face on `127.0.0.1:8791`, the default embodiment.
 
 Here `gold` means the current best-known-good Eric runtime preset, not only the
 robot's gold body color. The current gold baseline is back on the faster NVFP4
@@ -260,6 +265,15 @@ Start the browser page:
 ```powershell
 .\scripts\start_sts_page.ps1
 ```
+
+Start the default browser face in another PowerShell window:
+
+```powershell
+.\scripts\start_face_sim.ps1
+```
+
+Open `http://127.0.0.1:8791/` for the face. Run each foreground server in its
+own terminal; the page alone does not start the face or realtime worker.
 
 Optional Reachy Mini body adapter:
 
@@ -355,6 +369,9 @@ should not silently clip chat text unless `-TextMaxTokens` is explicitly used.
 The browser page is the main live control surface. It includes:
 
 - Realtime server connection and model restart controls.
+- Connect latest, previous, empty, or a selected session, with a standalone
+  session map for inspecting branches. Advanced Connection currently loads the
+  selected file as written; compressed note variants are not implemented yet.
 - A compact `Nerves` meter for GPU load and VRAM pressure while Eric is running.
 - Sensing Eye drop target for images or text files.
 - Mic start/stop, audio meter, and interruption sensitivity.
@@ -370,6 +387,7 @@ The browser page is the main live control surface. It includes:
   real output volume; Brain2 owns the observer monitor mouth/voice, monitor
   volume, monitor pace, person-lane intensity, and manual mulling.
 - Idle controls for drift, wonder, self-focus, notes-focus, and substrate tests.
+- Focus control for manual sensing-eye salience and matching preview opacity.
 - Conversation and event panes with copy and record buttons.
 - Context Map for a rough view of what Eric can draw from, including the active
   base prompt source, runtime state, loaded notes, memory, enabled tools, and

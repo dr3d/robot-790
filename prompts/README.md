@@ -47,7 +47,7 @@ surface.
 
 For the project/operator vocabulary around context bits, pinned notes,
 session notes, thread notes, receipts, and the growing hot conversation, see
-`docs/pinned-notes-memory-architecture.md`. Treat that vocabulary as labels for
+[the context architecture](../docs/context-engineering-architecture.md). Treat that vocabulary as labels for
 real controls and context sources, not as Eric's private mythology. Keep most of
 it in docs and postmortems unless a run specifically needs Eric to reason about
 his own context architecture.

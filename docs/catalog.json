@@ -1,6 +1,34 @@
 {
-    "generated":  "2026-09-07 20:54:00",
+    "generated":  "2026-09-08 10:36:23",
     "articles":  [
+                     {
+                         "title":  "The Note That Marked Its Own Evidence",
+                         "excerpt":  "On September 3, 2026, Robot 790 produced a small note that may become one of",
+                         "source":  "articles/the-note-that-marked-its-own-evidence.md",
+                         "bytes":  8310,
+                         "modified":  "2026-09-08 10:34"
+                     },
+                     {
+                         "title":  "The Event Loop Grew A Face",
+                         "excerpt":  "Robot 790 began as a practical build: speech in, language model, voice out,",
+                         "source":  "articles/the-event-loop-grew-a-face.md",
+                         "bytes":  19786,
+                         "modified":  "2026-09-08 10:34"
+                     },
+                     {
+                         "title":  "Browser Face, Inner Voice, And The Kitty Seed",
+                         "excerpt":  "On September 2, 2026, Robot 790 ran in the new browser-face simulator while Scott debugged the face, mouth text, and Brain 2 monitor. The run began as visual tuning and turned into a useful comparison between Eric and a stripped creature seed named Tina: a tiny animatronic kitty with almost no context.",
+                         "source":  "articles/browser-face-kitty-seed-run.md",
+                         "bytes":  3019,
+                         "modified":  "2026-09-08 10:34"
+                     },
+                     {
+                         "title":  "Context Engineering Is A Directed Graph",
+                         "excerpt":  "Robot 790 keeps continuity in ordinary session notes. Each records what happened",
+                         "source":  "articles/context-engineering-as-directed-graph.md",
+                         "bytes":  9888,
+                         "modified":  "2026-09-08 10:30"
+                     },
                      {
                          "title":  "A Working Proposition About Lessons",
                          "excerpt":  "This is not a discovery yet.",
@@ -42,20 +70,6 @@
                          "source":  "articles/ledger-keepers-view.md",
                          "bytes":  12948,
                          "modified":  "2026-09-04 05:06"
-                     },
-                     {
-                         "title":  "The Note That Marked Its Own Evidence",
-                         "excerpt":  "On September 3, 2026, Robot 790 produced a small note that may become one of",
-                         "source":  "articles/the-note-that-marked-its-own-evidence.md",
-                         "bytes":  8307,
-                         "modified":  "2026-09-03 22:29"
-                     },
-                     {
-                         "title":  "The Event Loop Grew A Face",
-                         "excerpt":  "Robot 790 began as a practical build: speech in, language model, voice out,",
-                         "source":  "articles/the-event-loop-grew-a-face.md",
-                         "bytes":  19783,
-                         "modified":  "2026-09-03 17:22"
                      },
                      {
                          "title":  "The Landscape Around Eric",
@@ -105,13 +119,6 @@
                          "source":  "articles/safety-is-architecture-not-charm.md",
                          "bytes":  7329,
                          "modified":  "2026-09-03 00:26"
-                     },
-                     {
-                         "title":  "Browser Face, Inner Voice, And The Kitty Seed",
-                         "excerpt":  "On September 2, 2026, Robot 790 ran in the new browser-face simulator while Scott debugged the face, mouth text, and Brain 2 monitor. The run began as visual tuning and turned into a useful comparison between Eric and a stripped creature seed named Tina: a tiny animatronic kitty with almost no context.",
-                         "source":  "articles/browser-face-kitty-seed-run.md",
-                         "bytes":  3007,
-                         "modified":  "2026-09-02 18:33"
                      },
                      {
                          "title":  "Lab Night, September 1 Into September 2",
@@ -293,12 +300,6 @@
                      "title":  "Microduck Joins The Household 2026 08 31 003937 events",
                      "source":  "logs/Microduck-Joins-The-Household-2026-08-31-003937-events.txt",
                      "bytes":  244311,
-                     "modified":  "2026-08-31 01:06"
-                 },
-                 {
-                     "title":  "Microduck Joins The Household 2026 08 31 003937 transcript",
-                     "source":  "logs/Microduck-Joins-The-Household-2026-08-31-003937-transcript.txt",
-                     "bytes":  13288,
                      "modified":  "2026-08-31 01:06"
                  },
                  {

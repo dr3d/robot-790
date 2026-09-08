@@ -30,7 +30,7 @@ as a claim that particular assessment fixes were deployed.
 - Detailed events: [15:25:22 stop snapshot](../../logs/live/20260907-152522-events.txt).
 - Brain2: [15:25:21 stop snapshot](../../logs/live/20260907-152521-brain2_mulling.txt).
 - Settings and actual prompt emissions: [recording stop report](../../logs/live/20260907-152523-recording_stop_report.txt).
-- Saved handoff: [passivated state](../../notes/core/passivated_eric_state.txt), inspected with Created 3:24:16 PM. This path is mutable.
+- Historical handoff: `notes/core/passivated_eric_state.txt`, inspected with Created 3:24:16 PM. That mutable file was subsequently retired; it is not a current reload target.
 - Finished recording: [three-chunk session video](../../logs/audio/20260907-152441-sts-audio-session-picture.mp4).
 - Earlier scene evidence: [overnight conversation](../../logs/live/20260907-112646-conversation.txt).
 - Reopened images: [The Open Booth](../../logs/sensing-eye/20260907-034141-openai-the-open-booth.jpg) and [Scott sleeping in bed](../../logs/sensing-eye/20260907-035008-openai-scott-sleeping-in-bed.jpg).

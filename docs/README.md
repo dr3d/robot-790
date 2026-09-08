@@ -24,12 +24,20 @@ opened directly as a `file://` URL.
 - `catalog.json`: generated site index consumed by `index.html`.
 - `assets/`: CSS and JavaScript for the static page.
 - `articles/`: public Markdown articles and essays.
+- `articles/context-engineering-as-directed-graph.md`: public article framing
+  session dependencies as a directed graph, distinguishing the working loader
+  from proposed three-representation notes and weighted relationships.
 - `logs/`: curated public transcript excerpts, not raw private logs.
+- `curation/postmortems/`: deliberately prepared session bundles. These may
+  include full transcripts, note copies, recordings, and image receipts, so
+  publication review applies to the entire bundle, not just its README.
 - `media/`: compressed public images, audio, and video.
 - `context-engineering-architecture.md`: session-note, pinned-note, latest, and
   runtime-truth architecture, including the standalone session-map chooser.
 - `prosody-and-mouth.md`: input prosody, transcript tags, speech-mouth motion,
   and why those cues help the live loop.
+- `engineering-status.md`: maintained implementation status, known limits, and
+  verification commands. Superseded review snapshots live in Git history.
 - `evidence_map.md`: working map of project observations, receipts, and open
   tests.
 - `face_contract.md`: face vocabulary, skin inheritance, and renderer contract.
@@ -65,6 +73,12 @@ such as `docs/media/raw-video/`, `docs/media/rejected/`, or the root `logs/`
 tree until they are curated and compressed. Public media should be aggressively
 compressed before it lands in `docs/media/images/`, `docs/media/videos/`, or
 `docs/media/audio/`.
+
+The article reader uses a pinned, locally vendored Markdown parser, including
+tables, links, lists, and code fences. Write image/link paths relative to the
+Markdown file so they work both on GitHub and in the reader. Run
+`node --test tests/docs.test.cjs` from the repository root after rebuilding the
+catalog to catch broken local links.
 
 The boundary is intentional: `docs/` is publishable, while `notes/` and `logs/`
 are local working memory unless something is deliberately copied or curated

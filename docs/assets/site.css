@@ -277,11 +277,8 @@ main {
   color: var(--muted);
 }
 
-.article-image {
-  margin: 22px 0;
-}
-
-.article-image img {
+.article-body img,
+.log-reader.markdown-log img {
   display: block;
   width: min(100%, 620px);
   max-height: 760px;
@@ -290,11 +287,34 @@ main {
   background: #05070b;
 }
 
-.article-image figcaption {
-  max-width: 620px;
-  margin-top: 8px;
-  color: var(--muted);
-  font-size: 0.92rem;
+.article-body table,
+.log-reader.markdown-log table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.article-body th,
+.article-body td,
+.log-reader.markdown-log th,
+.log-reader.markdown-log td {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.article-body pre,
+.log-reader.markdown-log pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.article-body a,
+.log-reader.markdown-log a {
+  overflow-wrap: anywhere;
 }
 
 .article-body code,

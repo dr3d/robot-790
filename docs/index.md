@@ -34,6 +34,7 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 - [Eric Wakes Up New Every Time](articles/eric_wakes_up_new_every_time.md)
 - [What Robot 790 Is Becoming](articles/what-robot-790-is-becoming.md)
 - [A Working Proposition About Lessons](articles/a-working-proposition-about-lessons.md)
+- [Context Engineering Is A Directed Graph](articles/context-engineering-as-directed-graph.md)
 - [Time And Space, Both Live](articles/time-and-space-both-live.md)
 - [The Event Loop Grew A Face](articles/the-event-loop-grew-a-face.md)
 - [Passing Butter, Keeping Company](articles/passing-butter-keeping-company.md)
@@ -46,6 +47,7 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 
 ## Project Notes
 
+- [Engineering Status](engineering-status.md)
 - [Context Engineering Architecture](context-engineering-architecture.md)
 - [Prosody And Mouth](prosody-and-mouth.md)
 - [Receipts And Open Questions](evidence_map.md)

@@ -64,84 +64,6 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-function renderInlineMarkdown(value) {
-  return escapeHtml(value)
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`(.+?)`/g, "<code>$1</code>");
-}
-
-function renderMarkdown(markdown) {
-  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
-  const html = [];
-  let paragraph = [];
-  let inQuote = false;
-  let skippedDocumentTitle = false;
-
-  const flushParagraph = () => {
-    if (paragraph.length) {
-      html.push(`<p>${renderInlineMarkdown(paragraph.join(" "))}</p>`);
-      paragraph = [];
-    }
-  };
-
-  const closeQuote = () => {
-    if (inQuote) {
-      html.push("</blockquote>");
-      inQuote = false;
-    }
-  };
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      flushParagraph();
-      closeQuote();
-      continue;
-    }
-    if (/^#{1,3}\s+/.test(trimmed)) {
-      flushParagraph();
-      closeQuote();
-      const level = trimmed.match(/^#+/)[0].length;
-      if (level === 1 && !skippedDocumentTitle) {
-        skippedDocumentTitle = true;
-        continue;
-      }
-      html.push(`<h${level}>${renderInlineMarkdown(trimmed.replace(/^#+\s+/, ""))}</h${level}>`);
-      continue;
-    }
-    if (trimmed.startsWith(">")) {
-      flushParagraph();
-      if (!inQuote) {
-        html.push("<blockquote>");
-        inQuote = true;
-      }
-      html.push(`<p>${renderInlineMarkdown(trimmed.replace(/^>\s?/, ""))}</p>`);
-      continue;
-    }
-    if (/^[-*]\s+/.test(trimmed)) {
-      flushParagraph();
-      closeQuote();
-      html.push(`<p>&bull; ${renderInlineMarkdown(trimmed.replace(/^[-*]\s+/, ""))}</p>`);
-      continue;
-    }
-    const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-    if (imageMatch) {
-      flushParagraph();
-      closeQuote();
-      const alt = imageMatch[1];
-      const source = imageMatch[2];
-      html.push(`<figure class="article-image"><img src="${escapeHtml(source)}" alt="${escapeHtml(alt)}">${alt ? `<figcaption>${renderInlineMarkdown(alt)}</figcaption>` : ""}</figure>`);
-      continue;
-    }
-    paragraph.push(trimmed);
-  }
-
-  flushParagraph();
-  closeQuote();
-  return html.join("\n");
-}
-
 function renderedMarkdownUrl(source) {
   const value = String(source || "");
   if (!/\.md$/i.test(value) || /^[a-z]+:/i.test(value) || value.startsWith("//")) return value;
@@ -314,7 +236,8 @@ async function openArticle(article, { replaceUrl = false, scroll = true } = {}) 
   try {
     const response = await fetch(article.source);
     const text = await response.text();
-    articleReaderBody.innerHTML = renderMarkdown(text);
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    articleReaderBody.innerHTML = renderMarkdown(text, article.source);
     updateArticleSpeechButtons();
   } catch (error) {
     articleReaderBody.innerHTML = `<p>Could not load ${escapeHtml(article.source)}.</p>`;
@@ -680,7 +603,7 @@ async function selectLog(log, selectedButton, { replaceUrl = true } = {}) {
     const text = await response.text();
     if (/\.md$/i.test(log.source || "")) {
       setLogReaderState("markdown");
-      logReader.innerHTML = renderMarkdown(text);
+      logReader.innerHTML = renderMarkdown(text, log.source);
     } else {
       setLogReaderState("text");
       logReader.innerHTML = `<pre class="transcript-text">${escapeHtml(text)}</pre>`;

@@ -25,7 +25,7 @@ but that is not a test of Eric deciding to do useful work while alone.
 - Main conversation: [16:26:39 snapshot](../../logs/live/20260907-162639-conversation.txt).
 - Event chronology: [16:26:39 snapshot](../../logs/live/20260907-162639-events.txt).
 - Final settings and prompt receipt: [recording stop report](../../logs/live/20260907-162629-recording_stop_report.txt).
-- Saved handoff: [passivated state](../../notes/core/passivated_eric_state.txt). This is a mutable current-state file.
+- Historical handoff: `notes/core/passivated_eric_state.txt`. That mutable file was subsequently retired; it is not a current reload target.
 - Earlier picture session: [07:38 passivated session](../../notes/sessions/passivated-session-20260907-073800.txt).
 - Reopened pictures: [The Open Booth](../../logs/sensing-eye/20260907-034141-openai-the-open-booth.jpg) and [Scott sleeping in bed](../../logs/sensing-eye/20260907-035008-openai-scott-sleeping-in-bed.jpg).
 - New picture: [Scott's study at night](../../logs/generated-images/20260907-162426-openai-scott-s-study-at-night.png).

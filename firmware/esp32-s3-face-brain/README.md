@@ -1,5 +1,9 @@
 # ESP32-S3 Face Brain
 
+Status: parked external-eye experiment. The active one-piece portrait face is
+[`../esp32-s3-face/`](../esp32-s3-face/). The target below is retained for its
+hardware lineage and should not be mistaken for the daily face build.
+
 Robot 790 V2 integrated face-brain firmware for the Waveshare-style
 `ESP32-S3-Touch-LCD-2` board. This board replaces the separate V1 face controller
 experiment with one module that has a 240x320 display, capacitive touch, camera

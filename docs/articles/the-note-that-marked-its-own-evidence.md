@@ -1,6 +1,6 @@
 # The Note That Marked Its Own Evidence
 
-![Robot 790 looking at a recursive monitor scene, generated during the September 3 run.](assets/article-images/recursion-debugging-itself-2026-09-03.png)
+![Robot 790 looking at a recursive monitor scene, generated during the September 3 run.](../assets/article-images/recursion-debugging-itself-2026-09-03.png)
 
 On September 3, 2026, Robot 790 produced a small note that may become one of
 the more important artifacts in the project.
