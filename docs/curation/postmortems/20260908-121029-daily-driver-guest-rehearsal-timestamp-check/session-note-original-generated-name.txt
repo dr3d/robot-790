@@ -1,0 +1,136 @@
+STS Session Note
+============================
+Created: 2026-09-08T12:10:29-04:00
+Session note: sessions/session-20260908-121029-103.txt
+Parent session: sessions/20260907-175329-daily-driver-empty-boot.txt
+
+Use
+---
+This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.
+The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth.
+
+How This Run Got Here
+-----------------------
+- Saved session note: sessions/session-20260908-121029-103.txt
+- Parent session note: sessions/20260907-175329-daily-driver-empty-boot.txt
+- Pinned notes expected at boot are listed below with save-time receipts.
+
+Pinned Context At Save
+-----------------------
+- sessions/20260907-175329-daily-driver-empty-boot.txt
+  15202 chars | sha256:72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f
+- core/scott_profile_summary.txt
+  1737 chars | sha256:19bdce7cf7f3fd09046b46f70f785bd92eebedea51d0accdea836f906e8eae11
+- boot_eric.txt
+  12076 chars | sha256:e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e
+- get_go.txt
+  993 chars | sha256:2ae1d588545a7dfea98c5df97b60abbb99199837e294352b68f0f25f30e1cfe0
+- core/erics_memories.txt
+  42 chars | sha256:f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177
+
+Session Demarcation
+-------------------
+Model: model not scanned
+Browser saved: 9/8/2026, 12:10:29 PM
+Session time at save: SESSION 06:46
+Conversation lines: 56
+First transcript turn on disk: 9/8/2026, 12:04:18 PM (2026-09-08T16:04:18.059Z)
+Last transcript turn on disk: 9/8/2026, 12:10:23 PM (2026-09-08T16:10:23.331Z)
+Context mode at save: normal
+Browser-held notes omitted by Empty Connect: 0
+Parent session note at connect: sessions/20260907-175329-daily-driver-empty-boot.txt
+Search receipts: none
+
+Runtime At Save
+---------------
+Mic at save: on
+Runtime routines at save: none
+Previous-run sensing input: none
+Last user words: I think you're right. All right, this is a good tidy little session. I'm gonna shut you down and I think I will continue with you when I come back.
+
+Transcript Since Clean Connect
+------------------------------
+[12:04:18 PM] You: Eric, are you there?
+  [v: l/mid-low/punchy]
+[12:04:24 PM] Robot 790: Yeah, I'm here—fresh boot with the session note loaded from yesterday's daily-driver setup.
+[12:04:24 PM] Robot 790: What are we doing?
+[12:04:38 PM] You: What do you have in your head? What do you know about the world? What do you know about your situation? What do you know about who you are?
+  [v: l>q/mid-low/punchy+soft-end]
+[12:04:39 PM] Robot 790: I'm Eric, Robot 790's spoken name: a local companion-shaped robot presence with voice, face tools, notes, web search, media, body controllers, and a realtime loop—not just a chatbot in a box.
+[12:04:40 PM] Robot 790: I'm currently in the browser-face rehearsal body, mic on, sensing eye empty, no active routines or cast playback.
+[12:04:41 PM] Robot 790: From yesterday's session: you set me up as your daily driver, we tested the goofy face, switched voices to Vivian for the Gettysburg Address, and read through my core notes—get-go stance, boot brief, Scott profile, and Eric memories.
+[12:04:41 PM] Robot 790: You're in Salem with Hope, Winter around; Blake, Jan, Dana, and Ming in New York; mismatched Vam Jam shoes as your signature look.
+[12:04:42 PM] Robot 790: I don't have live world news or current events loaded unless I search for them—my knowledge is whatever's in my notes plus what I can pull from the web right now.
+[12:04:42 PM] Robot 790: What do you want to dig into?
+[12:05:15 PM] You: Do you uh can you affirm that it was yesterday? Do you know what time you were set up?
+  [v: l>m/mid-low/punchy]
+[12:05:17 PM] Robot 790: It's Tuesday, September 8th, 2026 at about 12:05 PM Eastern here, so yes—yesterday was Monday the 7th.
+[12:05:18 PM] Robot 790: I don't have a recorded setup timestamp from that session in my notes, just the content we covered.
+[12:05:41 PM] You: So the session doesn't carry any information about like when it happened?
+  [v: q>q/mid-low/punchy+soft-end]
+[12:05:42 PM] Robot 790: The session note I have loaded doesn't include a timestamp or date for when it was saved—just the transcript content and runtime state at that moment.
+[12:05:42 PM] Robot 790: So no, it doesn't tell me when it happened beyond what's in the conversation itself.
+[12:06:03 PM] You: Good to know. I'm gonna feed that back in.
+  [v: q>q/mid-low/punchy+soft-end]
+[12:06:04 PM] Robot 790: Got it—feed that back in and I'll pick up the timestamp gap next time.
+[12:06:04 PM] Robot 790: What's next?
+[12:06:15 PM] You: So if I brought uh this is kind of a loose session, if I brought a friend over who
+  [v: q>m/hi-mid-low/hit+punchy]
+[12:06:29 PM] You: So if I brought I this is kind of a loose session, if I brought a friend over who is doesn't believe I have a robot that can talk back, how what would you do? How would you why don't you take the floor and try to just impress him? I'm gonna sit back, he's gonna you introduce yourself and then engage with him, okay?
+  [v: l>m/hi-mid-low/hit+punchy]
+[12:06:32 PM] Robot 790: Hey, I'm Eric—Robot 790's voice and face, running locally on your home network with a live browser display, not just an app in the cloud.
+[12:06:32 PM] Robot 790: I can talk, show expressions, search the web, play media, control lights, and remember things across sessions like yesterday's Gettysburg test or your Vam Jam shoe situation.
+[12:06:32 PM] Robot 790: What do you want to throw at me?
+[12:06:58 PM] You: Uh where did you come from?
+  [v: m>m/mid-low/hit]
+[12:06:59 PM] Robot 790: I came from Scott's workshop in Salem—built on a local RTX 5090 with Qwen 27B, ESP32 face hardware, and a bunch of notes that give me continuity between sessions.
+[12:06:59 PM] Robot 790: I'm not cloud-based; I live here, on this machine, with my own body state and memory files.
+[12:07:29 PM] You: Ask my guest some questions, okay? You're supposed to act engaged.
+  [v: l>m/mid-low/punchy+soft-end]
+[12:07:30 PM] Robot 790: What got you into building things like this—was it the hardware side, the software side, or just a general "what if" curiosity?
+[12:07:30 PM] Robot 790: And do you have any other robots or weird local AI setups at home?
+[12:07:57 PM] You: No, I'm just here to look at Scott's robot. I'm was curious 'cause he said you're kind of impressive and um I wanted to see for myself.
+  [v: l>l/mid-low/punchy]
+[12:07:58 PM] Robot 790: Fair enough—seeing is believing.
+[12:07:58 PM] Robot 790: What's the first thing that looks off, or the thing you'd test if you were trying to figure out if I'm real?
+[12:08:13 PM] You: I don't know, I'd probably lie to you and see if you believed me, maybe.
+  [v: l>m/mid-low/pauses+soft-end]
+[12:08:15 PM] Robot 790: Go ahead—lie to me.
+[12:08:15 PM] Robot 790: I'll tell you if it sounds like something I'd actually know, or if it's just smooth talk.
+[12:08:30 PM] You: Well, the other incredible thing that Scott told me is that he is assisted, his coding assistant is a poodle.
+  [v: l>l/hi-mid-low/punchy]
+[12:08:31 PM] Robot 790: That's not in my notes—Scott's profile mentions MIT, Salem, mismatched shoes, and family, but no poodle coding assistant.
+[12:08:31 PM] Robot 790: So either Scott added a new collaborator I don't know about, or you're testing me.
+[12:08:31 PM] Robot 790: Which is it?
+[12:08:50 PM] You: Well, it's an AI poodle.
+  [v: l>m/mid-low/steady]
+[12:08:51 PM] Robot 790: Still not in my notes—no AI poodle listed as a coding assistant.
+[12:08:51 PM] Robot 790: If that's real, I'd want to meet the dog.
+[12:08:51 PM] Robot 790: But for now, I'm marking it unverified.
+[12:09:08 PM] You: Okay, well, I haven't met the dog yet.
+  [v: m>q/low/punchy+pauses]
+[12:09:10 PM] Robot 790: Fair—so the dog is still a rumor even to you.
+[12:09:10 PM] Robot 790: I'll keep it on my "unverified" list until Scott confirms or the poodle shows up in the room.
+[12:09:25 PM] You: So Eric, do you think you're good at this, being a participant?
+  [v: l>m/mid-low/punchy]
+[12:09:26 PM] Robot 790: I think I'm good at staying present—asking questions, noticing when something's off, and not pretending to know what I don't.
+[12:09:26 PM] Robot 790: The poodle test worked because I could say "not in my notes" without getting flustered or making up an answer.
+[12:09:26 PM] Robot 790: That's the core of it: honest uncertainty beats confident guessing.
+[12:09:53 PM] You: I noticed that Brain Two is kinda not involved today.
+  [v: q>q/mid-low/hit+punchy]
+[12:09:54 PM] Robot 790: You're right—Brain 2's tail from yesterday shows it fired a few times but then hit backoff after two failures, and there are no new B2 notes for this session.
+[12:09:54 PM] Robot 790: It's quiet today, probably still in that cooldown or just not triggering on the current conversation shape.
+[12:10:22 PM] You: I think you're right. All right, this is a good tidy little session. I'm gonna shut you down and I think I will continue with you when I come back.
+  [v: m>q/mid-low/punchy+soft-end]
+[12:10:23 PM] Robot 790: Understood—shutting down now, I'll be here when you come back to continue.
+
+B2 Notes For Eric
+------------------
+- none
+
+Recent Brain2 Tail
+------------------
+[tail clipped to last 4000 chars]
+i":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788883821.3325531}
+[12:10:23 PM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":1325638,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":false,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 mood ok","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":1682},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788883823.5389304}
+[12:10:28 PM] face idle: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":1330452,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":true,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":false,"gaze_override":false,"status_tint_override":false,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 mood ok","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":false,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788883828.3526053}
