@@ -1,6 +1,13 @@
 {
-    "generated":  "2026-09-08 10:36:23",
+    "generated":  "2026-09-08 11:12:31",
     "articles":  [
+                     {
+                         "title":  "Teaching Eric\u0027s Mouth To Speak",
+                         "excerpt":  "Eric already has a mouth. It opens while he talks. It can round, show teeth,",
+                         "source":  "articles/teaching-erics-mouth-to-speak.md",
+                         "bytes":  10508,
+                         "modified":  "2026-09-08 11:12"
+                     },
                      {
                          "title":  "The Note That Marked Its Own Evidence",
                          "excerpt":  "On September 3, 2026, Robot 790 produced a small note that may become one of",

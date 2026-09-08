@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RObot-790 | Mouth Lab</title>
+  <link rel="stylesheet" href="lab.css">
+  <script src="rig.js" defer></script>
+  <script src="lab.js" defer></script>
+</head>
+<body>
+  <header><h1>RObot-790 <span>Mouth Lab</span></h1><span class="tag">Isolated study</span></header>
+  <main>
+    <section class="stage" aria-label="Mouth comparison">
+      <div class="captions"><span>Stepped cues</span><span>Articulated <b id="shapeName">Rest</b></span></div>
+      <canvas id="mouth" width="1000" height="400" role="img" aria-label="Stepped and articulated mouth renderings"></canvas>
+      <div class="transport">
+        <button id="play" class="icon primary" title="Play" aria-label="Play"><img src="icons/play.svg" alt=""></button>
+        <button id="stop" class="icon" title="Stop" aria-label="Stop"><img src="icons/square.svg" alt=""></button>
+        <input id="position" type="range" min="0" max="5" step=".001" value="0" aria-label="Playback position">
+        <output id="time">0.00 / 0.00</output>
+        <label class="check"><input id="loop" type="checkbox" checked>Loop</label>
+        <select id="speed" aria-label="Playback speed"><option value=".5">0.5x</option><option value=".75">0.75x</option><option value="1" selected>1x</option></select>
+      </div>
+      <div id="cueTrack" class="cue-track" aria-label="Mouth cue timeline"></div>
+    </section>
+    <section class="workbench" aria-label="Articulation controls">
+      <div class="sources">
+        <h2>Source</h2>
+        <select id="study" aria-label="Rig study"><option value="contacts">Contacts</option><option value="rounding">Rounding</option><option value="inventory">All shapes</option></select>
+        <div class="commands">
+          <button id="importAudio"><img src="icons/upload.svg" alt="">Audio</button>
+          <button id="importCues"><img src="icons/upload.svg" alt="">Cues</button>
+          <button id="reset"><img src="icons/rotate-ccw.svg" alt="">Reset</button>
+          <button id="export"><img src="icons/download.svg" alt="">Settings</button>
+        </div>
+        <input id="audioFile" type="file" accept="audio/*" hidden>
+        <input id="cueFile" type="file" accept=".json,application/json" hidden>
+        <p id="sourceState" role="status">Silent rig study</p>
+        <p id="error" role="alert"></p>
+        <div id="poses" class="poses" role="group" aria-label="Hold a mouth shape"></div>
+        <audio id="audio" preload="metadata"></audio>
+      </div>
+      <div class="parameters">
+        <h2>Motion</h2>
+        <label>Transition <output id="transitionValue"></output><input id="transition" type="range" min="0" max="180" step="5" value="90"></label>
+        <label>Lip lead <output id="anticipationValue"></output><input id="anticipation" type="range" min="0" max="100" step="5" value="45"></label>
+        <label>Jaw travel <output id="jawValue"></output><input id="jaw" type="range" min=".5" max="1.5" step=".05" value="1"></label>
+      </div>
+      <div class="parameters">
+        <h2>Form</h2>
+        <label>Lip volume <output id="lipsValue"></output><input id="lips" type="range" min=".5" max="1.8" step=".05" value="1"></label>
+        <label>Width <output id="widthValue"></output><input id="width" type="range" min=".65" max="1.15" step=".05" value="1"></label>
+        <label>Expression <output id="smileValue"></output><input id="smile" type="range" min="-.5" max=".8" step=".02" value=".12"></label>
+      </div>
+    </section>
+    <footer><a href="README.md">Lab notes</a><a href="../../docs/mouth-animation-research.md">Research</a><span id="fileNames"></span></footer>
+  </main>
+</body>
+</html>

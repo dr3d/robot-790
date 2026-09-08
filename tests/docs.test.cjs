@@ -72,3 +72,15 @@ test('repository Markdown links and catalog sources point at existing files', ()
   visitCatalog(JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, '')));
   assert.deepEqual([...missing].sort(), []);
 });
+
+test('Mouth Lab article is catalogued and remains explicit about its experimental boundary', () => {
+  const source = 'docs/articles/teaching-erics-mouth-to-speak.md';
+  const article = fs.readFileSync(path.join(root, source), 'utf8');
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
+  assert.match(article, /^# Teaching Eric's Mouth To Speak/m);
+  assert.match(article, /does \*\*not\*\* currently:/);
+  assert.match(article, /the lab is a renderer-and-timing bench/);
+  assert.match(article, /mouth-lab-first-pass-pose-study\.png/);
+  assert.ok(fs.existsSync(path.join(root, 'docs/assets/article-images/mouth-lab-first-pass-pose-study.png')));
+  assert.ok(catalog.articles.some(item => item.source === 'articles/teaching-erics-mouth-to-speak.md'));
+});

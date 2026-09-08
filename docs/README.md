@@ -36,6 +36,8 @@ opened directly as a `file://` URL.
   runtime-truth architecture, including the standalone session-map chooser.
 - `prosody-and-mouth.md`: input prosody, transcript tags, speech-mouth motion,
   and why those cues help the live loop.
+- `mouth-animation-research.md`: source audit, viseme/coarticulation research,
+  isolated mouth lab, and staged timing/renderer integration plan.
 - `engineering-status.md`: maintained implementation status, known limits, and
   verification commands. Superseded review snapshots live in Git history.
 - `evidence_map.md`: working map of project observations, receipts, and open

@@ -170,6 +170,10 @@ state, and repairable mistakes.
 
 ## Limits
 
+For the September 8 source audit, research, and isolated next-generation rig,
+see [Mouth Animation: From Pose Switching To Articulation](mouth-animation-research.md).
+That study does not change the production behavior described here.
+
 The system should keep these limits visible:
 
 - `voice_shape` may be absent.
