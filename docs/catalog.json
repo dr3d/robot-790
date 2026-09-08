@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-07 19:03:46",
+    "generated":  "2026-09-07 20:49:42",
     "articles":  [
                      {
                          "title":  "A Working Proposition About Lessons",
@@ -160,8 +160,8 @@
                  {
                      "title":  "Daily Driver Empty Boot 2026 09 07 postmortem",
                      "source":  "logs/Daily-Driver-Empty-Boot-2026-09-07-postmortem.md",
-                     "bytes":  2676,
-                     "modified":  "2026-09-07 19:03"
+                     "bytes":  2731,
+                     "modified":  "2026-09-07 19:23"
                  },
                  {
                      "title":  "Long Alone Idle Run 2026 09 07 postmortem",
@@ -349,7 +349,7 @@
                       "bytes":  15901074,
                       "date":  "2026-09-07 19:02",
                       "modified":  "2026-09-07 19:02",
-                      "description":  "A moving screen recording of the first clean daily-driver Empty Connect run after the passivated-state design was retired. Scott starts Eric lean but not blank: core Eric memory is present, old session material is omitted, and the rest of the context is built deliberately in conversation through browser-face embodiment, a goofy-pose check, voice switching, get_go, Boot Eric, and Scott\u0027s profile summary. The key observation is that Empty Connect can behave like an owned-unit boot, and disconnect can turn the sit-down into a timestamped continuity session note for the next run."
+                      "description":  "A moving screen recording of the first clean daily-driver Empty Connect run after the old passivated-state design was retired. Scott starts Eric lean but not blank: core Eric memory is present, old session material is omitted, and the rest of the context is built deliberately in conversation through browser-face embodiment, a goofy-pose check, voice switching, get_go, Boot Eric, and Scott\u0027s profile summary. The key observation is that Empty Connect can behave like an owned-unit boot, and disconnect can turn the sit-down into a timestamped session note for the next run."
                   },
                   {
                       "title":  "AI Is More Believable As A Robot",

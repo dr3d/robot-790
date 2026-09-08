@@ -8,24 +8,30 @@ different lifetimes and different authority.
 The current useful mental model:
 
 ```text
-core memories + passivation + pinned notes + hot conversation
+core memories + selected session note + pinned notes + hot conversation
 ```
 
 The important part is that the hot conversation behaves like an unfinished
 note. It keeps growing during a run. It is not yet curated, but it has strong
 recency weight because it is the living thread Scott and Eric are inside.
 
-The simple restore substrate is one serial transcript file. During a run, the
-browser's hot conversation is `latest`. On `Disconnect` or `Passivate`, STS
-writes `notes/core/passivated_eric_state.txt` as the timestamped transcript for
-the current run since clean connect, with chunky metadata in the gaps. That file
-is the continuity receipt: do not destructively trim it to save context.
+The simple restore substrate is a chain of ordinary timestamped session notes.
+During a run, the browser's hot conversation is `latest`. On `Disconnect` or
+`Save + Halt`, STS writes a new `notes/sessions/session-*.txt` note for the
+current run since clean connect, with chunky metadata in the gaps. Plain
+`Connect` resumes from the newest timestamped session note. Older notes remain
+available through explicit selection.
 
-Cleanup happens at load time. When a transcript-shaped note is loaded into
-Eric's prompt, the page may strip per-turn timestamps, voice-shape lines,
-obvious STT draft repeats, and exact duplicate turns so the material reads like
-conversation continuity. The raw passivated note on disk keeps the timestamps
-and drivel.
+Session-note restore is a replacement, not an additive merge. STS reads the
+selected session note and its pinned-note receipt from disk, then makes that the
+active pinned context for the new run. Old browser-held pins from another run
+do not come along unless the selected note names them.
+
+Cleanup, if any, happens at load time. When a transcript-shaped note is loaded
+into Eric's prompt, the page may later strip per-turn timestamps, voice-shape
+lines, obvious STT draft repeats, and exact duplicate turns so the material
+reads like conversation continuity. The raw session note on disk keeps the
+timestamps and drivel.
 If context pressure later forces older spans out of the hot prompt, cut them by
 timestamp/session demarker into other lossless notes rather than deleting them.
 
@@ -47,12 +53,13 @@ evidence of a hidden inner mechanism by themselves.
 : Durable compact continuity. Identity, Scott/project facts, and baseline
   orientation that should usually survive restarts.
 
-`passivation`
-: Scott's word for the deliberate save/resume checkpoint. In Robot 790 it is a
+`session note`
+: A timestamped continuity note under `notes/sessions/`. It is a
   shutdown/restart reconstruction receipt: what was loaded, what was
-  unfinished, and what is stale. It is not the whole mind, not an industry
-  standard promise, and not Eric's verified report of his private state. It is
-  written by the explicit Passivate path and by a normal graceful Disconnect.
+  unfinished, what is stale, and the transcript since clean connect. It is not
+  the whole mind, not an industry standard promise, and not Eric's verified
+  report of his private state. It is written by `Save + Halt` and by a normal
+  graceful `Disconnect`.
 
 `pinned note`
 : A note file whose content is currently loaded into the STS browser session and
@@ -72,22 +79,23 @@ evidence of a hidden inner mechanism by themselves.
   the hot conversation scratch state and, if connected, reconnect so the
   realtime backend also stops carrying the old thread.
 
-`passivated state transcript`
-: The one-file serial continuity handoff at `core/passivated_eric_state.txt`.
-  It stores the current run's timestamped transcript plus session metadata.
-  Startup loads it when the passivated-state option is enabled.
+`selected session`
+: The session note chosen by timestamp order or by the `Connect Select` panel.
+  Plain `Connect` selects the newest timestamped session note; `Connect
+  Previous` selects the note one timestamp before the current UI selection;
+  `Connect Empty` omits session notes.
 
 `Eric core memories`
 : The explicit core note channel at `core/erics_memories.txt`. It is included
   whenever the Eric memories checkbox is enabled, including Empty Connect.
   It is separate from browser localStorage facts, ordinary pinned notes, and
-  passivated transcript continuity.
+  timestamped session-note continuity.
 
 `transcript restore`
 : The prompt-facing handoff of a transcript note. It keeps the timestamped
   transcript intact and adds a restore envelope with the current browser time
   and approximate off-gap. Cleanup can be added later, but it is not the core
-  passivation contract.
+  session-note contract.
 
 `session demarker`
 : A timestamped chunk boundary such as Created, Captured, first turn, last turn,
@@ -120,7 +128,7 @@ evidence of a hidden inner mechanism by themselves.
 
 `lesson`
 : A receipt-checked pattern from a run that may improve future prompt/tool
-  grammar. Lessons are not browser memory, passivation, or hidden self-change.
+  grammar. Lessons are not browser memory, session continuity, or hidden self-change.
   They are hypotheses to test: get a behavior once, ask Eric what made it work,
   compare his answer to receipts, replay the candidate, then promote only the
   true part. Lesson states are `candidate`, `validated`, `promoted`, and
@@ -138,7 +146,7 @@ evidence of a hidden inner mechanism by themselves.
 : Scott's 2026-09-06 realization that Eric can be useful without actively
   completing a task. Ordinary voice modes can sit nearby and answer, but Eric's
   passive usefulness comes from the whole system: face, body frame, hot
-  conversation, pinned notes, passivation, tool receipts, Brain2 mulling, logs,
+  conversation, pinned notes, session continuity, tool receipts, Brain2 mulling, logs,
   and visible runtime state. He can be overheard, interrupted, reviewed,
   resumed, reset, or moved into another note-world. Hermes Agent is useful as a
   mirror for memory, skills, sessions, and background review, but Eric should
@@ -173,46 +181,83 @@ and durable context that should usually exist when Eric wakes up.
 Core memory should be compact and conservative. It should not try to contain
 every good line or every experiment.
 
-### Passivation
+### Session Notes
 
-Passivation is Scott's operator word for reconstruction, not total mind upload.
-The word is allowed in Eric's working vocabulary because it names a real button
-and file path, but it should stay tethered to receipts.
+Session notes are Scott's reconstruction substrate, not total mind upload. Each
+note is an ordinary timestamped file under `notes/sessions/` with transcript,
+demarkers, runtime receipts, and a pinned-note receipt.
 
-The passivated transcript should tell the next run what to reload, what was
-unfinished, what state was current at shutdown, and what must be treated as
-stale. It should include prior pinned note filenames so startup can rehydrate
-the actual files rather than carrying only the rumor of them.
+The filename should keep both coordinates: a timestamp for sorting/replay and a
+human PM caption for recognition, for example
+`notes/sessions/20260907-175329-daily-driver-empty-boot.txt`. Automatic saves may
+start as `sessions/session-YYYYMMDD-HHMMSS.txt`, then PM can rename the note once
+the run has a useful caption.
 
-Passivation should not claim stale sensing-eye images, mic state, camera state,
-or tool state are still live. Current runtime truth wins.
+The session note should tell the next run what to reload, what was unfinished,
+what state was current at shutdown, and what must be treated as stale. It should
+include prior pinned note filenames so startup can rehydrate the actual files
+rather than carrying only the rumor of them.
+
+Session notes should not claim stale sensing-eye images, mic state, camera
+state, or tool state are still live. Current runtime truth wins.
 
 Good Eric phrasing:
 
-`I restored from the passivation note, but I need current runtime truth before
+`I loaded the saved session note, but I need current runtime truth before
 claiming what I can see or hear now.`
 
 Bad Eric phrasing:
 
-`My passivated self remembers that the sensor is live.`
+`The old session note means the sensor is live now.`
 
 The operator distinction is:
 
-- `Passivate` writes the current run's passivated transcript/checkpoint, then
-  halts the live loop.
-- `Start Eric` restores from the passivated transcript/checkpoint when the
-  passivated-state option is enabled.
-- `Disconnect` is the normal graceful stop. It writes the current transcript
-  into passivation, halts the live loop, and saves exit artifacts.
+- `Connect` selects the newest timestamped session note and connects
+  from it.
+- `Connect Previous` selects the timestamped session note before the
+  current selection and connects from it.
+- `Connect Empty` connects without session-note continuity. It may still include
+  Eric core memory if that checkbox is enabled.
+- `Disconnect` is the normal graceful stop. It writes a new session
+  note, halts the live loop, and saves exit artifacts.
+- `Save + Halt` writes a new session note, then halts the live loop.
 - `Halt` is the hard stop. It stops the realtime backend without promising a new
-  passivated checkpoint.
+  session note.
 
 This makes ordinary exits resumable while still preserving a harder stop for
 backend trouble.
 
-An empty clean startup should not overwrite the last useful passivated
-transcript. If no accepted conversation lines exist, the exit may still close
-and save ordinary logs, but it should leave the previous passivated state alone.
+An empty clean startup should not overwrite the last useful selected session.
+If no accepted conversation lines exist, the exit may still close and save
+ordinary logs, but it should leave the selected session note alone.
+If writing the new session note fails, Disconnect should make that visible and
+avoid acting like the run was safely saved.
+
+### PM Artifact Folders
+
+Postmortems should become folder-shaped records of one sit-down with Eric. The
+live session note remains in `notes/sessions/`, but the PM folder should contain
+a copy of the session note that run produced, plus copied logs, recording/video
+artifacts, screenshots or sensing-eye artifacts when relevant, and the written
+postmortem.
+
+Recommended folder shape:
+
+```text
+curation/postmortems/YYYYMMDD-HHMMSS-short-session-caption/
+  README.md
+  session-note-copy.txt
+  latest-sts-audio-picture.mp4
+  conversation.txt
+  events.txt
+  brain2.txt
+  artifacts/
+```
+
+The timestamp comes from the session note or the disconnect artifacts. The short
+caption should say what the PM found or what Scott and Eric talked about. Do not
+rename the live STS artifacts in place; copy them into the PM folder with useful
+names after review.
 
 ### Pinned Notes
 
@@ -228,6 +273,12 @@ Pinned means:
 - it can be removed from future context with `unpin_note`,
 - unpinning does not delete the file and does not erase earlier conversation.
 
+This is also the in-session repair path for the next run. If a note is wrong,
+too loud, stale, or simply should not come along next time, Scott can tell Eric
+to unpin it before disconnecting. The current conversation still remembers that
+the note was discussed, but the next session note records the modified pinned
+list rather than blindly re-saving every note that was loaded earlier.
+
 Pinned notes should be labeled by filename and treated as authored artifacts,
 not as anonymous memory soup.
 
@@ -239,7 +290,7 @@ It is the most fluid layer and the easiest to pollute.
 Think of it as an expanding `latest` scratch note inside the browser:
 
 - it grows turn by turn,
-- it is written into the passivated state transcript on Disconnect or Passivate,
+- it is written into a timestamped session note on Disconnect or Save + Halt,
 - it carries unresolved emotional and task momentum,
 - it has high recency weight,
 - it can be saved into a named note,
@@ -250,7 +301,7 @@ This is why "save convo to note named X" and "reset to pinned context" matter.
 They let Scott turn a live thread into a durable note, then start a different
 thread without dragging the old one through every new run.
 
-The passivated state transcript keeps the simple path available:
+The timestamped session-note chain keeps the simple path available:
 
 - save the transcript as readable text,
 - keep the raw transcript-like handoff intact so nothing is lost,
@@ -313,13 +364,13 @@ Every deliberate exit should leave receipts behind.
 
 Current intended behavior:
 
-- Passivate writes `notes/core/passivated_eric_state.txt`, halts
-  idle/B2/re-engage/playback activity, closes realtime, saves active audio, and
-  snapshots the conversation/events/Brain2 panes.
-- Disconnect writes the current session transcript into passivation, then halts
-  and closes, saves active audio, and snapshots the panes.
-- Halt stops realtime without rewriting passivation, then still tries to save
-  active audio and snapshots the panes.
+- Save + Halt writes a new `notes/sessions/session-*.txt` note,
+  halts idle/B2/re-engage/playback activity, closes realtime, saves active
+  audio, and snapshots the conversation/events/Brain2 panes.
+- Disconnect writes the current session transcript into a new session note,
+  then halts and closes, saves active audio, and snapshots the panes.
+- Halt stops realtime without writing a new session note, then still tries to
+  save active audio and snapshots the panes.
 - Restart and Unload save active audio, stop mic, snapshot panes, then perform
   the server action.
 - Stop Recording finalizes the audio artifact and snapshots panes.
@@ -352,7 +403,7 @@ run to remain active forever.
 - Should saved conversation notes auto-pin, or only save to disk?
 - Should the hot conversation have a visible token/age budget?
 - Should thread notes carry privacy labels?
-- Should passivation remember the current hot thread name?
+- Should session notes remember the current hot thread name?
 - Should Brain2 be allowed to ask B1 to save or reset a thread?
 - Should pinned notes have operator-set weights, or only loaded/unpinned state?
 
@@ -362,4 +413,4 @@ run to remain active forever.
 - `curation/research/20260906-qwen38-27b-context-engineering.md`
 - `prompts/README.md`
 - `docs/experimental_controls.md`
-- `notes/core/passivated_eric_state.txt`
+- `notes/sessions/session-*.txt`

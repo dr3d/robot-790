@@ -1,3 +1,5 @@
+import pytest
+
 from robot_790d import realtime_tools
 from robot_790d.behavior import BehaviorDaemon
 from robot_790d.memory import list_facts
@@ -259,6 +261,67 @@ def test_set_chassis_refuses_overlapping_drive(monkeypatch) -> None:
     assert result["queued"] is False
     assert "refusing to queue" in str(result["error"])
     assert chassis.calls == []
+
+
+@pytest.mark.parametrize("action", ["status", "stop", "estop", "clear", "tank", "twist"])
+def test_chassis_failures_cannot_return_success(monkeypatch, action: str) -> None:
+    chassis = FakeChassis()
+    failure = {"error": "connection timed out"}
+    monkeypatch.setattr(chassis, action, lambda *args: failure)
+    monkeypatch.setattr(realtime_tools, "_build_chassis", lambda: chassis)
+
+    result = realtime_tools._set_chassis({"action": action})
+
+    assert result["status"] == "error"
+    assert result["error"] == "connection timed out"
+    assert result["chassis"] == failure
+    assert chassis.closed
+
+
+@pytest.mark.parametrize("method,args", [
+    ("_set_robot_mode", {"mode": "thinking"}),
+    ("_play_face_beat", {"name": "mischief"}),
+    ("_set_face_mood", {"name": "happy"}),
+    ("_set_eye_gaze", {"x": 0}),
+    ("_set_face_animation", {"enabled": True}),
+    ("_set_eye_style", {"name": "normal"}),
+    ("_set_mouth", {"shape": "open"}),
+])
+def test_face_failures_cannot_return_success(monkeypatch, method: str, args: dict) -> None:
+    face = FakeFace()
+    failure = {"error": "face unavailable"}
+    for name in ("control", "beat", "emotion", "gaze", "idle_animation", "style", "mouth"):
+        monkeypatch.setattr(face, name, lambda *args, **kwargs: failure, raising=False)
+    monkeypatch.setattr(realtime_tools, "_build_daemon", lambda: (BehaviorDaemon(face), face))
+
+    result = getattr(realtime_tools, method)(args)
+
+    assert result["status"] == "error"
+    assert result["error"] == "face unavailable"
+    assert result["face"] == failure
+    assert face.closed
+
+
+@pytest.mark.parametrize("failure", [
+    {"ok": False},
+    {"status": "failed", "reason": "drive unavailable"},
+    {"status": "skipped", "message": "drive not attempted"},
+])
+@pytest.mark.parametrize("failed_action", ["twist", "stop"])
+def test_timed_chassis_drive_checks_both_receipts(monkeypatch, failure: dict, failed_action: str) -> None:
+    chassis = FakeChassis()
+    monkeypatch.setattr(chassis, failed_action, lambda *args: failure)
+    monkeypatch.setattr(realtime_tools, "_build_chassis", lambda: chassis)
+    monkeypatch.setattr(realtime_tools.time, "sleep", lambda _: None)
+
+    result = realtime_tools._set_chassis({"action": "twist", "velocity": 0.2, "duration_s": 0.1})
+
+    assert result["status"] == "error"
+    assert result["error"]
+    assert chassis.closed
+    assert not realtime_tools._CHASSIS_DRIVE_LOCK.locked()
+    if failed_action == "twist":
+        assert ("stop", None) in chassis.calls
 
 
 def test_memory_tools_persist_named_facts(tmp_path, monkeypatch) -> None:

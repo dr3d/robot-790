@@ -222,6 +222,9 @@
     let easedMouthTopology = "";
     let easedMouthTalkLevel = 0;
     let lastMouthEaseAt = 0;
+    let easedSpeechEyeX = 0;
+    let easedSpeechEyeY = 0;
+    let lastSpeechEyeAt = 0;
     let faceCommandLastSeq = 0;
     const handledFaceCommandSeqs = new Set();
     let faceCommandPollInFlight = false;
@@ -288,18 +291,20 @@
 
     function defaultStsUrl() {
       const host = location.hostname || "127.0.0.1";
-      return `http://${host}:8790/`;
+      return `${location.protocol === "https:" ? "https:" : "http:"}//${host}:8790/`;
     }
 
     function normalizedStsUrl(value = stsUrlInput?.value) {
       const raw = String(value || defaultStsUrl()).trim().replace(/\/?$/, "/");
-      if (isLoopbackHost(location.hostname)) return raw;
       try {
         const url = new URL(raw);
-        if (isLoopbackHost(url.hostname)) {
+        if (!isLoopbackHost(location.hostname) && isLoopbackHost(url.hostname)) {
           url.hostname = location.hostname;
-          return url.toString().replace(/\/?$/, "/");
         }
+        if (location.protocol === "https:" && url.protocol === "http:" && url.hostname === location.hostname) {
+          url.protocol = "https:";
+        }
+        return url.toString().replace(/\/?$/, "/");
       } catch {
         return raw;
       }
@@ -1079,6 +1084,37 @@
       };
     }
 
+    function speechEyeLevel() {
+      if (!state || state.eyes_animate === false) return 0;
+      const mouth = state.mouth || {};
+      const speech = activeSpeechMouth(mouth);
+      if (speech) return clamp(0.36 + speech.energy * 0.64, 0, 1);
+      if (mouth.talking || state.mode === "speaking") {
+        return clamp(0.28 + Number(mouth.energy || 0.45) * 0.62, 0, 1);
+      }
+      return 0;
+    }
+
+    function speakingEyeOffset(t, left) {
+      const level = speechEyeLevel();
+      if (level <= 0) return { x: 0, y: 0 };
+
+      const dt = clamp(t - (lastSpeechEyeAt || t), 0, 140);
+      lastSpeechEyeAt = t;
+      const step = Math.floor(t / 760);
+      const seed = step * 12.9898;
+      const targetX = (Math.sin(seed) * 7.5 + Math.sin(seed * 1.87 + 1.2) * 3.0) * level;
+      const targetY = (-2.6 + Math.cos(seed * 1.31 + 0.5) * 4.2) * level;
+      const amount = 1 - Math.exp(-dt / 115);
+      easedSpeechEyeX = easeToward(easedSpeechEyeX, targetX, amount);
+      easedSpeechEyeY = easeToward(easedSpeechEyeY, targetY, amount);
+
+      return {
+        x: easedSpeechEyeX + Math.sin(t * 0.012 + (left ? 0.2 : 0.8)) * 0.9 * level,
+        y: easedSpeechEyeY + Math.sin(t * 0.009 + (left ? 1.1 : 1.9)) * 0.55 * level
+      };
+    }
+
     function eyeModeGaze(mode, gx, gy, left, t) {
       if (mode === "crossed") {
         const inward = left ? 1 : -1;
@@ -1274,12 +1310,13 @@
       const pose = lidPoseFor(mood, left);
       const palette = eyePalettes[state?.style || "robot"] || eyePalettes.robot;
       const idle = idleEyeOffset(t);
+      const speech = speakingEyeOffset(t, eyeballLeft);
       const rawGazeX = Number(gaze.x || 0);
       const rawGazeY = Number(gaze.y || 0);
       const baseGazeX = Math.abs(rawGazeX) <= 1 ? rawGazeX * firmwareEye.maxGazeX : rawGazeX * (firmwareEye.maxGazeX / 64.6);
       const baseGazeY = Math.abs(rawGazeY) <= 1 ? rawGazeY * firmwareEye.maxGazeY : rawGazeY * (firmwareEye.maxGazeY / 48);
-      let gx = clamp(baseGazeX + idle.x * 0.58, -firmwareEye.maxGazeX, firmwareEye.maxGazeX);
-      let gy = clamp(baseGazeY + idle.y * 0.58, -firmwareEye.maxGazeY, firmwareEye.maxGazeY);
+      let gx = clamp(baseGazeX + idle.x * 0.58 + speech.x, -firmwareEye.maxGazeX, firmwareEye.maxGazeX);
+      let gy = clamp(baseGazeY + idle.y * 0.58 + speech.y, -firmwareEye.maxGazeY, firmwareEye.maxGazeY);
 
       if (mood === "afraid") {
         gx += Math.sin(t * 0.032 + (eyeballLeft ? 0 : 1.4)) * 1.4;
@@ -1996,11 +2033,11 @@
       const pulse = 0.5 + Math.sin(t * 0.0017) * 0.5;
       const glow = 0.35 + 0.65 * (pulse * pulse * (3 - 2 * pulse));
       const cx = 360;
-      const cy = faceLayout.statusY + faceLayout.statusH / 2 - 6;
+      const cy = faceLayout.statusY + faceLayout.statusH / 2 - 26;
       ctx.save();
-      // The browser pane is intentionally narrowed; compensate so the nose reads round on screen.
+      // Keep the status nose deliberately taller than wide in the browser face.
       const rimRy = 124;
-      const rimRx = 148;
+      const rimRx = 148 * 0.8;
       const glowLayers = [
         [42, 0.035],
         [30, 0.055],
@@ -2076,8 +2113,8 @@
       ctx.globalAlpha = facePaint.opacity;
       if (facePaint.target === "nose") {
         const cx = 360;
-        const cy = faceLayout.statusY + faceLayout.statusH / 2 - 6;
-        const rx = 115;
+        const cy = faceLayout.statusY + faceLayout.statusH / 2 - 26;
+        const rx = 115 * 0.8;
         const ry = 93;
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);

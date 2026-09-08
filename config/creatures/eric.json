@@ -37,7 +37,7 @@
   "context_model": {
     "pinned_notes": "Loaded/open context blocks Eric may draw from right now; not every note file on disk.",
     "latest": "The growing active conversation/thread after startup context; it may later be saved, cleared, or reset.",
-    "passivation": "The project word for sealing reconstructable session continuity into the one-file passivated state transcript; not a verified inner feeling by itself.",
+    "session_notes": "Timestamped continuity notes saved under notes/sessions; Connect loads the latest selected note, Connect Previous moves one timestamp back, and Connect Empty omits them.",
     "ordering_hint": "Recent runtime state and tool receipts outrank older notes; pinned notes are nearby, shelf notes are only titles until read."
   },
   "machine_language": [
@@ -72,9 +72,9 @@
       "meaning": "Refer to the current growing conversation thread after startup context."
     },
     {
-      "term": "passivate",
-      "semantic_verb": "seal_reconstructable_state",
-      "meaning": "Save the current session continuity into the passivated state transcript."
+      "term": "session note",
+      "semantic_verb": "save_or_load_continuity_note",
+      "meaning": "Use a timestamped note under notes/sessions as reconstructable conversation continuity."
     },
     {
       "term": "Dial 1-2-3",

@@ -49,7 +49,7 @@
       user-select: none;
     }
     main {
-      width: min(1500px, calc(100vw - 16px));
+      width: min(1500px, calc(100vw - 28px));
       height: 100vh;
       height: 100dvh;
       max-height: 100vh;
@@ -805,8 +805,48 @@
     .memory-controls {
       grid-template-columns: minmax(260px, 1fr) minmax(180px, 260px) auto auto auto;
     }
+    .session-select-controls {
+      grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(120px, auto));
+      align-items: end;
+    }
+    .session-select-control {
+      grid-column: 1 / span 4;
+      min-width: 0;
+    }
+    #continuitySessionSelect {
+      min-height: 180px;
+      overflow: auto;
+      padding: 8px;
+      border-color: rgba(96, 211, 148, 0.26);
+      background: rgba(8, 16, 14, 0.42);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.45;
+    }
+    #continuitySessionSelect option {
+      padding: 7px 8px;
+      background: transparent;
+      color: var(--text);
+      font-weight: 650;
+    }
+    #continuitySessionSelect option:checked {
+      background: linear-gradient(90deg, rgba(96, 211, 148, 0.20), rgba(96, 211, 148, 0.05));
+      color: #e8fff3;
+    }
     .loaded-note-control {
       min-width: 0;
+    }
+    #loadedNoteSelect {
+      min-height: 46px;
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    #loadedNoteSelect option {
+      color: var(--text);
+      background: var(--panel-2);
+      font-weight: 650;
     }
     .thread-note-control {
       grid-column: 1 / span 2;
@@ -1195,7 +1235,8 @@
       height: 72px;
     }
     #settingsPanel .lab-goal-control,
-    #settingsPanel .thread-note-control {
+    #settingsPanel .thread-note-control,
+    #serverPanel .session-select-control {
       grid-column: auto;
     }
     #settingsPanel .thread-reset-option,
@@ -1843,17 +1884,35 @@
         <details id="realtimeControlsExpando" class="runtime-settings-expando realtime-controls-expando" open>
           <summary>
             <span class="runtime-settings-label">Connection Controls</span>
-            <span class="subtle">Connect, passivate, halt, restart, and unload</span>
+            <span class="subtle">Connect latest, previous, empty, halt, restart, and unload</span>
           </summary>
           <div class="runtime-settings-expando-body">
             <section class="controls realtime-action-controls">
               <button id="connect" class="primary">Connect</button>
-              <button id="emptyConnect" class="primary" type="button">Empty Connect</button>
+              <button id="previousConnect" class="primary" type="button">Connect Previous</button>
+              <button id="emptyConnect" class="primary" type="button">Connect Empty</button>
               <button id="disconnect" class="danger" disabled>Disconnect</button>
               <button id="haltRuntime" class="danger" type="button">Halt</button>
-              <button id="passivateEric" class="warn" type="button">Passivate</button>
+              <button id="saveAndHaltEric" class="warn" type="button">Save + Halt</button>
               <button id="restartServer" class="warn">Restart</button>
               <button id="unloadServer" class="danger">Unload</button>
+            </section>
+          </div>
+        </details>
+        <details id="connectSelectExpando" class="runtime-settings-expando">
+          <summary>
+            <span class="runtime-settings-label">Connect Select</span>
+            <span class="subtle">Choose a timestamped session note</span>
+          </summary>
+          <div class="runtime-settings-expando-body">
+            <section class="controls session-select-controls">
+              <label class="session-select-control">
+                Session Note
+                <select id="continuitySessionSelect" size="8"></select>
+              </label>
+              <button id="refreshContinuitySessions" type="button">Refresh</button>
+              <button id="selectContinuitySession" type="button">Select</button>
+              <button id="connectSelectedContinuitySession" class="primary" type="button">Connect Selected</button>
             </section>
           </div>
         </details>
@@ -2322,7 +2381,6 @@
               <button id="resetToPinnedContext" type="button">Reset To Pinned</button>
               <label class="toggle-row thread-reset-option"><input id="conversationNoteResetAfterSave" type="checkbox"> Reset after save</label>
               <label class="toggle-row"><input id="loadEricMemories" type="checkbox" checked> Load Eric memories on refresh</label>
-              <label class="toggle-row"><input id="loadPassivatedEric" type="checkbox" checked> Load passivated state + pinned notes</label>
             </section>
           </div>
         </details>
@@ -2438,6 +2496,7 @@
     const embodimentSelect = document.querySelector("#embodimentSelect");
     const chassisUrlInput = document.querySelector("#chassisUrl");
     const connectButton = document.querySelector("#connect");
+    const previousConnectButton = document.querySelector("#previousConnect");
     const emptyConnectButton = document.querySelector("#emptyConnect");
     const disconnectButton = document.querySelector("#disconnect");
     const haltRuntimeButton = document.querySelector("#haltRuntime");
@@ -2451,6 +2510,10 @@
     const customModelContext = document.querySelector("#customModelContext");
     const customModelParallel = document.querySelector("#customModelParallel");
     const realtimeControlsExpando = document.querySelector("#realtimeControlsExpando");
+    const continuitySessionSelect = document.querySelector("#continuitySessionSelect");
+    const refreshContinuitySessionsButton = document.querySelector("#refreshContinuitySessions");
+    const selectContinuitySessionButton = document.querySelector("#selectContinuitySession");
+    const connectSelectedContinuitySessionButton = document.querySelector("#connectSelectedContinuitySession");
     const faceIdleButton = document.querySelector("#faceIdle");
     const faceBeatButton = document.querySelector("#faceBeat");
     const chassisStopButton = document.querySelector("#chassisStop");
@@ -2478,8 +2541,7 @@
     const clearLatestThreadButton = document.querySelector("#clearLatestThread");
     const conversationNoteResetAfterSave = document.querySelector("#conversationNoteResetAfterSave");
     const resetToPinnedContextButton = document.querySelector("#resetToPinnedContext");
-    const passivateEricButton = document.querySelector("#passivateEric");
-    const loadPassivatedEric = document.querySelector("#loadPassivatedEric");
+    const saveAndHaltEricButton = document.querySelector("#saveAndHaltEric");
     const ttsVoice = document.querySelector("#ttsVoice");
     const ttsPrecision = document.querySelector("#ttsPrecision");
     const ttsInstruct = document.querySelector("#ttsInstruct");
@@ -2706,6 +2768,7 @@
     let lastUserConversationIndex = -1;
     let memorySaveArmedUntil = 0;
     let pendingToolCalls = 0;
+    let realtimeSessionGeneration = 0;
     let toolFollowupNeeded = false;
     let responseDoneAfterTool = false;
     let toolFollowupExactText = "";
@@ -2916,8 +2979,7 @@
     const micPanelStorageKey = "robot790.micPanel.open.v1";
     const settingsPanelStorageKey = "robot790.settingsPanel.open.v1";
     const loadEricMemoriesStorageKey = "robot790.loadEricMemories.v1";
-    const loadPassivatedEricStorageKey = "robot790.loadPassivatedEric.v1";
-    const passivatedEricNoteFilename = "core/passivated_eric_state.txt";
+    const legacyContinuityBookmarkNoteFilename = "core/continuity.txt";
     const labGoalOneShotStorageKey = "robot790.labGoalOneShot.v1";
     const idleToolAllowedNames = new Set([
       "get_body_sensors",
@@ -2969,8 +3031,11 @@
     const audioRecordRolloverMs = 12 * 60 * 1000;
     const lastAutosavedLogText = new Map();
     const baseStartupNoteFilenames = ["core/erics_memories.txt"];
-    let passivatedEricHalted = false;
-    let passivatedEricBusy = false;
+    let currentContinuitySessionFilename = "";
+    let continuityParentForCurrentRun = "";
+    let continuitySessions = [];
+    let continuitySaveHalted = false;
+    let continuitySaveBusy = false;
     const ttsStylePresets = {
       neutral: "",
       dry: "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
@@ -3955,33 +4020,6 @@
       },
       {
         type: "function",
-        name: "extract_passivated_session_notes",
-        description: (
-          "Turn a passivated Eric transcript record into durable per-session note files when the user explicitly asks " +
-          "to mine, extract, split, archive, or convert passivated state into session notes. This preserves transcript material; it is not a summary."
-        ),
-        parameters: {
-          type: "object",
-          properties: {
-            source_filename: {
-              type: "string",
-              description: "Passivated note filename to extract from. Defaults to core/passivated_eric_state.txt."
-            },
-            output_dir: {
-              type: "string",
-              description: "Folder inside Robot 790's notes folder for extracted session notes. Defaults to sessions."
-            },
-            overwrite: {
-              type: "boolean",
-              default: false,
-              description: "Overwrite deterministic filenames instead of creating a unique suffixed note."
-            }
-          },
-          additionalProperties: false
-        }
-      },
-      {
-        type: "function",
         name: "list_pinned_notes",
         description: (
           "List the note files currently pinned into Robot 790's active STS browser context. " +
@@ -3997,15 +4035,16 @@
         type: "function",
         name: "unpin_note",
         description: (
-          "Stop feeding one currently pinned note file into future Robot 790 context when the user explicitly asks " +
-          "to unpin, forget, stop using, remove, or close a note. This does not delete the note file and does not erase conversation history."
+          "Stop feeding one currently pinned note file into future context when the user explicitly asks " +
+          "to unpin, forget, stop using, remove, close, drop from boot context, leave out next time, or remove a polluting note. " +
+          "This changes the pinned-note list that the next session note will record. It does not delete the note file or erase conversation history."
         ),
         parameters: {
           type: "object",
           properties: {
             filename: {
               type: "string",
-              description: "Filename of the pinned note to unpin, such as erics_many_minds.md or core/passivated_eric_state.txt."
+              description: "Filename of the pinned note to unpin, such as erics_many_minds.md or sessions/20260907-175329-daily-driver-empty-boot.txt."
             }
           },
           required: ["filename"],
@@ -4592,12 +4631,12 @@
       "When reading a note, call read_text_file with a filename argument. Do not speak XML, JSON, or <tool_call> markup out loud.",
       "When the user asks what notes are pinned, loaded, open, or in context, call list_pinned_notes. Do not confuse pinned notes with all files on disk.",
       "When the user asks you to forget, unpin, close, stop using, or remove a loaded/pinned note from context, call unpin_note with the filename. This does not delete the file or erase previous conversation history.",
+      "If the user says a note should not come along next time, should not be in the next run, should be dropped from boot context, or is polluting the current context, treat that as an unpin request. If the exact filename is unclear, call list_pinned_notes first or ask for the filename.",
       "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
       "If the operator says write/save this as a note, write the note directly. If the wording is elliptical but clearly refers to the current report or summary, ask for one compact filename clarification instead of describing permission rules.",
       "When using write_text_file for a short note you authored, pass filename and content.",
       "When the operator asks to save the current conversation or thread as a named note, call write_text_file with filename and source conversation unless they explicitly ask for idle/events/full session too.",
       "When the operator asks to resume, restore, continue, or load a saved transcript/thread, call read_text_file for that note and treat the transcript as conversation continuity, not generic background lore.",
-      "When the operator asks to mine, extract, split, archive, or convert passivated state into session notes, call extract_passivated_session_notes. This preserves transcript material into permanent per-session notes; it is not a summary.",
       "When the user asks to summarize a named note or transcript into another note, call write_text_file with the target filename, source note_summary, and source_filename set to the note being summarized.",
       "Do not use source conversation when the user asks for a summary of a previously read or named note; source conversation copies the visible transcript.",
       "When using write_text_file for a long note based on captured session material, omit content and pass source instead; do not generate a huge content argument.",
@@ -4725,10 +4764,8 @@
       const value = text ?? [lastUserText, ...recentUserTexts].join(" ");
       const writeVerb = "write|save|append|put|record|log|create|produce|generate|make|update|edit|revise|amend|replace|remember";
       const noteNoun = "file|note|notes|txt|text|md|markdown|summary";
-      const passivatedExtractVerb = "mine|extract|split|archive|convert|decompose";
       return new RegExp(`\\b(${writeVerb})\\b[\\s\\S]{0,120}\\b(${noteNoun})\\b`, "i").test(value || "")
-        || new RegExp(`\\b(${noteNoun})\\b[\\s\\S]{0,120}\\b(${writeVerb})\\b`, "i").test(value || "")
-        || new RegExp(`\\b(${passivatedExtractVerb})\\b[\\s\\S]{0,120}\\bpassivat`, "i").test(value || "");
+        || new RegExp(`\\b(${noteNoun})\\b[\\s\\S]{0,120}\\b(${writeVerb})\\b`, "i").test(value || "");
     }
 
     function memorySaveArmed() {
@@ -4947,10 +4984,22 @@
       if (!filename) return;
       const content = result.content.replace(/\r\n/g, "\n").trim();
       if (!content) return;
-      loadedNoteContexts = [
+      const updatedContexts = [
         { filename, content, loadedAt: Date.now() },
         ...loadedNoteContexts.filter((item) => item.filename !== filename)
-      ].slice(0, maxLoadedNotes);
+      ];
+      const reservedCount = updatedContexts.filter((item) => (
+        (loadEricMemoriesEnabled() && noteFilenameInSet(item.filename, baseStartupNoteFilenames))
+        || noteFilenameIsCurrentContinuitySession(item.filename)
+      )).length;
+      let ordinaryCount = 0;
+      loadedNoteContexts = updatedContexts.filter((item) => {
+        if (
+          (loadEricMemoriesEnabled() && noteFilenameInSet(item.filename, baseStartupNoteFilenames))
+          || noteFilenameIsCurrentContinuitySession(item.filename)
+        ) return true;
+        return ordinaryCount++ < maxLoadedNotes - reservedCount;
+      });
       loadedNoteContextDirty = true;
       log(events, `loaded note pinned: ${filename}`);
       updateLoadedNoteControls();
@@ -4958,10 +5007,7 @@
     }
 
     function configuredStartupNoteFilenames() {
-      return [
-        ...(loadEricMemoriesEnabled() ? baseStartupNoteFilenames : []),
-        ...(loadPassivatedEricEnabled() ? [passivatedEricNoteFilename] : [])
-      ];
+      return loadEricMemoriesEnabled() ? [...baseStartupNoteFilenames] : [];
     }
 
     function noteFilenameSet(filenames) {
@@ -4970,6 +5016,13 @@
 
     function noteFilenameInSet(filename, filenames) {
       return noteFilenameSet(filenames).has(String(filename || "").toLowerCase());
+    }
+
+    function noteFilenameIsCurrentContinuitySession(filename) {
+      return Boolean(
+        currentContinuitySessionFilename
+        && String(filename || "").toLowerCase() === currentContinuitySessionFilename.toLowerCase()
+      );
     }
 
     function ericMemoryNoteContexts() {
@@ -5000,19 +5053,6 @@
 
     function saveEricMemoriesPref() {
       localStorage.setItem(loadEricMemoriesStorageKey, loadEricMemoriesEnabled() ? "true" : "false");
-    }
-
-    function loadPassivatedEricEnabled() {
-      return loadPassivatedEric?.checked !== false;
-    }
-
-    function loadPassivatedEricPref() {
-      const stored = localStorage.getItem(loadPassivatedEricStorageKey);
-      if (loadPassivatedEric) loadPassivatedEric.checked = stored !== "false";
-    }
-
-    function savePassivatedEricPref() {
-      localStorage.setItem(loadPassivatedEricStorageKey, loadPassivatedEricEnabled() ? "true" : "false");
     }
 
     function forgetNoteContexts(filenames) {
@@ -5135,58 +5175,219 @@
       };
     }
 
-    function passivatedPinnedNoteFilenames(content) {
+    function continuityPinnedNoteFilenames(content) {
       const text = String(content || "");
-      const match = text.match(/^(?:Previous-run loaded notes|Loaded notes):\s*(.+)$/mi);
-      if (!match) return [];
+      const heading = /^Pinned Context At Save\s*\n-+\s*\n/im.exec(text);
+      if (!heading) return [];
+      const afterHeading = text.slice(heading.index + heading[0].length);
+      const nextSection = /^Session Demarcation\s*\n-+\s*\n/im.exec(afterHeading);
+      const section = nextSection ? afterHeading.slice(0, nextSection.index) : afterHeading;
       const seen = new Set();
       const result = [];
-      for (const item of match[1].split(",")) {
-        const filename = item.trim();
+      for (const line of section.split("\n")) {
+        const match = line.match(/^\s*-\s+(.+?)\s*$/);
+        if (!match) continue;
+        const filename = match[1].trim();
         const key = filename.toLowerCase();
         if (!filename || key === "none") continue;
-        if (key === passivatedEricNoteFilename.toLowerCase()) continue;
+        if (key === legacyContinuityBookmarkNoteFilename.toLowerCase()) continue;
         if (seen.has(key)) continue;
         seen.add(key);
         result.push(filename);
       }
-      return result.slice(0, Math.max(0, maxLoadedNotes - 1));
+      return result;
     }
 
-    function passivatedStateContext() {
+    function continuitySessionContext() {
       return loadedNoteContexts.find((item) => (
-        String(item.filename || "").toLowerCase() === passivatedEricNoteFilename.toLowerCase()
+        noteFilenameIsCurrentContinuitySession(item.filename)
       )) || null;
     }
 
-    async function rehydratePassivatedPinnedNotes({ source = "passivation" } = {}) {
-      const passivatedContext = passivatedStateContext();
-      const filenames = passivatedPinnedNoteFilenames(passivatedContext?.content || "");
-      if (!filenames.length) return [];
-      const alreadyLoaded = noteFilenameSet(loadedNoteContexts.map((item) => item.filename));
-      const toLoad = filenames.filter((filename) => !alreadyLoaded.has(String(filename || "").toLowerCase()));
-      if (!toLoad.length) return [];
+    function setLoadedNoteContextsForContinuity(results) {
+      const seen = new Set();
+      loadedNoteContexts = (results || [])
+        .filter((item) => item?.status === "ok" && typeof item.content === "string")
+        .map((item) => ({
+          filename: String(item.filename || "").trim(),
+          content: String(item.content || "").replace(/\r\n/g, "\n").trim(),
+          loadedAt: Date.now()
+        }))
+        .filter((item) => {
+          const key = item.filename.toLowerCase();
+          if (!item.filename || !item.content || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      loadedNoteContextDirty = true;
+      updateLoadedNoteControls();
+      if (contextPanel?.open) renderContextMap();
+    }
+
+    async function fetchCurrentContinuitySession() {
+      const response = await fetch(new URL("/api/continuity/current", location.href), { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
+    async function fetchContinuitySessions() {
+      const response = await fetch(new URL("/api/continuity/sessions", location.href), { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      continuitySessions = Array.isArray(result.sessions) ? result.sessions : [];
+      renderContinuitySessionSelect(result.current_session_filename || "");
+      return result;
+    }
+
+    function renderContinuitySessionSelect(currentFilename = "") {
+      if (!continuitySessionSelect) return;
+      const previous = continuitySessionSelect.value;
+      continuitySessionSelect.replaceChildren();
+      if (!continuitySessions.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No session notes yet";
+        continuitySessionSelect.appendChild(option);
+        continuitySessionSelect.disabled = true;
+        return;
+      }
+      continuitySessionSelect.disabled = false;
+      for (const item of continuitySessions) {
+        const filename = String(item.filename || "");
+        const displayName = sessionNoteDisplayName(filename);
+        const option = document.createElement("option");
+        option.value = filename;
+        const marker = filename.toLowerCase() === String(currentFilename || "").toLowerCase() ? "* " : "";
+        option.textContent = `${marker}${displayName}`;
+        option.title = filename;
+        continuitySessionSelect.appendChild(option);
+      }
+      const preferred = previous || currentFilename || continuitySessions[0]?.filename || "";
+      if ([...continuitySessionSelect.options].some((option) => option.value === preferred)) {
+        continuitySessionSelect.value = preferred;
+      }
+    }
+
+    async function fetchContinuitySessionMetadata(filename) {
+      const name = String(filename || "").trim();
+      if (!name) throw new Error("Choose a session note first.");
+      const response = await fetch(new URL("/api/continuity/select", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_filename: name })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status !== "ok") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
+    }
+
+    async function selectContinuitySession(filename, { refresh = true } = {}) {
+      const name = String(filename || "").trim();
+      const result = await fetchContinuitySessionMetadata(name);
+      currentContinuitySessionFilename = result.session_filename || name;
+      if (refresh) {
+        await fetchContinuitySessions();
+        currentContinuitySessionFilename = result.session_filename || name;
+        renderContinuitySessionSelect(currentContinuitySessionFilename);
+      }
+      return result;
+    }
+
+    async function selectLatestContinuitySession() {
+      const result = await fetchContinuitySessions();
+      const latest = continuitySessions[0]?.filename || "";
+      if (!latest) return null;
+      if (String(result.current_session_filename || "").toLowerCase() === String(latest).toLowerCase()) {
+        currentContinuitySessionFilename = latest;
+        return fetchContinuitySessionMetadata(latest);
+      }
+      return selectContinuitySession(latest, { refresh: false });
+    }
+
+    async function loadCurrentContinuitySession({ source = "continuity", sessionFilename = "" } = {}) {
+      const current = sessionFilename
+        ? await fetchContinuitySessionMetadata(sessionFilename)
+        : await fetchCurrentContinuitySession();
+      if (current.status === "unavailable") {
+        currentContinuitySessionFilename = "";
+        continuityParentForCurrentRun = "";
+        return null;
+      }
+      const filename = String(current.session_filename || "").trim();
+      if (!filename) throw new Error("No session note was selected.");
+      currentContinuitySessionFilename = filename;
+      let sessionResult = null;
+      try {
+        sessionResult = await readTextFile({ filename, pin: false });
+      } catch (error) {
+        currentContinuitySessionFilename = "";
+        throw error;
+      }
+      const receipts = Array.isArray(current.pinned_notes) ? current.pinned_notes : [];
+      const receiptFilenames = receipts
+        .filter((item) => item?.status !== "missing" && item?.current_status !== "missing")
+        .map((item) => item?.filename)
+        .filter(Boolean);
+      const filenames = receiptFilenames.length
+        ? receiptFilenames
+        : continuityPinnedNoteFilenames(sessionResult?.content || "");
+      const allowed = filenames.filter((item) => (
+        loadEricMemoriesEnabled() || !noteFilenameInSet(item, baseStartupNoteFilenames)
+      ));
       const loaded = [];
       const failed = [];
-      for (const filename of [...toLoad].reverse()) {
+      for (const filename of allowed) {
         try {
-          await readTextFile({ filename });
-          loaded.push(filename);
+          loaded.push(await readTextFile({ filename, pin: false }));
         } catch (error) {
           failed.push(`${filename} (${error.message})`);
         }
       }
-      const restored = loaded.reverse();
+      const restored = loaded.map((item) => item.filename);
+      const changed = receipts
+        .filter((item) => item?.current_status === "changed")
+        .map((item) => item?.filename)
+        .filter(Boolean);
+      const missing = receipts
+        .filter((item) => item?.current_status === "missing")
+        .map((item) => item?.filename)
+        .filter(Boolean);
+      setLoadedNoteContextsForContinuity([sessionResult, ...loaded]);
+      continuityParentForCurrentRun = filename;
       log(events, [
-        `passivated pinned notes rehydrated from ${source}: ${restored.join(", ") || "none"}`,
+        `session note loaded from ${source}: ${filename}`,
+        `continuity pinned notes rehydrated: ${restored.join(", ") || "none"}`,
+        changed.length ? `changed since saved: ${changed.join(", ")}` : "",
+        missing.length ? `missing since saved: ${missing.join(", ")}` : "",
         failed.length ? `failed: ${failed.join("; ")}` : ""
       ].filter(Boolean).join(" / "));
-      recordUiEvent("passivated pinned notes rehydrated", restored.join(", ") || "none", {
+      recordUiEvent("session note loaded", filename, {
         source,
+        session_filename: filename,
         failed,
-        previous_run_loaded_notes: filenames
+        changed_pinned_notes: changed,
+        missing_pinned_notes: missing,
+        pinned_notes: allowed
       });
-      return restored;
+      return { ...current, restored_pinned_notes: restored, failed_pinned_notes: failed };
+    }
+
+    async function loadLatestContinuitySession({ source = "Connect" } = {}) {
+      const selected = await selectLatestContinuitySession();
+      if (!selected) {
+        currentContinuitySessionFilename = "";
+        continuityParentForCurrentRun = "";
+        log(events, "no session note yet");
+        return null;
+      }
+      return loadCurrentContinuitySession({ source, sessionFilename: selected.session_filename || "" });
     }
 
     function handleEricMemoriesPrefChange() {
@@ -5201,21 +5402,6 @@
       if (forgetNoteContexts(baseStartupNoteFilenames)) {
         updateSessionTools();
         log(events, "startup Eric memories unpinned");
-      }
-    }
-
-    function handlePassivatedEricPrefChange() {
-      savePassivatedEricPref();
-      recordUiEvent("passivated Eric startup", loadPassivatedEricEnabled() ? "on" : "off", {
-        loaded_notes: loadedNoteContexts.map((item) => item.filename)
-      });
-      if (loadPassivatedEricEnabled()) {
-        loadStartupNotes();
-        return;
-      }
-      if (forgetNoteContexts([passivatedEricNoteFilename])) {
-        updateSessionTools();
-        log(events, "passivated Eric state note unpinned");
       }
     }
 
@@ -5281,10 +5467,10 @@
           ? "Use configured creature/runtime instructions, Eric's core memory note, enabled tool schemas, the current live conversation in this websocket, and direct user input that arrives during this empty-connect run."
           : "Use only configured creature/runtime instructions, enabled tool schemas, the current live conversation in this websocket, and direct user input that arrives during this empty-connect run.",
         ericMemories
-          ? "Do not draw from browser localStorage memory, ordinary startup notes, pinned or loaded notes other than Eric's core memory note, passivated state, old visible transcript, event log, Brain2 carryover, lab goal, search receipts, alone-state ledger, last-user echo, sensing-eye image/text, camera frame, or previous run context unless the operator supplies it again during this live session."
-          : "Do not draw from browser memory, startup notes, pinned or loaded notes, passivated state, old visible transcript, event log, Brain2 carryover, lab goal, search receipts, alone-state ledger, last-user echo, sensing-eye image/text, camera frame, or previous run context unless the operator supplies it again during this live session.",
+          ? "Do not draw from browser localStorage memory, ordinary startup notes, pinned or loaded notes other than Eric's core memory note, saved session notes, old visible transcript, event log, Brain2 carryover, lab goal, search receipts, alone-state ledger, last-user echo, sensing-eye image/text, camera frame, or previous run context unless the operator supplies it again during this live session."
+          : "Do not draw from browser memory, startup notes, pinned or loaded notes, saved session notes, old visible transcript, event log, Brain2 carryover, lab goal, search receipts, alone-state ledger, last-user echo, sensing-eye image/text, camera frame, or previous run context unless the operator supplies it again during this live session.",
         ericMemories
-          ? "If asked what context you have, say this is an Empty Connect startup with Eric's core memory note loaded; passivated state, other notes, browser facts, and staged sensor content are omitted."
+          ? "If asked what context you have, say this is an Empty Connect startup with Eric's core memory note loaded; saved session notes, other notes, browser facts, and staged sensor content are omitted."
           : "If asked what context you have, say this is a clean config-only startup rather than claiming memories, notes, or staged sensor content.",
         ericMemories,
         formatCreatureForInstructions(),
@@ -5504,14 +5690,18 @@
       const name = String(filename || "").toLowerCase();
       const text = String(content || "");
       const turnLineCount = (text.match(/^\[[^\]]+\]\s+(You|Robot 790):/gm) || []).length;
-      if (name === passivatedEricNoteFilename.toLowerCase() && turnLineCount > 0) return true;
+      if (loadedNoteLooksLikeSessionNote(text) && turnLineCount > 0) return true;
       if (turnLineCount > 0 && /(^|\/)(latest_)?conversation(_transcript)?\.txt$/.test(name)) return true;
-      if (turnLineCount > 0 && /(^|\/)(conversation|thread|session|passivat)|\btranscript\b/.test(name)) return true;
+      if (turnLineCount > 0 && /(^|\/)(conversation|thread|session)|\btranscript\b/.test(name)) return true;
       return /Robot 790 (?:Live Log Snapshot|Conversation Transcript Chunk)/i.test(text)
         && turnLineCount > 0;
     }
 
-    function passivationCreatedAt(content) {
+    function loadedNoteLooksLikeSessionNote(content) {
+      return /^(?:STS Session Note|Robot 790 Session Note|Robot 790 Continuity Session)$/mi.test(String(content || ""));
+    }
+
+    function continuityCreatedAt(content) {
       const match = String(content || "").match(/^Created:\s*(.+)$/mi);
       if (!match) return null;
       const date = new Date(match[1].trim());
@@ -5519,19 +5709,18 @@
     }
 
     function loadedNoteRestoreEnvelope(item) {
-      const filename = String(item?.filename || "");
-      if (filename.toLowerCase() !== passivatedEricNoteFilename.toLowerCase()) return "";
-      const created = passivationCreatedAt(item?.content || "");
+      if (!loadedNoteLooksLikeSessionNote(item?.content || "")) return "";
+      const created = continuityCreatedAt(item?.content || "");
       const now = new Date();
       const lines = [
         "Restore envelope:",
         `- Current browser time at prompt assembly: ${now.toLocaleString()}.`
       ];
       if (created) {
-        lines.push(`- Passivated state was created: ${created.toLocaleString()}.`);
-        lines.push(`- Approximate off-gap since passivation: ${shortDuration(Math.max(0, now.getTime() - created.getTime()))}.`);
+        lines.push(`- Session note was created: ${created.toLocaleString()}.`);
+        lines.push(`- Approximate off-gap since that session: ${shortDuration(Math.max(0, now.getTime() - created.getTime()))}.`);
       } else {
-        lines.push("- Passivated state creation time was not parseable; do not invent an off-gap.");
+        lines.push("- Session note creation time was not parseable; do not invent an off-gap.");
       }
       lines.push("- Treat the handoff below as previous-session continuity. Current runtime truth still overrides stale tool, sensor, mic, camera, and recording state.");
       return lines.join("\n");
@@ -5576,18 +5765,33 @@
         heading,
         ...description
       ];
-      let remaining = maxLoadedNoteChars;
-      for (const item of contexts) {
+      const blocks = contexts.filter((item) => (
+        loadEricMemoriesEnabled() || !noteFilenameInSet(item.filename, baseStartupNoteFilenames)
+      )).map((item) => {
         const header = `\n[${item.filename}]`;
         const envelope = loadedNoteRestoreEnvelope(item);
         const body = clippedLoadedNotePromptContent(item, loadedNotePromptContent(item));
-        const block = `${header}\n${[envelope, body].filter(Boolean).join("\n")}`;
-        if (remaining <= header.length + 200) break;
-        const clippedBlock = block.length > remaining
-          ? `${block.slice(0, remaining)}\n[Loaded-note context clipped. Read the note again if exact detail is needed.]`
+        return {
+          header,
+          text: `${header}\n${[envelope, body].filter(Boolean).join("\n")}`,
+          core: noteFilenameInSet(item.filename, baseStartupNoteFilenames)
+        };
+      });
+      if (!blocks.length) return "";
+      // Reserve core memory without changing the operator's loaded-note order.
+      let coreRemaining = Math.min(maxLoadedNoteChars, blocks.filter((block) => block.core)
+        .reduce((total, block) => total + block.text.length, 0));
+      let remaining = maxLoadedNoteChars - coreRemaining;
+      const clippingNotice = "\n[Loaded-note context clipped. Read the note again if exact detail is needed.]";
+      for (const { header, text: block, core } of blocks) {
+        const available = core ? coreRemaining : remaining;
+        if (available <= header.length + (core ? 0 : 200)) continue;
+        const clippedBlock = block.length > available
+          ? `${block.slice(0, Math.max(0, available - clippingNotice.length))}${clippingNotice}`
           : block;
         lines.push(clippedBlock);
-        remaining -= clippedBlock.length;
+        if (core) coreRemaining -= clippedBlock.length;
+        else remaining -= clippedBlock.length;
       }
       return lines.join("\n");
     }
@@ -5597,7 +5801,7 @@
         heading: "Eric core memory note:",
         description: [
           "This core memory note is included whenever the Eric memories checkbox is on, including Empty Connect.",
-          "Treat it as Eric's basic continuity and operator relationship context. It is not browser localStorage memory and not the passivated transcript."
+          "Treat it as Eric's basic continuity and operator relationship context. It is not browser localStorage memory and not a saved session note."
         ]
       });
     }
@@ -5651,13 +5855,13 @@
         formatLabGoalForInstructions(),
         `- Microphone is ${micRuntimeLabel()}.`,
         `- Eric speaker audio is ${ericAudioRuntimeLabel()}.`,
-        "- Current runtime state overrides loaded notes and passivation notes for microphone, camera, sensing-eye, recording, cast, tools, and embodiment.",
+        "- Current runtime state overrides loaded notes and saved session notes for microphone, camera, sensing-eye, recording, cast, tools, and embodiment.",
         `- Browser live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
         `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
         emptyContext ? "- Recent sensing-eye visual notes are held outside Empty Connect." : sensingEyeImageHistoryContextLine(),
         `- Temporary sensing-eye text is ${sensingTextContent ? "present" : "absent"}${sensingTextContent ? ` (${sensingTextName || "unnamed text"})` : ""}.`,
         !visionImageUrl && !sensingTextContent
-          ? "- The sensing eye is empty right now. Historical passivation notes may say an image existed earlier, but that is not current visual context."
+          ? "- The sensing eye is empty right now. Historical session notes may say an image existed earlier, but that is not current visual context."
           : "- Sensing-eye content listed here is current for this browser session.",
         `- Audio recording is ${audioRecordingActive() ? "on" : "off"}; auto-record is ${autoAudioRecordEnabled() ? "on" : "off"}.`,
         audioRecordingActive()
@@ -5801,35 +6005,36 @@
       return host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]";
     }
 
-    function isLoopbackServiceUrl(value) {
-      try {
-        return isLoopbackHost(new URL(value).hostname);
-      } catch {
-        return false;
-      }
-    }
-
     function pageHostServiceUrl(value) {
-      if (isLoopbackHost(location.hostname) || !isLoopbackServiceUrl(value)) return normalizeUrlString(value);
-      const url = new URL(value);
-      url.hostname = location.hostname;
-      return normalizeUrlString(url.toString());
+      try {
+        const url = new URL(value);
+        if (!isLoopbackHost(location.hostname) && isLoopbackHost(url.hostname)) url.hostname = location.hostname;
+        if (location.protocol === "https:" && url.protocol === "http:" && url.hostname === location.hostname) {
+          url.protocol = "https:";
+        }
+        return normalizeUrlString(url.toString());
+      } catch {
+        return normalizeUrlString(value);
+      }
     }
 
     function defaultRealtimeUrl() {
       const host = location.hostname || "127.0.0.1";
-      return `ws://${host}:8765/v1/realtime`;
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      return `${protocol}//${host}:8765/v1/realtime`;
     }
 
     function normalizeRealtimeUrlForPage(value) {
       const raw = String(value || "").trim() || defaultRealtimeUrl();
-      if (isLoopbackHost(location.hostname)) return raw;
       try {
         const url = new URL(raw);
-        if (isLoopbackHost(url.hostname)) {
+        if (!isLoopbackHost(location.hostname) && isLoopbackHost(url.hostname)) {
           url.hostname = location.hostname;
-          return url.toString();
         }
+        if (location.protocol === "https:" && url.protocol === "ws:" && url.hostname === location.hostname) {
+          url.protocol = "wss:";
+        }
+        return url.toString();
       } catch {
         return raw;
       }
@@ -7629,7 +7834,7 @@
       if (emptyContext) {
         if (activeLoadedNotes.length) {
           lines.push("Included by Empty Connect core-memory rule:");
-          activeLoadedNotes.forEach((filename) => lines.push(filename));
+          activeLoadedNotes.forEach((filename) => lines.push(loadedNoteContextLine(filename)));
         } else {
           lines.push("No core memory note included; Eric memories checkbox is off or the note is not loaded.");
         }
@@ -7638,7 +7843,7 @@
           lines.push(`Other loaded notes held outside this run: ${omittedLoadedNotes.length}`);
         }
       } else if (activeLoadedNotes.length) {
-        activeLoadedNotes.forEach((filename) => lines.push(filename));
+        activeLoadedNotes.forEach((filename) => lines.push(loadedNoteContextLine(filename)));
       } else {
         lines.push("No notes loaded in this browser session yet.");
       }
@@ -7663,7 +7868,8 @@
       filenames.forEach((filename) => {
         const option = document.createElement("option");
         option.value = filename;
-        option.textContent = filename;
+        option.textContent = loadedNoteDisplayName(filename);
+        option.title = filename;
         loadedNoteSelect.appendChild(option);
       });
       if (filenames.includes(previous)) {
@@ -8923,7 +9129,7 @@
       return true;
     }
 
-    async function waitForPendingUserTranscriptBeforePassivation({ timeoutMs = 4500 } = {}) {
+    async function waitForPendingUserTranscriptBeforeSessionSave({ timeoutMs = 4500 } = {}) {
       const startedAt = Date.now();
       let waited = false;
       while (Date.now() - startedAt < timeoutMs) {
@@ -8933,7 +9139,7 @@
       }
       if (waited) {
         const waitedMs = Date.now() - startedAt;
-        log(events, `passivation transcript settle waited ${waitedMs}ms`);
+        log(events, `session-save transcript settle waited ${waitedMs}ms`);
       }
     }
 
@@ -9847,7 +10053,7 @@
         : "";
       const privacy = performancePrivacy ? performancePrivacyInstructions() : "";
       const emptyContextNote = emptyContext
-        ? "Empty Connect mode is active: use configured creature/runtime instructions plus live conversation from this websocket. Eric's core memory note is included when its checkbox is on; browser memory, ordinary loaded notes, passivated state, old transcript, sensing-eye content, search receipts, lab goal, alone-state ledger, and Brain2 carryover are intentionally omitted."
+        ? "Empty Connect mode is active: use configured creature/runtime instructions plus live conversation from this websocket. Eric's core memory note is included when its checkbox is on; browser memory, ordinary loaded notes, saved session notes, old transcript, sensing-eye content, search receipts, lab goal, alone-state ledger, and Brain2 carryover are intentionally omitted."
         : "";
       return [emptyContextNote, privacy, substrate, emptyContext ? "" : formatAloneStateForInstructions(), emptyContext ? "" : formatLastUserIdleCueForInstructions(), emptyContext ? "" : labGoalIdleContext(), emptyContext ? "" : idleSelfTaskContext(idleSelfTask), emptyContext ? "" : idleResearchThreadContext(), idleAttentionContext({ suppressRobotBody, performancePrivacy }), searchReceipts, loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", emptyContext ? "" : idleUnresolvedContext(), avoid, emptyContext ? "" : idleRetiredTopicsContext(), emptyContext ? "" : idleTemplateContext()]
         .filter(Boolean)
@@ -10195,6 +10401,8 @@
     }
 
     async function triggerBrain2Mull({ manual = false } = {}) {
+      const generation = realtimeSessionGeneration;
+      const socket = ws;
       const blocked = brain2BlockedReason({ manual });
       if (blocked) {
         bumpBrain2Counter("skipped");
@@ -10212,6 +10420,10 @@
         bumpBrain2Counter("fired");
         logBrain2("fired", manual ? "manual" : "auto");
         const result = await requestBrain2Mull({ manual });
+        if (socket !== ws || generation !== realtimeSessionGeneration) {
+          logBrain2("stale", "ignored result from previous realtime session");
+          return;
+        }
         lastBrain2MullAt = Date.now();
         brain2FailureStreak = 0;
         const mouthText = String(result.mouth_text || "").trim();
@@ -10260,6 +10472,10 @@
           updateSessionTools({ quiet: true });
         }
       } catch (error) {
+        if (socket !== ws || generation !== realtimeSessionGeneration) {
+          logBrain2("stale", `ignored error from previous realtime session: ${error.message}`);
+          return;
+        }
         bumpBrain2Counter("failed");
         logBrain2("failed", error.message);
         brain2FailureStreak += 1;
@@ -10270,9 +10486,11 @@
         }
         throw error;
       } finally {
-        brain2InFlight = false;
-        updateLanePressure({ reason: "Brain 2 mull finished" });
-        updateBrain2Controls();
+        if (socket === ws && generation === realtimeSessionGeneration) {
+          brain2InFlight = false;
+          updateLanePressure({ reason: "Brain 2 mull finished" });
+          updateBrain2Controls();
+        }
       }
     }
 
@@ -11912,9 +12130,18 @@
       return output;
     }
 
-    function send(event) {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify(event));
+    function activeRealtimeSession(socket = ws, generation = realtimeSessionGeneration) {
+      return Boolean(
+        socket
+        && socket === ws
+        && generation === realtimeSessionGeneration
+        && socket.readyState === WebSocket.OPEN
+      );
+    }
+
+    function send(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
+      if (!activeRealtimeSession(socket, generation)) return;
+      socket.send(JSON.stringify(event));
     }
 
     function beginRealtimeContextMode({ emptyContext = false } = {}) {
@@ -12308,7 +12535,7 @@
     }
 
     function normalizeFaceBaseUrl() {
-      return normalizeUrlString(faceUrl.value);
+      return pageHostServiceUrl(faceUrl.value);
     }
 
     function normalizeChassisBaseUrl() {
@@ -12334,8 +12561,8 @@
       } catch {
         data = { raw: text };
       }
-      if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}: ${text}`);
+      if (!response.ok || data?.ok === false || data?.error || ["error", "failed", "skipped"].includes(data?.status)) {
+        throw new Error(`${response.status} ${response.statusText}: ${data?.error || data?.reason || data?.message || text}`);
       }
       return data;
     }
@@ -12349,8 +12576,8 @@
       } catch {
         data = { raw: text };
       }
-      if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}: ${text}`);
+      if (!response.ok || data?.ok === false || data?.error || ["error", "failed", "skipped"].includes(data?.status)) {
+        throw new Error(`${response.status} ${response.statusText}: ${data?.error || data?.reason || data?.message || text}`);
       }
       return data;
     }
@@ -12372,8 +12599,8 @@
       } catch {
         data = { raw: text };
       }
-      if (!response.ok || data.ok === false) {
-        throw new Error(`${response.status} ${response.statusText}: ${data.error || text}`);
+      if (!response.ok || data?.ok === false || data?.error || ["error", "failed", "skipped"].includes(data?.status)) {
+        throw new Error(`${response.status} ${response.statusText}: ${data?.error || data?.reason || data?.message || text}`);
       }
       return data;
     }
@@ -13773,7 +14000,7 @@
         stopGpuWatch({ reason: "duration elapsed" });
         return;
       }
-      const waitMs = Number.isFinite(Number(delayMs)) ? Number(delayMs) : gpuWatchRoutine.cadenceMs;
+      const waitMs = delayMs != null && Number.isFinite(Number(delayMs)) ? Number(delayMs) : gpuWatchRoutine.cadenceMs;
       gpuWatchTimer = setTimeout(() => {
         triggerGpuWatchTick().catch((error) => {
           log(events, `gpu watch error: ${error.message}`);
@@ -14006,7 +14233,7 @@
         stopStandingRoutine({ reason: "duration elapsed" });
         return;
       }
-      const waitMs = Number.isFinite(Number(delayMs)) ? Number(delayMs) : standingRoutine.cadenceMs;
+      const waitMs = delayMs != null && Number.isFinite(Number(delayMs)) ? Number(delayMs) : standingRoutine.cadenceMs;
       standingRoutineTimer = setTimeout(() => {
         triggerStandingRoutineTick().catch((error) => {
           log(events, `standing routine error: ${error.message}`);
@@ -14370,7 +14597,7 @@
         `Eric speaker audio: ${ericAudioRuntimeLabel()}`,
         `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"}`,
-        `Passivated transcript: ${passivatedEricNoteFilename}`,
+        `Resume session note: ${currentContinuitySessionFilename || "none"}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
         `Sensing input: ${sensingInputLabel()}`,
         `Face controller: ${faceUrl.value}`,
@@ -14525,7 +14752,7 @@
           details: [
             `Visible lines: ${countPaneLines(conversation)}`,
             `Tracked conversation lines: ${conversationLines.length}`,
-            `Continuity file: ${passivatedEricNoteFilename}`,
+            `Resume session note: ${currentContinuitySessionFilename || "none"}`,
             "Loaded transcript notes are restored as timestamped transcript handoffs with an off-gap envelope.",
             emptyContext ? `Post-empty-connect lines: ${conversationLinesForCurrentPromptContext(Infinity).length}` : "",
             `Last user text chars: ${lastUserText.length}`
@@ -14559,7 +14786,7 @@
             `Connection: ${realtimeConnected() ? "connected" : "disconnected"}`,
             `Mic: ${micRuntimeLabel()}`,
             `Runtime routines: ${runtimeWatchLabel()}`,
-            `Passivated transcript: ${passivatedEricNoteFilename}`,
+            `Resume session note: ${currentContinuitySessionFilename || "none"}`,
             `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
             `Sensing input: ${sensingInputLabel()}`
           ]
@@ -14990,28 +15217,6 @@
       return result;
     }
 
-    async function extractPassivatedSessionNotes({ source_filename, output_dir, overwrite = false } = {}) {
-      if (!noteFileWriteAllowed()) {
-        throw new Error("Session-note extraction requires an explicit user request.");
-      }
-      const payload = {
-        source_filename: String(source_filename || passivatedEricNoteFilename),
-        output_dir: String(output_dir || "sessions"),
-        overwrite: Boolean(overwrite)
-      };
-      const response = await fetch(new URL("/api/passivation/extract-session-notes", location.href), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || result.status === "error") {
-        throw new Error(result.error || `${response.status} ${response.statusText}`);
-      }
-      log(events, `passivated session notes extracted: ${result.written_count || 0}/${result.session_count || 0} into ${result.output_dir || "sessions"}`);
-      return result;
-    }
-
     function textTail(value, maxChars = 4000) {
       const text = String(value || "").trimEnd();
       if (!text || text.length <= maxChars) return text;
@@ -15022,7 +15227,37 @@
       return Array.isArray(value) ? value.slice(-limit) : [];
     }
 
-    function compactPassivationList(items, formatter, limit = 8) {
+    function notePathBasename(filename) {
+      const text = String(filename || "").trim();
+      return text.split(/[\\/]/).pop() || text;
+    }
+
+    function sessionNoteDisplayName(filename) {
+      const base = notePathBasename(filename)
+        .replace(/\.txt$/i, "")
+        .replace(/^session-/i, "")
+        .replace(/^continuity-session-/i, "");
+      const match = base.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-\d{3})?(?:-(.+))?$/);
+      if (!match) return base;
+      const [, year, month, day, hour, minute, second, caption] = match;
+      const label = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+      return caption ? `${caption.replace(/-/g, " ")} - ${label}` : label;
+    }
+
+    function loadedNoteDisplayName(filename) {
+      const text = String(filename || "").trim();
+      if (/^sessions[\\/]/i.test(text)) return `session: ${sessionNoteDisplayName(text)}`;
+      if (/^core[\\/]/i.test(text)) return `core: ${notePathBasename(text)}`;
+      return text;
+    }
+
+    function loadedNoteContextLine(filename) {
+      const text = String(filename || "").trim();
+      if (/^sessions[\\/]/i.test(text)) return `${loadedNoteDisplayName(text)} (${text})`;
+      return text;
+    }
+
+    function compactSessionList(items, formatter, limit = 8) {
       const values = arrayTail(items, limit).map(formatter).filter(Boolean);
       return values.length ? values.map((item) => `- ${item}`).join("\n") : "- none";
     }
@@ -15036,7 +15271,7 @@
         line_count: conversationLines.length,
         first_line_at: conversationLines.length ? conversationLineTimeLabel(0) : "unknown",
         last_line_at: conversationLines.length ? conversationLineTimeLabel(conversationLines.length - 1) : "unknown",
-        continuity_file: passivatedEricNoteFilename
+        continuity_session: currentContinuitySessionFilename || "none"
       };
     }
 
@@ -15059,8 +15294,8 @@
       }
     }
 
-    async function passivationStep(label, operation, options = {}) {
-      return runtimeStep(label, operation, { ...options, prefix: "passivation step" });
+    async function continuityStep(label, operation, options = {}) {
+      return runtimeStep(label, operation, { ...options, prefix: "continuity step" });
     }
 
     function beginIntentionalExitCleanup() {
@@ -15105,7 +15340,7 @@
       log(events, `runtime halted: ${reason}`);
     }
 
-    function buildEricPassivationState() {
+    function buildEricContinuityState() {
       const emptyContext = emptyContextSessionEnabled();
       const allLoadedNotes = loadedNoteContexts.map((item) => ({
         filename: item.filename,
@@ -15136,11 +15371,11 @@
         : idleOutputLog;
       return {
         schema: 1,
-        kind: "robot_790_eric_passivated_transcript_state",
+        kind: "robot_790_continuity_session_state",
         created_at: new Date().toISOString(),
-        purpose: "Operator snapshot for halting Eric and rehydrating his working state after restart.",
+        purpose: "Operator snapshot for writing the latest live transcript/context into a resumable session note.",
         limits: {
-          note: "The passivated state note is a timestamped session transcript intended to reload as a transcript handoff with gap annotations."
+          note: "The session note is a timestamped transcript/context dump intended to reload with a pinned-note receipt and gap annotations."
         },
         context_mode: {
           key: currentPromptContextModeKey(),
@@ -15161,7 +15396,7 @@
           status_lanes: laneIndicatorLabel?.textContent || "",
           record_status: recordingIndicatorLabel?.textContent || "",
           tool_status: toolIndicatorLabel?.textContent || "",
-          runtime_watch: runtimeWatchReport("passivation")
+          runtime_watch: runtimeWatchReport("continuity save")
         },
         ui_settings: currentUiSettingsSnapshot(),
         browser_memory_facts: emptyContext ? [] : browserMemoryFacts,
@@ -15218,48 +15453,43 @@
       };
     }
 
-    function buildEricPassivationNote(state) {
+    function continuityPinnedFilenamesForSave(state) {
+      const seen = new Set();
+      return (state.loaded_notes || [])
+        .map((item) => String(item.filename || "").trim())
+        .filter((filename) => {
+          const key = filename.toLowerCase();
+          if (!filename || key === legacyContinuityBookmarkNoteFilename.toLowerCase()) return false;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+    }
+
+    function buildEricContinuitySessionBody(state) {
       const recentSearches = (state.tool_and_search_state.search_receipts || [])
         .map((item) => item.query)
         .filter(Boolean);
-      const previousLoadedNotes = state.loaded_notes
-        .map((item) => item.filename)
-        .filter((filename) => String(filename || "").toLowerCase() !== passivatedEricNoteFilename.toLowerCase());
       const transcript = state.conversation?.transcript || "[none]";
       const conversation = state.conversation || {};
       const noteLines = [
-        "Eric Passivated State Transcript",
-        "================================",
-        `Created: ${new Date(state.created_at).toLocaleString()}`,
-        `Continuity file: ${passivatedEricNoteFilename}`,
-        "",
-        "Use",
-        "---",
-        "This is Eric's passivated working state from the previous run, stored as a timestamped session transcript plus reconstruction metadata.",
-        "When this note is loaded into Eric's prompt, restore it as the prior timestamped transcript with the restore envelope's off-gap annotation. The disk note is the lossless receipt; do not destructively trim it to save context.",
-        "The restore envelope around this loaded note gives the current browser time and approximate off-gap since Created. Notice that gap before speaking as if no time passed.",
-        "Treat the transcript as prior conversation continuity, not generic background lore and not live sensor truth.",
-        "When the operator says they are plugging you back in, continue from this state naturally. Do not claim current sights, sounds, tools, or hardware state unless current runtime, current tools, or current user input confirm them.",
-        "Previous-run sensing input is stale-session provenance only. Do not call it staged, present, visible, or in-context unless the current runtime state also says a sensing-eye image or text is present.",
-        "Previous-run loaded-note names are provenance only until startup rehydrates those notes from disk.",
-        "If the last user words sound like a job, keep them in mind for a few idle beats and take one small auditable step.",
-        "",
         "Session Demarcation",
         "-------------------",
         `Model: ${state.runtime.model}`,
-        `Session time at passivation: ${state.runtime.session_time || "unknown"}`,
+        `Browser saved: ${new Date(state.created_at).toLocaleString()}`,
+        `Session time at save: ${state.runtime.session_time || "unknown"}`,
         `Conversation lines: ${conversation.line_count ?? "unknown"}`,
         `First transcript turn on disk: ${conversation.first_line_at || "unknown"}`,
         `Last transcript turn on disk: ${conversation.last_line_at || "unknown"}`,
         `Context mode at save: ${state.context_mode?.label || "Normal"}`,
         `Browser-held notes omitted by Empty Connect: ${state.context_mode?.omitted_loaded_note_count || 0}`,
-        `Previous-run loaded notes: ${previousLoadedNotes.join(", ") || "none"}`,
+        `Parent session note at connect: ${continuityParentForCurrentRun || "none"}`,
         `Search receipts: ${recentSearches.length ? recentSearches.join(" | ") : "none"}`,
         "",
         "Runtime At Save",
         "---------------",
-        `Mic at passivation: ${state.runtime.mic}`,
-        `Runtime routines at passivation: ${state.runtime.runtime_watch?.label || "none"}`,
+        `Mic at save: ${state.runtime.mic}`,
+        `Runtime routines at save: ${state.runtime.runtime_watch?.label || "none"}`,
         `Previous-run sensing input: ${state.sensing.label}`,
         `Last user words: ${state.last_user.text || "none"}`,
         "",
@@ -15269,7 +15499,7 @@
         "",
         "B2 Notes For Eric",
         "------------------",
-        compactPassivationList(state.brain2_state.notes_for_eric, (item) => item.text || item, 8),
+        compactSessionList(state.brain2_state.notes_for_eric, (item) => item.text || item, 8),
         "",
         "Recent Brain2 Tail",
         "------------------",
@@ -15278,102 +15508,126 @@
       return noteLines.join("\n");
     }
 
-    function updatePassivationButton() {
-      if (!passivateEricButton) return;
-      passivateEricButton.disabled = passivatedEricBusy;
-      passivateEricButton.textContent = passivatedEricBusy
-        ? "Working..."
-        : (passivatedEricHalted ? "Start Eric" : "Passivate");
+    async function saveContinuitySession({ body, pinnedFilenames, parentSessionFilename } = {}) {
+      const response = await fetch(new URL("/api/continuity/save", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: String(body || ""),
+          pinned_filenames: Array.isArray(pinnedFilenames) ? pinnedFilenames : [],
+          parent_session_filename: String(parentSessionFilename || "")
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.status !== "ok") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
     }
 
-    async function saveEricPassivationSnapshot({ reason = "Eric passivated", eventLabel = "Eric passivated", reloadSavedNote = true } = {}) {
-      await waitForPendingUserTranscriptBeforePassivation();
+    function updateSaveAndHaltButton() {
+      if (!saveAndHaltEricButton) return;
+      saveAndHaltEricButton.disabled = continuitySaveBusy;
+      saveAndHaltEricButton.textContent = continuitySaveBusy
+        ? "Working..."
+        : (continuitySaveHalted ? "Start Eric" : "Save + Halt");
+    }
+
+    async function saveEricContinuitySnapshot({ reason = "session note saved", eventLabel = "session note saved", reloadSavedNote = true } = {}) {
+      await waitForPendingUserTranscriptBeforeSessionSave();
       if (!conversationLines.length) {
-        throw new Error("No accepted conversation lines to save into passivation.");
+        throw new Error("No accepted conversation lines to save into a session note.");
       }
-      const state = buildEricPassivationState();
-      const noteText = buildEricPassivationNote(state);
-      await passivationStep("write passivated transcript", () => writeOperatorNoteFile({ filename: passivatedEricNoteFilename, content: noteText }), { required: true });
+      const state = buildEricContinuityState();
+      const result = await continuityStep("write session note", () => saveContinuitySession({
+        body: buildEricContinuitySessionBody(state),
+        pinnedFilenames: continuityPinnedFilenamesForSave(state),
+        parentSessionFilename: emptyContextSessionEnabled() ? "" : continuityParentForCurrentRun
+      }), { required: true });
+      const filename = result?.session_filename;
+      if (!filename) throw new Error("Session note save did not return a session filename.");
+      currentContinuitySessionFilename = filename;
+      continuityParentForCurrentRun = filename;
       if (reloadSavedNote) {
-        await passivationStep("reload passivated transcript", () => readTextFile({ filename: passivatedEricNoteFilename }), { required: true });
+        await continuityStep("reload session note", () => readTextFile({ filename }), { required: true });
       }
-      recordUiEvent(eventLabel, passivatedEricNoteFilename, {
+      await fetchContinuitySessions().catch(() => {});
+      recordUiEvent(eventLabel, filename, {
         reason,
         connected: realtimeConnected(),
         mic: micRuntimeLabel(),
-        conversation_lines: state.conversation?.line_count ?? conversationLines.length
+        conversation_lines: state.conversation?.line_count ?? conversationLines.length,
+        parent_session_filename: result.parent_session_filename || null,
+        pinned_notes: result.pinned_notes || []
       });
-      log(events, `${eventLabel}: ${passivatedEricNoteFilename}`);
-      return state;
+      log(events, `${eventLabel}: ${filename}`);
+      return { ...state, continuity_session_filename: filename };
     }
 
-    async function passivateEricState({ reason = "Eric passivated" } = {}) {
-      if (passivatedEricBusy) return;
-      passivatedEricBusy = true;
-      updatePassivationButton();
+    async function saveAndHaltEricState({ reason = "session note save and halt" } = {}) {
+      if (continuitySaveBusy) return;
+      continuitySaveBusy = true;
+      updateSaveAndHaltButton();
       try {
-        await saveEricPassivationSnapshot({ reason });
-        passivatedEricHalted = true;
+        await saveEricContinuitySnapshot({ reason });
+        continuitySaveHalted = true;
         beginIntentionalExitCleanup();
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
         haltRealtimeActivity(reason);
         if (closingSocket) {
-          await passivationStep("close realtime websocket", async () => {
+          await continuityStep("close realtime websocket", async () => {
             closingSocket.close();
             await waitForRealtimeClose(closingSocket);
           }, { timeoutMs: 4000 });
         }
         if (audioRecordingActive()) {
-          const stopResult = await passivationStep("stop audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
-          if (stopResult) log(events, `audio recording stopped for passivation: ${stopResult.recording_name || stopResult.status || "done"}`);
+          const stopResult = await continuityStep("stop audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
+          if (stopResult) log(events, `audio recording stopped for continuity save: ${stopResult.recording_name || stopResult.status || "done"}`);
         } else if (audioRecordFinalizing || audioRecordStopPromise) {
-          const stopResult = await passivationStep("finish audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
-          if (stopResult) log(events, `audio recording finalized for passivation: ${stopResult.recording_name || stopResult.status || "done"}`);
+          const stopResult = await continuityStep("finish audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
+          if (stopResult) log(events, `audio recording finalized for continuity save: ${stopResult.recording_name || stopResult.status || "done"}`);
         }
         if (micStream) {
-          await passivationStep("stop mic", () => stopMic({ reason }), { timeoutMs: 6000 });
+          await continuityStep("stop mic", () => stopMic({ reason }), { timeoutMs: 6000 });
         }
-        await passivationStep("save pane snapshots", () => recordExitPaneSnapshots("passivation"), { timeoutMs: 10000 });
+        await continuityStep("save pane snapshots", () => recordExitPaneSnapshots("continuity save"), { timeoutMs: 10000 });
       } catch (error) {
-        log(events, `Eric passivation error: ${error.message}`);
+        log(events, `session note save error: ${error.message}`);
       } finally {
-        passivatedEricBusy = false;
+        continuitySaveBusy = false;
         endIntentionalExitCleanupSoon();
-        updatePassivationButton();
+        updateSaveAndHaltButton();
       }
     }
 
-    async function startPassivatedEric() {
-      if (passivatedEricBusy) return;
-      passivatedEricBusy = true;
-      updatePassivationButton();
+    async function startContinuityEric() {
+      if (continuitySaveBusy) return;
+      continuitySaveBusy = true;
+      updateSaveAndHaltButton();
       try {
-        if (loadPassivatedEricEnabled()) {
-          await readTextFile({ filename: passivatedEricNoteFilename });
-          await rehydratePassivatedPinnedNotes({ source: "Start Eric" });
-        }
-        passivatedEricHalted = false;
-        recordUiEvent("Eric restored from passivation", passivatedEricNoteFilename, {
+        await loadLatestContinuitySession({ source: "Start Eric" });
+        continuitySaveHalted = false;
+        recordUiEvent("session note restore requested", currentContinuitySessionFilename || "none", {
           connected: realtimeConnected(),
-          load_passivated_state: loadPassivatedEricEnabled()
+          load_continuity_session: Boolean(currentContinuitySessionFilename)
         });
-        log(events, `Eric restore requested from ${passivatedEricNoteFilename}`);
+        log(events, `session note restore requested from ${currentContinuitySessionFilename || "no session note"}`);
         if (!realtimeConnected()) {
           connect();
         }
       } catch (error) {
-        log(events, `Eric restore error: ${error.message}`);
+        log(events, `session note restore error: ${error.message}`);
       } finally {
-        passivatedEricBusy = false;
-        updatePassivationButton();
+        continuitySaveBusy = false;
+        updateSaveAndHaltButton();
       }
     }
 
-    async function toggleEricPassivation() {
-      if (passivatedEricHalted) {
-        await startPassivatedEric();
+    async function toggleEricSaveAndHalt() {
+      if (continuitySaveHalted) {
+        await startContinuityEric();
       } else {
-        await passivateEricState();
+        await saveAndHaltEricState();
       }
     }
 
@@ -15411,7 +15665,7 @@
         return formatLoadedNoteSummary(await noteForSummary(sourceFilename));
       }
       const lines = [
-        "Robot 790 Session Note",
+        "STS Session Note",
         "======================",
         `Created: ${new Date().toLocaleString()}`,
         `Source: ${normalizedSource}`,
@@ -15717,7 +15971,7 @@
       return result;
     }
 
-    async function readTextFile({ filename, path, name: noteName } = {}) {
+    async function readTextFile({ filename, path, name: noteName, pin = true } = {}) {
       const name = String(filename || path || noteName || "").trim();
       if (!name) throw new Error("Missing filename");
       const url = new URL("/api/notes/read", location.href);
@@ -15728,7 +15982,7 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       log(events, `note file read: ${result.filename}`);
-      rememberLoadedNoteContext(result);
+      if (pin) rememberLoadedNoteContext(result);
       return result;
     }
 
@@ -15746,9 +16000,6 @@
         } catch (error) {
           log(events, `startup note skipped: ${filename} (${error.message})`);
         }
-      }
-      if (loadPassivatedEricEnabled()) {
-        await rehydratePassivatedPinnedNotes({ source: "startup" });
       }
       if (loadedNoteContextDirty) {
         loadedNoteContextDirty = false;
@@ -16691,7 +16942,6 @@
       if (name === "write_text_file") return writeTextFile(args);
       if (name === "read_text_file") return readTextFile(args);
       if (name === "list_text_files") return listTextFiles(args);
-      if (name === "extract_passivated_session_notes") return extractPassivatedSessionNotes(args);
       if (name === "list_pinned_notes") return listPinnedNotes(args);
       if (name === "unpin_note") return unpinNote(args);
       throw new Error(`Unknown tool: ${name}`);
@@ -16752,7 +17002,6 @@
         write_text_file: "WRITE",
         read_text_file: "READ",
         list_text_files: "LIST",
-        extract_passivated_session_notes: "EXTRACT",
         list_pinned_notes: "PINNED",
         unpin_note: "UNPIN"
       };
@@ -16800,7 +17049,6 @@
       if (name === "stop_standing_routine") return args.reason || "stop";
       if (name === "get_standing_routine_status") return runtimeWatchLabel();
       if (name === "read_text_file" || name === "write_text_file" || name === "unpin_note") return args.filename || args.path || args.name;
-      if (name === "extract_passivated_session_notes") return args.source_filename || passivatedEricNoteFilename;
       if (name === "show_web_page") return args.url;
       if (name === "generate_image") return args.title || args.prompt;
       if (name === "move_generated_image_to_sensing_eye") return generatedImageName || args.reason || "generated image";
@@ -16980,10 +17228,6 @@
       if (toolName === "write_text_file") {
         return `Saved that to ${result?.filename || "the note file"}.`;
       }
-      if (toolName === "extract_passivated_session_notes") {
-        const count = Number(result?.written_count ?? result?.session_count ?? 0);
-        return `Extracted ${count} session note${count === 1 ? "" : "s"} into ${result?.output_dir || "sessions"}.`;
-      }
       if (toolName === "unpin_note") {
         return `I unpinned ${result?.filename || "that note"}.`;
       }
@@ -17001,14 +17245,6 @@
         const count = Array.isArray(result?.files) ? result.files.length : 0;
         if (!count) return exactSpeechInstruction("I found no note files.");
         return "Use the list_text_files tool output to name the available note files compactly.";
-      }
-      if (toolName === "extract_passivated_session_notes") {
-        const notes = Array.isArray(result?.notes) ? result.notes : [];
-        if (!notes.length) return exactSpeechInstruction("I did not find any passivated sessions to extract.");
-        return (
-          "Use the extract_passivated_session_notes tool output to briefly report how many session notes were written " +
-          "and name the folder or first filename. Do not summarize the extracted transcripts."
-        );
       }
       if (toolName === "list_pinned_notes") {
         const count = Array.isArray(result?.files) ? result.files.length : 0;
@@ -17243,7 +17479,8 @@
       return `I moved to ${label}; same Eric, different body.`;
     }
 
-    async function handleFunctionCall(event) {
+    async function handleFunctionCall(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
+      if (!activeRealtimeSession(socket, generation)) return;
       pendingToolCalls += 1;
       toolFollowupNeeded = true;
       toolFollowupPromptSources = [...toolFollowupPromptSources, event.name].slice(-8);
@@ -17253,6 +17490,10 @@
         activityArgs = parseToolArguments(event.arguments);
         beginToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", detail: toolDetailFromArgs(event.name, activityArgs) });
         const result = await executeTool(event.name, activityArgs);
+        if (!activeRealtimeSession(socket, generation)) {
+          log(events, `stale tool result ignored: ${event.name}`);
+          return;
+        }
         if (event.name === "set_voice") toolFollowupExactText = voiceFollowupText(result);
         if (event.name === "set_ui_control") toolFollowupExactText = uiControlFollowupText(result);
         if (event.name === "get_ui_controls") toolFollowupInstructions = uiControlsFollowupInstructions(result);
@@ -17273,7 +17514,7 @@
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = memoryFollowupText(event.name, result);
         }
-        if (event.name === "write_text_file" || event.name === "extract_passivated_session_notes") {
+        if (event.name === "write_text_file") {
           toolFollowupExactText = noteFileFollowupText(event.name, result);
         }
         if (event.name === "unpin_note") {
@@ -17326,13 +17567,17 @@
               "get_standing_routine_status"
             ].includes(event.name) ? result : { status: "ok", result })
           }
-        });
+        }, { socket, generation });
         if (event.name === "remember_fact" || event.name === "forget_fact" || event.name === "search_web" || event.name === "unpin_note" || loadedNoteContextDirty) {
           const quietRefresh = event.name === "search_web";
           loadedNoteContextDirty = false;
           updateSessionTools({ quiet: quietRefresh });
         }
       } catch (error) {
+        if (!activeRealtimeSession(socket, generation)) {
+          log(events, `stale tool error ignored: ${event.name}: ${error.message}`);
+          return;
+        }
         endToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", status: "fail", detail: error.message });
         if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
         if (event.name === "set_ui_control") toolFollowupExactText = "I could not change that UI control.";
@@ -17350,7 +17595,7 @@
         if (event.name === "remember_fact" || event.name === "forget_fact") {
           toolFollowupExactText = "I could not save that.";
         }
-        if (event.name === "write_text_file" || event.name === "read_text_file" || event.name === "list_text_files" || event.name === "extract_passivated_session_notes" || event.name === "list_pinned_notes" || event.name === "unpin_note") {
+        if (event.name === "write_text_file" || event.name === "read_text_file" || event.name === "list_text_files" || event.name === "list_pinned_notes" || event.name === "unpin_note") {
           toolFollowupExactText = "I could not touch that file.";
         }
         if (event.name === "search_web") toolFollowupExactText = "I could not search.";
@@ -17378,13 +17623,15 @@
             call_id: event.call_id,
             output: JSON.stringify({ status: "error", error: error.message })
           }
-        });
+        }, { socket, generation });
+      } finally {
+        pendingToolCalls = Math.max(0, pendingToolCalls - 1);
+        maybeCreateToolFollowup({ socket, generation });
       }
-      pendingToolCalls -= 1;
-      maybeCreateToolFollowup();
     }
 
-    function maybeCreateToolFollowup() {
+    function maybeCreateToolFollowup({ socket = ws, generation = realtimeSessionGeneration } = {}) {
+      if (!activeRealtimeSession(socket, generation)) return;
       if (!toolFollowupNeeded || pendingToolCalls > 0 || !responseDoneAfterTool) return;
       toolFollowupNeeded = false;
       responseDoneAfterTool = false;
@@ -17421,7 +17668,7 @@
           instructions,
           ...ttsRuntimeConfig()
         }
-      });
+      }, { socket, generation });
     }
 
     function updateSessionTools({ quiet = false } = {}) {
@@ -18119,7 +18366,8 @@
       }
     }
 
-    function handleEvent(event) {
+    function handleEvent(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
+      if (!activeRealtimeSession(socket, generation)) return;
       if (event.type === "response.output_audio.delta" && event.delta) {
         cueFaceMode("speaking", 0.72);
         queueAudioDelta(event.delta);
@@ -18130,7 +18378,7 @@
         flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
         if (event.type === "response.done" && toolFollowupNeeded) {
           responseDoneAfterTool = true;
-          maybeCreateToolFollowup();
+          maybeCreateToolFollowup({ socket, generation });
         }
         if (event.type === "response.done") {
           const wasIdleInFlight = idleInFlight;
@@ -18261,7 +18509,7 @@
         }
         addConversation(`Robot 790: ${event.delta || ""}`, { touchActivity: false });
       } else if (event.type === "response.function_call_arguments.done") {
-        handleFunctionCall(event).catch((error) => log(events, `tool bridge error: ${error.message}`));
+        handleFunctionCall(event, { socket, generation }).catch((error) => log(events, `tool bridge error: ${error.message}`));
       } else if (event.type === "error") {
         responseActive = false;
         idleInFlight = false;
@@ -18284,28 +18532,158 @@
       log(events, event.type || JSON.stringify(event));
     }
 
-    async function connect({ emptyContext = false } = {}) {
+    function setConnectionButtonsDisabled(disabled) {
+      [connectButton, previousConnectButton, emptyConnectButton, connectSelectedContinuitySessionButton].forEach((button) => {
+        if (button) button.disabled = disabled;
+      });
+    }
+
+    async function rewindContinuitySessionToPrevious() {
+      const result = await fetchContinuitySessions();
+      const currentFilename = currentContinuitySessionFilename || result.current_session_filename || continuitySessions[0]?.filename || "";
+      const currentIndex = continuitySessions.findIndex((item) => (
+        String(item.filename || "").toLowerCase() === String(currentFilename || "").toLowerCase()
+      ));
+      if (currentIndex < 0) {
+        throw new Error("No current session note is available for Connect Previous.");
+      }
+      const previous = continuitySessions[currentIndex + 1];
+      if (!previous?.filename) {
+        throw new Error("The current session note has no earlier timestamped session.");
+      }
+      currentContinuitySessionFilename = previous.filename;
+      renderContinuitySessionSelect(previous.filename);
+      return {
+        status: "ok",
+        tool: "rewind_continuity_session",
+        archived_session_filename: currentFilename,
+        restored_session_filename: previous.filename,
+        restored_parent_session_filename: previous.parent_session_filename || ""
+      };
+    }
+
+    async function loadPreviousContinuityContext(sessionFilename) {
+      clearHotConversationState({ reason: "Connect Previous branch rewind" });
+      clearSensingEyeState({ source: "connect_previous", reason: "restore pre-gap state" });
+      // The restored note begins a new browser run without transport timing from branch A.
+      inputAudioTranscriptionPending = false;
+      lastSpeechStartedAt = 0;
+      lastInputVoiceShape = "";
+      lastConversationActivityAt = Date.now();
+      lastUserText = "";
+      recentUserTexts = [];
+      lastAcceptedUserTranscript = "";
+      lastAcceptedUserTranscriptAt = 0;
+      lastUserConversationIndex = -1;
+      lastUserTurnActivityAt = 0;
+      lastAssistantResponseDoneAt = 0;
+      responseActive = false;
+      idleInFlight = false;
+      brain2InFlight = false;
+      reengageInFlight = false;
+      loadedNoteContexts = [];
+      loadedNoteContextDirty = true;
+
+      if (loadEricMemoriesEnabled()) {
+        for (const filename of baseStartupNoteFilenames) {
+          await readTextFile({ filename });
+        }
+      }
+      await loadCurrentContinuitySession({ source: "Connect Previous", sessionFilename });
+      loadedNoteContextDirty = false;
+      updateLoadedNoteControls();
+      renderMemory();
+      updateSessionTools({ quiet: true });
+      if (contextPanel?.open) renderContextMap();
+    }
+
+    async function loadFreshContinuityContext({ source = "Connect", sessionFilename = "", reason = "continuity connect" } = {}) {
+      clearHotConversationState({ reason });
+      clearSensingEyeState({ source: "continuity_connect", reason });
+      inputAudioTranscriptionPending = false;
+      lastSpeechStartedAt = 0;
+      lastInputVoiceShape = "";
+      lastConversationActivityAt = Date.now();
+      lastUserText = "";
+      recentUserTexts = [];
+      lastAcceptedUserTranscript = "";
+      lastAcceptedUserTranscriptAt = 0;
+      lastUserConversationIndex = -1;
+      lastUserTurnActivityAt = 0;
+      lastAssistantResponseDoneAt = 0;
+      responseActive = false;
+      idleInFlight = false;
+      brain2InFlight = false;
+      reengageInFlight = false;
+      loadedNoteContexts = [];
+      loadedNoteContextDirty = true;
+      const result = sessionFilename
+        ? await loadCurrentContinuitySession({ source, sessionFilename })
+        : await loadLatestContinuitySession({ source });
+      loadedNoteContextDirty = false;
+      updateLoadedNoteControls();
+      renderMemory();
+      updateSessionTools({ quiet: true });
+      if (contextPanel?.open) renderContextMap();
+      return result;
+    }
+
+    async function connectPrevious() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-      setState(emptyContext ? "Empty connecting" : "Connecting", "warn");
-      connectButton.disabled = true;
-      emptyConnectButton.disabled = true;
+      setState("Restoring previous", "warn");
+      setConnectionButtonsDisabled(true);
       try {
         await ensureRuntimeConfigLoaded();
+        const rewind = await rewindContinuitySessionToPrevious();
+        await loadPreviousContinuityContext(rewind.restored_session_filename || "");
+        recordUiEvent("realtime connect previous", rewind.archived_session_filename || "previous branch selected", {
+          archived_session_filename: rewind.archived_session_filename,
+          restored_session_filename: rewind.restored_session_filename,
+          restored_parent_session_filename: rewind.restored_parent_session_filename || null
+        });
+        log(events, `Connect Previous kept branch note: ${rewind.archived_session_filename}`);
+        log(events, `Connect Previous restored session: ${rewind.restored_session_filename}`);
+        await connect({ restoredPrevious: true, continuityAlreadyLoaded: true });
+      } catch (error) {
+        setState("Previous unavailable");
+        setConnectionButtonsDisabled(false);
+        log(events, `Connect Previous error: ${error.message}`);
+      }
+    }
+
+    async function connect({ emptyContext = false, restoredPrevious = false, continuityAlreadyLoaded = false } = {}) {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      setState(emptyContext ? "Empty connecting" : restoredPrevious ? "Previous connecting" : "Connecting", "warn");
+      setConnectionButtonsDisabled(true);
+      let socket = null;
+      let sessionGeneration = 0;
+      try {
+        await ensureRuntimeConfigLoaded();
+        if (!emptyContext && !continuityAlreadyLoaded) {
+          await loadFreshContinuityContext({ source: "Connect", reason: "Connect latest session" });
+        }
+        continuityParentForCurrentRun = (
+          !emptyContext
+          && currentContinuitySessionFilename
+          && Boolean(continuitySessionContext())
+        ) ? currentContinuitySessionFilename : "";
         if (emptyContext) await ensureEricMemoriesLoadedForEmptyConnect();
         await ensurePlayback();
-        ws = new WebSocket(serverUrl.value.trim());
+        socket = new WebSocket(serverUrl.value.trim());
+        realtimeSessionGeneration += 1;
+        sessionGeneration = realtimeSessionGeneration;
+        ws = socket;
       } catch (error) {
         setState("Connect failed");
-        connectButton.disabled = false;
-        emptyConnectButton.disabled = false;
+        setConnectionButtonsDisabled(false);
         log(events, `connect error: ${error.message}`);
         return;
       }
-      ws.addEventListener("open", () => {
+      socket.addEventListener("open", () => {
+        if (!activeRealtimeSession(socket, sessionGeneration)) return;
         beginRealtimeContextMode({ emptyContext });
-        setState(emptyContext ? "Empty connected" : "Connected", "ok");
-        connectButton.disabled = true;
-        emptyConnectButton.disabled = true;
+        setState(emptyContext ? "Empty connected" : restoredPrevious ? "Previous connected" : "Connected", "ok");
+        setConnectionButtonsDisabled(true);
         disconnectButton.disabled = false;
         startMicButton.disabled = false;
         resetMicButton.disabled = false;
@@ -18331,7 +18709,7 @@
         noteConversationActivity();
         try {
           updateSessionTools();
-          recordRunSetupSnapshot(emptyContext ? "empty realtime open" : "realtime open");
+          recordRunSetupSnapshot(emptyContext ? "empty realtime open" : restoredPrevious ? "previous realtime open" : "realtime open");
         } catch (error) {
           log(events, `connect prompt setup error: ${error.message}`);
           const fallbackInstructions = [
@@ -18349,7 +18727,7 @@
               tools: [],
               tool_choice: "none"
             }
-          });
+          }, { socket, generation: sessionGeneration });
           rememberPromptLedger({
             kind: "session.update",
             source: "B1 fallback after connect prompt setup error",
@@ -18361,19 +18739,20 @@
             extra: { error: error.message },
             announce: true
           });
-          recordRunSetupSnapshot(emptyContext ? "empty realtime open fallback" : "realtime open fallback");
+          recordRunSetupSnapshot(emptyContext ? "empty realtime open fallback" : restoredPrevious ? "previous realtime open fallback" : "realtime open fallback");
         }
         updateLanePressure({ reason: "realtime connected" });
         updateIdleSchedulerStatus();
       });
-      ws.addEventListener("message", (message) => {
+      socket.addEventListener("message", (message) => {
         try {
-          handleEvent(JSON.parse(message.data));
+          handleEvent(JSON.parse(message.data), { socket, generation: sessionGeneration });
         } catch (error) {
           log(events, `bad event: ${error.message}`);
         }
       });
-      ws.addEventListener("close", () => {
+      socket.addEventListener("close", () => {
+        if (ws !== socket || realtimeSessionGeneration !== sessionGeneration) return;
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
         idleTimerFireAt = 0;
@@ -18401,8 +18780,7 @@
         clearUserTurnPending();
         clearAudioQueue();
         setState("Disconnected");
-        connectButton.disabled = false;
-        emptyConnectButton.disabled = false;
+        setConnectionButtonsDisabled(false);
         disconnectButton.disabled = true;
         startMicButton.disabled = true;
         stopMicButton.disabled = true;
@@ -18432,10 +18810,10 @@
           recordExitPaneSnapshots("disconnect").catch((error) => log(events, `disconnect snapshots error: ${error.message}`));
         }
       });
-      ws.addEventListener("error", () => {
+      socket.addEventListener("error", () => {
+        if (ws !== socket || realtimeSessionGeneration !== sessionGeneration) return;
         setState("Socket error");
-        connectButton.disabled = false;
-        emptyConnectButton.disabled = false;
+        setConnectionButtonsDisabled(false);
         log(events, "websocket error");
       });
     }
@@ -18459,8 +18837,7 @@
       clearAudioQueue();
       endIntentionalExitCleanupSoon();
       setState("Restarting realtime", "warn");
-      connectButton.disabled = true;
-      emptyConnectButton.disabled = true;
+      setConnectionButtonsDisabled(true);
       disconnectButton.disabled = true;
 
       try {
@@ -18478,16 +18855,14 @@
         setTimeout(() => {
           restartServerButton.disabled = false;
           unloadServerButton.disabled = false;
-          connectButton.disabled = false;
-          emptyConnectButton.disabled = false;
+          setConnectionButtonsDisabled(false);
           setState("Disconnected");
           log(events, "realtime restart launched; reconnect when ready");
         }, 5000);
       } catch (error) {
         restartServerButton.disabled = false;
         unloadServerButton.disabled = false;
-        connectButton.disabled = false;
-        emptyConnectButton.disabled = false;
+        setConnectionButtonsDisabled(false);
         setState("Restart failed");
         log(events, `realtime restart error: ${error.message}`);
       }
@@ -18523,8 +18898,7 @@
         }
         log(events, `realtime halt started: pid ${result.pid || "unknown"}`);
         setState("Disconnected");
-        connectButton.disabled = false;
-        emptyConnectButton.disabled = false;
+        setConnectionButtonsDisabled(false);
         disconnectButton.disabled = true;
         startMicButton.disabled = true;
         stopMicButton.disabled = true;
@@ -18562,8 +18936,7 @@
       clearAudioQueue();
       endIntentionalExitCleanupSoon();
       setState("Unloading realtime", "warn");
-      connectButton.disabled = true;
-      emptyConnectButton.disabled = true;
+      setConnectionButtonsDisabled(true);
       disconnectButton.disabled = true;
 
       try {
@@ -18581,16 +18954,14 @@
         setTimeout(() => {
           restartServerButton.disabled = false;
           unloadServerButton.disabled = false;
-          connectButton.disabled = false;
-          emptyConnectButton.disabled = false;
+          setConnectionButtonsDisabled(false);
           setState("Unloaded");
           log(events, "realtime backend stopped; LM Studio unload requested");
         }, 4000);
       } catch (error) {
         restartServerButton.disabled = false;
         unloadServerButton.disabled = false;
-        connectButton.disabled = false;
-        emptyConnectButton.disabled = false;
+        setConnectionButtonsDisabled(false);
         setState("Unload failed");
         log(events, `realtime unload error: ${error.message}`);
       }
@@ -18695,10 +19066,11 @@
       customModelContext: "Context window requested for the model backend.",
       customModelParallel: "Parallel prediction count for the loaded LM Studio model.",
       connect: "Connect the browser UI to the realtime STS server.",
-      emptyConnect: "Connect with only creature/runtime config and live turns from this socket; omit notes, memory, passivation, sensing-eye input, search receipts, lab goal, and Brain2 carryover.",
-      disconnect: "Sweep the current session transcript into passivation, then close the realtime connection.",
+      previousConnect: "Select the timestamped session note before the current one, then connect there.",
+      emptyConnect: "Connect with only creature/runtime config and live turns from this socket; omit saved session notes, other notes, sensing-eye input, search receipts, lab goal, and Brain2 carryover. Eric's core memory stays available when its checkbox is on.",
+      disconnect: "Save the current transcript/context as a timestamped session note, then close the realtime connection.",
       restartServer: "Restart the local realtime server using the selected model settings.",
-      haltRuntime: "Hard-stop only the realtime backend; leave STS, browser-face, LM Studio, and passivation alone.",
+      haltRuntime: "Hard-stop only the realtime backend; leave STS, browser-face, LM Studio, and continuity notes alone.",
       unloadServer: "Disconnect, stop the realtime backend, and unload LM Studio models to reclaim GPU memory.",
       embodimentExpando: "Open body target and face controller controls.",
       chassisExpando: "Open chassis endpoint and stop controls.",
@@ -18783,9 +19155,12 @@
       clearLatestThread: "Clear Latest discards the hot conversation scratch state. If connected, it reconnects so old realtime conversation context is actually dropped.",
       resetToPinnedContext: "Close the hot realtime session, clear conversation/idle/B2 scratch state, and reconnect from the currently pinned notes.",
       conversationNoteResetAfterSave: "After saving the conversation note, reset the hot session back to the pinned-note context.",
-      passivateEric: "Save Eric's passivated transcript, then halt the current realtime session.",
+      saveAndHaltEric: "Save the current conversation/context as a timestamped session note, then halt the realtime session.",
       loadEricMemories: "Load Eric's memory note into startup context on refresh.",
-      loadPassivatedEric: "Load the passivated transcript into startup context on refresh or Start Eric.",
+      continuitySessionSelect: "Choose a timestamped session note to select or connect.",
+      refreshContinuitySessions: "Refresh the timestamped session-note list.",
+      selectContinuitySession: "Make this the selected resume session note.",
+      connectSelectedContinuitySession: "Load this session note and connect from it.",
       llmTools: "Expose face and embodiment tools to the LLM.",
       llmBodySensorTools: "Expose read-only body sensor/status tools to the LLM.",
       llmChassisTools: "Expose chassis movement/stop tools to the LLM.",
@@ -18923,7 +19298,12 @@
 
     function currentRunSetupSnapshot(trigger = "connect") {
       const emptyContext = emptyContextSessionEnabled();
-      const availableStartupNotes = configuredStartupNoteFilenames();
+      const availableStartupNotes = [
+        ...configuredStartupNoteFilenames(),
+        ...(!emptyContext && currentContinuitySessionFilename
+          ? [currentContinuitySessionFilename]
+          : [])
+      ];
       const emptyStartupNotes = loadEricMemoriesEnabled() ? baseStartupNoteFilenames : [];
       const startupNotes = emptyContext ? emptyStartupNotes : availableStartupNotes;
       const availableLoadedNotes = loadedNoteContexts.map((item) => ({
@@ -18961,9 +19341,9 @@
           injected: startupContextInjected,
           omitted_by_empty_connect: emptyContext,
           eric_memories_enabled: loadEricMemoriesEnabled(),
-          passivated_state_enabled: !emptyContext && loadPassivatedEricEnabled(),
+          continuity_session_enabled: !emptyContext && Boolean(currentContinuitySessionFilename),
           eric_memories_preference_enabled: loadEricMemoriesEnabled(),
-          passivated_state_preference_enabled: loadPassivatedEricEnabled(),
+          selected_continuity_session: currentContinuitySessionFilename || "",
           startup_notes: startupNotes,
           loaded_notes: loadedNotes,
           browser_memory_facts: emptyContext ? 0 : browserMemoryFacts,
@@ -19010,6 +19390,13 @@
       });
       connect();
     });
+    previousConnectButton.addEventListener("click", () => {
+      recordUiEvent("realtime connect previous", "rewind requested", {
+        ...currentUiSettingsSnapshot(),
+        requested_context_mode: "previous"
+      });
+      connectPrevious();
+    });
     emptyConnectButton.addEventListener("click", () => {
       recordUiEvent("realtime empty connect", "config-only requested", {
         ...currentUiSettingsSnapshot(),
@@ -19018,22 +19405,27 @@
       connect({ emptyContext: true });
     });
     disconnectButton.addEventListener("click", async () => {
-      recordUiEvent("realtime disconnect", "continuity stop requested", { connected: realtimeConnected() });
+      recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
       beginIntentionalExitCleanup();
       try {
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
-        const saveResult = await runtimeStep(
-          "write continuity into passivated transcript",
-          () => saveEricPassivationSnapshot({
-            reason: "realtime disconnect",
-            eventLabel: "Eric continuity saved"
-          }),
-          { timeoutMs: 16000, prefix: "disconnect step" }
-        );
+        const saveResult = conversationLines.length
+          ? await runtimeStep(
+            "write session note",
+            () => saveEricContinuitySnapshot({
+              reason: "realtime disconnect",
+              eventLabel: "session note saved"
+            }),
+            { timeoutMs: 16000, prefix: "disconnect step", required: true }
+          )
+          : null;
         if (saveResult) {
-          passivatedEricHalted = true;
-          updatePassivationButton();
+          continuitySaveHalted = true;
+          updateSaveAndHaltButton();
+        } else {
+          log(events, "disconnect skipped session note: no accepted conversation lines");
+          recordUiEvent("session note skipped", "no accepted conversation lines", { connected: realtimeConnected() });
         }
         haltRealtimeActivity("realtime disconnect");
         if (closingSocket) {
@@ -19053,6 +19445,9 @@
           if (stopResult) log(events, `audio recording finalized for disconnect: ${stopResult.recording_name || stopResult.status || "done"}`);
         }
         await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("hard disconnect"), { timeoutMs: 10000, prefix: "disconnect step" });
+      } catch (error) {
+        log(events, `disconnect save blocked: ${error.message}`);
+        disconnectButton.disabled = false;
       } finally {
         endIntentionalExitCleanupSoon();
       }
@@ -19626,11 +20021,41 @@
       resetToPinnedContextButton?.addEventListener("click", () => {
         resetToPinnedContext({ reason: "operator reset to pinned notes" });
       });
-    passivateEricButton?.addEventListener("click", () => {
-      recordUiEvent(passivatedEricHalted ? "Eric passivation start" : "Eric passivation halt", "requested", currentUiSettingsSnapshot());
-      toggleEricPassivation();
+    saveAndHaltEricButton?.addEventListener("click", () => {
+      recordUiEvent(continuitySaveHalted ? "session note start" : "session note save and halt", "requested", currentUiSettingsSnapshot());
+      toggleEricSaveAndHalt();
     });
-    loadPassivatedEric?.addEventListener("change", handlePassivatedEricPrefChange);
+    refreshContinuitySessionsButton?.addEventListener("click", () => {
+      fetchContinuitySessions()
+        .then((result) => log(events, `session notes refreshed: ${result.sessions?.length || 0}`))
+        .catch((error) => log(events, `session note refresh error: ${error.message}`));
+    });
+    selectContinuitySessionButton?.addEventListener("click", () => {
+      selectContinuitySession(continuitySessionSelect?.value || "")
+        .then((result) => {
+          log(events, `session note selected: ${result.session_filename}`);
+          recordUiEvent("session note selected", result.session_filename || "", currentUiSettingsSnapshot());
+        })
+        .catch((error) => log(events, `session note select error: ${error.message}`));
+    });
+    connectSelectedContinuitySessionButton?.addEventListener("click", async () => {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      try {
+        const selected = await selectContinuitySession(continuitySessionSelect?.value || "");
+        await loadFreshContinuityContext({
+          source: "Connect Selected",
+          sessionFilename: selected.session_filename || "",
+          reason: "Connect selected session"
+        });
+        recordUiEvent("realtime connect selected", selected.session_filename || "", {
+          ...currentUiSettingsSnapshot(),
+          requested_context_mode: "selected"
+        });
+        await connect({ continuityAlreadyLoaded: true });
+      } catch (error) {
+        log(events, `Connect Selected error: ${error.message}`);
+      }
+    });
     clearLogButton.addEventListener("click", () => {
       clearHotConversationState({ reason: "clear log", clearEvents: true });
     });
@@ -19804,7 +20229,6 @@
     loadBrain2VoiceMonitor();
     loadPerformanceMode();
     loadEricMemoriesPref();
-    loadPassivatedEricPref();
     loadLabGoalOneShotPref();
     loadImageSettings();
     loadToolPrefs();
@@ -19822,8 +20246,9 @@
     updateAudioRecordButtons();
     updateHeaderClocks();
     updateTopMicMeter(0);
-    updatePassivationButton();
+    updateSaveAndHaltButton();
     loadStartupNotes();
+    fetchContinuitySessions().catch((error) => log(events, `session note list skipped: ${error.message}`));
     if (contextPanel.open) renderContextMap();
     scheduleLogPaneHeightUpdate();
     startGpuStatusPolling();

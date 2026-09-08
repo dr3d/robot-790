@@ -46,6 +46,7 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 
 ## Project Notes
 
+- [Context Engineering Architecture](context-engineering-architecture.md)
 - [Receipts And Open Questions](evidence_map.md)
 - [Face Contract](face_contract.md)
 - [Future Directions](future_directions.md)

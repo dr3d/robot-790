@@ -22,10 +22,16 @@ from urllib.parse import parse_qs, unquote, urlsplit
 import httpx
 
 from robot_790d.brain_status import get_brain_status, get_gpu_status
+from robot_790d.continuity import (
+    current_continuity_session,
+    list_continuity_sessions,
+    rewind_continuity_session,
+    save_continuity_session,
+    select_continuity_session,
+)
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
-from robot_790d.passivation import extract_passivated_session_notes
 from robot_790d.smart_home import control_smart_home_device
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
@@ -119,6 +125,12 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/sensing-eye/inbox":
             self._handle_sensing_eye_inbox_poll(parsed.query)
             return
+        if parsed.path == "/api/continuity/current":
+            self._handle_continuity_current()
+            return
+        if parsed.path == "/api/continuity/sessions":
+            self._handle_continuity_sessions()
+            return
         super().do_GET()
 
     def do_POST(self) -> None:
@@ -126,8 +138,14 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/notes/write":
             self._handle_note_write()
             return
-        if parsed.path == "/api/passivation/extract-session-notes":
-            self._handle_passivation_extract_session_notes()
+        if parsed.path == "/api/continuity/save":
+            self._handle_continuity_save()
+            return
+        if parsed.path == "/api/continuity/previous":
+            self._handle_continuity_previous()
+            return
+        if parsed.path == "/api/continuity/select":
+            self._handle_continuity_select()
             return
         if parsed.path == "/api/logs/record":
             self._handle_log_record()
@@ -300,15 +318,50 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             },
         )
 
-    def _handle_passivation_extract_session_notes(self) -> None:
+    def _handle_continuity_current(self) -> None:
+        try:
+            result = current_continuity_session()
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_continuity_sessions(self) -> None:
+        try:
+            result = list_continuity_sessions()
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_continuity_save(self) -> None:
         try:
             payload = self._read_json_body()
-            result = extract_passivated_session_notes(
-                None,
-                source_filename=str(payload.get("source_filename") or "core/passivated_eric_state.txt"),
-                output_dir=str(payload.get("output_dir") or "sessions"),
-                overwrite=bool(payload.get("overwrite") or False),
+            pinned = payload.get("pinned_filenames") or []
+            if not isinstance(pinned, list):
+                raise ValueError("pinned_filenames must be a list.")
+            result = save_continuity_session(
+                str(payload.get("body") or ""),
+                [str(filename) for filename in pinned],
+                parent_session_filename=str(payload.get("parent_session_filename") or ""),
             )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_continuity_previous(self) -> None:
+        try:
+            result = rewind_continuity_session()
+        except (OSError, ValueError) as exc:
+            self._send_json(409, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_continuity_select(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = select_continuity_session(str(payload.get("session_filename") or payload.get("filename") or ""))
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return

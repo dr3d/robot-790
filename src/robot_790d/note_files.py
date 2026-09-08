@@ -2,12 +2,43 @@ from __future__ import annotations
 
 import os
 import re
+import tempfile
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 ALLOWED_EXTENSIONS = {".md", ".txt"}
 MAX_NOTE_CHARS = 200000
 NOTES_DIRNAME = "notes"
+_NOTE_WRITE_LOCK = threading.Lock()
+
+
+@contextmanager
+def _note_write_transaction(root: Path) -> Iterator[None]:
+    # The page server and realtime worker can both write notes in separate processes.
+    with _NOTE_WRITE_LOCK, (root / ".note-write.lock").open("a+b") as lock_file:
+        if lock_file.seek(0, os.SEEK_END) == 0:
+            lock_file.write(b"\0")
+            lock_file.flush()
+        lock_file.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            lock_file.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 @dataclass(frozen=True)
@@ -113,22 +144,27 @@ def write_note_file(
 
     path = resolve_note_path(filename, instance_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    if mode == "append":
-        existing = path.read_text(encoding="utf-8") if path.exists() else ""
-        separator = "" if not existing or existing.endswith("\n") else "\n"
-        normalized_content = f"{existing}{separator}{normalized_content}"
-        if len(normalized_content) > MAX_NOTE_CHARS:
-            raise ValueError(f"Combined note is too long. Limit is {MAX_NOTE_CHARS} characters.")
+    with _note_write_transaction(notes_root_for_instance(instance_path).resolve()):
+        if mode == "append":
+            existing = path.read_text(encoding="utf-8") if path.exists() else ""
+            separator = "" if not existing or existing.endswith("\n") else "\n"
+            normalized_content = f"{existing}{separator}{normalized_content}"
+            if len(normalized_content) > MAX_NOTE_CHARS:
+                raise ValueError(f"Combined note is too long. Limit is {MAX_NOTE_CHARS} characters.")
 
-    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    try:
-        tmp_path.write_text(normalized_content, encoding="utf-8")
-        tmp_path.replace(path)
-    finally:
+        tmp_path: Path | None = None
         try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False
+            ) as temporary:
+                tmp_path = Path(temporary.name)
+                temporary.write(normalized_content)
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            tmp_path.replace(path)
+        finally:
+            if tmp_path is not None:
+                tmp_path.unlink(missing_ok=True)
 
     return NoteFile(filename=relative_note_name(path, instance_path), path=path, content=normalized_content)
 
@@ -139,6 +175,16 @@ def read_note_file(instance_path: str | Path | None, filename: str) -> NoteFile:
     if len(content) > MAX_NOTE_CHARS:
         raise ValueError(f"Note is too long to read. Limit is {MAX_NOTE_CHARS} characters.")
     return NoteFile(filename=relative_note_name(path, instance_path), path=path, content=content)
+
+
+def delete_note_file(instance_path: str | Path | None, filename: str) -> str:
+    path = find_existing_note_path(filename, instance_path)
+    root = notes_root_for_instance(instance_path).resolve()
+    with _note_write_transaction(root):
+        if not path.exists():
+            raise FileNotFoundError(path)
+        path.unlink()
+    return relative_note_name(path, instance_path)
 
 
 def list_note_files(instance_path: str | Path | None = None) -> list[str]:

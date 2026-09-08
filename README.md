@@ -283,6 +283,9 @@ The page connects to:
 ws://127.0.0.1:8765/v1/realtime
 ```
 
+The page, face, and realtime launchers default to localhost. For apartment-only
+HTTPS access with microphone/camera support, see [STS LAN setup](scripts/sts-lan.md).
+
 If Ctrl-C does not stop a stuck process, use:
 
 ```powershell

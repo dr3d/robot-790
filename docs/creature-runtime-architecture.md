@@ -4,7 +4,7 @@ Robot 790 is being split into a few explicit objects so Eric is not permanently 
 
 ## Runtime
 
-The runtime is the apparatus: microphones, audio playback, realtime connection, tool bridge, Brain2, sensing eye, recording, logs, passivation, and context assembly.
+The runtime is the apparatus: microphones, audio playback, realtime connection, tool bridge, Brain2, sensing eye, recording, logs, session notes, and context assembly.
 
 The runtime should know how to load a creature and an embodiment. It should not contain the permanent identity of the creature except as fallback text.
 
@@ -48,21 +48,21 @@ Examples:
 - `paint_face_from_sensing_eye`
 - `use_loaded_context`
 - `manage_active_thread`
-- `seal_reconstructable_state`
+- `save_continuity_session_note`
 - `start_recurring_spoken_task`
 
 The creature may know the machine-language phrase. The embodiment/runtime decides how the verb is executed.
 
 ## Context
 
-Pinned notes, latest thread, the passivated state transcript, sensing-eye input, search receipts, memory facts, Brain2 notes, and UI events are context blocks.
+Pinned notes, latest thread, selected session notes, sensing-eye input, search receipts, memory facts, Brain2 notes, and UI events are context blocks.
 
 The mental model:
 
 - pinned notes are nearby open notes
 - latest is the active notebook
 - shelf notes are visible by title only until read
-- passivation is reconstruction state
+- selected session notes are reconstruction state
 - current runtime/tool receipts outrank old notes
 
 ## First Factoring Rule

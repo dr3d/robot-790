@@ -21,14 +21,19 @@ if ($ports.Count -eq 0) {
 
 $processes = @(Get-CimInstance Win32_Process)
 $targetIds = New-Object "System.Collections.Generic.HashSet[int]"
+# The LAN proxy shares port numbers with the loopback services, but owns a separate lifetime.
+$proxyIds = @($processes | Where-Object { $_.Name -eq "caddy.exe" } | Select-Object -ExpandProperty ProcessId)
 
 foreach ($connection in Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue) {
-    if ($ports -contains [int]$connection.LocalPort) {
+    if ($ports -contains [int]$connection.LocalPort -and $proxyIds -notcontains [int]$connection.OwningProcess) {
         [void]$targetIds.Add([int]$connection.OwningProcess)
     }
 }
 
 foreach ($process in $processes) {
+    if ($proxyIds -contains [int]$process.ProcessId) {
+        continue
+    }
     $commandLine = [string]$process.CommandLine
     if (-not $commandLine.Contains($RepoRoot)) {
         continue
@@ -62,7 +67,7 @@ foreach ($processId in $targetIds) {
 Start-Sleep -Milliseconds 500
 
 $remaining = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-    Where-Object { $ports -contains [int]$_.LocalPort }
+    Where-Object { $ports -contains [int]$_.LocalPort -and $proxyIds -notcontains [int]$_.OwningProcess }
 
 if ($remaining) {
     Write-Warning "Some selected ports are still listening:"

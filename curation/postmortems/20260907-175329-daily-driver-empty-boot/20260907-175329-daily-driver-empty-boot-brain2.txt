@@ -1,0 +1,24 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-07T17:54:32
+Source: brain2_mulling
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[5:49:29 PM] fired: auto
+[5:49:30 PM] mull skipped: already in flight
+[5:49:31 PM] held: waiting for pause: The audit says 'runtime_load_failed' but we're running fine. The spec sheet and the live room do
+[5:49:45 PM] fired: auto
+[5:49:46 PM] mull skipped: already in flight
+[5:49:47 PM] note for Eric: The operator just asked for a full system dump; you delivered it. Do not re-list specs or the KV cache error now—wait for them to pick a tuning target.
+[5:49:51 PM] voice: The audit says 'runtime_load_failed' but we're running fine. The spec sheet and the live room do
+[5:49:57 PM] mouth: The audit says 'runtime_load_failed' but we're running fine. The spec sheet and the live room do
+[5:51:06 PM] fired: auto
+[5:51:07 PM] mull skipped: already in flight
+[5:51:08 PM] failed: Brain 2 returned no usable output.
+[5:51:21 PM] fired: auto
+[5:51:22 PM] mull skipped: already in flight
+[5:51:22 PM] failed: Brain 2 returned no usable output.
+[5:51:22 PM] backoff: 70s after 2 failures
+[5:52:32 PM] fired: auto
+[5:52:33 PM] mull skipped: already in flight
+[5:52:34 PM] mouth: Telemetry counts numbers. A nervous system knows who touched the nose.
+[5:52:34 PM] voice: Telemetry counts numbers. A nervous system knows who touched the nose.

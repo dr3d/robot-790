@@ -1,5 +1,5 @@
 param(
-    [string] $HostAddress = "0.0.0.0",
+    [string] $HostAddress = "127.0.0.1",
     [int] $Port = 8765,
     [int] $NumPipelines = 1,
     [int] $StreamBatchSentences = 1,

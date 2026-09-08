@@ -7,6 +7,7 @@ __pycache__/
 dist/
 build/
 tmp/
+.local/
 .env
 qwen3_tts.env
 *.log

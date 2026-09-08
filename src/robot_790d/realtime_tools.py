@@ -707,6 +707,24 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
     return ToolResult(result, create_response=False)
 
 
+def _device_error(result: dict[str, object]) -> str:
+    if result.get("error"):
+        return str(result["error"])
+    if result.get("ok") is False or result.get("status") in {"error", "failed", "skipped"}:
+        return str(result.get("reason") or result.get("message") or "Device did not complete the request.")
+    return ""
+
+
+def _device_tool_result(
+    tool: str, device: str, result: dict[str, object], **details: object
+) -> dict[str, object]:
+    error = _device_error(result)
+    payload: dict[str, object] = {"status": "error" if error else "ok", "tool": tool, **details, device: result}
+    if error:
+        payload["error"] = error
+    return payload
+
+
 def _set_robot_mode(arguments: dict[str, object]) -> dict[str, object]:
     raw_mode = str(arguments.get("mode", "")).strip().lower()
     if not raw_mode:
@@ -728,7 +746,7 @@ def _set_robot_mode(arguments: dict[str, object]) -> dict[str, object]:
     finally:
         face.close()
 
-    return {"status": "ok", "tool": "set_robot_mode", "mode": mode.value, "face": result}
+    return _device_tool_result("set_robot_mode", "face", result, mode=mode.value)
 
 
 def _play_face_beat(arguments: dict[str, object]) -> dict[str, object]:
@@ -742,7 +760,7 @@ def _play_face_beat(arguments: dict[str, object]) -> dict[str, object]:
     finally:
         face.close()
 
-    return {"status": "ok", "tool": "play_face_beat", "beat": beat_name, "face": result}
+    return _device_tool_result("play_face_beat", "face", result, beat=beat_name)
 
 
 def _set_face_mood(arguments: dict[str, object]) -> dict[str, object]:
@@ -759,7 +777,7 @@ def _set_face_mood(arguments: dict[str, object]) -> dict[str, object]:
     finally:
         face.close()
 
-    payload: dict[str, object] = {"status": "ok", "tool": "set_face_mood", "mood": mood_name, "face": result}
+    payload = _device_tool_result("set_face_mood", "face", result, mood=mood_name)
     if color:
         payload["color"] = color
     return payload
@@ -773,7 +791,7 @@ def _set_face_animation(arguments: dict[str, object]) -> dict[str, object]:
     finally:
         face.close()
 
-    return {"status": "ok", "tool": "set_face_animation", "enabled": enabled, "face": result}
+    return _device_tool_result("set_face_animation", "face", result, enabled=enabled)
 
 
 def _set_eye_style(arguments: dict[str, object]) -> dict[str, object]:
@@ -788,7 +806,7 @@ def _set_eye_style(arguments: dict[str, object]) -> dict[str, object]:
     finally:
         face.close()
 
-    payload: dict[str, object] = {"status": "ok", "tool": "set_eye_style", "face": result}
+    payload = _device_tool_result("set_eye_style", "face", result)
     if style_name:
         payload["style"] = style_name
     if eye_mode:
@@ -808,7 +826,7 @@ def _set_eye_gaze(arguments: dict[str, object]) -> dict[str, object]:
     finally:
         face.close()
 
-    return {"status": "ok", "tool": "set_eye_gaze", "x": x, "y": y, "duration": duration, "face": result}
+    return _device_tool_result("set_eye_gaze", "face", result, x=x, y=y, duration=duration)
 
 
 def _set_mouth(arguments: dict[str, object]) -> dict[str, object]:
@@ -844,15 +862,7 @@ def _set_mouth(arguments: dict[str, object]) -> dict[str, object]:
     finally:
         face.close()
 
-    return {
-        "status": "ok",
-        "tool": "set_mouth",
-        "style": style,
-        "shape": shape,
-        "talking": talking_bool,
-        "auto": auto,
-        "face": result,
-    }
+    return _device_tool_result("set_mouth", "face", result, style=style, shape=shape, talking=talking_bool, auto=auto)
 
 
 def _set_chassis(arguments: dict[str, object]) -> dict[str, object]:
@@ -863,13 +873,13 @@ def _set_chassis(arguments: dict[str, object]) -> dict[str, object]:
     chassis = _build_chassis()
     try:
         if action == "status":
-            return {"status": "ok", "tool": "set_chassis", "action": action, "chassis": chassis.status()}
+            return _device_tool_result("set_chassis", "chassis", chassis.status(), action=action)
         if action == "stop":
-            return {"status": "ok", "tool": "set_chassis", "action": action, "chassis": chassis.stop()}
+            return _device_tool_result("set_chassis", "chassis", chassis.stop(), action=action)
         if action == "estop":
-            return {"status": "ok", "tool": "set_chassis", "action": action, "chassis": chassis.estop()}
+            return _device_tool_result("set_chassis", "chassis", chassis.estop(), action=action)
         if action == "clear":
-            return {"status": "ok", "tool": "set_chassis", "action": action, "chassis": chassis.clear()}
+            return _device_tool_result("set_chassis", "chassis", chassis.clear(), action=action)
         if action == "tank":
             left = _clamp(_float_argument(arguments.get("left"), default=0.0), -1.0, 1.0)
             right = _clamp(_float_argument(arguments.get("right"), default=0.0), -1.0, 1.0)
@@ -906,21 +916,16 @@ def _run_chassis_drive(
         duration_arg = duration_s if duration_s > 0 else None
         drive_result = drive_once(duration_arg)
         if duration_s <= 0:
-            return {
-                "status": "ok",
-                "tool": "set_chassis",
-                "action": action,
-                "duration_s": 0.0,
-                "queued": False,
-                "chassis": drive_result,
-            }
+            return _device_tool_result(
+                "set_chassis", "chassis", drive_result, action=action, duration_s=0.0, queued=False
+            )
 
         time.sleep(duration_s)
         stop_result = chassis.stop()
         errors = [
-            result["error"]
+            _device_error(result)
             for result in (drive_result, stop_result)
-            if isinstance(result, dict) and "error" in result
+            if _device_error(result)
         ]
         if errors:
             return {

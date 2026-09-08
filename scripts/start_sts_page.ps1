@@ -1,5 +1,5 @@
 param(
-    [string] $HostAddress = "0.0.0.0",
+    [string] $HostAddress = "127.0.0.1",
     [int] $Port = 8790
 )
 
@@ -28,7 +28,9 @@ $LanAddress = Get-NetIPAddress -AddressFamily IPv4 |
 
 Write-Host "Starting Robot 790 STS page on $HostAddress`:$Port"
 Write-Host "Local: http://127.0.0.1:$Port/"
-if ($LanAddress) {
+if ($HostAddress -eq "127.0.0.1") {
+    Write-Host "Apartment HTTPS: start_sts_lan.ps1"
+} elseif ($LanAddress) {
     Write-Host "LAN:   http://$LanAddress`:$Port/"
 }
 & $Python -m robot_790d.sts_page_server --host $HostAddress --port $Port --directory $PageRoot

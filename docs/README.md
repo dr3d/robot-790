@@ -26,6 +26,8 @@ opened directly as a `file://` URL.
 - `articles/`: public Markdown articles and essays.
 - `logs/`: curated public transcript excerpts, not raw private logs.
 - `media/`: compressed public images, audio, and video.
+- `context-engineering-architecture.md`: session-note, pinned-note, latest, and
+  runtime-truth architecture.
 - `evidence_map.md`: working map of project observations, receipts, and open
   tests.
 - `face_contract.md`: face vocabulary, skin inheritance, and renderer contract.

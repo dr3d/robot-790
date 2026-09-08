@@ -1,7 +1,7 @@
 # Daily Driver Empty Boot
 
 This run is the first clean daily-driver boot after moving away from the old
-passivated-state file and toward timestamped continuity session notes.
+passivated-state file and toward timestamped session notes.
 
 Scott starts Eric with Empty Connect, meaning old session material is omitted,
 but Eric's core memory note is still present. Eric recognizes that state in the
@@ -26,10 +26,11 @@ nervous system knows who touched the nose." That is a good summary of the
 current design direction: raw readings are less important than body events Eric
 can treat as happenings in the room.
 
-At disconnect, STS saved the sit-down as
-`notes/sessions/continuity-session-20260907-175329-491.txt`, pinned/reloaded it,
-and captured matching audio/video and live-pane artifacts. The public video is
-the moving screen recording of that session.
+At disconnect, STS saved the sit-down as a timestamped session note, later
+renamed from the PM caption to
+`notes/sessions/20260907-175329-daily-driver-empty-boot.txt`, pinned/reloaded
+it, and captured matching audio/video and live-pane artifacts. The public video
+is the moving screen recording of that session.
 
 ## Observations
 

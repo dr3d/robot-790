@@ -139,23 +139,22 @@ as a receipt for the body build Eric is actually running.
 
 ## Exit Controls
 
-`Passivate` is Scott's deliberate save/resume path. It writes the one-file
-passivated state transcript at `notes/core/passivated_eric_state.txt`, halts
-idle/Brain2/re-engage activity, closes realtime, saves active audio, and
-snapshots the conversation, events, and Brain2 panes. The disk file keeps the
-timestamped transcript; when loaded into Eric's prompt, STS may sweep the
-technical junk and per-turn timestamps into a cleaner context view.
+`Save + Halt` is Scott's deliberate save/resume path. It writes a timestamped
+continuity session note under `notes/sessions/`, halts idle/Brain2/re-engage
+activity, closes realtime, saves active audio, and snapshots the conversation,
+events, and Brain2 panes. The saved note keeps the timestamped transcript plus
+its pinned-note receipt.
 
 `Disconnect` is the normal graceful stop. It first sweeps the current accepted
-conversation into the passivated state transcript, then halts the live loop,
-closes realtime, saves active audio if recording is on, and snapshots the panes
-for review. If no accepted conversation lines exist, it should leave the prior
-passivated state alone.
+conversation into a new timestamped continuity session note, then halts the
+live loop, closes realtime, saves active audio if recording is on, and snapshots
+the panes for review. If no accepted conversation lines exist, it should leave
+the selected continuity session alone.
 
-`Halt` is the emergency runtime stop. It does not promise a new passivated
-checkpoint; it stops the realtime backend while leaving STS, browser-face, and
-LM Studio loaded. Use it when the visible tab no longer seems to own the session
-or Eric keeps talking after Disconnect.
+`Halt` is the emergency runtime stop. It does not promise a new continuity
+session note; it stops the realtime backend while leaving STS, browser-face,
+and LM Studio loaded. Use it when the visible tab no longer seems to own the
+session or Eric keeps talking after Disconnect.
 
 `Restart` and `Unload` are server exits. They save active audio, stop the mic,
 snapshot panes, then perform the backend action.
@@ -164,8 +163,8 @@ snapshot panes, then perform the backend action.
 does not disconnect Eric.
 
 The intended invariant is simple: exits should leave logs, and any active
-recording should be saved when it is turned off. Passivate and Disconnect are
-special because they also write the latest continuity checkpoint.
+recording should be saved when it is turned off. Save + Halt and Disconnect are
+special because they also write a new timestamped continuity session note.
 
 `First contact` switches to stripped startup instructions. The selected
 creature seed plus the current conversation is the intended seed; optional

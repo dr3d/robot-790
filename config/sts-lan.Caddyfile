@@ -1,0 +1,81 @@
+{
+	admin off
+	persist_config off
+	auto_https disable_redirects
+	skip_install_trust
+	storage file_system "{$ROBOT_790_LAN_DATA}"
+	pki {
+		ca local {
+			name "Robot 790 Apartment LAN"
+		}
+	}
+	servers {
+		protocols h1 h2
+	}
+}
+
+(apartment_only) {
+	@outside not remote_ip {$ROBOT_790_LAN_SUBNET}
+	respond @outside "Apartment LAN only" 403
+	@foreign_origin {
+		header Origin *
+		not {
+			header Origin https://{$ROBOT_790_LAN_ADDRESS}:8790
+			header Origin https://{$ROBOT_790_LAN_ADDRESS}:8791
+			header Origin https://{$ROBOT_790_LAN_NAME}:8790
+			header Origin https://{$ROBOT_790_LAN_NAME}:8791
+		}
+	}
+	respond @foreign_origin "Untrusted browser origin" 403
+	@foreign_navigation {
+		header Sec-Fetch-Site cross-site
+		not header Origin *
+	}
+	respond @foreign_navigation "Untrusted browser navigation" 403
+	header -Server
+}
+
+https://{$ROBOT_790_LAN_ADDRESS}:8790, https://{$ROBOT_790_LAN_NAME}:8790 {
+	bind {$ROBOT_790_LAN_ADDRESS}
+	tls internal
+	route {
+		import apartment_only
+		handle /lan-root.crt {
+			root * "{$ROBOT_790_LAN_PUBLIC}"
+			header Content-Type application/x-x509-ca-cert
+			file_server
+		}
+		handle {
+			reverse_proxy 127.0.0.1:8790
+		}
+	}
+}
+
+https://{$ROBOT_790_LAN_ADDRESS}:8791, https://{$ROBOT_790_LAN_NAME}:8791 {
+	bind {$ROBOT_790_LAN_ADDRESS}
+	tls internal
+	route {
+		import apartment_only
+		reverse_proxy 127.0.0.1:8791
+	}
+}
+
+https://{$ROBOT_790_LAN_ADDRESS}:8765, https://{$ROBOT_790_LAN_NAME}:8765 {
+	bind {$ROBOT_790_LAN_ADDRESS}
+	tls internal
+	route {
+		import apartment_only
+		@realtime path /v1/realtime
+		handle @realtime {
+			reverse_proxy 127.0.0.1:8765
+		}
+		handle {
+			respond "Not found" 404
+		}
+	}
+}
+
+https://:8790, https://:8791, https://:8765 {
+	bind {$ROBOT_790_LAN_ADDRESS}
+	respond "Untrusted hostname" 403
+}

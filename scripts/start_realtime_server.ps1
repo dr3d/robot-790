@@ -1,5 +1,5 @@
 param(
-    [string] $HostAddress = "0.0.0.0",
+    [string] $HostAddress = "127.0.0.1",
     [int] $Port = 8765,
     [int] $NumPipelines = 4,
     [int] $StreamBatchSentences = 1,
@@ -23,7 +23,9 @@ $LanAddress = Get-NetIPAddress -AddressFamily IPv4 |
 
 Write-Host "Starting Robot 790 realtime server on $HostAddress`:$Port with $NumPipelines pipeline(s)"
 Write-Host "Local: ws://127.0.0.1:$Port/v1/realtime"
-if ($LanAddress) {
+if ($HostAddress -eq "127.0.0.1") {
+    Write-Host "Apartment HTTPS: start_sts_lan.ps1"
+} elseif ($LanAddress) {
     Write-Host "LAN:   ws://$LanAddress`:$Port/v1/realtime"
 }
 Write-Host "Streaming TTS in $StreamBatchSentences sentence batch(es)"
