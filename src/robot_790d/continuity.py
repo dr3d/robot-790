@@ -262,7 +262,8 @@ def format_continuity_session_note(
         "---",
         "This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.",
         (
-            "The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth."
+            "The filename should carry the PM caption. "
+            "Current sensors, tools, and time still need fresh runtime truth."
         ),
         "",
         "How This Run Got Here",

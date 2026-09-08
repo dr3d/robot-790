@@ -23,7 +23,9 @@ def test_browser_face_mouth_text_tracks_caption_source() -> None:
 def test_browser_face_mouth_tracks_speech_cue_layer() -> None:
     state = face_sim_server.FaceSimState("127.0.0.1", 8791)
 
-    speaking = state.set_mouth({"talking": True, "speech": {"active": True, "shape": "round", "energy": 0.72, "seq": 4}})
+    speaking = state.set_mouth(
+        {"talking": True, "speech": {"active": True, "shape": "round", "energy": 0.72, "seq": 4}}
+    )
     assert speaking["mouth"]["talking"] is True
     assert speaking["mouth"]["manual"] is True
     assert speaking["mouth"]["speech"] == {"active": True, "shape": "round", "energy": 0.72, "seq": 4}

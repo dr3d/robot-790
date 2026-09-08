@@ -86,6 +86,11 @@ memory, and self-model material to become central.
 recent conversation and live inputs dominate. High values make the pinned note
 feel like the world of the run.
 
+`Eye salience`, under Robot Controls > Focus, adjusts the sensing-eye preview's
+opacity and the attention instructions sent to conversation and idle. A fresh
+browser defaults to 7/10; an explicitly saved zero remains Off. It is a manual
+setting, not a timed decay, image deletion, or a measured model-attention weight.
+
 `Brain 2 mouth` allows the second lane to write short private asides to the
 mouth display. Brain 2 still does not get the speaking voice.
 
@@ -174,6 +179,17 @@ special because they also write a new timestamped continuity session note.
 
 `Connect Select` is the narrow in-panel chooser for session notes. It is useful
 for quick selection, quick archive, and ordinary daily operation.
+
+Its `Advanced Connection` sub-panel exposes the note representation:
+
+- `Raw`: load the selected session note exactly as written.
+- `Scrubbed` and `Summary`: unavailable and disabled until actual variants and
+  their loader are implemented.
+
+Selecting a label alone does not scrub a note. Current connections load the
+selected file as written. PM may create separate reviewed notes, but automatic
+variant discovery, generation, provenance checking, and budget-based switching
+are future work. See the [context architecture](context-engineering-architecture.md).
 
 The `Map` button opens `web/sts/session-map.html`, a wider helper view for
 session-note work. The map shows the active session notes, a simple lineage

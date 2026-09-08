@@ -33,7 +33,8 @@ def parse_browser_mouth_shapes(source: str) -> list[str]:
 
 def parse_browser_mouth_poses(source: str) -> dict[str, dict[str, float]]:
     mouth_pose_match = re.search(
-        r"function mouthPoseFor\(shape\) \{\s*return \{(?P<body>.*?)\n\s*\}\[shape\] \|\| mouthPoseFor\(\"neutral\"\);",
+        r"function mouthPoseFor\(shape\) \{\s*return \{(?P<body>.*?)"
+        r"\n\s*\}\[shape\] \|\| mouthPoseFor\(\"neutral\"\);",
         source,
         re.DOTALL,
     )

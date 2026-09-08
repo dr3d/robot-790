@@ -37,6 +37,14 @@ test('Connect Select exposes one-item checklist management and archive', () => {
   assert.match(page, /<select id="continuitySessionSelect" hidden/);
   assert.match(page, /id="openSessionMap"[^>]*>Map<\/button>/);
   assert.match(page, /id="archiveContinuitySession"[^>]*>Archive<\/button>/);
+  assert.match(page, /id="advancedConnectionExpando"/);
+  assert.match(page, /id="continuityScrubMode"/);
+  assert.match(page, /value="raw">Raw/);
+  assert.match(page, /value="cleaned_raw" disabled>Scrubbed \(unavailable\)/);
+  assert.match(page, /value="dense_summary" disabled>Summary \(unavailable\)/);
+  assert.match(page, /function continuityScrubModeLabel/);
+  assert.match(page, /loadContinuityScrubMode\(\)/);
+  assert.match(page, /Connection note flavor is/);
   assert.match(page, /function setSelectedContinuitySessionFilename\(filename\)/);
   assert.match(page, /querySelectorAll\(['"]\.session-choice['"]\)/);
   assert.match(page, /\/api\/continuity\/archive/);
@@ -96,6 +104,37 @@ test('Robot Controls exposes sensing-eye salience focus dial', () => {
   assert.match(page, /sensing-eye salience/);
   assert.match(page, /Sensing-eye salience is/);
   assert.match(page, /loadSensingEyeSalience\(\)/);
+});
+
+test('eye salience defaults to seven while preserving an explicit saved zero', () => {
+  for (const [saved, expected] of [[null, '7'], ['', '7'], ['oops', '7'], ['0', '0'], ['5', '5'], ['12', '10'], ['-1', '0']]) {
+    const context = loadFunctions(['loadSensingEyeSalience'], {
+      sensingEyeSalience: { value: '7' },
+      sensingEyeSalienceStorageKey: 'eye-salience',
+      localStorage: { getItem: () => saved },
+      updateSensingEyeSalienceUi: () => {},
+    });
+    context.loadSensingEyeSalience();
+    assert.equal(context.sensingEyeSalience.value, expected, `saved ${saved}`);
+  }
+});
+
+test('unimplemented note flavors cannot claim that a raw load was summarized', () => {
+  const stored = new Map([['note-flavor', 'dense_summary']]);
+  const context = loadFunctions([
+    'currentContinuityScrubMode', 'continuityScrubModeLabel', 'continuityScrubModeStatusText',
+    'updateContinuityScrubModeUi', 'loadContinuityScrubMode',
+  ], {
+    continuityScrubMode: { value: 'dense_summary' },
+    continuityScrubModeStatus: { textContent: '' },
+    continuityScrubModeStorageKey: 'note-flavor',
+    localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
+  });
+  context.loadContinuityScrubMode();
+  assert.equal(context.continuityScrubMode.value, 'raw');
+  assert.equal(stored.get('note-flavor'), 'raw');
+  assert.equal(context.continuityScrubModeLabel(), 'Raw');
+  assert.match(context.continuityScrubModeStatus.textContent, /as written/);
 });
 
 test('continuity pin receipts preserve every named dependency', () => {

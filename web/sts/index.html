@@ -872,6 +872,9 @@
       grid-template-columns: minmax(260px, 1fr) repeat(5, minmax(92px, auto));
       align-items: end;
     }
+    .advanced-connect-controls {
+      grid-template-columns: minmax(160px, 220px) minmax(220px, 1fr);
+    }
     .session-select-control {
       grid-column: 1 / span 6;
       min-width: 0;
@@ -1355,8 +1358,12 @@
     }
     #settingsPanel .lab-goal-control,
     #settingsPanel .thread-note-control,
+    #serverPanel .advanced-connect-controls > label,
     #serverPanel .session-select-control {
       grid-column: auto;
+    }
+    #serverPanel .advanced-connect-controls > .subtle {
+      grid-column: 1 / -1;
     }
     #settingsPanel .thread-reset-option,
     #settingsPanel .url-controls .toggle-row {
@@ -2161,6 +2168,25 @@
               <button id="archiveContinuitySession" class="warn" type="button">Archive</button>
               <button id="connectSelectedContinuitySession" class="primary" type="button">Connect Selected</button>
             </section>
+            <details id="advancedConnectionExpando" class="runtime-settings-expando">
+              <summary>
+                <span class="runtime-settings-label">Advanced Connection</span>
+                <span class="subtle">Session note representation</span>
+              </summary>
+              <div class="runtime-settings-expando-body">
+                <section class="controls advanced-connect-controls">
+                  <label>
+                    Note flavor
+                    <select id="continuityScrubMode">
+                      <option value="raw">Raw</option>
+                      <option value="cleaned_raw" disabled>Scrubbed (unavailable)</option>
+                      <option value="dense_summary" disabled>Summary (unavailable)</option>
+                    </select>
+                  </label>
+                  <span id="continuityScrubModeStatus" class="subtle">Load the selected note exactly as written.</span>
+                </section>
+              </div>
+            </details>
           </div>
         </details>
         <details id="connectionSettingsExpando" class="runtime-settings-expando">
@@ -2802,6 +2828,8 @@
     const openSessionMapButton = document.querySelector("#openSessionMap");
     const archiveContinuitySessionButton = document.querySelector("#archiveContinuitySession");
     const connectSelectedContinuitySessionButton = document.querySelector("#connectSelectedContinuitySession");
+    const continuityScrubMode = document.querySelector("#continuityScrubMode");
+    const continuityScrubModeStatus = document.querySelector("#continuityScrubModeStatus");
     const faceIdleButton = document.querySelector("#faceIdle");
     const faceBeatButton = document.querySelector("#faceBeat");
     const chassisStopButton = document.querySelector("#chassisStop");
@@ -3400,6 +3428,7 @@
     const idleSelfFocusStorageKey = "robot790.idleSelfFocus.v1";
     const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
     const sensingEyeSalienceStorageKey = "robot790.sensingEyeSalience.v1";
+    const continuityScrubModeStorageKey = "robot790.continuityScrubMode.v1";
     const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
     const brain2VoiceMonitorStorageKey = "robot790.brain2VoiceMonitor.v1";
     const brain2VoiceNameStorageKey = "robot790.brain2VoiceName.v2";
@@ -5664,6 +5693,32 @@
       )) || null;
     }
 
+    function currentContinuityScrubMode() {
+      // Alternate forms need actual source-linked artifacts and loader support.
+      return "raw";
+    }
+
+    function continuityScrubModeLabel() {
+      return "Raw";
+    }
+
+    function continuityScrubModeStatusText() {
+      return "Selected file as written. Alternate forms unavailable.";
+    }
+
+    function updateContinuityScrubModeUi() {
+      if (!continuityScrubMode) return;
+      const mode = currentContinuityScrubMode();
+      continuityScrubMode.value = mode;
+      if (continuityScrubModeStatus) continuityScrubModeStatus.textContent = continuityScrubModeStatusText(mode);
+      localStorage.setItem(continuityScrubModeStorageKey, mode);
+    }
+
+    function loadContinuityScrubMode() {
+      if (!continuityScrubMode) return;
+      updateContinuityScrubModeUi();
+    }
+
     function setLoadedNoteContextsForContinuity(results) {
       const seen = new Set();
       loadedNoteContexts = (results || [])
@@ -6425,6 +6480,7 @@
         `- Microphone is ${micRuntimeLabel()}.`,
         `- Eric speaker audio is ${ericAudioRuntimeLabel()}.`,
         "- Current runtime state overrides loaded notes and saved session notes for microphone, camera, sensing-eye, recording, cast, tools, and embodiment.",
+        `- Connection note flavor is ${continuityScrubModeLabel()}: ${continuityScrubModeStatusText()}`,
         `- Browser live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
         `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
         `- Sensing-eye salience is ${sensingEyeSalienceLabel()}: ${sensingEyeSalienceStatusText()}`,
@@ -7605,7 +7661,8 @@
 
     function loadSensingEyeSalience() {
       if (!sensingEyeSalience) return;
-      const saved = Number(localStorage.getItem(sensingEyeSalienceStorageKey));
+      const stored = localStorage.getItem(sensingEyeSalienceStorageKey);
+      const saved = stored === null || stored.trim() === "" ? NaN : Number(stored);
       sensingEyeSalience.value = Number.isFinite(saved) ? String(Math.max(0, Math.min(10, saved))) : "7";
       updateSensingEyeSalienceUi({ quiet: true });
     }
@@ -15220,6 +15277,7 @@
         `Self-focus: ${idleSelfFocusLabel()}`,
         `Notes: ${idleNotesFocusLabel()}`,
         `Sensing-eye salience: ${sensingEyeSalienceLabel()}`,
+        `Connection note flavor: ${continuityScrubModeLabel()}`,
         `Performance mode: ${performanceModeLabel()}`,
         `Substrate test: ${idleSubstrateTestEnabled() ? "on" : "off"}`,
         `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
@@ -15252,6 +15310,7 @@
         `Browser live camera stream: ${visionCameraActive() ? "on" : "off"}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"}`,
         `Resume session note: ${currentContinuitySessionFilename || "none"}`,
+        `Note flavor: ${continuityScrubModeLabel()}`,
         `Cast playback: ${castPlaybackActive ? "active" : "inactive"}`,
         `Sensing input: ${sensingInputLabel()}`,
         `Sensing-eye salience: ${sensingEyeSalienceLabel()}`,
@@ -19351,8 +19410,11 @@
       });
       recordUiEvent("realtime connect selected", selected.session_filename || "", {
         ...currentUiSettingsSnapshot(),
-        requested_context_mode: "selected"
+        requested_context_mode: "selected",
+        requested_resume_form: currentContinuityScrubMode(),
+        requested_resume_form_label: continuityScrubModeLabel()
       });
+      log(events, `${source}: ${selected.session_filename || "selected session"} / note flavor ${continuityScrubModeLabel()}`);
       await connect({ continuityAlreadyLoaded: true });
       return selected;
     }
@@ -19900,6 +19962,8 @@
       selectContinuitySession: "Make this the selected resume session note.",
       openSessionMap: "Open a wide popup map of session notes and parent branches.",
       connectSelectedContinuitySession: "Load this session note and connect from it.",
+      advancedConnectionExpando: "Session note representation for the next connection.",
+      continuityScrubMode: "Loads the selected file as written. Scrubbed and summary forms are unavailable until their artifacts and loader are implemented.",
       llmTools: "Expose face and embodiment tools to the LLM.",
       llmBodySensorTools: "Expose read-only body sensor/status tools to the LLM.",
       llmChassisTools: "Expose chassis movement/stop tools to the LLM.",
@@ -20001,7 +20065,9 @@
         connection: {
           context_mode: currentPromptContextModeKey(),
           context_mode_label: currentPromptContextModeLabel(),
-          last_connection_context_mode: lastRealtimeContextMode
+          last_connection_context_mode: lastRealtimeContextMode,
+          resume_form: currentContinuityScrubMode(),
+          resume_form_label: continuityScrubModeLabel()
         },
         model: modelControlDetails(),
         tools: toolSwitchDetails(),
@@ -20068,6 +20134,8 @@
         model_stamp: currentModelStamp(),
         context_mode: currentPromptContextModeKey(),
         context_mode_label: currentPromptContextModeLabel(),
+        resume_form: currentContinuityScrubMode(),
+        resume_form_label: continuityScrubModeLabel(),
         runtime_prompt: {
           source: runtimeConfig.base_session_prompt_source || "inline",
           creature_source: runtimeConfig.creature_source || "",
@@ -20106,6 +20174,7 @@
       const summary = [
         setup.model_stamp,
         setup.context_mode_label || realtimeContextModeLabel(setup.context_mode),
+        `note flavor ${setup.resume_form_label}`,
         `${enabledToolCount} tools`,
         setup.startup_context.omitted_by_empty_connect
           ? `${loadedNoteNames.length} loaded notes / ${setup.startup_context.omitted_loaded_note_count} omitted`
@@ -20787,6 +20856,11 @@
         })
         .catch((error) => log(events, `session note select error: ${error.message}`));
     });
+    continuityScrubMode?.addEventListener("change", () => {
+      updateContinuityScrubModeUi();
+      recordUiEvent("continuity note flavor", continuityScrubModeLabel(), currentUiSettingsSnapshot());
+      log(events, `continuity note flavor ${continuityScrubModeLabel()}`);
+    });
     openSessionMapButton?.addEventListener("click", openSessionMapWindow);
     archiveContinuitySessionButton?.addEventListener("click", () => {
       const filename = selectedContinuitySessionFilename();
@@ -21072,6 +21146,7 @@
     loadConversationFontSize();
     loadConversationPaneHeight();
     loadLowerLogPaneSplit();
+    loadContinuityScrubMode();
     applyOperatorDefaultsOnce();
     ensureRuntimeConfigLoaded();
     renderMemory();
