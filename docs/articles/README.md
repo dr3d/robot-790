@@ -17,6 +17,11 @@ After adding articles, rebuild `../catalog.json`:
 ```
 
 The static page lists Markdown files from this folder automatically.
+It orders every public shelf newest first by a stable artifact timestamp: a
+timestamp in the filename when present, then the file's first Git addition, and
+only then filesystem time as a local fallback. Do not rely on a file edit to
+move an older article to the top. Reused media filenames instead carry an
+explicit `published` time in `docs/media/run-notes.json`.
 
 Keep these public-safe:
 

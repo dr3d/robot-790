@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path $DocsDir
+$repositoryRoot = Split-Path -Parent $root.Path
 $catalogPath = Join-Path $root "catalog.json"
 $mediaNotesPath = Join-Path $root "media/run-notes.json"
 $mediaNotes = $null
@@ -44,6 +45,94 @@ function Get-ExcerptFromMarkdown {
         return ($trimmed -replace '\*\*', '' -replace '\*', '' -replace '`', '').Trim()
     }
     return ""
+}
+
+function New-ArtifactMoment {
+    param([datetime]$Value, [string]$Source, [string]$Precision = "timestamp")
+    return [pscustomobject]@{
+        value = [datetime]::SpecifyKind($Value, [System.DateTimeKind]::Local)
+        source = $Source
+        precision = $Precision
+    }
+}
+
+function Convert-ToArtifactMoment {
+    param([string]$Value, [string]$Format, [string]$Source, [string]$Precision = "timestamp")
+    try {
+        $parsed = [datetime]::ParseExact(
+            $Value,
+            $Format,
+            [System.Globalization.CultureInfo]::InvariantCulture,
+            [System.Globalization.DateTimeStyles]::None
+        )
+        return New-ArtifactMoment $parsed $Source $Precision
+    } catch {
+        return $null
+    }
+}
+
+function Get-StampedArtifactMoment {
+    param([string]$Text)
+
+    if ($Text -match '(?<!\d)(\d{8})[-_T]?(\d{6})(?!\d)') {
+        return Convert-ToArtifactMoment "$($Matches[1])$($Matches[2])" "yyyyMMddHHmmss" "filename" "timestamp"
+    }
+    if ($Text -match '(?<!\d)(\d{4})[-_](\d{2})[-_](\d{2})(?:[-_T ]?(\d{2}):?(\d{2}):?(\d{2}))?(?!\d)') {
+        if ($Matches[4]) {
+            return Convert-ToArtifactMoment "$($Matches[1])$($Matches[2])$($Matches[3])$($Matches[4])$($Matches[5])$($Matches[6])" "yyyyMMddHHmmss" "filename" "timestamp"
+        }
+        return Convert-ToArtifactMoment "$($Matches[1])$($Matches[2])$($Matches[3])" "yyyyMMdd" "filename" "date"
+    }
+    if ($Text -match '(?<!\d)(\d{8})(?!\d)') {
+        return Convert-ToArtifactMoment $Matches[1] "yyyyMMdd" "filename" "date"
+    }
+    return $null
+}
+
+function Get-GitAddedArtifactMoment {
+    param([System.IO.FileInfo]$File)
+
+    $repoPrefix = $repositoryRoot.TrimEnd('\') + '\'
+    $fullPath = $File.FullName
+    if (-not $fullPath.StartsWith($repoPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $null
+    }
+    $repoPath = $fullPath.Substring($repoPrefix.Length).Replace('\', '/')
+    try {
+        $stamps = @(& git -C $repositoryRoot log --follow --diff-filter=A --format=%aI -- $repoPath 2>$null)
+        if ($LASTEXITCODE -ne 0) {
+            return $null
+        }
+        $stamp = $stamps | Where-Object { $_ } | Select-Object -Last 1
+        if (-not $stamp) {
+            return $null
+        }
+        $parsed = [datetime]::Parse(
+            $stamp,
+            [System.Globalization.CultureInfo]::InvariantCulture,
+            [System.Globalization.DateTimeStyles]::RoundtripKind
+        )
+        return New-ArtifactMoment $parsed "git-added"
+    } catch {
+        return $null
+    }
+}
+
+function Get-CanonicalArtifactMoment {
+    param([System.IO.FileInfo]$File)
+
+    $stamped = Get-StampedArtifactMoment $File.Name
+    if ($stamped -and $stamped.precision -eq "timestamp") {
+        return $stamped
+    }
+    $gitAdded = Get-GitAddedArtifactMoment $File
+    if ($gitAdded) {
+        return $gitAdded
+    }
+    if ($stamped) {
+        return $stamped
+    }
+    return New-ArtifactMoment $File.LastWriteTime "filesystem"
 }
 
 function Get-MediaKind {
@@ -107,15 +196,7 @@ function Get-FriendlyMediaTitle {
 
 function Get-MediaDate {
     param([System.IO.FileInfo]$File)
-    $stem = [System.IO.Path]::GetFileNameWithoutExtension($File.Name)
-    if ($stem -match '^(?:VID|IMG)(\d{8})(\d{6})$') {
-        return [datetime]::ParseExact("$($Matches[1])$($Matches[2])", "yyyyMMddHHmmss", $null)
-    }
-    if ($stem -match '(\d{4})-(\d{2})-(\d{2})(?:-(\d{2})(\d{2})(\d{2}))?') {
-        $time = if ($Matches[4]) { "$($Matches[4])$($Matches[5])$($Matches[6])" } else { "000000" }
-        return [datetime]::ParseExact("$($Matches[1])$($Matches[2])$($Matches[3])$time", "yyyyMMddHHmmss", $null)
-    }
-    return $File.LastWriteTime
+    return (Get-CanonicalArtifactMoment $File).value
 }
 
 function Get-MediaRole {
@@ -176,6 +257,35 @@ function Get-MediaDescription {
     return ""
 }
 
+function Get-MediaArtifactMoment {
+    param([string]$Source, [System.IO.FileInfo]$File)
+
+    if ($null -ne $mediaNotes) {
+        $candidates = @($Source, $File.Name)
+        foreach ($candidate in $candidates) {
+            $entry = $mediaNotes.PSObject.Properties[$candidate]
+            if (-not $entry -or $entry.Value -is [string]) {
+                continue
+            }
+            $published = $entry.Value.PSObject.Properties["published"]
+            if (-not $published -or -not $published.Value) {
+                continue
+            }
+            try {
+                $parsed = [datetime]::Parse(
+                    [string]$published.Value,
+                    [System.Globalization.CultureInfo]::InvariantCulture,
+                    [System.Globalization.DateTimeStyles]::RoundtripKind
+                )
+                return New-ArtifactMoment $parsed "metadata"
+            } catch {
+                throw "Invalid published timestamp for $Source in media/run-notes.json."
+            }
+        }
+    }
+    return Get-CanonicalArtifactMoment $File
+}
+
 function Get-PublicLogStem {
     param([System.IO.FileInfo]$File)
     $base = [System.IO.Path]::GetFileNameWithoutExtension($File.Name)
@@ -185,51 +295,73 @@ function Get-PublicLogStem {
 $articles = @()
 $articleDir = Join-Path $root "articles"
 if (Test-Path $articleDir) {
-    $articles = Get-ChildItem -Path $articleDir -File -Filter "*.md" |
+    $articles = @(
+        Get-ChildItem -Path $articleDir -File -Filter "*.md" |
         Where-Object { $_.Name -ne "README.md" } |
-        Sort-Object LastWriteTime, Name -Descending |
         ForEach-Object {
+            $moment = Get-CanonicalArtifactMoment $_
             $source = Convert-ToSitePath $_.FullName
             [ordered]@{
                 title = Get-TitleFromMarkdown $_.FullName
                 excerpt = Get-ExcerptFromMarkdown $_.FullName
                 source = $source
                 bytes = $_.Length
+                published = $moment.value.ToString("yyyy-MM-dd HH:mm")
+                published_sort = $moment.value.ToString("yyyyMMddHHmmss")
+                published_source = $moment.source
                 modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
-        }
+        } |
+        Sort-Object @{ Expression = { $_.published_sort }; Descending = $true },
+                    @{ Expression = { $_.source }; Descending = $false }
+    )
 }
 
 $logs = @()
 $logDir = Join-Path $root "logs"
 if (Test-Path $logDir) {
     $logExtensions = @(".txt", ".log", ".md")
-    $logs = Get-ChildItem -Path $logDir -File -Recurse |
+    $logs = @(
+        Get-ChildItem -Path $logDir -File -Recurse |
         Where-Object { $logExtensions -contains $_.Extension.ToLowerInvariant() -and $_.Name -ne "README.md" } |
         Group-Object { Get-PublicLogStem $_ } |
         ForEach-Object {
             $_.Group |
-                Sort-Object @{ Expression = { $_.LastWriteTime }; Descending = $true },
-                            @{ Expression = { $_.Length }; Descending = $true },
-                            @{ Expression = { $_.Name }; Descending = $true } |
+                ForEach-Object {
+                    [pscustomobject]@{
+                        file = $_
+                        moment = Get-CanonicalArtifactMoment $_
+                    }
+                } |
+                Sort-Object @{ Expression = { $_.moment.value }; Descending = $true },
+                            @{ Expression = { $_.file.Length }; Descending = $true },
+                            @{ Expression = { $_.file.Name }; Descending = $true } |
                 Select-Object -First 1
         } |
-        Sort-Object LastWriteTime -Descending |
         ForEach-Object {
+            $file = $_.file
+            $moment = $_.moment
             [ordered]@{
-                title = [System.IO.Path]::GetFileNameWithoutExtension($_.Name).Replace("_", " ").Replace("-", " ")
-                source = Convert-ToSitePath $_.FullName
-                bytes = $_.Length
-                modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
+                title = [System.IO.Path]::GetFileNameWithoutExtension($file.Name).Replace("_", " ").Replace("-", " ")
+                source = Convert-ToSitePath $file.FullName
+                bytes = $file.Length
+                published = $moment.value.ToString("yyyy-MM-dd HH:mm")
+                published_sort = $moment.value.ToString("yyyyMMddHHmmss")
+                published_source = $moment.source
+                modified = $file.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
-        }
+        } |
+        Sort-Object @{ Expression = { $_.published_sort }; Descending = $true },
+                    @{ Expression = { $_.source }; Descending = $false }
+    )
 }
 
 $mediaSearchDirs = @("articles", "media") | ForEach-Object { Join-Path $root $_ } | Where-Object { Test-Path $_ }
 $media = @()
 if ($mediaSearchDirs.Count -gt 0) {
     $mediaExtensions = @(".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm", ".mov", ".mp3", ".wav", ".m4a", ".ogg")
-    $media = Get-ChildItem -Path $mediaSearchDirs -File -Recurse |
+    $media = @(
+        Get-ChildItem -Path $mediaSearchDirs -File -Recurse |
         Where-Object {
             $sitePath = Convert-ToSitePath $_.FullName
             $mediaExtensions -contains $_.Extension.ToLowerInvariant() -and
@@ -237,15 +369,15 @@ if ($mediaSearchDirs.Count -gt 0) {
             $sitePath -notlike "media/raw-video/*" -and
             $sitePath -notlike "media/rejected/*"
         } |
-        Sort-Object @{ Expression = { Get-MediaDate $_ }; Descending = $true }, @{ Expression = { $_.Name }; Descending = $true } |
         ForEach-Object {
             $source = Convert-ToSitePath $_.FullName
+            $moment = Get-MediaArtifactMoment $source $_
             $previewName = ([System.IO.Path]::GetFileNameWithoutExtension($_.Name) + ".jpg")
             $previewPath = "media/previews/$previewName"
             $hasPreview = Test-Path (Join-Path $root $previewPath)
             $kind = Get-MediaKind $_.Extension
             $role = Get-MediaRole $_ $source $kind
-            $mediaDate = Get-MediaDate $_
+            $mediaDate = $moment.value
             $description = Get-MediaDescription $source $_
             $item = [ordered]@{
                 title = Get-FriendlyMediaTitle $_
@@ -256,14 +388,57 @@ if ($mediaSearchDirs.Count -gt 0) {
                 banner_rank = Get-BannerRank $role $kind
                 bytes = $_.Length
                 date = $mediaDate.ToString("yyyy-MM-dd HH:mm")
+                published = $moment.value.ToString("yyyy-MM-dd HH:mm")
+                published_sort = $moment.value.ToString("yyyyMMddHHmmss")
+                published_source = $moment.source
                 modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
             if ($description) {
                 $item.description = $description
             }
             $item
-        }
+        } |
+        Sort-Object @{ Expression = { $_.published_sort }; Descending = $true },
+                    @{ Expression = { $_.source }; Descending = $false }
+    )
 }
+
+function Update-PublicArticleIndex {
+    param([object[]]$Articles)
+
+    $indexPath = Join-Path $root "index.md"
+    if (-not (Test-Path $indexPath)) {
+        return
+    }
+    $startMarker = "<!-- generated-articles:start -->"
+    $endMarker = "<!-- generated-articles:end -->"
+    $content = Get-Content -Path $indexPath -Encoding UTF8 -Raw
+    $start = $content.IndexOf($startMarker, [System.StringComparison]::Ordinal)
+    $end = $content.IndexOf($endMarker, [System.StringComparison]::Ordinal)
+    if ($start -lt 0 -or $end -lt $start) {
+        return
+    }
+    $end += $endMarker.Length
+    $entries = $Articles | ForEach-Object {
+        "- [$($_.title)]($($_.source)) - $($_.published)"
+    }
+    $replacementLines = @(
+        $startMarker,
+        "Articles are listed newest first by their published artifact time.",
+        ""
+    ) + @($entries) + @(
+        "",
+        $endMarker
+    )
+    $replacement = $replacementLines -join "`n"
+    $updated = $content.Substring(0, $start) + $replacement + $content.Substring($end)
+    if ($updated -ne $content) {
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($indexPath, $updated, $utf8NoBom)
+    }
+}
+
+Update-PublicArticleIndex $articles
 
 $catalog = [ordered]@{
     generated = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")

@@ -84,3 +84,41 @@ test('Mouth Lab article is catalogued and remains explicit about its experimenta
   assert.ok(fs.existsSync(path.join(root, 'docs/assets/article-images/mouth-lab-first-pass-pose-study.png')));
   assert.ok(catalog.articles.some(item => item.source === 'articles/teaching-erics-mouth-to-speak.md'));
 });
+
+test('public catalog shelves carry canonical publication times and sort newest first', () => {
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
+  for (const shelf of ['articles', 'logs', 'media']) {
+    const items = catalog[shelf] || [];
+    for (const item of items) {
+      assert.match(item.published || '', /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+      assert.match(item.published_sort || '', /^\d{14}$/);
+      assert.match(item.published_source || '', /^(filename|git-added|metadata|filesystem)$/);
+    }
+    const sortKeys = items.map(item => item.published_sort);
+    assert.deepEqual(sortKeys, [...sortKeys].sort().reverse(), `${shelf} is newest first`);
+  }
+});
+
+test('media metadata preserves the current recording time when a filename is reused', () => {
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
+  const dailyDriver = catalog.media.find(item => item.source === 'media/videos/Daily-Driver.mp4');
+  assert.equal(dailyDriver.published, '2026-09-07 19:02');
+  assert.equal(dailyDriver.published_source, 'metadata');
+});
+
+test('public page sorts every shelf using canonical publication time', () => {
+  const page = fs.readFileSync(path.join(root, 'docs/assets/site.js'), 'utf8');
+  assert.match(page, /function newestFirst\(items\)/);
+  assert.match(page, /const orderedArticles = newestFirst\(articles\)/);
+  assert.match(page, /const orderedMediaItems = newestFirst\(mediaItems\)/);
+  assert.match(page, /const orderedLogs = newestFirst\(logs\)/);
+  assert.match(page, /function publicationLabel\(item\)/);
+});
+
+test('repository Markdown article list is generated from the same newest-first catalog', () => {
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
+  const index = fs.readFileSync(path.join(root, 'docs/index.md'), 'utf8');
+  assert.doesNotMatch(index, /System\.Object\[\]/);
+  const sources = [...index.matchAll(/]\((articles\/[^)]+)\)/g)].map(match => match[1]);
+  assert.deepEqual(sources, catalog.articles.map(item => item.source));
+});

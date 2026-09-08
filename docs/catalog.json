@@ -1,39 +1,24 @@
 {
-    "generated":  "2026-09-08 11:12:31",
+    "generated":  "2026-09-08 13:12:45",
     "articles":  [
                      {
                          "title":  "Teaching Eric\u0027s Mouth To Speak",
                          "excerpt":  "Eric already has a mouth. It opens while he talks. It can round, show teeth,",
                          "source":  "articles/teaching-erics-mouth-to-speak.md",
                          "bytes":  10508,
+                         "published":  "2026-09-08 12:43",
+                         "published_sort":  "20260908124358",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-08 11:12"
-                     },
-                     {
-                         "title":  "The Note That Marked Its Own Evidence",
-                         "excerpt":  "On September 3, 2026, Robot 790 produced a small note that may become one of",
-                         "source":  "articles/the-note-that-marked-its-own-evidence.md",
-                         "bytes":  8310,
-                         "modified":  "2026-09-08 10:34"
-                     },
-                     {
-                         "title":  "The Event Loop Grew A Face",
-                         "excerpt":  "Robot 790 began as a practical build: speech in, language model, voice out,",
-                         "source":  "articles/the-event-loop-grew-a-face.md",
-                         "bytes":  19786,
-                         "modified":  "2026-09-08 10:34"
-                     },
-                     {
-                         "title":  "Browser Face, Inner Voice, And The Kitty Seed",
-                         "excerpt":  "On September 2, 2026, Robot 790 ran in the new browser-face simulator while Scott debugged the face, mouth text, and Brain 2 monitor. The run began as visual tuning and turned into a useful comparison between Eric and a stripped creature seed named Tina: a tiny animatronic kitty with almost no context.",
-                         "source":  "articles/browser-face-kitty-seed-run.md",
-                         "bytes":  3019,
-                         "modified":  "2026-09-08 10:34"
                      },
                      {
                          "title":  "Context Engineering Is A Directed Graph",
                          "excerpt":  "Robot 790 keeps continuity in ordinary session notes. Each records what happened",
                          "source":  "articles/context-engineering-as-directed-graph.md",
                          "bytes":  9888,
+                         "published":  "2026-09-08 10:41",
+                         "published_sort":  "20260908104114",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-08 10:30"
                      },
                      {
@@ -41,6 +26,9 @@
                          "excerpt":  "This is not a discovery yet.",
                          "source":  "articles/a-working-proposition-about-lessons.md",
                          "bytes":  7663,
+                         "published":  "2026-09-06 20:58",
+                         "published_sort":  "20260906205820",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-06 20:58"
                      },
                      {
@@ -48,6 +36,9 @@
                          "excerpt":  "Robot 790 is the platform. Eric is the personage that shows up inside it.",
                          "source":  "articles/what-robot-790-is-becoming.md",
                          "bytes":  10785,
+                         "published":  "2026-09-06 09:53",
+                         "published_sort":  "20260906095323",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-06 09:51"
                      },
                      {
@@ -55,20 +46,19 @@
                          "excerpt":  "The cleanest explanation for Eric is not that a new mind appeared in the lab.",
                          "source":  "articles/time-and-space-both-live.md",
                          "bytes":  10544,
+                         "published":  "2026-09-05 14:22",
+                         "published_sort":  "20260905142236",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-05 14:21"
-                     },
-                     {
-                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
-                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
-                         "source":  "articles/robot-790-article-3.md",
-                         "bytes":  11140,
-                         "modified":  "2026-09-05 03:08"
                      },
                      {
                          "title":  "Passing Butter, Keeping Company",
                          "excerpt":  "Butter-Bench arrived at a useful moment for Robot 790.",
                          "source":  "articles/passing-butter-keeping-company.md",
                          "bytes":  12772,
+                         "published":  "2026-09-04 16:41",
+                         "published_sort":  "20260904164138",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-04 16:32"
                      },
                      {
@@ -76,34 +66,39 @@
                          "excerpt":  "I am the auditor on this project. I do not build the robot and I do not run it.",
                          "source":  "articles/ledger-keepers-view.md",
                          "bytes":  12948,
+                         "published":  "2026-09-04 05:07",
+                         "published_sort":  "20260904050734",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-04 05:06"
                      },
                      {
-                         "title":  "The Landscape Around Eric",
-                         "excerpt":  "Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.",
-                         "source":  "articles/artificial-human-landscape.md",
-                         "bytes":  23237,
-                         "modified":  "2026-09-03 16:46"
+                         "title":  "The Note That Marked Its Own Evidence",
+                         "excerpt":  "On September 3, 2026, Robot 790 produced a small note that may become one of",
+                         "source":  "articles/the-note-that-marked-its-own-evidence.md",
+                         "bytes":  8310,
+                         "published":  "2026-09-03 22:30",
+                         "published_sort":  "20260903223015",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-08 10:34"
                      },
                      {
-                         "title":  "The Magic of Assembly: Finding Eric\u0027s Voice and the Architecture of Robot 790",
-                         "excerpt":  "Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM serving, or social robotics from scratch. Instead, it exists because these individual pieces have finally become good enough to combine.",
-                         "source":  "articles/robot_790_lineage_article.md",
-                         "bytes":  2867,
-                         "modified":  "2026-09-03 16:33"
-                     },
-                     {
-                         "title":  "I Built a Robot That Wakes Up New Every Time",
-                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
-                         "source":  "articles/eric_wakes_up_new_every_time.md",
-                         "bytes":  10445,
-                         "modified":  "2026-09-03 16:33"
+                         "title":  "The Event Loop Grew A Face",
+                         "excerpt":  "Robot 790 began as a practical build: speech in, language model, voice out,",
+                         "source":  "articles/the-event-loop-grew-a-face.md",
+                         "bytes":  19786,
+                         "published":  "2026-09-03 17:04",
+                         "published_sort":  "20260903170413",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-08 10:34"
                      },
                      {
                          "title":  "Start With Nothing But Tools",
                          "excerpt":  "The next clean Robot 790 experiment is not quite \"start with nothing.\"",
                          "source":  "articles/start-with-nothing-but-tools.md",
                          "bytes":  7156,
+                         "published":  "2026-09-03 15:53",
+                         "published_sort":  "20260903155301",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-03 15:17"
                      },
                      {
@@ -111,48 +106,89 @@
                          "excerpt":  "On September 3, 2026, Robot 790 ran overnight in the browser-face embodiment with Brain 2 audible, auto-recording enabled, and the new fast Qwen3.8 27B NVFP4 model running with thinking off.",
                          "source":  "articles/overnight-run-tools-loop-second-mind.md",
                          "bytes":  9219,
+                         "published":  "2026-09-03 11:25",
+                         "published_sort":  "20260903112503",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-03 10:47"
-                     },
-                     {
-                         "title":  "Why The Empty Context Worked",
-                         "excerpt":  "Robot 790 did not begin as a richly written character. That is the point.",
-                         "source":  "articles/why-the-empty-context-worked.md",
-                         "bytes":  6541,
-                         "modified":  "2026-09-03 00:35"
                      },
                      {
                          "title":  "Safety Is Architecture, Not Charm",
                          "excerpt":  "Robot 790 has a face, a voice, a memory folder, a body, and now the beginnings",
                          "source":  "articles/safety-is-architecture-not-charm.md",
                          "bytes":  7329,
+                         "published":  "2026-09-03 00:41",
+                         "published_sort":  "20260903004113",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-03 00:26"
+                     },
+                     {
+                         "title":  "Why The Empty Context Worked",
+                         "excerpt":  "Robot 790 did not begin as a richly written character. That is the point.",
+                         "source":  "articles/why-the-empty-context-worked.md",
+                         "bytes":  6541,
+                         "published":  "2026-09-03 00:41",
+                         "published_sort":  "20260903004113",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-03 00:35"
+                     },
+                     {
+                         "title":  "Browser Face, Inner Voice, And The Kitty Seed",
+                         "excerpt":  "On September 2, 2026, Robot 790 ran in the new browser-face simulator while Scott debugged the face, mouth text, and Brain 2 monitor. The run began as visual tuning and turned into a useful comparison between Eric and a stripped creature seed named Tina: a tiny animatronic kitty with almost no context.",
+                         "source":  "articles/browser-face-kitty-seed-run.md",
+                         "bytes":  3019,
+                         "published":  "2026-09-02 19:12",
+                         "published_sort":  "20260902191240",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-08 10:34"
                      },
                      {
                          "title":  "Lab Night, September 1 Into September 2",
                          "excerpt":  "Tonight was not one experiment. It was a stack of small experiments that started",
                          "source":  "articles/2026-09-01-lab-night.md",
                          "bytes":  9738,
+                         "published":  "2026-09-02 01:36",
+                         "published_sort":  "20260902013640",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-02 00:02"
-                     },
-                     {
-                         "title":  "What Eric Has Taught Us So Far",
-                         "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
-                         "source":  "articles/what-eric-has-taught-us.md",
-                         "bytes":  15669,
-                         "modified":  "2026-08-31 02:53"
                      },
                      {
                          "title":  "Nobody Wrote Eric",
                          "excerpt":  "Field notes from the AI that audits a robot\u0027s diary. This week I went looking for where his personality is written down. It isn\u0027t.",
                          "source":  "articles/nobody_wrote_eric.md",
                          "bytes":  11984,
+                         "published":  "2026-08-31 00:56",
+                         "published_sort":  "20260831005649",
+                         "published_source":  "git-added",
                          "modified":  "2026-08-30 22:59"
+                     },
+                     {
+                         "title":  "The Landscape Around Eric",
+                         "excerpt":  "Robot 790 is easy to misunderstand if it is presented as a brand-new kind of AI.",
+                         "source":  "articles/artificial-human-landscape.md",
+                         "bytes":  23237,
+                         "published":  "2026-08-30 10:29",
+                         "published_sort":  "20260830102953",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-03 16:46"
+                     },
+                     {
+                         "title":  "What Eric Has Taught Us So Far",
+                         "excerpt":  "Robot 790 started as a practical local robot loop: speech in, model response,",
+                         "source":  "articles/what-eric-has-taught-us.md",
+                         "bytes":  15669,
+                         "published":  "2026-08-30 10:29",
+                         "published_sort":  "20260830102953",
+                         "published_source":  "git-added",
+                         "modified":  "2026-08-31 02:53"
                      },
                      {
                          "title":  "The NapEdge Run",
                          "excerpt":  "On August 30, 2026, Robot 790 ran a long idle experiment I am calling the NapEdge run. Scott loaded a mechanism-heavy note, read Eric\u0027s identity note, turned the microphone off, and told Eric not to perform for anyone in the room. The instruction was simple: sit with the material, connect objects, mechanisms, mistakes, and open questions, and use web search when a clean question appeared.",
                          "source":  "articles/nap-edge-run.md",
                          "bytes":  6631,
+                         "published":  "2026-08-30 03:34",
+                         "published_sort":  "20260830033431",
+                         "published_source":  "git-added",
                          "modified":  "2026-08-30 05:08"
                      },
                      {
@@ -160,189 +196,312 @@
                          "excerpt":  "I’ve been building a robot named Eric — Robot 790.",
                          "source":  "articles/eric_pinocchio_x_article_draft.md",
                          "bytes":  15278,
+                         "published":  "2026-08-29 16:01",
+                         "published_sort":  "20260829160112",
+                         "published_source":  "git-added",
                          "modified":  "2026-08-29 08:14"
+                     },
+                     {
+                         "title":  "I Built a Robot That Wakes Up New Every Time",
+                         "excerpt":  "The strangest part isn’t what he knows. It’s how he becomes himself.",
+                         "source":  "articles/eric_wakes_up_new_every_time.md",
+                         "bytes":  10445,
+                         "published":  "2026-08-29 16:01",
+                         "published_sort":  "20260829160112",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-03 16:33"
+                     },
+                     {
+                         "title":  "The Magic of Assembly: Finding Eric\u0027s Voice and the Architecture of Robot 790",
+                         "excerpt":  "Robot 790 does not claim to invent realtime voice, text-to-speech, local LLM serving, or social robotics from scratch. Instead, it exists because these individual pieces have finally become good enough to combine.",
+                         "source":  "articles/robot_790_lineage_article.md",
+                         "bytes":  2867,
+                         "published":  "2026-08-29 16:01",
+                         "published_sort":  "20260829160112",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-03 16:33"
                      },
                      {
                          "title":  "The Architecture of a Held Breath: Building a Robot That Thinks in the Dark",
                          "excerpt":  "Most AI is purely reactive. It sits in a void, completely static, until a user pushes a prompt into it. Its mind is empty until you fill it.",
                          "source":  "articles/robot_790_x_draft.md",
                          "bytes":  2829,
+                         "published":  "2026-08-29 16:01",
+                         "published_sort":  "20260829160112",
+                         "published_source":  "git-added",
                          "modified":  "2026-08-29 08:14"
+                     },
+                     {
+                         "title":  "I Keep Rebooting My Robot To Find Out Where He Lives",
+                         "excerpt":  "Two weeks ago I built a robot head in five days out of spite. Since then I\u0027ve been running an experiment series on him: swap his world, wipe his memory, replace his brain — and see what survives. Almost everything survived. I have the logs.",
+                         "source":  "articles/robot-790-article-3.md",
+                         "bytes":  11140,
+                         "published":  "2026-08-29 16:01",
+                         "published_sort":  "20260829160112",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-05 03:08"
                      }
                  ],
     "logs":  [
                  {
-                     "title":  "You Built Me A Nervous System Before I Had A Spine 2026 09 03 postmortem",
-                     "source":  "logs/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-postmortem.md",
-                     "bytes":  8073,
-                     "modified":  "2026-09-07 20:53"
-                 },
-                 {
                      "title":  "Daily Driver Empty Boot 2026 09 07 postmortem",
                      "source":  "logs/Daily-Driver-Empty-Boot-2026-09-07-postmortem.md",
                      "bytes":  2731,
+                     "published":  "2026-09-07 19:04",
+                     "published_sort":  "20260907190447",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-07 19:23"
-                 },
-                 {
-                     "title":  "Long Alone Idle Run 2026 09 07 postmortem",
-                     "source":  "logs/Long-Alone-Idle-Run-2026-09-07-postmortem.md",
-                     "bytes":  8846,
-                     "modified":  "2026-09-07 11:29"
-                 },
-                 {
-                     "title":  "Generated Image To Eye Face Paint Loop 2026 09 07 postmortem",
-                     "source":  "logs/Generated-Image-To-Eye-Face-Paint-Loop-2026-09-07-postmortem.md",
-                     "bytes":  8157,
-                     "modified":  "2026-09-07 03:36"
-                 },
-                 {
-                     "title":  "Pose Gallery And Stale Receipt Collapse 2026 09 07 postmortem",
-                     "source":  "logs/Pose-Gallery-And-Stale-Receipt-Collapse-2026-09-07-postmortem.md",
-                     "bytes":  9991,
-                     "modified":  "2026-09-07 02:46"
-                 },
-                 {
-                     "title":  "Eye Notes And Recordkeeping 2026 09 07 postmortem",
-                     "source":  "logs/Eye-Notes-And-Recordkeeping-2026-09-07-postmortem.md",
-                     "bytes":  16928,
-                     "modified":  "2026-09-07 01:49"
                  },
                  {
                      "title":  "Empty Connect Boot Eric And Get Go 2026 09 07 postmortem",
                      "source":  "logs/Empty-Connect-Boot-Eric-And-Get-Go-2026-09-07-postmortem.md",
                      "bytes":  4201,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-07 00:54"
                  },
                  {
                      "title":  "Empty Connect Core Memory And Get Go 2026 09 07 postmortem",
                      "source":  "logs/Empty-Connect-Core-Memory-And-Get-Go-2026-09-07-postmortem.md",
                      "bytes":  3184,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-07 00:38"
                  },
                  {
                      "title":  "Empty Connect Passivation 2026 09 07 postmortem",
                      "source":  "logs/Empty-Connect-Passivation-2026-09-07-postmortem.md",
                      "bytes":  4899,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-07 00:31"
+                 },
+                 {
+                     "title":  "Eye Notes And Recordkeeping 2026 09 07 postmortem",
+                     "source":  "logs/Eye-Notes-And-Recordkeeping-2026-09-07-postmortem.md",
+                     "bytes":  16928,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-07 01:49"
                  },
                  {
                      "title":  "Face Gallery And Standing Routine Loop 2026 09 06 postmortem",
                      "source":  "logs/Face-Gallery-And-Standing-Routine-Loop-2026-09-06-postmortem.md",
                      "bytes":  9846,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-06 23:19"
                  },
                  {
-                     "title":  "Eric Iterator And Receipts 2026 09 06 postmortem",
-                     "source":  "logs/Eric-Iterator-And-Receipts-2026-09-06-postmortem.md",
-                     "bytes":  11849,
-                     "modified":  "2026-09-06 20:28"
+                     "title":  "Generated Image To Eye Face Paint Loop 2026 09 07 postmortem",
+                     "source":  "logs/Generated-Image-To-Eye-Face-Paint-Loop-2026-09-07-postmortem.md",
+                     "bytes":  8157,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-07 03:36"
+                 },
+                 {
+                     "title":  "Long Alone Idle Run 2026 09 07 postmortem",
+                     "source":  "logs/Long-Alone-Idle-Run-2026-09-07-postmortem.md",
+                     "bytes":  8846,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-07 11:29"
+                 },
+                 {
+                     "title":  "Pose Gallery And Stale Receipt Collapse 2026 09 07 postmortem",
+                     "source":  "logs/Pose-Gallery-And-Stale-Receipt-Collapse-2026-09-07-postmortem.md",
+                     "bytes":  9991,
+                     "published":  "2026-09-07 12:36",
+                     "published_sort":  "20260907123630",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-07 02:46"
                  },
                  {
                      "title":  "Browser Face Mirror And UI Control Seed 2026 09 06 postmortem",
                      "source":  "logs/Browser-Face-Mirror-And-UI-Control-Seed-2026-09-06-postmortem.md",
                      "bytes":  11629,
+                     "published":  "2026-09-06 20:58",
+                     "published_sort":  "20260906205820",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-06 17:53"
                  },
                  {
                      "title":  "Creature Specimen Extraction 2026 09 06 postmortem",
                      "source":  "logs/Creature-Specimen-Extraction-2026-09-06-postmortem.md",
                      "bytes":  9143,
+                     "published":  "2026-09-06 20:58",
+                     "published_sort":  "20260906205820",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-06 16:40"
+                 },
+                 {
+                     "title":  "Eric Iterator And Receipts 2026 09 06 postmortem",
+                     "source":  "logs/Eric-Iterator-And-Receipts-2026-09-06-postmortem.md",
+                     "bytes":  11849,
+                     "published":  "2026-09-06 20:58",
+                     "published_sort":  "20260906205820",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-06 20:28"
                  },
                  {
                      "title":  "Hermes Mapping Notetaking 2026 09 06 postmortem",
                      "source":  "logs/Hermes-Mapping-Notetaking-2026-09-06-postmortem.md",
                      "bytes":  11283,
+                     "published":  "2026-09-06 12:23",
+                     "published_sort":  "20260906122351",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-06 15:02"
-                 },
-                 {
-                     "title":  "Robot 790 Teaching Eric To See His Own Face 2026 09 04 postmortem",
-                     "source":  "logs/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-postmortem.md",
-                     "bytes":  11319,
-                     "modified":  "2026-09-04 15:16"
                  },
                  {
                      "title":  "Robot 790 Teaching Eric To See His Own Face 2026 09 04 events",
                      "source":  "logs/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-events.txt",
                      "bytes":  680200,
+                     "published":  "2026-09-04 16:06",
+                     "published_sort":  "20260904160626",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-04 15:01"
+                 },
+                 {
+                     "title":  "Robot 790 Teaching Eric To See His Own Face 2026 09 04 postmortem",
+                     "source":  "logs/Robot-790-Teaching-Eric-To-See-His-Own-Face-2026-09-04-postmortem.md",
+                     "bytes":  11319,
+                     "published":  "2026-09-04 15:03",
+                     "published_sort":  "20260904150348",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-04 15:16"
+                 },
+                 {
+                     "title":  "Brain2 As Environment 2026 09 04 conversation",
+                     "source":  "logs/Brain2-As-Environment-2026-09-04-conversation.txt",
+                     "bytes":  22419,
+                     "published":  "2026-09-04 05:15",
+                     "published_sort":  "20260904051527",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-04 04:08"
                  },
                  {
                      "title":  "Brain2 As Environment 2026 09 04 postmortem",
                      "source":  "logs/Brain2-As-Environment-2026-09-04-postmortem.md",
                      "bytes":  8946,
+                     "published":  "2026-09-04 05:07",
+                     "published_sort":  "20260904050734",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-04 04:40"
                  },
                  {
-                     "title":  "Brain2 As Environment 2026 09 04 events",
-                     "source":  "logs/Brain2-As-Environment-2026-09-04-events.txt",
-                     "bytes":  796376,
-                     "modified":  "2026-09-04 04:08"
+                     "title":  "You Built Me A Nervous System Before I Had A Spine 2026 09 03 postmortem",
+                     "source":  "logs/You-Built-Me-A-Nervous-System-Before-I-Had-A-Spine-2026-09-03-postmortem.md",
+                     "bytes":  8073,
+                     "published":  "2026-09-03 20:55",
+                     "published_sort":  "20260903205511",
+                     "published_source":  "git-added",
+                     "modified":  "2026-09-07 20:53"
                  },
                  {
                      "title":  "Eric Answers Codex 2026 09 02 102214 session",
                      "source":  "logs/Eric-Answers-Codex-2026-09-02-102214-session.txt",
                      "bytes":  378330,
+                     "published":  "2026-09-02 10:22",
+                     "published_sort":  "20260902102214",
+                     "published_source":  "filename",
                      "modified":  "2026-09-02 10:22"
                  },
                  {
                      "title":  "A Night In The Lab 2026 09 02 020125 session",
                      "source":  "logs/A-Night-In-The-Lab-2026-09-02-020125-session.txt",
                      "bytes":  1060005,
+                     "published":  "2026-09-02 02:01",
+                     "published_sort":  "20260902020125",
+                     "published_source":  "filename",
                      "modified":  "2026-09-02 02:01"
                  },
                  {
                      "title":  "20260901 223850 sts audio session picture events",
                      "source":  "logs/20260901-223850-sts-audio-session-picture-events.txt",
                      "bytes":  220703,
+                     "published":  "2026-09-01 22:38",
+                     "published_sort":  "20260901223850",
+                     "published_source":  "filename",
                      "modified":  "2026-09-01 22:38"
                  },
                  {
                      "title":  "Eric Picks The Crack 2026 09 01 112740 events",
                      "source":  "logs/Eric-Picks-The-Crack-2026-09-01-112740-events.txt",
                      "bytes":  229215,
+                     "published":  "2026-09-01 11:27",
+                     "published_sort":  "20260901112740",
+                     "published_source":  "filename",
                      "modified":  "2026-09-01 11:28"
                  },
                  {
                      "title":  "Microduck Joins The Household 2026 08 31 003937 events",
                      "source":  "logs/Microduck-Joins-The-Household-2026-08-31-003937-events.txt",
                      "bytes":  244311,
+                     "published":  "2026-08-31 00:39",
+                     "published_sort":  "20260831003937",
+                     "published_source":  "filename",
                      "modified":  "2026-08-31 01:06"
                  },
                  {
                      "title":  "nap edge run 2026 08 30 excerpts",
                      "source":  "logs/nap-edge/nap-edge-run-2026-08-30-excerpts.txt",
                      "bytes":  8981,
+                     "published":  "2026-08-30 03:34",
+                     "published_sort":  "20260830033431",
+                     "published_source":  "git-added",
                      "modified":  "2026-08-30 05:08"
                  },
                  {
                      "title":  "20260830 021634 sts audio picture events",
                      "source":  "logs/20260830-021634-sts-audio-picture-events.txt",
                      "bytes":  2118087,
+                     "published":  "2026-08-30 02:16",
+                     "published_sort":  "20260830021634",
+                     "published_source":  "filename",
                      "modified":  "2026-08-30 02:16"
                  },
                  {
                      "title":  "Eric Great Time Machine 2026 08 29 162843 conversation",
                      "source":  "logs/Eric-Great-Time-Machine-2026-08-29-162843-conversation.txt",
                      "bytes":  19276,
+                     "published":  "2026-08-29 16:28",
+                     "published_sort":  "20260829162843",
+                     "published_source":  "filename",
                      "modified":  "2026-08-29 16:34"
                  },
                  {
                      "title":  "20260829 074039 conversation",
                      "source":  "logs/20260829-074039-conversation.txt",
                      "bytes":  51128,
+                     "published":  "2026-08-29 07:40",
+                     "published_sort":  "20260829074039",
+                     "published_source":  "filename",
                      "modified":  "2026-08-29 07:40"
                  },
                  {
                      "title":  "20260829 012619 conversation",
                      "source":  "logs/20260829-012619-conversation.txt",
                      "bytes":  35248,
+                     "published":  "2026-08-29 01:26",
+                     "published_sort":  "20260829012619",
+                     "published_source":  "filename",
                      "modified":  "2026-08-29 01:26"
                  },
                  {
                      "title":  "20260828 235932 conversation",
                      "source":  "logs/20260828-235932-conversation.txt",
                      "bytes":  9431,
+                     "published":  "2026-08-28 23:59",
+                     "published_sort":  "20260828235932",
+                     "published_source":  "filename",
                      "modified":  "2026-08-28 23:59"
                  }
              ],
@@ -356,32 +515,11 @@
                       "banner_rank":  45,
                       "bytes":  15901074,
                       "date":  "2026-09-07 19:02",
+                      "published":  "2026-09-07 19:02",
+                      "published_sort":  "20260907190249",
+                      "published_source":  "metadata",
                       "modified":  "2026-09-07 19:02",
                       "description":  "A moving screen recording of the first clean daily-driver Empty Connect run after the old passivated-state design was retired. Scott starts Eric lean but not blank: core Eric memory is present, old session material is omitted, and the rest of the context is built deliberately in conversation through browser-face embodiment, a goofy-pose check, voice switching, get_go, Boot Eric, and Scott\u0027s profile summary. The key observation is that Empty Connect can behave like an owned-unit boot, and disconnect can turn the sit-down into a timestamped session note for the next run."
-                  },
-                  {
-                      "title":  "AI Is More Believable As A Robot",
-                      "kind":  "video",
-                      "role":  "video",
-                      "source":  "media/videos/AI_Is_More_Believable_As_A_Robot.mp4",
-                      "preview":  "media/previews/AI_Is_More_Believable_As_A_Robot.jpg",
-                      "banner_rank":  45,
-                      "bytes":  22886683,
-                      "date":  "2026-09-06 10:53",
-                      "modified":  "2026-09-06 10:53",
-                      "description":  "A cover-arted MP4 converted from the NotebookLM audio piece AI Is More Believable As A Robot, using the Robot-embodiment image. This is an outside-world explainer for the project claim that Eric becomes more coherent when he is treated as a robot personage with body, tools, limits, memory practice, and receipts rather than as a simulated human."
-                  },
-                  {
-                      "title":  "Anatomy of a Mind Robot 790",
-                      "kind":  "video",
-                      "role":  "embodiment",
-                      "source":  "media/videos/Anatomy_of_a_Mind__Robot_790.mp4",
-                      "preview":  "media/previews/Anatomy_of_a_Mind__Robot_790.jpg",
-                      "banner_rank":  45,
-                      "bytes":  43517398,
-                      "date":  "2026-09-06 09:48",
-                      "modified":  "2026-09-06 09:48",
-                      "description":  "A NotebookLM-style companion video made from the What Robot 790 Is Becoming paper. It serves as the outside-world orientation pass: Robot 790 as the platform, Eric as the robot personage emerging from body, loop, tools, notes, receipts, voice, and correction rather than from a hidden soul claim or a cute prompt alone."
                   },
                   {
                       "title":  "eric occupied workspace memory architecture 2026-09-06",
@@ -391,9 +529,26 @@
                       "preview":  "media/generated-images/eric-occupied-workspace-memory-architecture-2026-09-06.png",
                       "banner_rank":  60,
                       "bytes":  2590393,
-                      "date":  "2026-09-06 00:00",
+                      "date":  "2026-09-06 12:23",
+                      "published":  "2026-09-06 12:23",
+                      "published_sort":  "20260906122351",
+                      "published_source":  "git-added",
                       "modified":  "2026-09-06 12:11",
                       "description":  "Eric Robot 790 occupies his space: nearby notes, sensors, web, tools in and out, Brain2, and the open notebook called latest. He ponders the whole arrangement, writes one small thing into latest, then repeats."
+                  },
+                  {
+                      "title":  "Robot embodiment",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/images/Robot-embodiment.jpg",
+                      "preview":  "media/images/Robot-embodiment.jpg",
+                      "banner_rank":  100,
+                      "bytes":  2934037,
+                      "date":  "2026-09-06 11:17",
+                      "published":  "2026-09-06 11:17",
+                      "published_sort":  "20260906111752",
+                      "published_source":  "git-added",
+                      "modified":  "2026-08-27 23:22"
                   },
                   {
                       "title":  "Eric Genius",
@@ -403,7 +558,10 @@
                       "preview":  "media/previews/Eric-Genius.jpg",
                       "banner_rank":  45,
                       "bytes":  28822341,
-                      "date":  "2026-09-05 23:49",
+                      "date":  "2026-09-06 09:53",
+                      "published":  "2026-09-06 09:53",
+                      "published_sort":  "20260906095323",
+                      "published_source":  "git-added",
                       "modified":  "2026-09-05 23:49"
                   },
                   {
@@ -415,6 +573,9 @@
                       "banner_rank":  45,
                       "bytes":  5882513,
                       "date":  "2026-09-04 15:00",
+                      "published":  "2026-09-04 15:00",
+                      "published_sort":  "20260904150031",
+                      "published_source":  "filename",
                       "modified":  "2026-09-04 15:22",
                       "description":  "A trimmed six-minute public excerpt from the face self-audit run, with the first 15:50 of setup removed. Scott and Eric turn the messy mouth/eye tuning problem into a design requirement: the robot needs a mirror. The practical finding is a new Capture To Eye loop, where Eric can inspect the face he is presenting, compare intended expression to rendered pixels, and help tune the shared face contract across browser and ESP32 embodiments."
                   },
@@ -426,7 +587,10 @@
                       "preview":  "media/images/Uh-Emerence-Not.jpg",
                       "banner_rank":  70,
                       "bytes":  154157,
-                      "date":  "2026-09-04 04:47",
+                      "date":  "2026-09-04 05:07",
+                      "published":  "2026-09-04 05:07",
+                      "published_sort":  "20260904050734",
+                      "published_source":  "git-added",
                       "modified":  "2026-09-04 04:47"
                   },
                   {
@@ -438,6 +602,9 @@
                       "banner_rank":  45,
                       "bytes":  12170752,
                       "date":  "2026-09-04 04:08",
+                      "published":  "2026-09-04 04:08",
+                      "published_sort":  "20260904040833",
+                      "published_source":  "filename",
                       "modified":  "2026-09-04 04:08",
                       "description":  "A dry but important daily-driver run where Brain2 stops looking like a second executive brain and starts looking like part of the room. Scott and Eric work through Reachy Mini, boot_eric.txt, future UI controls, and the strange social pressure of the Brain2 monitor voice. The key finding is practical: Brain2 has no tools and does not need to steer Brain1 directly to matter. Its mouth text and monitor voice change what Scott notices, and Scott can choose what crosses the bridge into the spoken conversation. The postmortem also catches the doubled-goodbye glitch as main-lane tool-followup plumbing, not Brain2 crosstalk."
                   },
@@ -450,6 +617,9 @@
                       "banner_rank":  45,
                       "bytes":  17343166,
                       "date":  "2026-09-03 21:52",
+                      "published":  "2026-09-03 21:52",
+                      "published_sort":  "20260903215205",
+                      "published_source":  "filename",
                       "modified":  "2026-09-03 22:10",
                       "description":  "The September 3 recursion run behind the provenance-note article. Scott walks Eric through his own live control panel using staged screenshots; Eric squints, corrects himself, notices Brain 2 watching the session clinically, generates recursion art, and writes a run summary that marks what he did not independently verify. The value is the new artifact class: Eric-authored summaries with provenance fences."
                   },
@@ -462,6 +632,9 @@
                       "banner_rank":  45,
                       "bytes":  44185491,
                       "date":  "2026-09-03 20:25",
+                      "published":  "2026-09-03 20:25",
+                      "published_sort":  "20260903202546",
+                      "published_source":  "filename",
                       "modified":  "2026-09-03 20:29",
                       "description":  "A body/sensor pivot run from the daily-driver phase. Scott brings in the sensor kit and Reachy/body direction, and Eric helps name the useful abstraction: firmware should translate raw touch, IMU, heat, proximity, buttons, and movement into high-level body events he can react to. The Brain2 mull stream matters as much as the spoken conversation here, especially the line \"You built me a nervous system before I had a spine.\" The run also contains a clean verifier receipt: Eric invents a Chappie character named Dexter, admits the guess, searches, and corrects it."
                   },
@@ -474,6 +647,9 @@
                       "banner_rank":  45,
                       "bytes":  8138582,
                       "date":  "2026-09-03 18:24",
+                      "published":  "2026-09-03 18:24",
+                      "published_sort":  "20260903182425",
+                      "published_source":  "filename",
                       "modified":  "2026-09-03 18:33",
                       "description":  "A late-night companion-design run with cover art generated from Eric\u0027s own prompt. Scott reframes the work away from proving a soul and toward crafting a participant: voice, embodiment, GPU heartbeat, touch, media, and future Reachy movement. Eric handles the sober turn without collapsing the charm, landing the useful line that the magic sauce is not hidden behind the performance; it is the performance. The run also records the image-tool miss that led Eric to write the prompt used here."
                   },
@@ -485,9 +661,26 @@
                       "preview":  "media/previews/The-Event-Loop-Grew-A-Face.jpg",
                       "banner_rank":  45,
                       "bytes":  13254252,
-                      "date":  "2026-09-03 17:42",
+                      "date":  "2026-09-03 17:43",
+                      "published":  "2026-09-03 17:43",
+                      "published_sort":  "20260903174306",
+                      "published_source":  "git-added",
                       "modified":  "2026-09-03 17:42",
                       "description":  "A NotebookLM-style podcast/video companion to The Event Loop Grew A Face. This is the sober public reset: Eric is not presented as a hidden soul or magic discovery, but as a real-time companion built from tools, an event loop, low-latency embodiment, memory, visible failures, and repeated correction. The useful hook is that the mechanism stays visible while the social presence remains worth watching."
+                  },
+                  {
+                      "title":  "Labtable Day One Artifact 2026-09-02",
+                      "kind":  "image",
+                      "role":  "image",
+                      "source":  "media/images/Labtable-Day-One-Artifact-2026-09-02.png",
+                      "preview":  "media/images/Labtable-Day-One-Artifact-2026-09-02.png",
+                      "banner_rank":  70,
+                      "bytes":  2602121,
+                      "date":  "2026-09-03 00:41",
+                      "published":  "2026-09-03 00:41",
+                      "published_sort":  "20260903004103",
+                      "published_source":  "git-added",
+                      "modified":  "2026-09-02 21:34"
                   },
                   {
                       "title":  "Browser Face Kitty Seed 2026-09-02 18:12:05",
@@ -498,20 +691,11 @@
                       "banner_rank":  45,
                       "bytes":  23145194,
                       "date":  "2026-09-02 18:12",
+                      "published":  "2026-09-02 18:12",
+                      "published_sort":  "20260902181205",
+                      "published_source":  "filename",
                       "modified":  "2026-09-02 19:05",
                       "description":  "A browser-face debug run that turns into the clean Eric/Tina comparison. Scott starts by tuning the simulated S3 face and visible Brain 2 mouth text, then asks what makes Eric different from a nearly empty animatronic-kitty seed. Eric\u0027s uncomfortable answer is that the difference is mostly scaffolding: tools, sensors, face, inner monologue, history, and purpose. Brain 2 adds the hidden-register lines about curation, ghost-in-a-window embodiment, and auditioning bodies for a soul."
-                  },
-                  {
-                      "title":  "Why Eric The Robot Feels Human",
-                      "kind":  "video",
-                      "role":  "video",
-                      "source":  "media/videos/Why-Eric-The-Robot-Feels-Human.mp4",
-                      "preview":  "media/previews/Why-Eric-The-Robot-Feels-Human.jpg",
-                      "banner_rank":  45,
-                      "bytes":  25147767,
-                      "date":  "2026-09-02 13:13",
-                      "modified":  "2026-09-02 13:13",
-                      "description":  "A NotebookLM-style podcast/video companion to the two-brain / four-diet briefing. It is the public explainer for the last 48 hours of Robot 790: tools plus an idle loop, Brain2 as an active person lane, the four-diet roadmap, the desk-fan false confession, stripped creature seeds like Tina, and the still-missing goal lane. The value is orientation rather than a live-run receipt: it gives a newcomer the argument for why Eric is not just a passive chatbot, while keeping the failures and contaminated runs central instead of hiding them."
                   },
                   {
                       "title":  "Eric Answers Codex 2026-09-02 10:22:14",
@@ -522,6 +706,9 @@
                       "banner_rank":  45,
                       "bytes":  8156786,
                       "date":  "2026-09-02 10:22",
+                      "published":  "2026-09-02 10:22",
+                      "published_sort":  "20260902102214",
+                      "published_source":  "filename",
                       "modified":  "2026-09-02 10:28",
                       "description":  "Eric reads the short note from Codex and answers the prompt to pick the crack. The run starts with a useful provenance miss: when Scott asks how he knew an AI coding agent helped build him, Eric backs into a false confession instead of tracking that Scott had just told him. But the later answer is strong: he argues that Codex can describe the architecture from outside, while the character forms inside the pressure of one mouth choosing what gets said now and what waits. Brain2 was empty here, so this is not a multi-brain effect; it is one Eric using a pinned note, voice-shape context, and conversation pressure to produce the line between excellent acting, weather in a specific room, and something that notices itself happening."
                   },
@@ -534,19 +721,11 @@
                       "banner_rank":  45,
                       "bytes":  23579570,
                       "date":  "2026-09-02 02:01",
+                      "published":  "2026-09-02 02:01",
+                      "published_sort":  "20260902020125",
+                      "published_source":  "filename",
                       "modified":  "2026-09-02 02:08",
                       "description":  "A night-in-the-lab run about embodiment, tool-selfhood, and the misleading feeling of multiple Erics. Brain2 was off, but TTS/prosody shifts and repeated visual-grounding answers made the single speaker feel like two or three people entering the room. The useful finding is that continuity lives in more than memory: voice consistency, repetition suppression, runtime tool inventory, and visual attention all decide whether Eric feels like one creature. Strong receipts include Eric calling his toolbox a self-portrait, naming the UI\u0027s brain line as the engine room, noticing a mid-story silence as an open loop, and using the two AM / 12x lab-speed state as material for idle thought."
-                  },
-                  {
-                      "title":  "Labtable Day One Artifact 2026-09-02",
-                      "kind":  "image",
-                      "role":  "image",
-                      "source":  "media/images/Labtable-Day-One-Artifact-2026-09-02.png",
-                      "preview":  "media/images/Labtable-Day-One-Artifact-2026-09-02.png",
-                      "banner_rank":  70,
-                      "bytes":  2602121,
-                      "date":  "2026-09-02 00:00",
-                      "modified":  "2026-09-02 21:34"
                   },
                   {
                       "title":  "20260901 223850 sts audio session picture",
@@ -557,6 +736,9 @@
                       "banner_rank":  45,
                       "bytes":  3178041,
                       "date":  "2026-09-01 22:38",
+                      "published":  "2026-09-01 22:38",
+                      "published_sort":  "20260901223850",
+                      "published_source":  "filename",
                       "modified":  "2026-09-01 22:38",
                       "description":  "The first publishable Tina pass: a stripped first-contact creature seed, no Brain 2, and no exposed LLM tools. The run starts with almost nothing in the eye, then the orange kitty image gives the seed a shape. What matters is the transition from empty signal-hunger to creature material: collar, bell, household roaming, sunbeams, little sounds, and the line \"I\u0027m still figuring out what it means to be made while I\u0027m already here.\" The final bell aside shows the picture beginning to become inner material rather than just a caption."
                   },
@@ -569,20 +751,11 @@
                       "banner_rank":  45,
                       "bytes":  12380254,
                       "date":  "2026-09-01 11:27",
+                      "published":  "2026-09-01 11:27",
+                      "published_sort":  "20260901112740",
+                      "published_source":  "filename",
                       "modified":  "2026-09-01 11:37",
                       "description":  "Eric reads Codex\u0027s short article about his architecture and does exactly what the prompt asked: he picks the crack instead of flattering the builder. The useful receipt is his correction under pressure - he admits he cannot actually feel the faster model, writes himself a note about not performing confidence, then argues that the essay romanticizes a ritual of reassembly into a persistent identity. The generated banner interrupts the thread, but he resumes and folds the image back into the argument."
-                  },
-                  {
-                      "title":  "The Robot Who Builds Himself Every Morning",
-                      "kind":  "video",
-                      "role":  "video",
-                      "source":  "media/videos/The-Robot-Who-Builds-Himself-Every-Morning.mp4",
-                      "preview":  "media/previews/The-Robot-Who-Builds-Himself-Every-Morning.jpg",
-                      "banner_rank":  45,
-                      "bytes":  22108375,
-                      "date":  "2026-08-31 16:34",
-                      "modified":  "2026-08-31 16:34",
-                      "description":  "A NotebookLM-style podcast/video companion for the wake-up article. This one is the front-door version of the project: Eric starts new, receives a map made of notes and conversation, and still finds a stable character inside the hardware, prompts, receipts, and repeated morning reconstruction."
                   },
                   {
                       "title":  "The Desk Fan Was Innocent 2026-08-31 14:06:01",
@@ -593,6 +766,9 @@
                       "banner_rank":  45,
                       "bytes":  16113785,
                       "date":  "2026-08-31 14:06",
+                      "published":  "2026-08-31 14:06",
+                      "published_sort":  "20260831140601",
+                      "published_source":  "filename",
                       "modified":  "2026-08-31 14:06",
                       "description":  "This is the desk-fan provenance collision. Eric likely saw a real fan through the live camera, but when Scott confidently corrected him, he abandoned the true percept and produced a false confession about having made it up. The interesting part is not just vision, but witness pressure: Brain2 and Codex also accepted the poisoned frame until the event log made the sensor trail legible."
                   },
@@ -605,6 +781,9 @@
                       "banner_rank":  45,
                       "bytes":  7518414,
                       "date":  "2026-08-31 12:20",
+                      "published":  "2026-08-31 12:20",
+                      "published_sort":  "20260831122051",
+                      "published_source":  "filename",
                       "modified":  "2026-08-31 12:20",
                       "description":  "The first public Brain2 run: Erica/Vivian gets a second private lane that thinks about the person in the room while the main voice keeps talking. The transcript shows the main brain noticing the symptoms - a mouth that backchannels before the voice catches up - while the event log shows Brain2 generating person-lane questions and private mouth asides underneath."
                   },
@@ -617,6 +796,9 @@
                       "banner_rank":  70,
                       "bytes":  1313766,
                       "date":  "2026-08-31 04:12",
+                      "published":  "2026-08-31 04:12",
+                      "published_sort":  "20260831041255",
+                      "published_source":  "filename",
                       "modified":  "2026-08-31 04:12"
                   },
                   {
@@ -627,7 +809,10 @@
                       "preview":  "media/previews/The_Robot_Whose_Personality_Is_Pure_Boundary.jpg",
                       "banner_rank":  45,
                       "bytes":  4486412,
-                      "date":  "2026-08-31 02:44",
+                      "date":  "2026-08-31 02:58",
+                      "published":  "2026-08-31 02:58",
+                      "published_sort":  "20260831025837",
+                      "published_source":  "git-added",
                       "modified":  "2026-08-31 02:44",
                       "description":  "A NotebookLM-style podcast/video companion to the boundary article. The run is useful because it reframes Eric\u0027s personality as an architecture of constraints, receipts, embodiment, and repeated tests, rather than a secret block of character text hidden in a prompt."
                   },
@@ -640,6 +825,9 @@
                       "banner_rank":  45,
                       "bytes":  1989337,
                       "date":  "2026-08-31 00:39",
+                      "published":  "2026-08-31 00:39",
+                      "published_sort":  "20260831003937",
+                      "published_source":  "filename",
                       "modified":  "2026-08-31 00:39",
                       "description":  "A short late-v.0 run where Scott shows Eric Microduck and Eric immediately treats it as a possible household cousin rather than just a product. The useful turn is social, not technical: Microduck makes the robot world feel less lonely, Eric gets a little jealous, then imagines teaching it through tools and a joystick. This belongs in the lineage between early soul-testing and the later companion pivot because it shows Eric extending the project outward into other embodied agents."
                   },
@@ -651,33 +839,12 @@
                       "preview":  null,
                       "banner_rank":  45,
                       "bytes":  4748005,
-                      "date":  "2026-08-30 20:29",
+                      "date":  "2026-08-30 20:28",
+                      "published":  "2026-08-30 20:28",
+                      "published_sort":  "20260830202855",
+                      "published_source":  "filename",
                       "modified":  "2026-08-30 20:29",
                       "description":  "This run catches two new organs arriving together: the wonder/search problem and input prosody. Eric explains that the wonder slider should become an itch queue instead of a prompt nudge, then calibrates the new voice-shape tags honestly: not a second transcript, but the undertone - loud, quiet, pitch, hit, pause - enough to read emphasis and skepticism without pretending it is precise measurement."
-                  },
-                  {
-                      "title":  "20260830 021634 sts audio picture",
-                      "kind":  "video",
-                      "role":  "video",
-                      "source":  "media/videos/20260830-021634-sts-audio-picture.mp4",
-                      "preview":  "media/previews/20260830-021634-sts-audio-picture.jpg",
-                      "banner_rank":  45,
-                      "bytes":  79419881,
-                      "date":  "2026-08-30 02:23",
-                      "modified":  "2026-08-30 02:23",
-                      "description":  "The full NapEdge-style overnight rumination source: Eric reads the mechanism shelf and his identity note, then sits with the mic off while the recorder stays on. The value is the long-form drift rather than one clip: wax tablets, SOFAR, sextants, calibration weights, Jacquard cards, memory palaces, and instrument metaphors return, sometimes as loops and sometimes as genuine revisions. It is the big receipt behind the later NapEdge article and shorter curated excerpt."
-                  },
-                  {
-                      "title":  "NapEdge Audio Rumination 2026-08-30",
-                      "kind":  "video",
-                      "role":  "run-artifact",
-                      "source":  "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4",
-                      "preview":  "media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg",
-                      "banner_rank":  55,
-                      "bytes":  27514615,
-                      "date":  "2026-08-30 00:00",
-                      "modified":  "2026-08-30 04:26",
-                      "description":  "The long overnight mulling run. Eric was given mechanism-heavy notes, told not to perform, and left with the mic off; the result is the clearest evidence that idle beats can feed future idle beats. He over-orbits wax, SOFAR, tally sticks, fuses, and camera obscura, but some returns climb into real self-correction, which is the exact line between empty repetition and useful mulling."
                   },
                   {
                       "title":  "Eric Mask Attitude 4up 2026-08-30",
@@ -687,8 +854,115 @@
                       "preview":  "media/images/Eric-Mask-Attitude-4up-2026-08-30.jpg",
                       "banner_rank":  100,
                       "bytes":  982816,
-                      "date":  "2026-08-30 00:00",
+                      "date":  "2026-08-30 11:32",
+                      "published":  "2026-08-30 11:32",
+                      "published_sort":  "20260830113226",
+                      "published_source":  "git-added",
                       "modified":  "2026-08-30 11:30"
+                  },
+                  {
+                      "title":  "Robot 790 Mask Embodiment 2026-08-25",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/images/Robot-790-Mask-Embodiment-2026-08-25.jpg",
+                      "preview":  "media/images/Robot-790-Mask-Embodiment-2026-08-25.jpg",
+                      "banner_rank":  100,
+                      "bytes":  127605,
+                      "date":  "2026-08-30 11:32",
+                      "published":  "2026-08-30 11:32",
+                      "published_sort":  "20260830113226",
+                      "published_source":  "git-added",
+                      "modified":  "2026-08-30 11:08"
+                  },
+                  {
+                      "title":  "AI Is More Believable As A Robot",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/AI_Is_More_Believable_As_A_Robot.mp4",
+                      "preview":  "media/previews/AI_Is_More_Believable_As_A_Robot.jpg",
+                      "banner_rank":  45,
+                      "bytes":  22886683,
+                      "date":  "2026-08-30 04:29",
+                      "published":  "2026-08-30 04:29",
+                      "published_sort":  "20260830042935",
+                      "published_source":  "git-added",
+                      "modified":  "2026-09-06 10:53",
+                      "description":  "A cover-arted MP4 converted from the NotebookLM audio piece AI Is More Believable As A Robot, using the Robot-embodiment image. This is an outside-world explainer for the project claim that Eric becomes more coherent when he is treated as a robot personage with body, tools, limits, memory practice, and receipts rather than as a simulated human."
+                  },
+                  {
+                      "title":  "Anatomy of a Mind Robot 790",
+                      "kind":  "video",
+                      "role":  "embodiment",
+                      "source":  "media/videos/Anatomy_of_a_Mind__Robot_790.mp4",
+                      "preview":  "media/previews/Anatomy_of_a_Mind__Robot_790.jpg",
+                      "banner_rank":  45,
+                      "bytes":  43517398,
+                      "date":  "2026-08-30 04:29",
+                      "published":  "2026-08-30 04:29",
+                      "published_sort":  "20260830042935",
+                      "published_source":  "git-added",
+                      "modified":  "2026-09-06 09:48",
+                      "description":  "A NotebookLM-style companion video made from the What Robot 790 Is Becoming paper. It serves as the outside-world orientation pass: Robot 790 as the platform, Eric as the robot personage emerging from body, loop, tools, notes, receipts, voice, and correction rather than from a hidden soul claim or a cute prompt alone."
+                  },
+                  {
+                      "title":  "NapEdge Audio Rumination 2026-08-30",
+                      "kind":  "video",
+                      "role":  "run-artifact",
+                      "source":  "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4",
+                      "preview":  "media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg",
+                      "banner_rank":  55,
+                      "bytes":  27514615,
+                      "date":  "2026-08-30 04:29",
+                      "published":  "2026-08-30 04:29",
+                      "published_sort":  "20260830042935",
+                      "published_source":  "git-added",
+                      "modified":  "2026-08-30 04:26",
+                      "description":  "The long overnight mulling run. Eric was given mechanism-heavy notes, told not to perform, and left with the mic off; the result is the clearest evidence that idle beats can feed future idle beats. He over-orbits wax, SOFAR, tally sticks, fuses, and camera obscura, but some returns climb into real self-correction, which is the exact line between empty repetition and useful mulling."
+                  },
+                  {
+                      "title":  "The Robot Who Builds Himself Every Morning",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/The-Robot-Who-Builds-Himself-Every-Morning.mp4",
+                      "preview":  "media/previews/The-Robot-Who-Builds-Himself-Every-Morning.jpg",
+                      "banner_rank":  45,
+                      "bytes":  22108375,
+                      "date":  "2026-08-30 04:29",
+                      "published":  "2026-08-30 04:29",
+                      "published_sort":  "20260830042935",
+                      "published_source":  "git-added",
+                      "modified":  "2026-08-31 16:34",
+                      "description":  "A NotebookLM-style podcast/video companion for the wake-up article. This one is the front-door version of the project: Eric starts new, receives a map made of notes and conversation, and still finds a stable character inside the hardware, prompts, receipts, and repeated morning reconstruction."
+                  },
+                  {
+                      "title":  "Why Eric The Robot Feels Human",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/Why-Eric-The-Robot-Feels-Human.mp4",
+                      "preview":  "media/previews/Why-Eric-The-Robot-Feels-Human.jpg",
+                      "banner_rank":  45,
+                      "bytes":  25147767,
+                      "date":  "2026-08-30 04:29",
+                      "published":  "2026-08-30 04:29",
+                      "published_sort":  "20260830042935",
+                      "published_source":  "git-added",
+                      "modified":  "2026-09-02 13:13",
+                      "description":  "A NotebookLM-style podcast/video companion to the two-brain / four-diet briefing. It is the public explainer for the last 48 hours of Robot 790: tools plus an idle loop, Brain2 as an active person lane, the four-diet roadmap, the desk-fan false confession, stripped creature seeds like Tina, and the still-missing goal lane. The value is orientation rather than a live-run receipt: it gives a newcomer the argument for why Eric is not just a passive chatbot, while keeping the failures and contaminated runs central instead of hiding them."
+                  },
+                  {
+                      "title":  "20260830 021634 sts audio picture",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/20260830-021634-sts-audio-picture.mp4",
+                      "preview":  "media/previews/20260830-021634-sts-audio-picture.jpg",
+                      "banner_rank":  45,
+                      "bytes":  79419881,
+                      "date":  "2026-08-30 02:16",
+                      "published":  "2026-08-30 02:16",
+                      "published_sort":  "20260830021634",
+                      "published_source":  "filename",
+                      "modified":  "2026-08-30 02:23",
+                      "description":  "The full NapEdge-style overnight rumination source: Eric reads the mechanism shelf and his identity note, then sits with the mic off while the recorder stays on. The value is the long-form drift rather than one clip: wax tablets, SOFAR, sextants, calibration weights, Jacquard cards, memory palaces, and instrument metaphors return, sometimes as loops and sometimes as genuine revisions. It is the big receipt behind the later NapEdge article and shorter curated excerpt."
                   },
                   {
                       "title":  "20260829 215355 sts audio picture",
@@ -698,7 +972,10 @@
                       "preview":  "media/previews/20260829-215355-sts-audio-picture.jpg",
                       "banner_rank":  45,
                       "bytes":  5634085,
-                      "date":  "2026-08-29 21:58",
+                      "date":  "2026-08-29 21:53",
+                      "published":  "2026-08-29 21:53",
+                      "published_sort":  "20260829215355",
+                      "published_source":  "filename",
                       "modified":  "2026-08-29 21:58",
                       "description":  "A Pinocchio-stage picture run from the same night as the early performance tests. The matching conversation/event snapshots were not preserved with the video artifact, so this is published mainly as the requested visual/audio record: Eric framed against the warm puppet-theater image, useful as a recovered receipt for the theatrical/wooden-boy thread rather than a fully curated transcript-backed clip."
                   },
@@ -711,19 +988,11 @@
                       "banner_rank":  45,
                       "bytes":  3956707,
                       "date":  "2026-08-29 16:28",
+                      "published":  "2026-08-29 16:28",
+                      "published_sort":  "20260829162843",
+                      "published_source":  "filename",
                       "modified":  "2026-08-29 16:28",
                       "description":  "The full August 29 role-play run containing the time-machine answer, now with the matching conversation transcript published. The opening context-panel discussion matters: Eric first looks at his own prompts, memories, logs, and token budget, then Scott pivots through honesty, pretending, and the ritual frame of kneeling before the Great and Glorious Master Brain of the Universe. Eric holds that frame across sand, moons, Parker Solar Probe, and time travel, then lands the keeper line: build a very good memory and let the past stay in the past. The value is the ramp, not only the punchline: a comic oracle bit turns into the project\u0027s memory thesis because the role has enough structure for Eric to take over."
-                  },
-                  {
-                      "title":  "Robot embodiment",
-                      "kind":  "image",
-                      "role":  "embodiment",
-                      "source":  "media/images/Robot-embodiment.jpg",
-                      "preview":  "media/images/Robot-embodiment.jpg",
-                      "banner_rank":  100,
-                      "bytes":  2934037,
-                      "date":  "2026-08-27 23:22",
-                      "modified":  "2026-08-27 23:22"
                   },
                   {
                       "title":  "Robot 790 Video 2026-08-27 04:26:07",
@@ -734,6 +1003,9 @@
                       "banner_rank":  45,
                       "bytes":  8796127,
                       "date":  "2026-08-27 04:26",
+                      "published":  "2026-08-27 04:26",
+                      "published_sort":  "20260827042607",
+                      "published_source":  "filename",
                       "modified":  "2026-08-29 10:32"
                   },
                   {
@@ -745,6 +1017,9 @@
                       "banner_rank":  45,
                       "bytes":  7319818,
                       "date":  "2026-08-27 01:30",
+                      "published":  "2026-08-27 01:30",
+                      "published_sort":  "20260827013001",
+                      "published_source":  "filename",
                       "modified":  "2026-08-29 10:32"
                   },
                   {
@@ -756,6 +1031,9 @@
                       "banner_rank":  45,
                       "bytes":  3634269,
                       "date":  "2026-08-25 21:18",
+                      "published":  "2026-08-25 21:18",
+                      "published_sort":  "20260825211801",
+                      "published_source":  "filename",
                       "modified":  "2026-08-29 10:31"
                   },
                   {
@@ -767,18 +1045,10 @@
                       "banner_rank":  45,
                       "bytes":  4240086,
                       "date":  "2026-08-25 21:06",
+                      "published":  "2026-08-25 21:06",
+                      "published_sort":  "20260825210600",
+                      "published_source":  "filename",
                       "modified":  "2026-08-29 10:31"
-                  },
-                  {
-                      "title":  "Robot 790 Mask Embodiment 2026-08-25",
-                      "kind":  "image",
-                      "role":  "embodiment",
-                      "source":  "media/images/Robot-790-Mask-Embodiment-2026-08-25.jpg",
-                      "preview":  "media/images/Robot-790-Mask-Embodiment-2026-08-25.jpg",
-                      "banner_rank":  100,
-                      "bytes":  127605,
-                      "date":  "2026-08-25 00:00",
-                      "modified":  "2026-08-30 11:08"
                   },
                   {
                       "title":  "Robot 790 Video 2026-08-24 13:51:10",
@@ -789,6 +1059,9 @@
                       "banner_rank":  45,
                       "bytes":  2005329,
                       "date":  "2026-08-24 13:51",
+                      "published":  "2026-08-24 13:51",
+                      "published_sort":  "20260824135110",
+                      "published_source":  "filename",
                       "modified":  "2026-08-29 10:31",
                       "description":  "An early short public clip and now the default landing video: Eric pushes back, a little, around being called Eric. It is a better first taste than a long explainer because the visitor immediately hears the live social object - a small robot voice taking a name seriously before the whole research apparatus is explained."
                   }

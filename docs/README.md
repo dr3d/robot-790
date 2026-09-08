@@ -17,6 +17,12 @@ The page is static, but it loads `catalog.json` with browser `fetch()`. That
 works on GitHub Pages and from a local HTTP file server. It may not work when
 opened directly as a `file://` URL.
 
+The catalog gives articles, media, and curated logs a canonical artifact time
+and renders each public shelf newest first. It does not use an incidental later
+file edit as the public chronology. A timestamped filename is preferred; use a
+`published` field in `media/run-notes.json` for a deliberately reused media
+filename whose current artifact needs an explicit time.
+
 ## Layout
 
 - `index.html`: static public page.

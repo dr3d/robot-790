@@ -245,8 +245,33 @@ async function openArticle(article, { replaceUrl = false, scroll = true } = {}) 
   }
 }
 
+function publicationSortKey(item) {
+  const explicit = String(item?.published_sort || "").trim();
+  if (/^\d{8}(?:\d{6})?$/.test(explicit)) return explicit.padEnd(14, "0");
+  const timestamp = Date.parse(item?.published || item?.date || item?.modified || "") || 0;
+  return String(timestamp).padStart(16, "0");
+}
+
+function publicationTimestamp(item) {
+  const value = Date.parse(item?.published || item?.date || item?.modified || "");
+  return Number.isFinite(value) ? value : 0;
+}
+
+function newestFirst(items) {
+  return [...items].sort((left, right) => {
+    const timeOrder = publicationSortKey(right).localeCompare(publicationSortKey(left));
+    if (timeOrder) return timeOrder;
+    return String(left?.source || "").localeCompare(String(right?.source || ""));
+  });
+}
+
+function publicationLabel(item) {
+  const value = String(item?.published || item?.date || item?.modified || "").trim();
+  return value ? `Published ${value}` : "";
+}
+
 function articleTimestamp(article) {
-  return Date.parse(article?.modified || 0) || 0;
+  return publicationTimestamp(article);
 }
 
 function defaultArticleIndex(articles) {
@@ -263,17 +288,18 @@ function defaultArticleIndex(articles) {
 }
 
 function showArticles(articles) {
-  if (!articles.length) {
+  const orderedArticles = newestFirst(articles);
+  if (!orderedArticles.length) {
     articleList.innerHTML = '<p class="empty">No articles found yet.</p>';
     return;
   }
 
-  articleList.innerHTML = articles.map((article, index) => `
+  articleList.innerHTML = orderedArticles.map((article, index) => `
     <section class="card">
       <div>
         <h3>${escapeHtml(article.title)}</h3>
         <p>${escapeHtml(article.excerpt || "Markdown article")}</p>
-        <p class="meta">${bytesLabel(article.bytes)}</p>
+        <p class="meta">${escapeHtml([publicationLabel(article), bytesLabel(article.bytes)].filter(Boolean).join(" - "))}</p>
       </div>
       <div class="card-actions">
         <button type="button" data-read-article="${index}">Read Here</button>
@@ -284,7 +310,7 @@ function showArticles(articles) {
 
   articleList.querySelectorAll("[data-read-article]").forEach((button) => {
     button.addEventListener("click", () => {
-      const article = articles[Number(button.dataset.readArticle)];
+      const article = orderedArticles[Number(button.dataset.readArticle)];
       openArticle(article, { replaceUrl: true });
     });
   });
@@ -293,7 +319,7 @@ function showArticles(articles) {
     link.addEventListener("click", (event) => {
       const featureSource = link.dataset.featureSource;
       const featureIndex = featureSource
-        ? articles.findIndex((article) => article.source === featureSource)
+        ? orderedArticles.findIndex((article) => article.source === featureSource)
         : -1;
       const targetIndex = featureIndex >= 0 ? featureIndex : 0;
       const firstArticleButton = articleList.querySelector(`[data-read-article="${targetIndex}"]`);
@@ -301,16 +327,16 @@ function showArticles(articles) {
         return;
       }
       event.preventDefault();
-      openArticle(articles[targetIndex], { replaceUrl: true });
+      openArticle(orderedArticles[targetIndex], { replaceUrl: true });
     });
   });
 
   const requested = requestedArticleSource();
   const selectedIndex = requested
-    ? articles.findIndex((article) => article.source === requested)
+    ? orderedArticles.findIndex((article) => article.source === requested)
     : -1;
-  const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultArticleIndex(articles);
-  openArticle(articles[targetIndex], {
+  const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultArticleIndex(orderedArticles);
+  openArticle(orderedArticles[targetIndex], {
     replaceUrl: false,
     scroll: location.hash === "#article-reader"
   });
@@ -326,12 +352,17 @@ function mediaButton(media, index) {
   const description = media.description
     ? `<span class="media-description">${escapeHtml(media.description)}</span>`
     : "";
+  const details = [
+    `${media.kind}${role}`,
+    publicationLabel(media),
+    bytesLabel(media.bytes)
+  ].filter(Boolean).join(" - ");
   return `
     <button class="media-item" type="button" data-media="${index}">
       ${preview}
       <span class="media-copy">
         <strong>${escapeHtml(media.title)}</strong>
-        <span class="media-kind">${escapeHtml(media.kind)}${escapeHtml(role)} - ${bytesLabel(media.bytes)}</span>
+        <span class="media-kind">${escapeHtml(details)}</span>
         ${description}
       </span>
     </button>
@@ -339,9 +370,7 @@ function mediaButton(media, index) {
 }
 
 function mediaTimestamp(media) {
-  const modified = Date.parse(media.modified || 0) || 0;
-  const dated = Date.parse(media.date || 0) || 0;
-  return Math.max(modified, dated);
+  return publicationTimestamp(media);
 }
 
 function bannerImageSource(media) {
@@ -401,22 +430,23 @@ function scrollToMediaLanding() {
 }
 
 function showMedia(mediaItems) {
-  if (!mediaItems.length) {
+  const orderedMediaItems = newestFirst(mediaItems);
+  if (!orderedMediaItems.length) {
     mediaList.innerHTML = '<p class="empty">No audio or video found yet.</p>';
     return;
   }
 
-  mediaList.innerHTML = mediaItems.map(mediaButton).join("");
+  mediaList.innerHTML = orderedMediaItems.map(mediaButton).join("");
   mediaList.querySelectorAll("[data-media]").forEach((button) => {
-    button.addEventListener("click", () => selectMedia(mediaItems[Number(button.dataset.media)], button));
+    button.addEventListener("click", () => selectMedia(orderedMediaItems[Number(button.dataset.media)], button));
   });
   const requested = requestedMediaSource();
   const selectedIndex = requested
-    ? mediaItems.findIndex((media) => media.source === requested)
+    ? orderedMediaItems.findIndex((media) => media.source === requested)
     : -1;
-  const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultMediaIndex(mediaItems);
+  const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultMediaIndex(orderedMediaItems);
   const targetButton = mediaList.querySelector(`[data-media="${targetIndex}"]`);
-  selectMedia(mediaItems[targetIndex], targetButton, {
+  selectMedia(orderedMediaItems[targetIndex], targetButton, {
     replaceUrl: false,
     autoplay: selectedIndex >= 0 && requestedMediaAutoplay()
   });
@@ -529,7 +559,9 @@ function selectMedia(media, selectedButton = null, { replaceUrl = true, autoplay
   const role = media.role && !["image", "video", "audio", "file"].includes(media.role)
     ? ` - ${media.role}`
     : "";
-  const meta = `${media.title} - ${media.kind}${role} - ${bytesLabel(media.bytes)}`;
+  const meta = [media.title, `${media.kind}${role}`, publicationLabel(media), bytesLabel(media.bytes)]
+    .filter(Boolean)
+    .join(" - ");
   const description = media.description
     ? escapeHtml(media.description)
     : "No curation note for this item yet.";
@@ -624,32 +656,33 @@ async function selectLog(log, selectedButton, { replaceUrl = true } = {}) {
 }
 
 function showLogs(logs) {
-  if (!logs.length) {
+  const orderedLogs = newestFirst(logs);
+  if (!orderedLogs.length) {
     logList.innerHTML = '<p class="empty">No public transcript logs found yet.</p>';
     return;
   }
 
-  logList.innerHTML = logs.map((log, index) => `
+  logList.innerHTML = orderedLogs.map((log, index) => `
     <button class="log-item" type="button" data-log="${index}">
       <strong>${escapeHtml(log.title)}</strong><br>
-      <span class="meta">${escapeHtml(logKindLabel(log))} - ${escapeHtml(log.modified || "")} - ${bytesLabel(log.bytes)}</span>
+      <span class="meta">${escapeHtml([logKindLabel(log), publicationLabel(log), bytesLabel(log.bytes)].filter(Boolean).join(" - "))}</span>
     </button>
   `).join("");
 
   logList.querySelectorAll("[data-log]").forEach((button) => {
     button.addEventListener("click", () => {
-      const log = logs[Number(button.dataset.log)];
+      const log = orderedLogs[Number(button.dataset.log)];
       selectLog(log, button);
     });
   });
   const requested = requestedLogSource();
   const selectedIndex = requested
-    ? logs.findIndex((log) => log.source === requested)
+    ? orderedLogs.findIndex((log) => log.source === requested)
     : -1;
   const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
   const targetButton = logList.querySelector(`[data-log="${targetIndex}"]`);
   if (targetButton) {
-    selectLog(logs[targetIndex], targetButton, { replaceUrl: false });
+    selectLog(orderedLogs[targetIndex], targetButton, { replaceUrl: false });
     if (selectedIndex >= 0 && location.hash === "#log-reader") {
       requestAnimationFrame(() => {
         logReader?.scrollIntoView({ block: "start" });

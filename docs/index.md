@@ -31,20 +31,35 @@ to be readable without digging through live private logs.
 
 Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 
-- [Eric Wakes Up New Every Time](articles/eric_wakes_up_new_every_time.md)
-- [What Robot 790 Is Becoming](articles/what-robot-790-is-becoming.md)
-- [A Working Proposition About Lessons](articles/a-working-proposition-about-lessons.md)
-- [Context Engineering Is A Directed Graph](articles/context-engineering-as-directed-graph.md)
-- [Teaching Eric's Mouth To Speak](articles/teaching-erics-mouth-to-speak.md)
-- [Time And Space, Both Live](articles/time-and-space-both-live.md)
-- [The Event Loop Grew A Face](articles/the-event-loop-grew-a-face.md)
-- [Passing Butter, Keeping Company](articles/passing-butter-keeping-company.md)
-- [The Note That Marked Its Own Evidence](articles/the-note-that-marked-its-own-evidence.md)
-- [Receipts And Open Questions](evidence_map.md)
-- [The Landscape Around Eric](articles/artificial-human-landscape.md)
-- [What Eric Has Taught Us So Far](articles/what-eric-has-taught-us.md)
-- Articles about Eric waking up new, the Pinocchio runs, the empty-brain tests,
-  and the public desk-show idea are also collected here.
+<!-- generated-articles:start -->
+Articles are listed newest first by their published artifact time.
+
+- [Teaching Eric's Mouth To Speak](articles/teaching-erics-mouth-to-speak.md) - 2026-09-08 12:43
+- [Context Engineering Is A Directed Graph](articles/context-engineering-as-directed-graph.md) - 2026-09-08 10:41
+- [A Working Proposition About Lessons](articles/a-working-proposition-about-lessons.md) - 2026-09-06 20:58
+- [What Robot 790 Is Becoming](articles/what-robot-790-is-becoming.md) - 2026-09-06 09:53
+- [Time And Space, Both Live](articles/time-and-space-both-live.md) - 2026-09-05 14:22
+- [Passing Butter, Keeping Company](articles/passing-butter-keeping-company.md) - 2026-09-04 16:41
+- [The Ledger-Keeper's View](articles/ledger-keepers-view.md) - 2026-09-04 05:07
+- [The Note That Marked Its Own Evidence](articles/the-note-that-marked-its-own-evidence.md) - 2026-09-03 22:30
+- [The Event Loop Grew A Face](articles/the-event-loop-grew-a-face.md) - 2026-09-03 17:04
+- [Start With Nothing But Tools](articles/start-with-nothing-but-tools.md) - 2026-09-03 15:53
+- [The Overnight Run: Tools, Loop, And Second Mind](articles/overnight-run-tools-loop-second-mind.md) - 2026-09-03 11:25
+- [Safety Is Architecture, Not Charm](articles/safety-is-architecture-not-charm.md) - 2026-09-03 00:41
+- [Why The Empty Context Worked](articles/why-the-empty-context-worked.md) - 2026-09-03 00:41
+- [Browser Face, Inner Voice, And The Kitty Seed](articles/browser-face-kitty-seed-run.md) - 2026-09-02 19:12
+- [Lab Night, September 1 Into September 2](articles/2026-09-01-lab-night.md) - 2026-09-02 01:36
+- [Nobody Wrote Eric](articles/nobody_wrote_eric.md) - 2026-08-31 00:56
+- [The Landscape Around Eric](articles/artificial-human-landscape.md) - 2026-08-30 10:29
+- [What Eric Has Taught Us So Far](articles/what-eric-has-taught-us.md) - 2026-08-30 10:29
+- [The NapEdge Run](articles/nap-edge-run.md) - 2026-08-30 03:34
+- [I Built a Robot That Wakes Up With a New Mind Every Time](articles/eric_pinocchio_x_article_draft.md) - 2026-08-29 16:01
+- [I Built a Robot That Wakes Up New Every Time](articles/eric_wakes_up_new_every_time.md) - 2026-08-29 16:01
+- [The Magic of Assembly: Finding Eric's Voice and the Architecture of Robot 790](articles/robot_790_lineage_article.md) - 2026-08-29 16:01
+- [The Architecture of a Held Breath: Building a Robot That Thinks in the Dark](articles/robot_790_x_draft.md) - 2026-08-29 16:01
+- [I Keep Rebooting My Robot To Find Out Where He Lives](articles/robot-790-article-3.md) - 2026-08-29 16:01
+
+<!-- generated-articles:end -->
 
 ## Project Notes
 
