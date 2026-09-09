@@ -1,4 +1,19 @@
 {
+  "media/generated-images/concept-embodiment-bare-and-masked-2026-09-09.png": {
+    "published": "2026-09-09T01:10:23-04:00",
+    "title": "One Body, Many Faces",
+    "description": "A concept diptych for Robot 790 embodiment: the same open acrylic rig appears first with exposed ESP32-S3 hardware, displays, LEDs, copper supports, and point-to-point wiring, then with a removable illustrated face mask. It is an illustration of a design direction, not a circuit diagram or finished build."
+  },
+  "media/generated-images/concept-embodiment-bare-rig-2026-09-09.png": {
+    "published": "2026-09-09T01:10:23-04:00",
+    "title": "Embodiment Concept: Open Rig",
+    "description": "Concept art for an open Robot 790 embodiment: an acrylic face frame with exposed ESP32-S3 hardware, eye and mouth displays, copper supports, LEDs, and visible point-to-point wiring. It is not an authoritative wiring diagram."
+  },
+  "media/generated-images/concept-embodiment-removable-mask-2026-09-09.jpg": {
+    "published": "2026-09-09T01:10:23-04:00",
+    "title": "Embodiment Concept: Removable Mask",
+    "description": "Concept art for a removable illustrated mask over the open Robot 790 face rig. The mask changes visible expression while leaving the same eye and mouth hardware underneath; it is not a finished physical design."
+  },
   "media/generated-images/eric-occupied-workspace-memory-architecture-2026-09-06.png": {
     "description": "Eric Robot 790 occupies his space: nearby notes, sensors, web, tools in and out, Brain2, and the open notebook called latest. He ponders the whole arrangement, writes one small thing into latest, then repeats."
   },

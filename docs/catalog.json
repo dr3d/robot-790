@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-09-09 10:53:33",
+    "generated":  "2026-09-09 12:31:29",
     "articles":  [
                      {
                          "title":  "The Brain That Runs Conversation And Dreams",
@@ -10,6 +10,16 @@
                          "published_sort":  "20260909041529",
                          "published_source":  "filename",
                          "modified":  "2026-09-09 04:16"
+                     },
+                     {
+                         "title":  "One Body, Many Faces",
+                         "excerpt":  "Robot 790 does not need to hide his construction to become more legible. One",
+                         "source":  "articles/2026-09-09-one-body-many-faces.md",
+                         "bytes":  1961,
+                         "published":  "2026-09-09 00:00",
+                         "published_sort":  "20260909000000",
+                         "published_source":  "filename",
+                         "modified":  "2026-09-09 12:31"
                      },
                      {
                          "title":  "Teaching Eric\u0027s Mouth To Speak",
@@ -516,6 +526,51 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "One Body, Many Faces",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/generated-images/concept-embodiment-bare-and-masked-2026-09-09.png",
+                      "preview":  "media/generated-images/concept-embodiment-bare-and-masked-2026-09-09.png",
+                      "banner_rank":  100,
+                      "bytes":  2083990,
+                      "date":  "2026-09-09 01:10",
+                      "published":  "2026-09-09 01:10",
+                      "published_sort":  "20260909011023",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-09 12:30",
+                      "description":  "A concept diptych for Robot 790 embodiment: the same open acrylic rig appears first with exposed ESP32-S3 hardware, displays, LEDs, copper supports, and point-to-point wiring, then with a removable illustrated face mask. It is an illustration of a design direction, not a circuit diagram or finished build."
+                  },
+                  {
+                      "title":  "Embodiment Concept: Open Rig",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/generated-images/concept-embodiment-bare-rig-2026-09-09.png",
+                      "preview":  "media/generated-images/concept-embodiment-bare-rig-2026-09-09.png",
+                      "banner_rank":  100,
+                      "bytes":  2089348,
+                      "date":  "2026-09-09 01:10",
+                      "published":  "2026-09-09 01:10",
+                      "published_sort":  "20260909011023",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-09 01:10",
+                      "description":  "Concept art for an open Robot 790 embodiment: an acrylic face frame with exposed ESP32-S3 hardware, eye and mouth displays, copper supports, LEDs, and visible point-to-point wiring. It is not an authoritative wiring diagram."
+                  },
+                  {
+                      "title":  "Embodiment Concept: Removable Mask",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/generated-images/concept-embodiment-removable-mask-2026-09-09.jpg",
+                      "preview":  "media/generated-images/concept-embodiment-removable-mask-2026-09-09.jpg",
+                      "banner_rank":  100,
+                      "bytes":  2337394,
+                      "date":  "2026-09-09 01:10",
+                      "published":  "2026-09-09 01:10",
+                      "published_sort":  "20260909011023",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-09 01:39",
+                      "description":  "Concept art for a removable illustrated mask over the open Robot 790 face rig. The mask changes visible expression while leaving the same eye and mouth hardware underneath; it is not a finished physical design."
+                  },
                   {
                       "title":  "Time And Space, Both Live: A Listening Companion",
                       "kind":  "video",

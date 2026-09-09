@@ -27,6 +27,8 @@ filename whose current artifact needs an explicit time.
 
 - `index.html`: static public page.
 - `index.md`: short Markdown landing copy for humans reading the repository.
+- `repository-map.md`: repo-level map distinguishing local evidence, tracked
+  editorial curation, public docs, and social publish packets.
 - `catalog.json`: generated site index consumed by `index.html`.
 - `assets/`: CSS and JavaScript for the static page.
 - `articles/`: public Markdown articles and essays.
@@ -37,6 +39,8 @@ filename whose current artifact needs an explicit time.
 - `curation/postmortems/`: deliberately prepared session bundles. These may
   include full transcripts, note copies, recordings, and image receipts, so
   publication review applies to the entire bundle, not just its README.
+  Routine postmortems stay local in ignored `logs/runs/<run-id>/` at the
+  repository root; only selected material belongs on this public shelf.
 - `media/`: compressed public images, audio, and video.
 - `context-engineering-architecture.md`: session-note, pinned-note, latest, and
   runtime-truth architecture, including the standalone session-map chooser.

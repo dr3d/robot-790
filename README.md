@@ -138,6 +138,12 @@ voices, third-party code, and media assets carry their own licenses.
 
 - `docs/`: public GitHub Pages shelf for articles, curated transcripts, and
   publishable media. This is the public memory palace.
+- `curation/`: tracked editorial notes, concepts, and selected durable material.
+  It is GitHub-visible, so routine postmortems belong locally under `logs/runs/`
+  unless explicitly promoted.
+- `publish-packets/`: small, ready-to-review social-post materials such as
+  captions, thumbnails, tags, links, and manifests. It is tracked but not a
+  GitHub Pages section.
 - `config/face/`: editable face contract data. This is where shared expression
   vocabulary, pose constants, aliases, mood mappings, and skin inheritance
   should live before being generated into browser or firmware code.
@@ -146,7 +152,7 @@ voices, third-party code, and media assets carry their own licenses.
 - `notes/`: private local working notes, identity files, library books, world
   substrates, and experiment scratch. This folder is ignored by git by default.
 - `logs/`: local live captures, event logs, generated images, and audio/video
-  recordings. This folder is ignored by git by default.
+  recordings. Routine PMs live in ignored `logs/runs/<run-id>/` folders.
 - `scripts/`: startup, shutdown, model restart, docs catalog, and media helper
   scripts.
 - `web/`: browser-facing control surfaces.
@@ -158,6 +164,8 @@ voices, third-party code, and media assets carry their own licenses.
 
 - [Public Page](docs/index.md): GitHub Pages landing page and article shelf.
 - [Docs Folder](docs/README.md): how the static site is organized.
+- [Repository Map](docs/repository-map.md): where code, local evidence,
+  editorial curation, public docs, and publish packets belong.
 - [Engineering Status](docs/engineering-status.md): current guarantees, known
   limits, verification commands, and the remaining reliability work.
 - [Context Engineering](docs/context-engineering-architecture.md): session

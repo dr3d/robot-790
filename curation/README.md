@@ -13,6 +13,27 @@ This folder is tracked, so it is a review staging area rather than a privacy
 boundary. Keep private live captures in ignored `logs/` and `notes/` until a
 publication decision has been made.
 
+## Postmortems
+
+Keep routine postmortems local by default, alongside the run's evidence in
+`logs/runs/<run-id>/postmortem.md`. That directory is ignored by Git. A request
+to do a postmortem authorizes the analysis and local record; publishing it to
+GitHub is a separate decision.
+
+When Scott chooses a finding worth sharing, prepare a concise summary or
+selected evidence for `curation/` or `docs/`. A useful fix or public article
+does not require publishing the full postmortem or its raw session bundle.
+Review every included artifact before publication.
+
+`curation/` itself is tracked and GitHub-visible. It is an editorial area, not
+a local archive. The older `curation/postmortems/` collection is legacy tracked
+review material; do not add routine PMs there. Review individual legacy runs
+before moving or removing them because some clips, packets, and articles point
+back to those paths. See [the repository map](../docs/repository-map.md) for
+the full local-to-public flow.
+
+## Workflow
+
 The usual workflow:
 
 1. Record a conversation or idle run from the STS page.
