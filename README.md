@@ -504,7 +504,10 @@ The realtime page can expose these tools to the LLM:
   stop Cast playback.
 - `set_smart_home_device`: list, check, turn on, turn off, or toggle
   allowlisted Home Assistant `light`, `switch`, or `fan` entities.
-- `write_text_file`, `read_text_file`, `list_text_files`: text-note file tools.
+- `write_text_file`, `read_text_file`, `list_text_files`: sandboxed local text,
+  source, and data file tools inside `notes/`. Supported extensions are `.txt`,
+  `.md`, `.py`, `.json`, `.csv`, `.html`, `.css`, `.js`, `.yaml`, and `.yml`;
+  writing source never executes it.
 - `get_brain_status`: local diagnostics such as model, context, token pressure,
   latency, TTS timing, and approximate browser context contribution.
 

@@ -69,7 +69,28 @@ def test_note_files_allow_named_markdown(tmp_path: Path) -> None:
     assert read_note_file(tmp_path, "logs/today.md").content == "# Today\n"
 
 
-@pytest.mark.parametrize("filename", ["../secret.txt", "/tmp/secret.txt", "bad.json", "folder/../secret.txt"])
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "programs/spirograph.py",
+        "data/runtime.json",
+        "exports/turns.csv",
+        "web/sketch.html",
+        "web/theme.css",
+        "web/sketch.js",
+        "config/runtime.yaml",
+        "config/runtime.yml",
+    ],
+)
+def test_note_files_allow_named_source_and_data_files(tmp_path: Path, filename: str) -> None:
+    written = write_note_file(tmp_path, filename, "sample")
+
+    assert written.filename == filename
+    assert read_note_file(tmp_path, filename).content == "sample"
+    assert filename in list_note_files(tmp_path)
+
+
+@pytest.mark.parametrize("filename", ["../secret.txt", "/tmp/secret.txt", "bad.ps1", "binary.exe", "folder/../secret.txt"])
 def test_note_files_reject_unsafe_paths(tmp_path: Path, filename: str) -> None:
     with pytest.raises(ValueError):
         resolve_note_path(filename, tmp_path)

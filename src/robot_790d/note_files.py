@@ -9,7 +9,20 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-ALLOWED_EXTENSIONS = {".md", ".txt"}
+# This is a sandboxed text shelf, not an execution surface. Every permitted
+# source or data file still resolves beneath notes/ and is only read or written.
+ALLOWED_EXTENSIONS = {
+    ".css",
+    ".csv",
+    ".html",
+    ".js",
+    ".json",
+    ".md",
+    ".py",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
 MAX_NOTE_CHARS = 200000
 NOTES_DIRNAME = "notes"
 _NOTE_WRITE_LOCK = threading.Lock()
@@ -70,7 +83,8 @@ def resolve_note_path(filename: str, instance_path: str | Path | None = None) ->
         raise ValueError("Filename must stay inside the notes folder.")
 
     if relative.suffix.lower() not in ALLOWED_EXTENSIONS:
-        raise ValueError("Only .md and .txt note files are allowed.")
+        allowed = ", ".join(sorted(ALLOWED_EXTENSIONS))
+        raise ValueError(f"Only these local text/source file types are allowed: {allowed}.")
 
     path = (root / relative).resolve()
     try:

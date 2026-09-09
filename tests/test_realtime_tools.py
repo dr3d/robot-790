@@ -513,3 +513,16 @@ def test_text_file_tools_use_instance_notes_folder(tmp_path, monkeypatch) -> Non
         "content": "Robot 790 is awake.",
     }
     assert listed == {"status": "ok", "tool": "list_text_files", "files": ["session_summary.txt"]}
+
+
+def test_text_file_tools_write_python_source_without_execution(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("ROBOT_790_INSTANCE_PATH", str(tmp_path))
+    source = "print('spirograph ready')\n"
+
+    written = realtime_tools._write_text_file({"filename": "programs/spirograph.py", "content": source})
+    read = realtime_tools._read_text_file({"filename": "programs/spirograph.py"})
+
+    assert written["status"] == "ok"
+    assert written["filename"] == "programs/spirograph.py"
+    assert read["content"] == source
+    assert (tmp_path / "notes" / "programs" / "spirograph.py").read_text(encoding="utf-8") == source

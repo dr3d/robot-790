@@ -600,10 +600,12 @@ TOOLS: list[dict[str, object]] = [
         "type": "function",
         "name": "write_text_file",
         "description": (
-            "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, "
-            "append, or put text into a named file. Use .txt by default unless the user explicitly names .md. "
-            "Notes are durable memory aids: record what happened, what the user supplied, and Eric's thoughts as "
-            "thoughts. Do not turn Eric's poetic rumination or unverified outside facts into remembered truth."
+            "Write or append a sandboxed local text, source, or data file only when the user explicitly asks to "
+            "save, write, append, or put content into a named file. Files stay inside Robot 790's notes folder. "
+            "Supported types are .txt, .md, .py, .json, .csv, .html, .css, .js, .yaml, and .yml; use .txt by "
+            "default. Writing a source file does not execute it. Notes are durable memory aids: record what "
+            "happened, what the user supplied, and Eric's thoughts as thoughts. Do not turn Eric's poetic "
+            "rumination or unverified outside facts into remembered truth."
         ),
         "parameters": {
             "type": "object",
@@ -611,11 +613,11 @@ TOOLS: list[dict[str, object]] = [
                 "filename": {
                     "type": "string",
                     "description": (
-                        "Relative filename inside Robot 790's notes folder. "
-                        "If no extension is given, .txt is used."
+                        "Relative filename inside Robot 790's notes folder. Use an allowed text/source extension; "
+                        "if no extension is given, .txt is used."
                     ),
                 },
-                "content": {"type": "string", "description": "Plain text content to write."},
+                "content": {"type": "string", "description": "UTF-8 text content to write."},
                 "mode": {
                     "type": "string",
                     "enum": ["overwrite", "append"],
@@ -630,7 +632,10 @@ TOOLS: list[dict[str, object]] = [
     {
         "type": "function",
         "name": "read_text_file",
-        "description": "Read a .txt or .md note file from Robot 790's notes folder when the user explicitly asks.",
+        "description": (
+            "Read a supported local text, source, or data file from Robot 790's notes folder when the user "
+            "explicitly asks. Reading source does not execute it."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
@@ -649,7 +654,7 @@ TOOLS: list[dict[str, object]] = [
     {
         "type": "function",
         "name": "list_text_files",
-        "description": "List Robot 790 note files when the user explicitly asks what notes or text files exist.",
+        "description": "List supported local text, source, and data files when the user explicitly asks what exists.",
         "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
     },
 ]

@@ -2710,7 +2710,7 @@
               <label class="toggle-row"><input id="llmWebSearchTools" type="checkbox" checked> LLM web search</label>
               <label class="toggle-row"><input id="llmWebPageTools" type="checkbox" checked> LLM web pages</label>
               <label class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</label>
-              <label class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM note files</label>
+              <label class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM local files</label>
               <label class="toggle-row"><input id="llmImageTools" type="checkbox" checked> LLM image generation</label>
               <label class="toggle-row"><input id="llmSmartHomeTools" type="checkbox" checked> LLM smart home</label>
             </div>
@@ -4447,8 +4447,9 @@
         type: "function",
         name: "write_text_file",
         description: (
-          "Write or append plain text to a Robot 790 note file only when the user explicitly asks to save, write, " +
-          "append, or put text into a named file. Use .txt by default unless the user explicitly names .md. " +
+          "Write or append a sandboxed local text, source, or data file only when the user explicitly asks to save, write, " +
+          "append, or put content into a named file. Files stay inside Robot 790's notes folder. Supported types are " +
+          ".txt, .md, .py, .json, .csv, .html, .css, .js, .yaml, and .yml; use .txt by default. Writing a source file does not execute it. " +
           "For short authored notes, provide content. For long notes based on captured session material, omit content and choose source. " +
           "For a summary of a named note or transcript, omit content and use source note_summary with source_filename. " +
           "Notes are durable memory aids: record what happened, what the user supplied, and Eric's thoughts as thoughts. " +
@@ -4459,11 +4460,11 @@
           properties: {
             filename: {
               type: "string",
-              description: "Relative filename inside Robot 790's notes folder. Use this exact argument name, not path. If no extension is given, .txt is used."
+              description: "Relative filename inside Robot 790's notes folder. Use this exact argument name, not path. Use an allowed text/source extension; if none is given, .txt is used."
             },
             content: {
               type: "string",
-              description: "Plain text content to write. Use this for short notes. Omit it for long notes captured from source."
+              description: "UTF-8 text content to write. Use this for short files. Omit it for long notes captured from source."
             },
             source: {
               type: "string",
@@ -4488,7 +4489,7 @@
       {
         type: "function",
         name: "read_text_file",
-        description: "Read a .txt or .md note file from Robot 790's notes folder when the user explicitly asks.",
+        description: "Read a supported local text, source, or data file from Robot 790's notes folder when the user explicitly asks. Reading source does not execute it.",
         parameters: {
           type: "object",
           properties: {
@@ -4504,7 +4505,7 @@
       {
         type: "function",
         name: "list_text_files",
-        description: "List Robot 790 note files when the user explicitly asks what notes or text files exist.",
+        description: "List supported local text, source, and data files when the user explicitly asks what exists.",
         parameters: {
           type: "object",
           properties: {},
@@ -5120,12 +5121,14 @@
       "Use memory tools only when the user explicitly asks you to remember or forget a named fact, or when you just asked the user to provide a fact so you could save it and the user provides that fact in the next turn.",
       "When remembering, choose a short snake_case name and one factual sentence.",
       "Never say you saved, stored, or remembered a fact unless you actually called remember_fact successfully.",
-      "Use note file tools only when the user explicitly asks you to write, save, append, read, or list a text file or note.",
-      "When reading a note, call read_text_file with a filename argument. Do not speak XML, JSON, or <tool_call> markup out loud.",
+      "Use local file tools only when the user explicitly asks you to write, save, append, read, or list a note, text file, source file, program, script, or data file.",
+      "When reading a local file, call read_text_file with a filename argument. Do not speak XML, JSON, or <tool_call> markup out loud.",
       "When the user asks what notes are pinned, loaded, open, or in context, call list_pinned_notes. Do not confuse pinned notes with all files on disk.",
       "When the user asks you to forget, unpin, close, stop using, or remove a loaded/pinned note from context, call unpin_note with the filename. This does not delete the file or erase previous conversation history.",
       "If the user says a note should not come along next time, should not be in the next run, should be dropped from boot context, or is polluting the current context, treat that as an unpin request. If the exact filename is unclear, call list_pinned_notes first or ask for the filename.",
-      "For note files, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file.",
+      "For ordinary notes, prefer plain .txt filenames; use .md only if the user explicitly names a markdown file. The supported local file types are .txt, .md, .py, .json, .csv, .html, .css, .js, .yaml, and .yml.",
+      "When the user explicitly asks for a program or source file, use its named supported extension, such as .py. Do not say you cannot write a file while write_text_file is available.",
+      "Writing a source file does not execute it, render it, or change the machine. Never claim code ran without a separate verified execution receipt.",
       "If the operator says write/save this as a note, write the note directly. If the wording is elliptical but clearly refers to the current report or summary, ask for one compact filename clarification instead of describing permission rules.",
       "When using write_text_file for a short note you authored, pass filename and content.",
       "When the operator asks to save the current conversation or thread as a named note, call write_text_file with filename and source conversation unless they explicitly ask for idle/events/full session too.",
@@ -5256,9 +5259,9 @@
     function noteFileWriteAllowed(text) {
       const value = text ?? [lastUserText, ...recentUserTexts].join(" ");
       const writeVerb = "write|save|append|put|record|log|create|produce|generate|make|update|edit|revise|amend|replace|remember";
-      const noteNoun = "file|note|notes|txt|text|md|markdown|summary";
-      return new RegExp(`\\b(${writeVerb})\\b[\\s\\S]{0,120}\\b(${noteNoun})\\b`, "i").test(value || "")
-        || new RegExp(`\\b(${noteNoun})\\b[\\s\\S]{0,120}\\b(${writeVerb})\\b`, "i").test(value || "");
+      const localFileNoun = "file|note|notes|txt|text|md|markdown|summary|python|py|code|source|script|program|json|csv|html|css|javascript|js|yaml|yml";
+      return new RegExp(`\\b(${writeVerb})\\b[\\s\\S]{0,120}\\b(${localFileNoun})\\b`, "i").test(value || "")
+        || new RegExp(`\\b(${localFileNoun})\\b[\\s\\S]{0,120}\\b(${writeVerb})\\b`, "i").test(value || "");
     }
 
     function memorySaveArmed() {
@@ -15441,7 +15444,7 @@
         `Web search: ${llmWebSearchTools.checked ? "on" : "off"}`,
         `Web pages: ${llmWebPageTools.checked ? "on" : "off"}`,
         `Cast media: ${llmCastMediaTools.checked ? "on" : "off"}`,
-        `Note files: ${llmNoteFileTools.checked ? "on" : "off"}`,
+        `Local files: ${llmNoteFileTools.checked ? "on" : "off"}`,
         `Image generation: ${llmImageTools.checked ? "on" : "off"}`,
         `Smart home: ${llmSmartHomeTools.checked ? "on" : "off"}`,
         eventsText
@@ -16032,7 +16035,7 @@
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
-      log(events, `note file ${result.filename}: ${result.characters || 0} chars`);
+      log(events, `local file ${result.filename}: ${result.characters || 0} chars`);
       return result;
     }
 
@@ -16053,7 +16056,7 @@
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
-      log(events, `operator note file ${result.filename}: ${result.characters || 0} chars`);
+      log(events, `operator local file ${result.filename}: ${result.characters || 0} chars`);
       return result;
     }
 
@@ -20114,7 +20117,7 @@
       llmWebSearchTools: "Expose web search to the LLM.",
       llmWebPageTools: "Expose browser page-opening tools to the LLM.",
       llmCastMediaTools: "Expose media/cast controls to the LLM.",
-      llmNoteFileTools: "Expose local note-file tools to the LLM.",
+      llmNoteFileTools: "Expose sandboxed local text, source, and data file tools to the LLM.",
       llmImageTools: "Expose image generation to the LLM.",
       llmSmartHomeTools: "Expose smart-home tools to the LLM when configured.",
       transcriptProsodyMode: "Choose whether conversation snapshots include compact or full prosody tags.",

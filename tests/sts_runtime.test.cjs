@@ -46,6 +46,14 @@ test('the shipped page scripts compile', () => {
   scripts.forEach((source, index) => new vm.Script(source, { filename: `sts-inline-${index}.js` }));
 });
 
+test('local file tools can write source without granting execution', () => {
+  assert.match(page, /LLM local files/);
+  assert.match(page, /\.txt, \.md, \.py, \.json, \.csv, \.html, \.css, \.js, \.yaml, and \.yml/);
+  assert.match(page, /Writing a source file does not execute it/);
+  assert.match(page, /localFileNoun = "[^"\n]*python[^"\n]*program/);
+  assert.match(page, /Do not say you cannot write a file while write_text_file is available/);
+});
+
 test('session updates are fingerprinted before they can reset a warm model cache', () => {
   const context = loadFunctions(['sessionUpdateFingerprint'], {});
   const base = {
