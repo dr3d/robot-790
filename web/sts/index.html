@@ -9225,9 +9225,7 @@
       const idleCandidateTools = idleEnabledToolList();
       const context = estimateBrowserContextUse();
       const facts = safeLoadMemoryFacts();
-      const activeLoadedNotes = loadedNoteContextsForCurrentPrompt().map((item) => (
-        `${item.filename} (${approximateTextTokens(item.content)} tok approx)`
-      ));
+      const activeLoadedNoteCount = loadedNoteContextsForCurrentPrompt().length;
       const omittedLoadedNotes = loadedNoteContextsOmittedByEmptyConnect();
       const searchQueries = searchContextReceipts.map((item) => item.query).filter(Boolean);
       const brain2QuestionCount = brain2QuestionCandidates.length;
@@ -9244,7 +9242,7 @@
         `B1 creature specimen: ${creatureIdentity.key || "inline"}${runtimeConfig.creature_source ? ` from ${runtimeConfig.creature_source}` : ""} / machine language ${creatureMachineLanguage.length}`,
         `B1 prompt assembly: ${emptyContext ? "Eric core memories if enabled, creature specimen, embodiment config, live runtime routine state, runtime behavior rules, base system prompt; live conversation only after connect" : "memory, loaded notes, sensing text, search receipts, alone-state ledger, creature specimen, embodiment/runtime state, runtime behavior rules, wonder policy, Brain2 advisory notes, base system prompt"}`,
         `B1 active context buckets: ${emptyContext ? `empty connect includes Eric core memories when enabled; omits browser memory, ordinary loaded notes, sensing text, search receipts, alone state, lab goal, last-user echo, and Brain2 carryover (active loaded notes ${context.loaded_notes.approximate_tokens} tok / omitted memory ${context.browser_memory.approximate_tokens} tok / omitted ordinary notes ${omittedLoadedNotes.length} / omitted sensing ${context.sensing_eye_text.approximate_tokens} tok / omitted search ${context.search_receipts.approximate_tokens} tok / omitted alone ${context.alone_state.approximate_tokens} tok)` : `memory ${context.browser_memory.approximate_tokens} tok / loaded notes ${context.loaded_notes.approximate_tokens} tok / sensing text ${context.sensing_eye_text.approximate_tokens} tok / search receipts ${context.search_receipts.approximate_tokens} tok / alone state ${context.alone_state.approximate_tokens} tok`}`,
-        `B1 loaded notes: ${activeLoadedNotes.length ? activeLoadedNotes.slice(0, 8).join(" | ") : "none"}${emptyContext ? ` / ${omittedLoadedNotes.length} ordinary held outside Empty Connect` : ""}`,
+        `B1 loaded-note dependencies: ${activeLoadedNoteCount} active${emptyContext ? ` / ${omittedLoadedNotes.length} ordinary held outside Empty Connect` : ""}`,
         `B1 browser memory facts: ${emptyContext ? `omitted by empty connect (${facts.length} available)` : facts.length}`,
         `B1 sensing input: ${emptyContext ? `omitted by empty connect (${sensingInputLabel()})` : sensingInputLabel()}`,
         `B1 search receipts: ${emptyContext ? `omitted by empty connect (${searchQueries.length})` : searchQueries.length ? searchQueries.slice(0, 6).join(" | ") : "none"}`,
@@ -9363,106 +9361,56 @@
       }
     }
 
-    function promptLedgerItemReport(item, index) {
-      const stamp = item.at ? new Date(item.at).toLocaleString() : "[unknown time]";
-      const inputText = item.input === null || typeof item.input === "undefined"
-        ? "[none]"
-        : typeof item.input === "string"
-        ? item.input
-        : safePromptLedgerJson(item.input);
+    function promptLedgerInputReceipt(input) {
+      if (input === null || typeof input === "undefined" || input === "") return "none";
+      if (typeof input === "string") return `text (${input.length} chars)`;
+      if (Array.isArray(input)) return `array (${input.length} items)`;
+      if (typeof input === "object") return `object (${Object.keys(input).length} keys)`;
+      return typeof input;
+    }
+
+    function promptLedgerReceiptLine(item, index, label) {
+      const entry = item && typeof item === "object" ? item : {};
+      const instructionChars = String(entry.instructions || "").length;
+      const toolCount = Number.isFinite(Number(entry.tool_count))
+        ? Number(entry.tool_count)
+        : Array.isArray(entry.tools)
+        ? entry.tools.length
+        : 0;
       return [
-        `### ${index}. ${item.kind} / ${item.source} / ${stamp}`,
-        `conversation: ${item.conversation || "none"}`,
-        `modalities: ${item.modalities?.length ? item.modalities.join(", ") : "none"}`,
-        `tool_choice: ${item.tool_choice || "none"}`,
-        `tools: ${item.tool_names?.length ? item.tool_names.join(", ") : "none"}`,
-        "",
-        "instructions:",
-        item.instructions || "[none]",
-        "",
-        "input:",
-        inputText,
-        "",
-        "tool schemas:",
-        Array.isArray(item.tools) && item.tools.length ? safePromptLedgerJson(item.tools) : "[none]",
-        "",
-        "extra:",
-        item.extra ? safePromptLedgerJson(item.extra) : "[none]"
+        `- ${label} ${index}: ${entry.kind || "prompt"} / ${entry.source || "unknown"} / ${entry.at || "[unknown time]"}`,
+        `  instructions: ${instructionChars} chars; input: ${promptLedgerInputReceipt(entry.input)}; tools: ${toolCount}; choice: ${entry.tool_choice || "none"}`
       ].join("\n");
     }
 
-    function brain2PromptItemReport(item, index) {
-      const stamp = item.at ? new Date(item.at).toLocaleString() : "[unknown time]";
-      return [
-        `### ${index}. Brain2 ${item.mode} / ${item.status} / ${stamp}`,
-        "client request payload:",
-        item.request_payload ? safePromptLedgerJson(item.request_payload) : "[none]",
-        "",
-        "system:",
-        item.system || "[missing prompt_debug.system]",
-        "",
-        "user:",
-        item.user || "[missing prompt_debug.user]",
-        "",
-        "request:",
-        item.request ? safePromptLedgerJson(item.request) : "[none]",
-        "",
-        "raw response:",
-        item.response_raw_text || "[none]",
-        "",
-        "error:",
-        item.error || "[none]"
-      ].join("\n");
-    }
-
-    function fullPromptLedgerReportText() {
-      const currentSessionSnapshot = lastSessionPromptSnapshot || (() => {
-        const tools = enabledToolList();
-        return {
-          at: new Date().toISOString(),
-          kind: "session.current_snapshot",
-          source: "B1 session",
-          conversation: "default",
-          modalities: ["audio", "text"],
-          tool_choice: tools.length ? "auto" : "none",
-          tool_count: tools.length,
-          tool_names: tools.map((tool) => tool?.name || "[unnamed]"),
-          instructions: buildSessionInstructions({ includeBrain2Advisory: false }),
-          input: null,
-          tools,
-          extra: {
-            tts: ttsRuntimeConfig(),
-            first_contact: firstContactModeEnabled(),
-            context_mode: currentPromptContextModeKey(),
-            run_preset: runPresetLabel(),
-            creature_seed: currentCreatureProfile().label,
-            synthesized_for_report: true
-          }
-        };
-      })();
+    function promptLedgerReceiptReportText() {
+      const b1Entries = Array.isArray(promptLedgerLog) ? promptLedgerLog : [];
+      const b2Entries = Array.isArray(brain2PromptLog) ? brain2PromptLog : [];
+      const recentB1 = b1Entries.slice(-12);
+      const recentB2 = b2Entries.slice(-8);
       const sections = [
-        "Full Prompt Ledger",
-        "------------------",
-        "This section is intentionally bulky. It is for prompt/context backtracking, not skim reading.",
-        ""
+        "Prompt Ledger Receipt",
+        "---------------------",
+        "Prompt instructions, model inputs, tool schemas, Brain2 bodies, and loaded-note contents are intentionally omitted from PM artifacts.",
+        "The session note records dependency receipts; conversation, events, and Brain2 panes are saved separately.",
+        "",
+        "Latest B1 Session Snapshot",
+        "--------------------------"
       ];
-      sections.push("Latest B1 Session Prompt Snapshot");
-      sections.push("---------------------------------");
-      sections.push(promptLedgerItemReport(currentSessionSnapshot, 1));
-      sections.push("");
-      sections.push("All Prompt Emissions");
-      sections.push("--------------------");
-      if (promptLedgerLog.length) {
-        promptLedgerLog.forEach((item, index) => sections.push(promptLedgerItemReport(item, index + 1), ""));
+      if (lastSessionPromptSnapshot) {
+        sections.push(promptLedgerReceiptLine(lastSessionPromptSnapshot, 1, "session"));
       } else {
-        sections.push("[none captured]", "");
+        sections.push("[no session snapshot captured]");
       }
-      sections.push("Brain2 Prompt Emissions");
-      sections.push("-----------------------");
-      if (brain2PromptLog.length) {
-        brain2PromptLog.forEach((item, index) => sections.push(brain2PromptItemReport(item, index + 1), ""));
-      } else {
-        sections.push("[none captured]", "");
+      sections.push("", "B1 Prompt Emissions", "-------------------");
+      sections.push(`Captured: ${b1Entries.length}; retained as receipts: ${recentB1.length}.`);
+      if (recentB1.length) {
+        recentB1.forEach((item, index) => sections.push(promptLedgerReceiptLine(item, index + 1, "B1")));
+      }
+      sections.push("", "Brain2 Prompt Emissions", "-----------------------");
+      sections.push(`Captured: ${b2Entries.length}; retained as receipts: ${recentB2.length}.`);
+      if (recentB2.length) {
+        recentB2.forEach((item, index) => sections.push(promptLedgerReceiptLine(item, index + 1, "Brain2")));
       }
       return sections.join("\n").trimEnd();
     }
@@ -9579,8 +9527,8 @@
         `Brain 2 voice: ${brain2VoiceLabel()}`,
         `Enabled tools: ${enabledTools.map((tool) => tool.name).join(", ") || "none"}`,
         "",
-        "Prompt / Context / Brain Setup",
-        "------------------------------",
+        "Context Receipt",
+        "---------------",
         promptContextSetupLines().join("\n"),
         "",
         "Current UI Settings",
@@ -9591,11 +9539,11 @@
         "------------------",
         uiControlReportText(),
         "",
-        "Tool Follow-Up Prompts",
-        "----------------------",
-        toolFollowupPromptReportText(),
+        "Tool Follow-Up Receipts",
+        "-----------------------",
+        toolFollowupPromptReceiptText(),
         "",
-        fullPromptLedgerReportText(),
+        promptLedgerReceiptReportText(),
         "",
         "Read For",
         "--------",
@@ -9724,8 +9672,8 @@
         `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
         `Brain 2 voice: ${brain2VoiceLabel()}`,
         "",
-        "Prompt / Context / Brain Setup",
-        "------------------------------",
+        "Context Receipt",
+        "---------------",
         promptContextSetupLines().join("\n"),
         "",
         "Current UI Settings",
@@ -9736,11 +9684,11 @@
         "------------------",
         uiControlReportText(),
         "",
-        "Tool Follow-Up Prompts",
-        "----------------------",
-        toolFollowupPromptReportText(),
+        "Tool Follow-Up Receipts",
+        "-----------------------",
+        toolFollowupPromptReceiptText(),
         "",
-        fullPromptLedgerReportText(),
+        promptLedgerReceiptReportText(),
         "",
         "Run Telemetry",
         "-------------",
@@ -9748,17 +9696,12 @@
         "",
         recordingCurationSignals(),
         "",
-        "Conversation Pane",
-        "-----------------",
-        recordingSnapshotPaneText("conversation"),
-        "",
-        "Brain2 Pane",
-        "-----------",
-        recordingSnapshotPaneText("brain2_mulling"),
-        "",
-        "Events Pane",
-        "-----------",
-        recordingSnapshotPaneText("events")
+        "Separate Snapshot Artifacts",
+        "--------------------------",
+        `Conversation: ${conversationLines.length} tracked lines, saved separately as a conversation snapshot.`,
+        `Brain2: ${countPaneLines(brain2Log)} visible lines, saved separately as a Brain2 snapshot.`,
+        `Events: ${eventLogLines.length} tracked lines, saved separately as an events snapshot.`,
+        "Pane bodies are intentionally not duplicated in this stop report."
       ];
       return sections.join("\n");
     }
@@ -17876,24 +17819,25 @@
 
     function rememberToolFollowupPrompt({ sources = [], kind = "default", instructions = "" } = {}) {
       const sourceNames = [...new Set((sources || []).map((item) => String(item || "").trim()).filter(Boolean))];
+      const instructionChars = String(instructions || "").length;
       const item = {
         at: new Date().toISOString(),
         source: sourceNames.join("+") || "unknown",
         kind,
-        instructions: String(instructions || "")
+        instruction_chars: instructionChars
       };
       toolFollowupPromptLog = [...toolFollowupPromptLog, item].slice(-maxToolFollowupPromptLog);
-      log(events, `tool followup prompt [${item.kind}] ${item.source}: ${compactToolStatusDetail(item.instructions, 520)}`);
+      log(events, `tool followup prompt [${item.kind}] ${item.source}: ${instructionChars} chars`);
     }
 
-    function toolFollowupPromptReportText() {
-      const recent = toolFollowupPromptLog;
+    function toolFollowupPromptReceiptText() {
+      const recent = Array.isArray(toolFollowupPromptLog) ? toolFollowupPromptLog.slice(-12) : [];
       if (!recent.length) return "[none captured]";
       return recent.map((item) => {
         const stamp = new Date(item.at).toLocaleString();
         return [
           `[${stamp}] ${item.kind} ${item.source}`,
-          item.instructions || "[empty]"
+          `instructions: ${Number(item.instruction_chars) || 0} chars; body omitted`
         ].join("\n");
       }).join("\n\n");
     }

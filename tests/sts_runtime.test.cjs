@@ -54,6 +54,111 @@ test('local file tools can write source without granting execution', () => {
   assert.match(page, /Do not say you cannot write a file while write_text_file is available/);
 });
 
+test('PM prompt ledgers retain receipts without copying prompt or loaded-note bodies', () => {
+  const context = loadFunctions([
+    'promptLedgerInputReceipt',
+    'promptLedgerReceiptLine',
+    'promptLedgerReceiptReportText',
+  ], {
+    lastSessionPromptSnapshot: {
+      at: '2026-09-08T22:00:00.000Z',
+      kind: 'session.update',
+      source: 'B1 session',
+      instructions: 'PINNED_NOTE_BODY_SENTINEL',
+      input: 'USER_INPUT_BODY_SENTINEL',
+      tool_count: 3,
+      tool_choice: 'auto',
+    },
+    promptLedgerLog: [{
+      at: '2026-09-08T22:01:00.000Z',
+      kind: 'response.create',
+      source: 'typed user turn',
+      instructions: 'ANOTHER_PINNED_NOTE_BODY_SENTINEL',
+      input: { notes: 'PRIVATE_INPUT_SENTINEL' },
+      tools: [{ name: 'read_text_file' }],
+      tool_choice: 'auto',
+    }],
+    brain2PromptLog: [{
+      at: '2026-09-08T22:02:00.000Z',
+      kind: 'chat.completions',
+      source: 'Brain2 normal',
+      instructions: 'BRAIN2_SYSTEM_BODY_SENTINEL',
+      input: 'BRAIN2_INPUT_BODY_SENTINEL',
+      tool_count: 0,
+      tool_choice: 'none',
+    }],
+  });
+  const report = context.promptLedgerReceiptReportText();
+  assert.match(report, /Prompt Ledger Receipt/);
+  assert.match(report, /Captured: 1; retained as receipts: 1\./);
+  assert.match(report, /instructions: 25 chars; input: text \(24 chars\); tools: 3; choice: auto/);
+  assert.doesNotMatch(report, /PINNED_NOTE_BODY_SENTINEL|USER_INPUT_BODY_SENTINEL|PRIVATE_INPUT_SENTINEL|BRAIN2_SYSTEM_BODY_SENTINEL|BRAIN2_INPUT_BODY_SENTINEL/);
+  assert.doesNotMatch(page, /fullPromptLedgerReportText/);
+
+  const followup = loadFunctions(['toolFollowupPromptReceiptText'], {
+    toolFollowupPromptLog: [{
+      at: '2026-09-08T22:03:00.000Z',
+      kind: 'tool-specific',
+      source: 'read_text_file',
+      instruction_chars: 29,
+      instructions: 'TOOL_FOLLOWUP_BODY_SENTINEL',
+    }],
+  });
+  const followupReport = followup.toolFollowupPromptReceiptText();
+  assert.match(followupReport, /instructions: 29 chars; body omitted/);
+  assert.doesNotMatch(followupReport, /TOOL_FOLLOWUP_BODY_SENTINEL/);
+  assert.doesNotMatch(page, /toolFollowupPromptReportText/);
+
+  const stopReportStart = page.indexOf('function recordingStopReportText(');
+  const stopReportEnd = page.indexOf('\n    async function recordAudioStopSnapshots', stopReportStart);
+  const stopReportSource = page.slice(stopReportStart, stopReportEnd);
+  assert.match(stopReportSource, /Separate Snapshot Artifacts/);
+  assert.match(stopReportSource, /Pane bodies are intentionally not duplicated/);
+  assert.doesNotMatch(stopReportSource, /recordingSnapshotPaneText\("conversation"\)|recordingSnapshotPaneText\("brain2_mulling"\)|recordingSnapshotPaneText\("events"\)/);
+
+  const contextReceiptStart = page.indexOf('function promptContextSetupLines(');
+  const contextReceiptEnd = page.indexOf('\n    function safePromptLedgerJson', contextReceiptStart);
+  const contextReceiptSource = page.slice(contextReceiptStart, contextReceiptEnd);
+  assert.match(contextReceiptSource, /B1 loaded-note dependencies:/);
+  assert.doesNotMatch(contextReceiptSource, /activeLoadedNotes|item\.filename/);
+
+  const stopContext = loadFunctions(['recordingStopReportText'], {
+    audioRecordSessionChunks: [],
+    audioRecordSessionCoverFilename: '',
+    audioRecordSessionCaptions: [],
+    currentModelStamp: () => 'test model',
+    runPresetLabel: () => 'test preset',
+    idleClockLabel: () => 'test clock',
+    sensingInputLabel: () => 'none',
+    visionCameraActive: () => false,
+    micRuntimeLabel: () => 'ready',
+    micDeviceReportLabel: () => 'test mic',
+    ericAudioRuntimeLabel: () => 'ready',
+    autoAudioRecordEnabled: () => false,
+    idleDriftLabel: () => 'steady',
+    performanceModeLabel: () => 'off',
+    brain2MouthBrainEnabled: () => false,
+    brain2VoiceLabel: () => 'off',
+    promptContextSetupLines: () => ['context receipt'],
+    safePromptLedgerJson: () => '{}',
+    currentUiSettingsSnapshot: () => ({}),
+    uiControlReportText: () => '[none]',
+    toolFollowupPromptReceiptText: () => '[none]',
+    promptLedgerReceiptReportText: () => '[none]',
+    runTelemetryLines: () => ['telemetry receipt'],
+    recordingCurationSignals: () => 'curation signal',
+    conversationLines: ['CONVERSATION_BODY_SENTINEL'],
+    brain2Log: { textContent: 'BRAIN2_BODY_SENTINEL' },
+    eventLogLines: ['EVENT_BODY_SENTINEL'],
+    countPaneLines: () => 1,
+  });
+  const stopReport = stopContext.recordingStopReportText({
+    recordingResult: { latest: 'audio.webm' },
+  });
+  assert.match(stopReport, /Separate Snapshot Artifacts/);
+  assert.doesNotMatch(stopReport, /CONVERSATION_BODY_SENTINEL|BRAIN2_BODY_SENTINEL|EVENT_BODY_SENTINEL/);
+});
+
 test('session updates are fingerprinted before they can reset a warm model cache', () => {
   const context = loadFunctions(['sessionUpdateFingerprint'], {});
   const base = {
