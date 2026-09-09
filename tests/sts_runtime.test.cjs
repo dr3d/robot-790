@@ -285,6 +285,7 @@ test('Connect Previous follows the prior timestamped continuity session', () => 
 test('Connect Select exposes one-item checklist management and archive', () => {
   assert.match(page, /id="continuitySessionList" role="listbox"/);
   assert.match(page, /<select id="continuitySessionSelect" hidden/);
+  assert.doesNotMatch(page, /id="selectContinuitySession"/);
   assert.match(page, /id="openSessionMap"[^>]*>Map<\/button>/);
   assert.match(page, /id="archiveContinuitySession"[^>]*>Archive<\/button>/);
   assert.match(page, /id="advancedConnectionExpando"/);

@@ -905,14 +905,14 @@
       grid-template-columns: minmax(260px, 1fr) minmax(180px, 260px) auto auto auto;
     }
     .session-select-controls {
-      grid-template-columns: minmax(260px, 1fr) repeat(5, minmax(92px, auto));
+      grid-template-columns: minmax(260px, 1fr) repeat(4, minmax(92px, auto));
       align-items: end;
     }
     .advanced-connect-controls {
       grid-template-columns: minmax(160px, 220px) minmax(220px, 1fr);
     }
     .session-select-control {
-      grid-column: 1 / span 6;
+      grid-column: 1 / span 5;
       min-width: 0;
     }
     #continuitySessionSelect[hidden] {
@@ -2226,7 +2226,6 @@
                 <select id="continuitySessionSelect" hidden aria-hidden="true" tabindex="-1"></select>
               </label>
               <button id="refreshContinuitySessions" type="button">Refresh</button>
-              <button id="selectContinuitySession" type="button">Select</button>
               <button id="openSessionMap" type="button">Map</button>
               <button id="archiveContinuitySession" class="warn" type="button">Archive</button>
               <button id="connectSelectedContinuitySession" class="primary" type="button">Connect Selected</button>
@@ -2895,7 +2894,6 @@
     const continuitySessionList = document.querySelector("#continuitySessionList");
     const continuitySessionSelect = document.querySelector("#continuitySessionSelect");
     const refreshContinuitySessionsButton = document.querySelector("#refreshContinuitySessions");
-    const selectContinuitySessionButton = document.querySelector("#selectContinuitySession");
     const openSessionMapButton = document.querySelector("#openSessionMap");
     const archiveContinuitySessionButton = document.querySelector("#archiveContinuitySession");
     const connectSelectedContinuitySessionButton = document.querySelector("#connectSelectedContinuitySession");
@@ -6014,7 +6012,6 @@
         && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
       );
       const locked = connectionButtonsLocked || socketBusy;
-      if (selectContinuitySessionButton) selectContinuitySessionButton.disabled = locked || !hasSelection;
       if (archiveContinuitySessionButton) archiveContinuitySessionButton.disabled = locked || !hasSelection || continuitySessions.length <= 1;
       if (connectSelectedContinuitySessionButton) connectSelectedContinuitySessionButton.disabled = locked || !hasSelection;
     }
@@ -20658,7 +20655,6 @@
       loadEricMemories: "Load Eric's memory note into startup context on refresh.",
       continuitySessionSelect: "Choose a timestamped session note to select or connect.",
       refreshContinuitySessions: "Refresh the timestamped session-note list.",
-      selectContinuitySession: "Make this the selected resume session note.",
       openSessionMap: "Open a wide popup map of session notes and parent branches.",
       connectSelectedContinuitySession: "Load this session note and connect from it.",
       advancedConnectionExpando: "Session note representation for the next connection.",
@@ -21552,14 +21548,6 @@
       fetchContinuitySessions()
         .then((result) => log(events, `session notes refreshed: ${result.sessions?.length || 0}`))
         .catch((error) => log(events, `session note refresh error: ${error.message}`));
-    });
-    selectContinuitySessionButton?.addEventListener("click", () => {
-      selectContinuitySession(selectedContinuitySessionFilename())
-        .then((result) => {
-          log(events, `session note selected: ${result.session_filename}`);
-          recordUiEvent("session note selected", result.session_filename || "", currentUiSettingsSnapshot());
-        })
-        .catch((error) => log(events, `session note select error: ${error.message}`));
     });
     continuityScrubMode?.addEventListener("change", () => {
       updateContinuityScrubModeUi();
