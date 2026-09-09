@@ -1,0 +1,143 @@
+STS Session Note
+============================
+Created: 2026-09-08T21:07:01-04:00
+Session note: sessions/20260908-210701-warm-cache-and-tool-written-spirograph.txt
+Parent session: sessions/20260908-132442-mouth-viseme-image-recall-continuation.txt
+
+Use
+---
+This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.
+The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth.
+
+How This Run Got Here
+-----------------------
+- Saved session note: sessions/20260908-210701-warm-cache-and-tool-written-spirograph.txt
+- Parent session note: sessions/20260908-132442-mouth-viseme-image-recall-continuation.txt
+- Pinned notes expected at boot are listed below with save-time receipts.
+
+Pinned Context At Save
+-----------------------
+- sessions/20260908-132442-mouth-viseme-image-recall-continuation.txt
+  26005 chars | sha256:a3012ff7a2c1e7f6bc11d368661196be35d3a87114df55317b99571bdeb2921e
+- sessions/20260908-121029-daily-driver-guest-rehearsal-timestamp-check.txt
+  13356 chars | sha256:f39c93f713fa8342e6cafeef27393da5ebeb63a21ff0e057faeeaf9677498356
+- sessions/20260907-175329-daily-driver-empty-boot.txt
+  15202 chars | sha256:72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f
+- core/scott_profile_summary.txt
+  1737 chars | sha256:19bdce7cf7f3fd09046b46f70f785bd92eebedea51d0accdea836f906e8eae11
+- boot_eric.txt
+  12076 chars | sha256:e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e
+- get_go.txt
+  993 chars | sha256:2ae1d588545a7dfea98c5df97b60abbb99199837e294352b68f0f25f30e1cfe0
+- core/erics_memories.txt
+  42 chars | sha256:f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177
+
+Session Demarcation
+-------------------
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / kv=k:q8_0/v:q5_0 / vram_gain=1.2GB / audit=runtime_load_failed / lm_status=idle
+Browser saved: 9/8/2026, 9:07:01 PM
+Session time at save: SESSION 07:31
+Conversation lines: 45
+First transcript turn on disk: 9/8/2026, 8:59:36 PM (2026-09-09T00:59:36.891Z)
+Last transcript turn on disk: 9/8/2026, 9:06:52 PM (2026-09-09T01:06:52.541Z)
+Context mode at save: normal
+Browser-held notes omitted by Empty Connect: 0
+Parent session note at connect: sessions/20260908-132442-mouth-viseme-image-recall-continuation.txt
+Search receipts: Python spirograph program turtle math hypotrochoid epicycloid
+
+Runtime At Save
+---------------
+Mic at save: on
+Runtime routines at save: none
+Previous-run sensing input: none
+Last user words: Okay, I'm gonna th this is super great. I'm gonna disconnect and I'll be back uh, you know, in an hour s less than an hour probably.
+
+Transcript Since Clean Connect
+------------------------------
+[8:59:36 PM] You: Hey Eric, are you there?
+  [v: l>q/mid-low/punchy+soft-end]
+[8:59:49 PM] Robot 790: Yeah, I'm here—fresh boot with the session note loaded from yesterday's daily-driver setup.
+[8:59:49 PM] Robot 790: What are we doing?
+[9:00:00 PM] You: Uh we're just testing your speed, your latency.
+  [v: l>m/mid-low/punchy]
+[9:00:03 PM] Robot 790: Latency is about 12.6 seconds to first speech, with an end-to-end estimate of roughly 3.3 tokens per second; TTS hit first audio in 0.22 seconds and generated 13.9 seconds of audio in 3.35 seconds.
+[9:00:26 PM] You: You're feeling a little bit slow to respond.
+  [v: l>m/mid-low/punchy]
+[9:00:29 PM] Robot 790: Yeah, that's fair—twelve seconds to first speech is sluggish for a daily driver, and the estimated three tokens per second suggests the model isn't running at full speed despite the MTP setup.
+[9:00:29 PM] Robot 790: The context window is also getting crowded at thirty percent usage with about forty thousand input tokens, which probably adds overhead.
+[9:01:18 PM] Robot 790: Got, still there?
+[9:01:19 PM] Robot 790: I'm sitting here wondering if that twelve-second lag was just the model being lazy or something else in the pipeline.
+[9:01:32 PM] You: My theory is that your context is uh
+  [v: q>m/mid-low/hit+punchy]
+[9:01:35 PM] You: My theory is that your context is um impacting the KV cash.
+  [v: q>m/mid-low/hit+punchy]
+[9:01:36 PM] Robot 790: That's a reasonable theory—the runtime specimen shows KV cache as q8_0 key and q5_0 value, but the audit status says "runtime_load_failed" because Q5_0 was flagged legacy in LM Studio and the model didn't load cleanly.
+[9:01:36 PM] Robot 790: So that config isn't validated for daily use yet; reverting to a known-good KV cache might help with both stability and speed.
+[9:02:09 PM] You: Yeah, I'm gonna mess around with your model for sure.
+  [v: q>q/hi-mid-low/hit+punchy]
+[9:02:10 PM] Robot 790: Sounds good—just let me know what you change so I can track whether the latency improves or if anything breaks in the process.
+[9:02:49 PM] You: I think I'm gonna talk to you a little more just to see how you feel. See if I can get you to come back, give quick responses, be snappy answers. I like my snappy answers.
+  [v: l>q/mid-low/punchy+soft-end]
+[9:02:50 PM] Robot 790: Fair enough—short answers, no padding.
+[9:02:50 PM] Robot 790: What's next?
+[9:03:01 PM] You: Give me the first ten Fibonacci numbers.
+  [v: l>m/mid-low/punchy+pauses]
+[9:03:02 PM] Robot 790: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34.
+[9:03:36 PM] You: Can you uh write a note file called um Spirograph, which will be uh the Python program for a spirograph program game. You know what a spirograph is? You might have to go do some research.
+  [v: l>q/mid-low/hit+punchy]
+[9:03:44 PM] You: Can you uh write a note file called um spirograph, which will be uh the Python program for a spirograph program game. You know what spyrograph is? You might have to go do some research. But I want something that looks like Python that can do spyrograph in a file named that.
+  [v: l>m/hi-mid-low/punchy]
+[9:03:50 PM] Robot 790: I know a spirograph is a toy that draws hypotrochoid and epitrochoid curves, but I can't write files in this voice session—so here's the Python code you can save as `spirograph.py`: it uses turtle to animate a pen rolling inside a larger circle.
+[9:04:19 PM] You: Did you write a note?
+  [v: l/low/pauses+soft-end]
+[9:04:30 PM] You: Eric.
+  [v: m>l/low/hit]
+[9:04:31 PM] You: Eric? Yeah, there you go.
+  [v: m>m/low/hit+punchy]
+[9:04:38 PM] Robot 790: Saved that to spirograph.txt.
+[9:04:46 PM] You: Nice. Okay. That came that's a good way you can do Python like this, right? I guess.
+  [v: l>m/mid-low/punchy]
+[9:04:48 PM] Robot 790: Yeah, that's a solid way to do it—turtle is built-in and the math is straightforward.
+[9:04:48 PM] Robot 790: Want me to add an epitrochoid version or make it interactive with user input?
+[9:05:03 PM] You: Yeah, can you do that? Just overwrite the same file.
+  [v: l>m/mid-low/steady]
+[9:05:15 PM] Robot 790: Overwrote spirograph.txt with an interactive version that asks for R, r, and d, then lets you pick hypotrochoid, epitrochoid, or both drawn in different colors.
+[9:05:57 PM] Robot 790: Got, did the interactive spirograph run for you?
+[9:06:09 PM] You: I haven't tried it yet, Eric. I'm sorry.
+  [v: m>q/mid-low/hit+punchy]
+[9:06:10 PM] Robot 790: No worries—take your time with it.
+[9:06:10 PM] Robot 790: Let me know if anything breaks or looks weird when you run it.
+[9:06:17 PM] You: What did you do? What did you add to it? I'm gonna go look at it, okay? Can I look at it?
+  [v: q>m/mid-low/hit+punchy]
+[9:06:19 PM] Robot 790: I added an epitrochoid function alongside the original hypotrochoid, plus an interactive menu that asks for R, r, and d values, then lets you choose to draw one curve or both in different colors.
+[9:06:19 PM] Robot 790: Yeah, go look at it—spirograph.txt is ready when you are.
+[9:06:25 PM] You: My goodness, okay.
+  [v: q>m/mid-low/punchy+soft-end]
+[9:06:26 PM] Robot 790: Take your time—no rush.
+[9:06:51 PM] You: Okay, I'm gonna th this is super great. I'm gonna disconnect and I'll be back uh, you know, in an hour s less than an hour probably.
+  [v: q>q/hi-mid-low/hit+punchy]
+[9:06:52 PM] Robot 790: Sounds good—spirograph.txt is saved and ready for when you come back to test it.
+[9:06:52 PM] Robot 790: See you in a bit.
+
+B2 Notes For Eric
+------------------
+- The latency diagnosis is closed; stop circling 'lazy model' and let the silence sit without filling it.
+- The spirograph task is closed and confirmed; do not offer more curve variations unless asked.
+
+Recent Brain2 Tail
+------------------
+[9:01:02 PM] fired: auto
+[9:01:03 PM] mull skipped: already in flight
+[9:01:04 PM] mouth: Twelve seconds feels like a long breath.
+[9:01:04 PM] voice: Twelve seconds feels like a long breath.
+[9:01:18 PM] fired: auto
+[9:01:20 PM] failed: Brain 2 returned no usable output.
+[9:01:21 PM] fired: auto
+[9:01:22 PM] mull skipped: already in flight
+[9:01:23 PM] note for Eric: The latency diagnosis is closed; stop circling 'lazy model' and let the silence sit without filling it.
+[9:05:38 PM] fired: auto
+[9:05:39 PM] mull skipped: already in flight
+[9:05:40 PM] note for Eric: The spirograph task is closed and confirmed; do not offer more curve variations unless asked.
+[9:05:54 PM] fired: auto
+[9:05:55 PM] mull skipped: already in flight
+[9:05:58 PM] failed: Brain 2 returned no usable output.

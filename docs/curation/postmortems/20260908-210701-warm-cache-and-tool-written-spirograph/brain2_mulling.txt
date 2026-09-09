@@ -1,0 +1,20 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-08T21:07:18
+Source: brain2_mulling
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[9:01:02 PM] fired: auto
+[9:01:03 PM] mull skipped: already in flight
+[9:01:04 PM] mouth: Twelve seconds feels like a long breath.
+[9:01:04 PM] voice: Twelve seconds feels like a long breath.
+[9:01:18 PM] fired: auto
+[9:01:20 PM] failed: Brain 2 returned no usable output.
+[9:01:21 PM] fired: auto
+[9:01:22 PM] mull skipped: already in flight
+[9:01:23 PM] note for Eric: The latency diagnosis is closed; stop circling 'lazy model' and let the silence sit without filling it.
+[9:05:38 PM] fired: auto
+[9:05:39 PM] mull skipped: already in flight
+[9:05:40 PM] note for Eric: The spirograph task is closed and confirmed; do not offer more curve variations unless asked.
+[9:05:54 PM] fired: auto
+[9:05:55 PM] mull skipped: already in flight
+[9:05:58 PM] failed: Brain 2 returned no usable output.

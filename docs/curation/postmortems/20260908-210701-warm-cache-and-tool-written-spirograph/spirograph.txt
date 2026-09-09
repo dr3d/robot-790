@@ -1,0 +1,110 @@
+import turtle
+import math
+
+def hypotrochoid(R, r, d, steps=3600):
+    """Draw a hypotrochoid (inner spirograph)."""
+    t = turtle.Turtle()
+    t.speed(0)
+    screen = t.getscreen()
+    screen.bgcolor("black")
+    t.pensize(1)
+
+    for i in range(steps):
+        theta = 2 * math.pi * i / steps
+        x = (R - r) * math.cos(theta) + d * math.cos((R - r) / r * theta)
+        y = (R - r) * math.sin(theta) - d * math.sin((R - r) / r * theta)
+
+        if i == 0:
+            t.penup()
+            t.goto(x, y)
+            t.pendown()
+        else:
+            t.goto(x, y)
+
+    return screen
+
+def epitrochoid(R, r, d, steps=3600):
+    """Draw an epitrochoid (outer spirograph)."""
+    t = turtle.Turtle()
+    t.speed(0)
+    screen = t.getscreen()
+    screen.bgcolor("black")
+    t.pensize(1)
+
+    for i in range(steps):
+        theta = 2 * math.pi * i / steps
+        x = (R + r) * math.cos(theta) - d * math.cos((R + r) / r * theta)
+        y = (R + r) * math.sin(theta) - d * math.sin((R + r) / r * theta)
+
+        if i == 0:
+            t.penup()
+            t.goto(x, y)
+            t.pendown()
+        else:
+            t.goto(x, y)
+
+    return screen
+
+def interactive():
+    """Ask user for parameters and draw both curves."""
+    print("Spirograph Generator")
+    print("====================")
+    
+    try:
+        R = float(input("Outer circle radius (R): "))
+        r = float(input("Rolling circle radius (r): "))
+        d = float(input("Pen distance from center (d): "))
+        
+        if R <= 0 or r <= 0 or d < 0:
+            print("Please use positive values for R and r, non-negative for d.")
+            return
+            
+        choice = input("Draw hypotrochoid (1), epitrochoid (2), or both (3)? ").strip()
+        
+        if choice == "1":
+            screen = hypotrochoid(R, r, d)
+        elif choice == "2":
+            screen = epitrochoid(R, r, d)
+        else:
+            # Draw both on same canvas with different colors
+            t1 = turtle.Turtle()
+            t1.speed(0)
+            screen = t1.getscreen()
+            screen.bgcolor("black")
+            
+            # Hypotrochoid in cyan
+            t1.pensize(1)
+            t1.pencolor("cyan")
+            for i in range(3600):
+                theta = 2 * math.pi * i / 3600
+                x = (R - r) * math.cos(theta) + d * math.cos((R - r) / r * theta)
+                y = (R - r) * math.sin(theta) - d * math.sin((R - r) / r * theta)
+                if i == 0:
+                    t1.penup()
+                    t1.goto(x, y)
+                    t1.pendown()
+                else:
+                    t1.goto(x, y)
+            
+            # Epitrochoid in magenta
+            t2 = turtle.Turtle()
+            t2.speed(0)
+            t2.pensize(1)
+            t2.pencolor("magenta")
+            for i in range(3600):
+                theta = 2 * math.pi * i / 3600
+                x = (R + r) * math.cos(theta) - d * math.cos((R + r) / r * theta)
+                y = (R + r) * math.sin(theta) - d * math.sin((R + r) / r * theta)
+                if i == 0:
+                    t2.penup()
+                    t2.goto(x, y)
+                    t2.pendown()
+                else:
+                    t2.goto(x, y)
+            
+            screen.mainloop()
+    except ValueError:
+        print("Invalid input. Please enter numbers.")
+
+if __name__ == "__main__":
+    interactive()
