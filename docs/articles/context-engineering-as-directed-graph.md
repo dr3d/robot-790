@@ -24,7 +24,8 @@ session note records the pin list as it stands at disconnect.
 There is no general graph database or graph solver. Authority is largely
 expressed in context labels and instructions, with deterministic checks for tool
 results and runtime actions. There is no learned weighting engine, recursive
-dependency loader, or automatic choice among compressed note variants.
+dependency loader, or automatic policy for choosing among note variants. The
+operator can explicitly choose an available source-checked derivative.
 
 The [architecture guide](../context-engineering-architecture.md) describes the
 current controls and limits. The remaining sections distinguish that working
@@ -62,7 +63,7 @@ starting selection.
 
 ## Three Representations
 
-The proposed next step preserves three representations of a session:
+The current representation model preserves three forms of a session:
 
 - **Raw:** the original saved record, with timestamps, transcription mistakes,
   repetition, and runtime annotations.
@@ -86,11 +87,13 @@ Raw is authoritative about the saved record, not about the world. A raw
 transcript can faithfully record a false statement. Current measurements and
 other evidence still matter.
 
-The design would let an operator choose a lighter representation while retaining
-the route back to its source. Resolution is separate from authority and
-provenance. Today Advanced Connection loads the selected file as written;
-unavailable Scrubbed and Summary options are disabled. Automatic generation,
-validation, and variant selection remain work to implement.
+The operator can choose a lighter representation while retaining the route back
+to its source. Resolution is separate from authority and provenance. The raw
+session remains the dependency manifest, while an available Scrubbed or Summary
+sidecar supplies alternate session text. Advanced Connection and Session Map
+check the sidecar's source filename and SHA-256 before enabling it. Automatic
+generation, semantic validation, and policy-driven variant selection remain work
+to implement.
 
 ## The Dependency-Spec Analogy
 

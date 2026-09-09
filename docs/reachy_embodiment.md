@@ -53,6 +53,12 @@ bring-up.
 
 Eric is the personage. Reachy is a body.
 
+The broader cross-body direction, including capability manifests, hardware
+profiles, body awareness, and the acrylic/mask path, lives in
+[`creature-runtime-architecture.md`](creature-runtime-architecture.md).
+Reachy is a demanding test case for that common contract, not an exception to
+it.
+
 Do not let a second conversation stack create a second Eric unless the run is
 explicitly testing that. The first useful version should keep the language model,
 TTS, STT, note files, and run logs on the Robot 790 workstation, then send only

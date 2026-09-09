@@ -1,6 +1,16 @@
 {
-    "generated":  "2026-09-08 15:06:42",
+    "generated":  "2026-09-09 10:53:33",
     "articles":  [
+                     {
+                         "title":  "The Brain That Runs Conversation And Dreams",
+                         "excerpt":  "Robot 790 is not one language model with a face attached. The live model matters,",
+                         "source":  "articles/2026-09-09-041529-the-brain-that-runs-conversation-and-dreams.md",
+                         "bytes":  9968,
+                         "published":  "2026-09-09 04:15",
+                         "published_sort":  "20260909041529",
+                         "published_source":  "filename",
+                         "modified":  "2026-09-09 04:16"
+                     },
                      {
                          "title":  "Teaching Eric\u0027s Mouth To Speak",
                          "excerpt":  "Eric already has a mouth. It opens while he talks. It can round, show teeth,",
@@ -15,11 +25,11 @@
                          "title":  "Context Engineering Is A Directed Graph",
                          "excerpt":  "Robot 790 keeps continuity in ordinary session notes. Each records what happened",
                          "source":  "articles/context-engineering-as-directed-graph.md",
-                         "bytes":  9888,
+                         "bytes":  10088,
                          "published":  "2026-09-08 10:41",
                          "published_sort":  "20260908104114",
                          "published_source":  "git-added",
-                         "modified":  "2026-09-08 10:30"
+                         "modified":  "2026-09-09 03:19"
                      },
                      {
                          "title":  "A Working Proposition About Lessons",

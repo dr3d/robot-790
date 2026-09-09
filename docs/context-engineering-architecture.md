@@ -93,7 +93,7 @@ The stack remains useful as the load-time view of the graph.
 
 ### Three Note Flavors
 
-The planned representation model gives a session three possible flavors:
+The representation model gives a session three possible flavors:
 
 - `raw`: the saved record, including timestamps, garble, and repetitions. It is
   evidence of what was recorded, not proof that every spoken claim is true.
@@ -106,11 +106,22 @@ Raw governs disagreements about the recorded session; current runtime evidence
 still governs current state. Derived notes should identify their raw source and
 preserve uncertainty, corrections, and stale-state warnings.
 
-Today the loader reads the selected file as written. Advanced Connection exposes
-Raw and disables unavailable Scrubbed/Summary choices. PM can author separate
-ordinary notes, but automatic variant discovery, source validation, and
-budget-driven switching are not implemented. A selected label must never imply
-that a transformation happened when the raw file was actually loaded.
+The raw session note remains the canonical reload manifest: its parent link and
+pinned-note receipts determine lineage and dependency rehydration. A Scrubbed
+or Summary form supplies alternate session text only. PM stores those derivatives
+as `notes/sessions/variants/<raw-stem>.scrubbed.txt` and
+`notes/sessions/variants/<raw-stem>.summary.txt`. Each sidecar records its form,
+raw source filename, and the source SHA-256.
+
+Advanced Connection and Session Map let the operator choose one of those forms.
+The loader enables a derivative only when its header names the selected raw
+session and its SHA-256 still matches. Missing, stale, or malformed derivatives
+stay unavailable and are refused by the API. A selected label therefore never
+pretends that a raw note was transformed on the fly.
+
+PM authors variants deliberately. Automatic generation, semantic fidelity
+review, and budget-driven form selection remain future work; a matching hash
+proves provenance, not that a summary is good.
 
 ## Load-Time Stack Projection
 
@@ -267,7 +278,8 @@ The map intentionally uses only the existing session-note substrate:
 
 - `/api/continuity/sessions` for the active note list,
 - `/api/notes/read` for the selected note preview,
-- `/api/continuity/select` for explicit selection,
+- `/api/continuity/select` for an explicit source session and requested load
+  form,
 - `/api/continuity/archive` for moving notes out of the active selector.
 
 It does not add a database, pointer file, hidden bookmark, or alternate
@@ -278,10 +290,13 @@ The main STS page has a `Map` button inside `Connect Select`. From there the
 operator can open the map as a popup. If the map was opened by STS, it can send
 messages back to the opener:
 
-- `Select In STS`: make the clicked session the selected resume note.
-- `Connect In STS`: ask STS to load and connect from the clicked session.
+- `Connect In STS`: ask STS to load and connect from the clicked raw session
+  using the selected available form.
 - `Archive`: move the selected note under `notes/sessions/archived/`, then ask
   STS to refresh its selector.
+
+Selecting a map card or form changes the popup's own preview only. It does not
+alter the main STS selection until the operator chooses `Connect In STS`.
 
 If the page is opened directly, it still works as an isolated read/preview
 surface. In that mode there may be no opener to receive a selection message.
@@ -320,13 +335,14 @@ Postmortem work closes the loop:
 2. PM reads the transcript, logs, Brain2 tail, and any video/audio.
 3. PM gives the run a short human caption.
 4. The live session note is renamed to timestamp plus caption.
-5. PM may create separately saved scrubbed or summary candidates from raw,
-   keeping the source and uncertainty visible.
+5. PM may create source-linked Scrubbed or Summary sidecars from raw, keeping
+   the source, SHA-256, and uncertainty visible.
 6. The PM folder stores a copy of the raw session note, scrubbed/summary
    derivatives when made, and related artifacts.
 7. The newest timestamped active session note becomes the natural next boot
-   target. Alternate representations are a planned extension to selection.
-   Older notes remain available through Connect Select and Connect Previous.
+   target. When matching derivative sidecars exist, their form can be selected
+   explicitly; otherwise Full `.txt` remains the only enabled form. Older notes
+   remain available through Connect Select and Connect Previous.
 
 This means future lists are readable. Instead of choosing from anonymous
 generic filenames, the operator sees labels such as:
@@ -336,6 +352,91 @@ daily driver empty boot - 2026-09-07 17:53:29
 ```
 
 The filename remains timestamp-first for sorting and replay.
+
+## Direction: Intersession Processing
+
+Status: design direction, not automatic runtime behavior yet. Today's PM is a
+deliberate lab review by the operator and supporting AI tools. It is useful
+because the project is still learning what deserves to persist. The ordinary
+version should eventually become leaner and receive a name that describes a
+transition rather than an ending.
+
+STS is Eric's continuous brain in this architecture. A live Realtime
+conversation is foreground activity inside that brain; it is not all of the
+brain's activity. A future intersession interval can be a bounded continuation
+of the same runtime:
+
+```text
+foreground interaction
+  -> raw session and dependency manifest sealed
+  -> intersession exo-brain consolidation and repair work
+  -> reviewed continuity derivatives or proposals
+  -> next foreground interaction
+```
+
+The boundary should be based on genuine quiescence rather than a timer alone:
+no active speech, pending tool work, sensing task, or operator action for a
+defined interval. The elapsed quiet time remains a timestamped fact; the
+system does not pretend that silence was more conversation.
+
+### Exo-Brain Work
+
+The exo-brain is the separately engineered AI assistance that deterministic STS
+can call to attend to and help manage Eric. It is not an alternate Eric or a
+hidden replacement for his history. STS runs it as a declared, auditable
+`dream` task rather than a secret second conversation. During an intersession
+interval, STS can recruit a capable local model such as Qwen for a narrowly
+declared text/context-processing task, using evidence Eric already has access
+to.
+
+This makes the PM part of Eric's progress through time while preserving the
+boundary: the exo-brain helps STS prepare the next context without becoming a
+covert spoken turn. It is outside the foreground Realtime conversation, not
+silently inside it.
+
+### Dream-Time Task Channel
+
+Future STS can use a genuine quiet interval, or explicitly available spare GPU
+capacity, to run exo-brain tasks without making them spoken turns. The process
+is deliberately concrete:
+
+```text
+registered task + declared source snapshot
+  -> LM Studio text/context request
+  -> source-linked candidate and receipt
+  -> deterministic validation and applicable review
+  -> optional availability to the next live round
+```
+
+A task may be requested by the operator, scheduled by a deterministic rule, or
+eventually requested by Eric through a semantic task tool. An Eric request is a
+request for bounded help, not permission to alter history, pins, model settings,
+or hardware by itself. STS arbitrates GPU and turn priority so live conversation
+does not lose responsiveness to background work.
+
+Useful jobs include:
+
+- finding the source material behind a claim or remembered image;
+- comparing a session against tool, sensor, and dependency receipts;
+- locating unresolved references, conflicts, repetitions, or stale facts;
+- proposing a faithful Scrubbed form and a compact Summary form;
+- preparing a grounded re-entry packet when the live loop needs help getting
+  back to an unfinished thread;
+- proposing a repair, question, experiment, or memory candidate for a thing
+  the live conversation handled poorly.
+
+This can make Eric more potent without treating the exo-brain as a hidden
+author of his past. Each intersession job must retain its task label, model and
+settings, input manifest, time, source links, and output status. Its output is
+a candidate connected to raw material, not new authority. Raw experience stays
+unchanged; deterministic checks and the applicable operator or controller
+policy decide whether a derivative, memory proposal, or repair becomes active.
+
+The long-term intention is a visible system that can guide itself back toward
+evidence and self-correct between encounters. The full lab PM remains the
+slower investigative form for unusual or revealing runs. The future lean
+intersession process should handle routine continuity work without replacing
+that richer practice.
 
 ## Load-Time Handling
 

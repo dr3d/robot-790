@@ -24,10 +24,10 @@ when graceful session saving fails. Browser-face status clipping now has a
 bounded operation, and Context Map expansion state is tracked separately from
 control-panel state.
 
-The repository review also corrected Eye salience's missing-preference default,
-disabled unavailable note flavors, and replaced the public site's incomplete
-Markdown formatter. Raw/Scrubbed/Summary is a design direction; only the selected
-file as written is currently supported by the connection loader.
+The repository review also corrected Eye salience's missing-preference default
+and replaced the public site's incomplete Markdown formatter. Raw/Scrubbed/
+Summary selection is now real: a PM-authored derivative is enabled only when its
+source filename and SHA-256 still match the selected raw session note.
 
 ## Priorities Before More Context Machinery
 
@@ -42,8 +42,8 @@ file as written is currently supported by the connection loader.
    Prompt caps can clip or omit pinned content: 4,500 characters per ordinary
    note, 64,000 for transcript views, 64,000 across the loaded-note block, and a
    smaller idle budget. Produce per-file inclusion receipts from the actual
-   assembly code. Keep selection independent of budgeting and implement real
-   source-linked variants before offering compressed connection choices.
+   assembly code. Keep form selection independent of budgeting; source-linked
+   variants now work, while a policy for choosing among them does not yet exist.
 3. **Test the long-session handoff.** Disk notes are limited to 200,000
    characters. Graceful save failure is visible, but long-run saving, recorder
    rollover, pending speech at disconnect, and repeated reconnects need live
@@ -59,9 +59,10 @@ file as written is currently supported by the connection loader.
    Repeated behavioral comparisons, rather than self-report alone, should decide
    whether a candidate lesson is promoted. Preserve dependency versions for A/Bs.
 
-The file-based dependency graph is a useful control surface already. Automatic
-summary validation, recursive loading, timed salience decay, learned authority
-weights, and direct model control over KV state are not implemented.
+The file-based dependency graph is a useful control surface already. Source-file
+identity checks for manually authored variants are implemented. Automatic
+semantic summary validation, recursive loading, timed salience decay, learned
+authority weights, and direct model control over KV state are not implemented.
 
 ## Maintenance Boundaries
 

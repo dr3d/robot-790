@@ -223,8 +223,7 @@ def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
     result = sts_page_server.mull_second_brain(
         {
             "conversation": (
-                "Operator: I think performance mode changed the answer.\n"
-                "Robot 790: The spotlight made me tidy."
+                "Operator: I think performance mode changed the answer.\nRobot 790: The spotlight made me tidy."
             ),
             "person_focus": 8,
         }
@@ -234,6 +233,139 @@ def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
     assert result["mouth_text"] == ""
     assert result["revision_candidate"] == "I said it was a joke; thinking about it more, it was a dodge."
     assert result["should_surface"] is False
+
+
+def test_deliberate_once_runs_one_local_thinking_pass(monkeypatch) -> None:
+    calls = []
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                "<think>private scratch work that must never leave the worker</think>\n"
+                                "Answer: Keep the quit check inside the one main loop."
+                            )
+                        }
+                    }
+                ]
+            }
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def post(self, url, headers=None, json=None):
+            calls.append((url, headers, json))
+            return FakeResponse()
+
+    monkeypatch.setenv("ROBOT_790_DELIBERATE_BASE_URL", "http://deliberate.local/v1")
+    monkeypatch.setenv("ROBOT_790_DELIBERATE_MODEL", "deliberate-test-model")
+    monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
+
+    result = sts_page_server.deliberate_once(
+        {
+            "question": "Why does the preview need one main loop?",
+            "thinking": "xhigh",
+            "conversation": "Operator: Make the preview quit cleanly.\nRobot 790: I can inspect the loop.",
+            "loaded_notes": [
+                {"filename": "sessions/example.txt", "content": "The preview currently has three menu paths."},
+            ],
+        }
+    )
+
+    assert result["status"] == "ok"
+    assert result["tool"] == "deliberate_once"
+    assert result["rounds"] == 1
+    assert result["thinking_requested"] == "xhigh"
+    assert result["thinking"] == "xhigh"
+    assert result["answer"] == "Keep the quit check inside the one main loop."
+    assert "private scratch" not in result["answer"]
+    assert calls[0][0] == "http://deliberate.local/v1/chat/completions"
+    request = calls[0][2]
+    assert request["model"] == "deliberate-test-model"
+    assert request["reasoning_effort"] == "xhigh"
+    assert request["chat_template_kwargs"] == {"enable_thinking": True}
+    assert request["max_tokens"] == 1200
+    assert "Loaded note: sessions/example.txt" in request["messages"][1]["content"]
+
+
+def test_deliberate_once_maps_policy_to_loaded_model_capability(monkeypatch) -> None:
+    calls = []
+
+    class ModelsResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "models": [
+                    {
+                        "key": "qwen3.8-27b-nvfp4-mtp",
+                        "loaded_instances": [{"id": "qwen3.8-27b-nvfp4-mtp"}],
+                        "capabilities": {"reasoning": {"allowed_options": ["off", "on"]}},
+                    }
+                ]
+            }
+
+    class CompletionResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"choices": [{"message": {"content": "Use the single event loop."}}]}
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def get(self, url, headers=None, timeout=None):
+            calls.append(("get", url, headers, timeout))
+            return ModelsResponse()
+
+        def post(self, url, headers=None, json=None):
+            calls.append(("post", url, headers, json))
+            return CompletionResponse()
+
+    monkeypatch.setenv("ROBOT_790_DELIBERATE_BASE_URL", "http://127.0.0.1:1234/v1")
+    monkeypatch.setenv("ROBOT_790_DELIBERATE_MODEL", "qwen3.8-27b-nvfp4-mtp")
+    monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
+
+    result = sts_page_server.deliberate_once({"question": "How should the loop exit?", "thinking": "xhigh"})
+
+    assert result["status"] == "ok"
+    assert result["thinking_requested"] == "xhigh"
+    assert result["thinking"] == "on"
+    assert result["thinking_options"] == ["off", "on"]
+    assert calls[0][0:2] == ("get", "http://127.0.0.1:1234/api/v1/models")
+    assert calls[1][0:2] == ("post", "http://127.0.0.1:1234/v1/chat/completions")
+    assert calls[1][3]["reasoning_effort"] == "on"
+
+
+def test_deliberate_once_requires_a_question() -> None:
+    try:
+        sts_page_server.deliberate_once({"question": "   "})
+    except ValueError as exc:
+        assert "question is required" in str(exc).lower()
+    else:
+        raise AssertionError("Expected empty deliberate question to fail")
 
 
 def test_record_log_snapshot_writes_timestamped_and_latest_files(tmp_path) -> None:

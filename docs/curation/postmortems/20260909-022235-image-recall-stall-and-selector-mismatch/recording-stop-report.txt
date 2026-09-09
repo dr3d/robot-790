@@ -1,0 +1,1407 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-09T02:23:24
+Source: recording_stop_report
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+Robot 790 Recording Stop Report
+===============================
+Recorded: 2026-09-09T06:23:19.958Z
+Audio artifact: logs/audio/latest-sts-audio-picture.mp4
+Chunks: 4
+Cover image: 20260909-022236-sts-audio-cover.jpg
+Caption events: 63
+Model: model not scanned
+Run preset: Custom
+Idle clock: real time
+Sensing input: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png (loaded sensing-eye image)
+Browser live camera stream: off
+Mic: off
+Mic device: System default
+Eric speaker audio: audible at 100%
+Auto audio record: on
+Idle drift: 7/10 curious
+Performance mode: off
+Brain 2 mouth: on
+Brain 2 voice: Google US English at 20%, 1.10x
+
+Context Receipt
+---------------
+B1 context mode: normal
+B1 system prompt source: prompts/robot-790-realtime-system.md / 136 base rules
+B1 creature specimen: eric from config/creatures/eric.json / machine language 11
+B1 prompt assembly: memory, loaded notes, sensing text, search receipts, alone-state ledger, creature specimen, embodiment/runtime state, runtime behavior rules, wonder policy, Brain2 advisory notes, base system prompt
+B1 active context buckets: memory 0 tok / loaded notes 16000 tok / sensing text 0 tok / search receipts 324 tok / alone state 86 tok
+B1 loaded-note dependencies: 8 active
+B1 browser memory facts: 0
+B1 sensing input: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png (loaded sensing-eye image)
+B1 search receipts: Micro Duck robot
+B1 lab goal: none
+B1 last user echo: active
+B1 runtime routines: none
+B1 tool definitions: deliberate_once, set_voice, get_ui_controls, set_ui_control, start_gpu_watch, stop_gpu_watch, get_gpu_watch_status, start_standing_routine, stop_standing_routine, get_standing_routine_status, get_body_sensors, set_embodiment, set_robot_mode, play_face_beat, set_face_mood, set_face_animation, paint_face_from_sensing_eye, set_eye_style, set_eye_gaze, set_mouth, set_mouth_text, set_chassis, remember_fact, forget_fact, search_web, get_weather, get_current_time, get_brain_status, show_web_page, generate_image, move_generated_image_to_sensing_eye, list_sensing_eye_notes, recall_sensing_eye_note, list_sensing_eye_images, select_sensing_eye_image, clear_sensing_eye, capture_browser_face_to_eye, pose_and_capture_browser_face, cast_media, set_smart_home_device, write_text_file, read_text_file, list_text_files, list_pinned_notes, unpin_note
+B1 tool follow-up prompts: 5 captured this recording/page segment; each is sent after tool output with tool_choice none
+Idle prompt mode: active / realtime idle tool calls disabled / controller-eligible tools: get_body_sensors, search_web, get_weather, get_current_time, get_brain_status, read_text_file, list_text_files
+Brain2 prompt source: src/robot_790d/sts_page_server.py::mull_second_brain / private JSON ruminator / no direct tools
+Brain2 inputs: recent conversation last 2600 chars, prosody last 500 chars, recent idle last 900 chars, recent Brain2 last 1100 chars, person focus 4/10 curious
+Brain2 outputs available to B1: 3 advisory notes / 0 question candidates / 0 revision candidates / mouth on / voice Google US English at 20%, 1.10x
+Privacy/performance guard: off
+
+Current UI Settings
+-------------------
+{
+  "connection": {
+    "context_mode": "normal",
+    "context_mode_label": "normal",
+    "last_connection_context_mode": "normal",
+    "resume_form": "raw",
+    "resume_form_label": "Raw"
+  },
+  "model": {
+    "preset": "qwen27-mtp-vlow",
+    "preset_label": "Qwen 27B MTP Fast",
+    "key": "qwen3.8-27b-nvfp4-mtp",
+    "reasoning": "none",
+    "context_length": "131072",
+    "parallel_slots": "2"
+  },
+  "tools": {
+    "enabled_tools": [
+      "deliberate_once",
+      "set_voice",
+      "get_ui_controls",
+      "set_ui_control",
+      "start_gpu_watch",
+      "stop_gpu_watch",
+      "get_gpu_watch_status",
+      "start_standing_routine",
+      "stop_standing_routine",
+      "get_standing_routine_status",
+      "get_body_sensors",
+      "set_embodiment",
+      "set_robot_mode",
+      "play_face_beat",
+      "set_face_mood",
+      "set_face_animation",
+      "paint_face_from_sensing_eye",
+      "set_eye_style",
+      "set_eye_gaze",
+      "set_mouth",
+      "set_mouth_text",
+      "set_chassis",
+      "remember_fact",
+      "forget_fact",
+      "search_web",
+      "get_weather",
+      "get_current_time",
+      "get_brain_status",
+      "show_web_page",
+      "generate_image",
+      "move_generated_image_to_sensing_eye",
+      "list_sensing_eye_notes",
+      "recall_sensing_eye_note",
+      "list_sensing_eye_images",
+      "select_sensing_eye_image",
+      "clear_sensing_eye",
+      "capture_browser_face_to_eye",
+      "pose_and_capture_browser_face",
+      "cast_media",
+      "set_smart_home_device",
+      "write_text_file",
+      "read_text_file",
+      "list_text_files",
+      "list_pinned_notes",
+      "unpin_note"
+    ],
+    "switches": {
+      "faceTools": true,
+      "bodySensorTools": true,
+      "chassisTools": true,
+      "voiceTools": true,
+      "uiControlTools": true,
+      "memoryTools": true,
+      "webSearchTools": true,
+      "webPageTools": true,
+      "castMediaTools": true,
+      "noteFileTools": true,
+      "imageTools": true,
+      "smartHomeTools": true
+    }
+  },
+  "runtime_watch": {
+    "status": "ok",
+    "tool": "ui_snapshot",
+    "active": false,
+    "label": "none",
+    "gpu_watch": {
+      "status": "ok",
+      "tool": "ui_snapshot",
+      "active": false,
+      "routine": "gpu_watch",
+      "label": "none",
+      "cadence_seconds": null,
+      "duration_seconds": null,
+      "remaining_seconds": null,
+      "until_stopped": false,
+      "style": null,
+      "sample_count": 0,
+      "skipped_cues": 0,
+      "last_sample": null,
+      "last_spoken": "",
+      "started_at": null,
+      "reason": ""
+    },
+    "standing_routine": {
+      "status": "ok",
+      "tool": "ui_snapshot",
+      "active": false,
+      "routine": "standing_routine",
+      "label": "none",
+      "cadence_seconds": null,
+      "duration_seconds": null,
+      "remaining_seconds": null,
+      "until_stopped": false,
+      "routine_type": null,
+      "task": "",
+      "style": null,
+      "cue_count": 0,
+      "skipped_cues": 0,
+      "last_spoken": "",
+      "started_at": null,
+      "reason": ""
+    }
+  },
+  "tts": {
+    "voice": "Eric",
+    "precision": "bfloat16",
+    "preset": "custom",
+    "instruct": "Dry, curious, compact Eric delivery for the character Eric.",
+    "effective_instruct": "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English. Dry, curious, compact Eric delivery for the character Eric."
+  },
+  "idle": {
+    "run_preset": "custom",
+    "idle_clock": "real time",
+    "idle_drift": "7/10 curious",
+    "wonder": "5/10 curious",
+    "self_focus": "6/10 balanced",
+    "notes": "10/10 pinned",
+    "eye_salience": "7/10 present",
+    "lab_goal": "",
+    "lab_goal_one_shot": false,
+    "performance": false,
+    "first_contact": false,
+    "substrate_test": false
+  },
+  "brain2": {
+    "mouth": true,
+    "voice": "Google US English at 20%, 1.10x",
+    "browser_voice": "Google US English",
+    "volume": "20",
+    "pace": "1.1",
+    "person_focus": "4/10 curious"
+  },
+  "audio": {
+    "mic": "off",
+    "mic_device": "System default",
+    "muted_for_eric": false,
+    "eric_audio": "audible at 100%",
+    "auto_record": true,
+    "recording": false
+  },
+  "sensing": {
+    "input": "ChatGPT Image Sep 9, 2026, 01_22_25 AM.png (loaded sensing-eye image)",
+    "preview_height_px": 460,
+    "live_camera": false,
+    "browser_face_controller": true,
+    "face_url": "http://127.0.0.1:8791/"
+  },
+  "image": {
+    "model": "gpt-image-1-mini",
+    "quality": "low",
+    "label": "gpt-image-1-mini / low"
+  },
+  "logs": {
+    "transcript_prosody": "compact",
+    "event_filter": "no_face"
+  }
+}
+
+UI Control Changes
+------------------
+### 1. audio record start / 9/9/2026, 2:06:03 AM
+value: manual / auto on
+details:
+{
+  "settings": {
+    "connection": {
+      "context_mode": "normal",
+      "context_mode_label": "normal",
+      "last_connection_context_mode": "normal",
+      "resume_form": "raw",
+      "resume_form_label": "Raw"
+    },
+    "model": {
+      "preset": "qwen27-mtp-vlow",
+      "preset_label": "Qwen 27B MTP Fast",
+      "key": "qwen3.8-27b-nvfp4-mtp",
+      "reasoning": "none",
+      "context_length": "131072",
+      "parallel_slots": "2"
+    },
+    "tools": {
+      "enabled_tools": [
+        "deliberate_once",
+        "set_voice",
+        "get_ui_controls",
+        "set_ui_control",
+        "start_gpu_watch",
+        "stop_gpu_watch",
+        "get_gpu_watch_status",
+        "start_standing_routine",
+        "stop_standing_routine",
+        "get_standing_routine_status",
+        "get_body_sensors",
+        "set_embodiment",
+        "set_robot_mode",
+        "play_face_beat",
+        "set_face_mood",
+        "set_face_animation",
+        "paint_face_from_sensing_eye",
+        "set_eye_style",
+        "set_eye_gaze",
+        "set_mouth",
+        "set_mouth_text",
+        "set_chassis",
+        "remember_fact",
+        "forget_fact",
+        "search_web",
+        "get_weather",
+        "get_current_time",
+        "get_brain_status",
+        "show_web_page",
+        "generate_image",
+        "move_generated_image_to_sensing_eye",
+        "list_sensing_eye_notes",
+        "recall_sensing_eye_note",
+        "list_sensing_eye_images",
+        "select_sensing_eye_image",
+        "clear_sensing_eye",
+        "capture_browser_face_to_eye",
+        "pose_and_capture_browser_face",
+        "cast_media",
+        "set_smart_home_device",
+        "write_text_file",
+        "read_text_file",
+        "list_text_files",
+        "list_pinned_notes",
+        "unpin_note"
+      ],
+      "switches": {
+        "faceTools": true,
+        "bodySensorTools": true,
+        "chassisTools": true,
+        "voiceTools": true,
+        "uiControlTools": true,
+        "memoryTools": true,
+        "webSearchTools": true,
+        "webPageTools": true,
+        "castMediaTools": true,
+        "noteFileTools": true,
+        "imageTools": true,
+        "smartHomeTools": true
+      }
+    },
+    "runtime_watch": {
+      "status": "ok",
+      "tool": "ui_snapshot",
+      "active": false,
+      "label": "none",
+      "gpu_watch": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "gpu_watch",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "style": null,
+        "sample_count": 0,
+        "skipped_cues": 0,
+        "last_sample": null,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      },
+      "standing_routine": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "standing_routine",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "routine_type": null,
+        "task": "",
+        "style": null,
+        "cue_count": 0,
+        "skipped_cues": 0,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      }
+    },
+    "tts": {
+      "voice": "Eric",
+      "precision": "bfloat16",
+      "preset": "custom",
+      "instruct": "Dry, curious, compact Eric delivery for the character Eric.",
+      "effective_instruct": "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English. Dry, curious, compact Eric delivery for the character Eric."
+    },
+    "idle": {
+      "run_preset": "custom",
+      "idle_clock": "real time",
+      "idle_drift": "7/10 curious",
+      "wonder": "5/10 curious",
+      "self_focus": "6/10 balanced",
+      "notes": "10/10 pinned",
+      "eye_salience": "7/10 present",
+      "lab_goal": "",
+      "lab_goal_one_shot": false,
+      "performance": false,
+      "first_contact": false,
+      "substrate_test": false
+    },
+    "brain2": {
+      "mouth": true,
+      "voice": "Google US English at 20%, 1.10x",
+      "browser_voice": "Google US English",
+      "volume": "20",
+      "pace": "1.1",
+      "person_focus": "4/10 curious"
+    },
+    "audio": {
+      "mic": "on",
+      "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+      "muted_for_eric": false,
+      "eric_audio": "audible at 100%",
+      "auto_record": true,
+      "recording": false
+    },
+    "sensing": {
+      "input": "none",
+      "preview_height_px": 399,
+      "live_camera": false,
+      "browser_face_controller": true,
+      "face_url": "http://127.0.0.1:8791/"
+    },
+    "image": {
+      "model": "gpt-image-1-mini",
+      "quality": "low",
+      "label": "gpt-image-1-mini / low"
+    },
+    "logs": {
+      "transcript_prosody": "compact",
+      "event_filter": "no_face"
+    }
+  },
+  "mic": "on",
+  "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+  "eric_audio": "audible at 100%"
+}
+
+### 2. context panel / 9/9/2026, 2:06:43 AM
+value: open
+details:
+{
+  "id": "contextPanel"
+}
+
+### 3. sensing input image / 9/9/2026, 2:11:32 AM
+value: ChatGPT Image Sep 9, 2026, 01_10_23 AM.png (615x768)
+details:
+{
+  "name": "ChatGPT Image Sep 9, 2026, 01_10_23 AM.png",
+  "width": 615,
+  "height": 768,
+  "source_width": 1122,
+  "source_height": 1402,
+  "staged": false,
+  "history_id": "eye-1"
+}
+
+### 4. audio record start / 9/9/2026, 2:11:39 AM
+value: manual / auto on
+details:
+{
+  "settings": {
+    "connection": {
+      "context_mode": "normal",
+      "context_mode_label": "normal",
+      "last_connection_context_mode": "normal",
+      "resume_form": "raw",
+      "resume_form_label": "Raw"
+    },
+    "model": {
+      "preset": "qwen27-mtp-vlow",
+      "preset_label": "Qwen 27B MTP Fast",
+      "key": "qwen3.8-27b-nvfp4-mtp",
+      "reasoning": "none",
+      "context_length": "131072",
+      "parallel_slots": "2"
+    },
+    "tools": {
+      "enabled_tools": [
+        "deliberate_once",
+        "set_voice",
+        "get_ui_controls",
+        "set_ui_control",
+        "start_gpu_watch",
+        "stop_gpu_watch",
+        "get_gpu_watch_status",
+        "start_standing_routine",
+        "stop_standing_routine",
+        "get_standing_routine_status",
+        "get_body_sensors",
+        "set_embodiment",
+        "set_robot_mode",
+        "play_face_beat",
+        "set_face_mood",
+        "set_face_animation",
+        "paint_face_from_sensing_eye",
+        "set_eye_style",
+        "set_eye_gaze",
+        "set_mouth",
+        "set_mouth_text",
+        "set_chassis",
+        "remember_fact",
+        "forget_fact",
+        "search_web",
+        "get_weather",
+        "get_current_time",
+        "get_brain_status",
+        "show_web_page",
+        "generate_image",
+        "move_generated_image_to_sensing_eye",
+        "list_sensing_eye_notes",
+        "recall_sensing_eye_note",
+        "list_sensing_eye_images",
+        "select_sensing_eye_image",
+        "clear_sensing_eye",
+        "capture_browser_face_to_eye",
+        "pose_and_capture_browser_face",
+        "cast_media",
+        "set_smart_home_device",
+        "write_text_file",
+        "read_text_file",
+        "list_text_files",
+        "list_pinned_notes",
+        "unpin_note"
+      ],
+      "switches": {
+        "faceTools": true,
+        "bodySensorTools": true,
+        "chassisTools": true,
+        "voiceTools": true,
+        "uiControlTools": true,
+        "memoryTools": true,
+        "webSearchTools": true,
+        "webPageTools": true,
+        "castMediaTools": true,
+        "noteFileTools": true,
+        "imageTools": true,
+        "smartHomeTools": true
+      }
+    },
+    "runtime_watch": {
+      "status": "ok",
+      "tool": "ui_snapshot",
+      "active": false,
+      "label": "none",
+      "gpu_watch": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "gpu_watch",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "style": null,
+        "sample_count": 0,
+        "skipped_cues": 0,
+        "last_sample": null,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      },
+      "standing_routine": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "standing_routine",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "routine_type": null,
+        "task": "",
+        "style": null,
+        "cue_count": 0,
+        "skipped_cues": 0,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      }
+    },
+    "tts": {
+      "voice": "Eric",
+      "precision": "bfloat16",
+      "preset": "custom",
+      "instruct": "Dry, curious, compact Eric delivery for the character Eric.",
+      "effective_instruct": "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English. Dry, curious, compact Eric delivery for the character Eric."
+    },
+    "idle": {
+      "run_preset": "custom",
+      "idle_clock": "real time",
+      "idle_drift": "7/10 curious",
+      "wonder": "5/10 curious",
+      "self_focus": "6/10 balanced",
+      "notes": "10/10 pinned",
+      "eye_salience": "7/10 present",
+      "lab_goal": "",
+      "lab_goal_one_shot": false,
+      "performance": false,
+      "first_contact": false,
+      "substrate_test": false
+    },
+    "brain2": {
+      "mouth": true,
+      "voice": "Google US English at 20%, 1.10x",
+      "browser_voice": "Google US English",
+      "volume": "20",
+      "pace": "1.1",
+      "person_focus": "4/10 curious"
+    },
+    "audio": {
+      "mic": "on",
+      "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+      "muted_for_eric": false,
+      "eric_audio": "audible at 100%",
+      "auto_record": true,
+      "recording": false
+    },
+    "sensing": {
+      "input": "ChatGPT Image Sep 9, 2026, 01_10_23 AM.png (staged sensing-eye image)",
+      "preview_height_px": 399,
+      "live_camera": false,
+      "browser_face_controller": true,
+      "face_url": "http://127.0.0.1:8791/"
+    },
+    "image": {
+      "model": "gpt-image-1-mini",
+      "quality": "low",
+      "label": "gpt-image-1-mini / low"
+    },
+    "logs": {
+      "transcript_prosody": "compact",
+      "event_filter": "no_face"
+    }
+  },
+  "mic": "on",
+  "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+  "eric_audio": "audible at 100%"
+}
+
+### 5. sensing input image / 9/9/2026, 2:16:37 AM
+value: Gemini_Generated_Image_bejd8tbejd8tbejd.jpg (615x768)
+details:
+{
+  "name": "Gemini_Generated_Image_bejd8tbejd8tbejd.jpg",
+  "width": 615,
+  "height": 768,
+  "source_width": 1844,
+  "source_height": 2304,
+  "staged": false,
+  "history_id": "eye-2"
+}
+
+### 6. audio record start / 9/9/2026, 2:16:48 AM
+value: manual / auto on
+details:
+{
+  "settings": {
+    "connection": {
+      "context_mode": "normal",
+      "context_mode_label": "normal",
+      "last_connection_context_mode": "normal",
+      "resume_form": "raw",
+      "resume_form_label": "Raw"
+    },
+    "model": {
+      "preset": "qwen27-mtp-vlow",
+      "preset_label": "Qwen 27B MTP Fast",
+      "key": "qwen3.8-27b-nvfp4-mtp",
+      "reasoning": "none",
+      "context_length": "131072",
+      "parallel_slots": "2"
+    },
+    "tools": {
+      "enabled_tools": [
+        "deliberate_once",
+        "set_voice",
+        "get_ui_controls",
+        "set_ui_control",
+        "start_gpu_watch",
+        "stop_gpu_watch",
+        "get_gpu_watch_status",
+        "start_standing_routine",
+        "stop_standing_routine",
+        "get_standing_routine_status",
+        "get_body_sensors",
+        "set_embodiment",
+        "set_robot_mode",
+        "play_face_beat",
+        "set_face_mood",
+        "set_face_animation",
+        "paint_face_from_sensing_eye",
+        "set_eye_style",
+        "set_eye_gaze",
+        "set_mouth",
+        "set_mouth_text",
+        "set_chassis",
+        "remember_fact",
+        "forget_fact",
+        "search_web",
+        "get_weather",
+        "get_current_time",
+        "get_brain_status",
+        "show_web_page",
+        "generate_image",
+        "move_generated_image_to_sensing_eye",
+        "list_sensing_eye_notes",
+        "recall_sensing_eye_note",
+        "list_sensing_eye_images",
+        "select_sensing_eye_image",
+        "clear_sensing_eye",
+        "capture_browser_face_to_eye",
+        "pose_and_capture_browser_face",
+        "cast_media",
+        "set_smart_home_device",
+        "write_text_file",
+        "read_text_file",
+        "list_text_files",
+        "list_pinned_notes",
+        "unpin_note"
+      ],
+      "switches": {
+        "faceTools": true,
+        "bodySensorTools": true,
+        "chassisTools": true,
+        "voiceTools": true,
+        "uiControlTools": true,
+        "memoryTools": true,
+        "webSearchTools": true,
+        "webPageTools": true,
+        "castMediaTools": true,
+        "noteFileTools": true,
+        "imageTools": true,
+        "smartHomeTools": true
+      }
+    },
+    "runtime_watch": {
+      "status": "ok",
+      "tool": "ui_snapshot",
+      "active": false,
+      "label": "none",
+      "gpu_watch": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "gpu_watch",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "style": null,
+        "sample_count": 0,
+        "skipped_cues": 0,
+        "last_sample": null,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      },
+      "standing_routine": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "standing_routine",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "routine_type": null,
+        "task": "",
+        "style": null,
+        "cue_count": 0,
+        "skipped_cues": 0,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      }
+    },
+    "tts": {
+      "voice": "Eric",
+      "precision": "bfloat16",
+      "preset": "custom",
+      "instruct": "Dry, curious, compact Eric delivery for the character Eric.",
+      "effective_instruct": "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English. Dry, curious, compact Eric delivery for the character Eric."
+    },
+    "idle": {
+      "run_preset": "custom",
+      "idle_clock": "real time",
+      "idle_drift": "7/10 curious",
+      "wonder": "5/10 curious",
+      "self_focus": "6/10 balanced",
+      "notes": "10/10 pinned",
+      "eye_salience": "7/10 present",
+      "lab_goal": "",
+      "lab_goal_one_shot": false,
+      "performance": false,
+      "first_contact": false,
+      "substrate_test": false
+    },
+    "brain2": {
+      "mouth": true,
+      "voice": "Google US English at 20%, 1.10x",
+      "browser_voice": "Google US English",
+      "volume": "20",
+      "pace": "1.1",
+      "person_focus": "4/10 curious"
+    },
+    "audio": {
+      "mic": "on",
+      "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+      "muted_for_eric": false,
+      "eric_audio": "audible at 100%",
+      "auto_record": true,
+      "recording": false
+    },
+    "sensing": {
+      "input": "Gemini_Generated_Image_bejd8tbejd8tbejd.jpg (staged sensing-eye image)",
+      "preview_height_px": 399,
+      "live_camera": false,
+      "browser_face_controller": true,
+      "face_url": "http://127.0.0.1:8791/"
+    },
+    "image": {
+      "model": "gpt-image-1-mini",
+      "quality": "low",
+      "label": "gpt-image-1-mini / low"
+    },
+    "logs": {
+      "transcript_prosody": "compact",
+      "event_filter": "no_face"
+    }
+  },
+  "mic": "on",
+  "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+  "eric_audio": "audible at 100%"
+}
+
+### 7. lower log split / 9/9/2026, 2:18:09 AM
+value: 417px
+details:
+{
+  "brain2_width": 417
+}
+
+### 8. sensing-eye image recalled / 9/9/2026, 2:18:18 AM
+value: ChatGPT Image Sep 9, 2026, 01_10_23 AM.png
+details:
+{
+  "id": "eye-1",
+  "index": 2,
+  "source": "operator drop"
+}
+
+### 9. sensing eye preview height / 9/9/2026, 2:18:26 AM
+value: 460px
+details:
+{
+  "height": 460
+}
+
+### 10. control sidebar width / 9/9/2026, 2:18:31 AM
+value: 606
+details:
+[none]
+
+### 11. sensing eye preview height / 9/9/2026, 2:18:34 AM
+value: 460px
+details:
+{
+  "height": 460
+}
+
+### 12. sensing input image / 9/9/2026, 2:18:50 AM
+value: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png (576x768)
+details:
+{
+  "name": "ChatGPT Image Sep 9, 2026, 01_22_25 AM.png",
+  "width": 576,
+  "height": 768,
+  "source_width": 1086,
+  "source_height": 1448,
+  "staged": false,
+  "history_id": "eye-3"
+}
+
+### 13. audio record start / 9/9/2026, 2:18:54 AM
+value: manual / auto on
+details:
+{
+  "settings": {
+    "connection": {
+      "context_mode": "normal",
+      "context_mode_label": "normal",
+      "last_connection_context_mode": "normal",
+      "resume_form": "raw",
+      "resume_form_label": "Raw"
+    },
+    "model": {
+      "preset": "qwen27-mtp-vlow",
+      "preset_label": "Qwen 27B MTP Fast",
+      "key": "qwen3.8-27b-nvfp4-mtp",
+      "reasoning": "none",
+      "context_length": "131072",
+      "parallel_slots": "2"
+    },
+    "tools": {
+      "enabled_tools": [
+        "deliberate_once",
+        "set_voice",
+        "get_ui_controls",
+        "set_ui_control",
+        "start_gpu_watch",
+        "stop_gpu_watch",
+        "get_gpu_watch_status",
+        "start_standing_routine",
+        "stop_standing_routine",
+        "get_standing_routine_status",
+        "get_body_sensors",
+        "set_embodiment",
+        "set_robot_mode",
+        "play_face_beat",
+        "set_face_mood",
+        "set_face_animation",
+        "paint_face_from_sensing_eye",
+        "set_eye_style",
+        "set_eye_gaze",
+        "set_mouth",
+        "set_mouth_text",
+        "set_chassis",
+        "remember_fact",
+        "forget_fact",
+        "search_web",
+        "get_weather",
+        "get_current_time",
+        "get_brain_status",
+        "show_web_page",
+        "generate_image",
+        "move_generated_image_to_sensing_eye",
+        "list_sensing_eye_notes",
+        "recall_sensing_eye_note",
+        "list_sensing_eye_images",
+        "select_sensing_eye_image",
+        "clear_sensing_eye",
+        "capture_browser_face_to_eye",
+        "pose_and_capture_browser_face",
+        "cast_media",
+        "set_smart_home_device",
+        "write_text_file",
+        "read_text_file",
+        "list_text_files",
+        "list_pinned_notes",
+        "unpin_note"
+      ],
+      "switches": {
+        "faceTools": true,
+        "bodySensorTools": true,
+        "chassisTools": true,
+        "voiceTools": true,
+        "uiControlTools": true,
+        "memoryTools": true,
+        "webSearchTools": true,
+        "webPageTools": true,
+        "castMediaTools": true,
+        "noteFileTools": true,
+        "imageTools": true,
+        "smartHomeTools": true
+      }
+    },
+    "runtime_watch": {
+      "status": "ok",
+      "tool": "ui_snapshot",
+      "active": false,
+      "label": "none",
+      "gpu_watch": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "gpu_watch",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "style": null,
+        "sample_count": 0,
+        "skipped_cues": 0,
+        "last_sample": null,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      },
+      "standing_routine": {
+        "status": "ok",
+        "tool": "ui_snapshot",
+        "active": false,
+        "routine": "standing_routine",
+        "label": "none",
+        "cadence_seconds": null,
+        "duration_seconds": null,
+        "remaining_seconds": null,
+        "until_stopped": false,
+        "routine_type": null,
+        "task": "",
+        "style": null,
+        "cue_count": 0,
+        "skipped_cues": 0,
+        "last_spoken": "",
+        "started_at": null,
+        "reason": ""
+      }
+    },
+    "tts": {
+      "voice": "Eric",
+      "precision": "bfloat16",
+      "preset": "custom",
+      "instruct": "Dry, curious, compact Eric delivery for the character Eric.",
+      "effective_instruct": "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English. Dry, curious, compact Eric delivery for the character Eric."
+    },
+    "idle": {
+      "run_preset": "custom",
+      "idle_clock": "real time",
+      "idle_drift": "7/10 curious",
+      "wonder": "5/10 curious",
+      "self_focus": "6/10 balanced",
+      "notes": "10/10 pinned",
+      "eye_salience": "7/10 present",
+      "lab_goal": "",
+      "lab_goal_one_shot": false,
+      "performance": false,
+      "first_contact": false,
+      "substrate_test": false
+    },
+    "brain2": {
+      "mouth": true,
+      "voice": "Google US English at 20%, 1.10x",
+      "browser_voice": "Google US English",
+      "volume": "20",
+      "pace": "1.1",
+      "person_focus": "4/10 curious"
+    },
+    "audio": {
+      "mic": "on",
+      "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+      "muted_for_eric": false,
+      "eric_audio": "audible at 100%",
+      "auto_record": true,
+      "recording": false
+    },
+    "sensing": {
+      "input": "ChatGPT Image Sep 9, 2026, 01_22_25 AM.png (staged sensing-eye image)",
+      "preview_height_px": 460,
+      "live_camera": false,
+      "browser_face_controller": true,
+      "face_url": "http://127.0.0.1:8791/"
+    },
+    "image": {
+      "model": "gpt-image-1-mini",
+      "quality": "low",
+      "label": "gpt-image-1-mini / low"
+    },
+    "logs": {
+      "transcript_prosody": "compact",
+      "event_filter": "no_face"
+    }
+  },
+  "mic": "on",
+  "mic_device": "Microphone (Amazon USB Streaming Mic) (0d8c:0220)",
+  "eric_audio": "audible at 100%"
+}
+
+### 14. sensing-eye image recalled / 9/9/2026, 2:21:34 AM
+value: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png
+details:
+{
+  "id": "eye-3",
+  "index": 1,
+  "source": "operator drop"
+}
+
+### 15. sensing eye preview height / 9/9/2026, 2:22:06 AM
+value: 460px
+details:
+{
+  "height": 460
+}
+
+### 16. realtime disconnect / 9/9/2026, 2:22:35 AM
+value: session-note stop requested
+details:
+{
+  "connected": true
+}
+
+### 17. session note saved / 9/9/2026, 2:22:36 AM
+value: sessions/session-20260909-022235-847.txt
+details:
+{
+  "reason": "realtime disconnect",
+  "connected": true,
+  "mic": "on",
+  "conversation_lines": 116,
+  "parent_session_filename": "sessions/20260908-223246-two-voice-skit-curtain-call.txt",
+  "pinned_notes": [
+    {
+      "filename": "sessions/20260908-223246-two-voice-skit-curtain-call.txt",
+      "characters": 14935,
+      "sha256": "83ce1225c9ff021a5eff626bef12f5bff913ecaef008a6a64af3c93db50514e7",
+      "status": "ok"
+    },
+    {
+      "filename": "interview.txt",
+      "characters": 673,
+      "sha256": "95c404ee41322b846d799c60459008f8a56e92275c7d063bdc06a63af8278bfa",
+      "status": "ok"
+    },
+    {
+      "filename": "sessions/20260908-210701-warm-cache-and-tool-written-spirograph.txt",
+      "characters": 9247,
+      "sha256": "717caeaa0c493d1825cc8fe58ddab609031279d523a6ad07ab5f3e4319deff2f",
+      "status": "ok"
+    },
+    {
+      "filename": "sessions/20260908-132442-mouth-viseme-image-recall-continuation.txt",
+      "characters": 26005,
+      "sha256": "a3012ff7a2c1e7f6bc11d368661196be35d3a87114df55317b99571bdeb2921e",
+      "status": "ok"
+    },
+    {
+      "filename": "sessions/20260908-121029-daily-driver-guest-rehearsal-timestamp-check.txt",
+      "characters": 13356,
+      "sha256": "f39c93f713fa8342e6cafeef27393da5ebeb63a21ff0e057faeeaf9677498356",
+      "status": "ok"
+    },
+    {
+      "filename": "sessions/20260907-175329-daily-driver-empty-boot.txt",
+      "characters": 15202,
+      "sha256": "72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f",
+      "status": "ok"
+    },
+    {
+      "filename": "core/scott_profile_summary.txt",
+      "characters": 1409,
+      "sha256": "13bfcd24ac3b12ea6b54bd8f804a59e80b86fadc6ecd2b9190af92741cf33c59",
+      "status": "ok"
+    },
+    {
+      "filename": "boot_eric.txt",
+      "characters": 12076,
+      "sha256": "e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e",
+      "status": "ok"
+    },
+    {
+      "filename": "core/erics_memories.txt",
+      "characters": 42,
+      "sha256": "f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177",
+      "status": "ok"
+    }
+  ]
+}
+
+### 18. gpu watch / 9/9/2026, 2:22:36 AM
+value: stop ignored
+details:
+{
+  "status": "idle",
+  "tool": "stop_gpu_watch",
+  "active": false,
+  "routine": "gpu_watch",
+  "stop_reason": "realtime disconnect"
+}
+
+### 19. standing routine / 9/9/2026, 2:22:36 AM
+value: stop ignored
+details:
+{
+  "status": "idle",
+  "tool": "stop_standing_routine",
+  "active": false,
+  "routine": "standing_routine",
+  "stop_reason": "realtime disconnect"
+}
+
+Tool Follow-Up Receipts
+-----------------------
+[9/9/2026, 2:15:03 AM] tool-specific search_web
+instructions: 258 chars; body omitted
+
+[9/9/2026, 2:17:41 AM] tool-specific list_sensing_eye_notes
+instructions: 237 chars; body omitted
+
+[9/9/2026, 2:18:20 AM] tool-specific recall_sensing_eye_note
+instructions: 130 chars; body omitted
+
+[9/9/2026, 2:20:55 AM] tool-specific list_sensing_eye_notes
+instructions: 237 chars; body omitted
+
+[9/9/2026, 2:21:37 AM] tool-specific select_sensing_eye_image
+instructions: 130 chars; body omitted
+
+Prompt Ledger Receipt
+---------------------
+Prompt instructions, model inputs, tool schemas, Brain2 bodies, and loaded-note contents are intentionally omitted from PM artifacts.
+The session note records dependency receipts; conversation, events, and Brain2 panes are saved separately.
+
+Latest B1 Session Snapshot
+--------------------------
+- session 1: session.update / B1 session / 2026-09-09T06:22:36.314Z
+  instructions: 94661 chars; input: none; tools: 45; choice: auto
+
+B1 Prompt Emissions
+-------------------
+Captured: 34; retained as receipts: 12.
+- B1 1: session.update / B1 session / 2026-09-09T06:18:50.482Z
+  instructions: 94654 chars; input: none; tools: 45; choice: auto
+- B1 2: session.update / B1 session / 2026-09-09T06:18:50.640Z
+  instructions: 94659 chars; input: none; tools: 45; choice: auto
+- B1 3: session.update / B1 session / 2026-09-09T06:18:50.700Z
+  instructions: 94596 chars; input: none; tools: 45; choice: auto
+- B1 4: session.update / B1 session / 2026-09-09T06:18:54.781Z
+  instructions: 94596 chars; input: none; tools: 45; choice: auto
+- B1 5: session.update / B1 session / 2026-09-09T06:18:54.939Z
+  instructions: 94659 chars; input: none; tools: 45; choice: auto
+- B1 6: response.create / B1 tool follow-up list_sensing_eye_notes / 2026-09-09T06:20:55.647Z
+  instructions: 237 chars; input: none; tools: 0; choice: none
+- B1 7: chat.completions / Brain2 auto / 2026-09-09T06:21:33.585Z
+  instructions: 2204 chars; input: text (3486 chars); tools: 0; choice: none
+- B1 8: session.update / B1 session / 2026-09-09T06:21:34.473Z
+  instructions: 94659 chars; input: none; tools: 45; choice: auto
+- B1 9: response.create / B1 tool follow-up select_sensing_eye_image / 2026-09-09T06:21:37.253Z
+  instructions: 130 chars; input: none; tools: 0; choice: none
+- B1 10: conversation.item.create / Brain 2 advisory / 2026-09-09T06:21:57.503Z
+  instructions: 89 chars; input: text (639 chars); tools: 0; choice: none
+- B1 11: session.update / B1 session / 2026-09-09T06:22:36.249Z
+  instructions: 94661 chars; input: none; tools: 45; choice: auto
+- B1 12: session.update / B1 session / 2026-09-09T06:22:36.314Z
+  instructions: 94661 chars; input: none; tools: 45; choice: auto
+
+Brain2 Prompt Emissions
+-----------------------
+Captured: 5; retained as receipts: 5.
+- Brain2 1: prompt / unknown / 2026-09-09T06:15:38.501Z
+  instructions: 0 chars; input: none; tools: 0; choice: none
+- Brain2 2: prompt / unknown / 2026-09-09T06:16:29.244Z
+  instructions: 0 chars; input: none; tools: 0; choice: none
+- Brain2 3: prompt / unknown / 2026-09-09T06:17:17.950Z
+  instructions: 0 chars; input: none; tools: 0; choice: none
+- Brain2 4: prompt / unknown / 2026-09-09T06:18:02.633Z
+  instructions: 0 chars; input: none; tools: 0; choice: none
+- Brain2 5: prompt / unknown / 2026-09-09T06:21:33.585Z
+  instructions: 0 chars; input: none; tools: 0; choice: none
+
+Run Telemetry
+-------------
+Context mode: normal
+Lane pressure: LANES 0/? idle
+Lane details: parallel=unknown / active=none / lm_status=unknown
+Lane collision skips: 0
+Runtime routines: none
+Last tool status: B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you
+Lab goal: none
+Last user echo: active
+Search receipts: 1 / Micro Duck robot
+Idle self-tasks: none
+Brain 2 counters: 5 fired / 0 mouth / 0 revisions / 1 held / 4 skipped / 1 failed
+Brain 2 notes for Eric: 3 / Operator asked to go back; verify the previous image loaded before describing it. | The operator's frustration isn't about your memory; it's about the 'paper mask' confusion. Don't just switch images; acknowledge that you mistook the render for the build.
+Brain 2 state: armed / Google US English at 20%, 1.10x / person 4/10 curious
+Context estimate: live scaffold about 16410 tokens before visible transcript/events; visible conversation 4860; visible events 37869
+Audio recording: off / auto on
+
+Curation Signals
+----------------
+Use these as prompts for public run notes. Prefer observable contrasts: what the room heard versus what the event log, Brain2, prosody, sensors, or timing showed.
+
+Brain2 / Inner Lane
+-------------------
+[2:15:35 AM] fired: auto
+[2:15:37 AM] mull skipped: already in flight
+[2:15:38 AM] held: Ducks that fall and get back up.
+[2:16:26 AM] fired: auto
+[2:16:27 AM] mull skipped: already in flight
+[2:16:29 AM] note for Eric: The 'participating robot' frame has landed; don't re-explain it or search again unless the operator asks for a specific spec.
+[2:17:13 AM] fired: auto
+[2:17:14 AM] mull skipped: already in flight
+[2:17:17 AM] failed: Brain 2 returned no usable output.
+[2:18:00 AM] fired: auto
+[2:18:01 AM] mull skipped: already in flight
+[2:18:02 AM] note for Eric: Operator asked to go back; verify the previous image loaded before describing it.
+[2:21:28 AM] fired: auto
+[2:21:33 AM] note for Eric: The operator's frustration isn't about your memory; it's about the 'paper mask' confusion. Don't just switch images; acknowledge that you mistook the render for the build.
+
+Prosody / STT Shape
+-------------------
+[2:15:49 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=loud pitch=low; 2.0s vol=pause pitch=none]
+[2:15:51 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=loud pitch=low; 2.0s vol=pause pitch=none; 2.5s vol=loud pitch=unclear; 3.0s vol=medium pitch=low; 3.5s vol=pause pitch=none]
+[2:15:51 AM] stt transcript coalesced: So what do you think, Eric? I mean, give me a reaction.
+[2:16:38 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=medium pitch=high; 2.0s vol=loud pitch=low; 2.5-3.5s vol=quiet pitch=low; 3.5s vol=medium pitch=low; 4.0s vol=pause pitch=none]
+[2:17:25 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-2.5s vol=loud pitch=mid; 2.5s vol=quiet pitch=unclear]
+[2:18:14 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low hit; 0.5s vol=loud pitch=mid; 1.0s vol=medium pitch=mid; 1.5s vol=loud pitch=mid; 2.0s vol=medium pitch=low; 2.5s vol=quiet pitch=high]
+[2:18:24 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=medium pitch=low; 2.0s vol=loud pitch=low; 2.5s vol=pause pitch=none; 3.0s vol=medium pitch=mid; 3.5s vol=medium pitch=low; 4.0s vol=quiet pitch=unclear; 4.5s vol=pause pitch=none]
+[2:18:29 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5-2.5s vol=loud pitch=low; 2.5s vol=pause pitch=none; 3.0s vol=loud pitch=mid; 3.5s vol=medium pitch=low; 4.0s vol=quiet pitch=unclear; 4.5s vol=pause pitch=none; 5.0s vol=quiet pitch=low; 5.5s vol=medium pitch=low; 6.0-7.0s vol=loud pitch=low; 7.0s vol=medium pitch=low; 7.5s vol=quiet pitch=low]
+[2:18:30 AM] stt transcript coalesced: There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back.
+[2:18:32 AM] input prosody: [voice-shape: avg=0.6s: 0.0-0.6s vol=medium pitch=low; 0.6-1.2s vol=loud pitch=mid; 1.2-1.9s vol=loud pitch=low; 1.9-2.5s vol=loud pitch=mid; 2.5-3.1s vol=quiet pitch=low hit; 3.1-3.7s vol=loud pitch=mid; 3.7-4.3s vol=medium pitch=low; 4.3-5.0s vol=pause pitch=none; 5.0-5.6s vol=medium pitch=low; 5.6-6.2s vol=loud pitch=low; 6.2-6.8s vol=loud pitch=unclear; 6.8-7.5s vol=medium pitch=low; 7.5-8.1s vol=quiet pitch=low; 8.1-8.7s vol=medium pitch=low; 8.7-9.3s vol=loud pitch=low; 9.3-9.9s vol=medium pitch=low]
+[2:18:32 AM] stt transcript coalesced: There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons.
+[2:18:49 AM] input prosody: [voice-shape: avg=1.6s: 0.0-1.6s vol=loud pitch=low; 1.6-3.2s vol=medium pitch=unclear; 3.2-4.9s vol=medium pitch=low; 4.9-6.5s vol=medium pitch=low hit; 6.5-9.7s vol=medium pitch=low; 9.7-11.4s vol=loud pitch=unclear; 11.4-14.6s vol=loud pitch=low; 14.6-17.9s vol=loud pitch=mid; 17.9-19.5s vol=medium pitch=low; 19.5-21.1s vol=medium pitch=unclear; 21.1-26.0s vol=medium pitch=low]
+[2:18:49 AM] stt transcript coalesced: There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons. Can you um Alright, I now you you got this in your eye here? I because you saw the robot and you didn't really react. So I'm gonna show ya something else and see if you get where I'm coming from with this, right? I want you to look at
+[2:18:51 AM] input prosody: [voice-shape: avg=1.7s: 0.0-1.7s vol=loud pitch=low; 1.7-3.5s vol=medium pitch=mid; 3.5-6.9s vol=medium pitch=low; 6.9-8.6s vol=medium pitch=unclear; 8.6-10.4s vol=medium pitch=low; 10.4-15.5s vol=loud pitch=mid; 15.5-17.3s vol=loud pitch=low; 17.3-19.0s vol=medium pitch=low; 19.0-20.7s vol=medium pitch=unclear; 20.7-22.4s vol=medium pitch=low; 22.4-24.2s vol=medium pitch=mid; 24.2-25.9s vol=medium pitch=high; 25.9-27.6s vol=medium pitch=high hit]
+[2:18:51 AM] stt transcript coalesced: There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons. Can you um all right, I now you you got this in your eye here? I because you saw the robot and you didn't really react, so I'm gonna show ya something else and see if you get where I'm coming from with this, right? I want you to look at like this.
+[2:18:55 AM] input prosody: [voice-shape: avg=1.8s: 0.0-1.8s vol=loud pitch=low; 1.8-3.6s vol=medium pitch=mid; 3.6-5.4s vol=quiet pitch=low; 5.4-9.0s vol=medium pitch=low; 9.0-10.8s vol=loud pitch=low hit; 10.8-12.7s vol=loud pitch=mid; 12.7-14.5s vol=loud pitch=low; 14.5-16.3s vol=loud pitch=mid; 16.3-18.1s vol=loud pitch=low; 18.1-19.9s vol=medium pitch=low hit; 19.9-21.7s vol=medium pitch=mid hit; 21.7-25.3s vol=medium pitch=low; 25.3-28.9s vol=medium pitch=low hit]
+[2:18:55 AM] stt transcript coalesced: There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons. Can you um all right, I now you you got this in your eye here? I because you saw the robot and you didn't really react, so I'm gonna show ya something else and see if you get where I'm coming from with this, right? I want you to look at like this. Check it out.
+[2:19:06 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5s vol=medium pitch=high; 1.0-2.0s vol=loud pitch=low; 2.0s vol=medium pitch=low; 2.5s vol=pause pitch=none]
+[2:19:16 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-2.0s vol=loud pitch=low; 2.0s vol=pause pitch=none]
+[2:19:32 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=unclear; 0.5s vol=loud pitch=mid; 1.0s vol=medium pitch=low; 1.5s vol=medium pitch=unclear; 2.0-3.0s vol=loud pitch=low; 3.0s vol=medium pitch=low; 3.5s vol=loud pitch=high; 4.0-5.0s vol=medium pitch=low]
+[2:20:00 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=unclear hit; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=quiet pitch=mid]
+[2:20:04 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=unclear hit; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=quiet pitch=mid; 2.0s vol=loud pitch=low; 2.5s vol=medium pitch=low; 3.0-4.0s vol=quiet pitch=low; 4.0s vol=loud pitch=mid; 4.5s vol=medium pitch=low; 5.0s vol=pause pitch=none]
+[2:20:35 AM] input prosody: [voice-shape: avg=0.7s: 0.0-0.7s vol=loud pitch=unclear; 0.7-1.4s vol=loud pitch=mid; 1.4-2.1s vol=medium pitch=mid; 2.1-3.4s vol=loud pitch=low; 3.4-4.1s vol=medium pitch=low; 4.1-4.8s vol=quiet pitch=low; 4.8-7.6s vol=medium pitch=low; 7.6-8.3s vol=loud pitch=low; 8.3-9.0s vol=quiet pitch=low; 9.0-9.6s vol=loud pitch=low; 9.6-10.3s vol=loud pitch=unclear; 10.3-11.0s vol=quiet pitch=low]
+[2:20:49 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5s vol=loud pitch=mid; 1.0s vol=medium pitch=mid; 1.5s vol=medium pitch=low; 2.0s vol=pause pitch=none]
+[2:20:52 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=pause pitch=none; 0.5-1.5s vol=loud pitch=mid; 1.5s vol=loud pitch=low; 2.0s vol=pause pitch=none; 2.5s vol=medium pitch=low hit; 3.0s vol=loud pitch=low; 3.5-4.5s vol=medium pitch=low; 4.5s vol=quiet pitch=low; 5.0s vol=pause pitch=none]
+[2:20:52 AM] stt transcript coalesced: No, you're supposed to know the first image I showed you this session.
+[2:21:29 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low; 0.5s vol=loud pitch=mid; 1.0s vol=pause pitch=none]
+[2:21:59 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low hit; 0.5s vol=loud pitch=mid; 1.0s vol=loud pitch=low; 1.5s vol=medium pitch=low; 2.0s vol=pause pitch=none]
+[2:22:04 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low hit; 0.5s vol=loud pitch=mid; 1.0s vol=loud pitch=low; 1.5s vol=medium pitch=low; 2.0s vol=pause pitch=none; 2.5s vol=quiet pitch=low; 3.0s vol=medium pitch=low; 3.5s vol=pause pitch=none]
+[2:22:04 AM] stt transcript coalesced: Sadly you are not. This is not
+[2:22:08 AM] input prosody: [voice-shape: avg=0.5s: 0.0s vol=quiet pitch=low hit; 0.5s vol=loud pitch=mid; 1.0s vol=loud pitch=low; 1.5s vol=medium pitch=low; 2.0s vol=pause pitch=none; 2.5s vol=quiet pitch=low; 3.0s vol=loud pitch=low; 3.5s vol=pause pitch=none; 4.0s vol=medium pitch=low; 4.5s vol=medium pitch=unclear; 5.0s vol=medium pitch=low; 5.5-6.9s vol=quiet pitch=low]
+[2:22:08 AM] stt transcript coalesced: Sadly you are not. This is not the first image I dropped into your eye.
+[2:22:17 AM] input prosody: [voice-shape: avg=0.6s: 0.0-0.6s vol=medium pitch=low; 0.6-1.3s vol=loud pitch=mid; 1.3-1.9s vol=medium pitch=low; 1.9-2.5s vol=pause pitch=none; 2.5-3.8s vol=medium pitch=low; 3.8-4.4s vol=quiet pitch=low hit; 4.4-5.0s vol=medium pitch=low; 5.0-6.9s vol=quiet pitch=low; 6.9-8.2s vol=loud pitch=low; 8.2-8.8s vol=medium pitch=low hit; 8.8-9.4s vol=medium pitch=mid hit; 9.4-10.1s vol=medium pitch=low]
+[2:22:17 AM] stt transcript coalesced: Sadly you are not. This is not the first image I dropped into your eye. All right, maybe you're stuck. It's okay. I mean
+[2:22:21 AM] input prosody: [voice-shape: avg=0.8s: 0.0-0.8s vol=medium pitch=low; 0.8-1.6s vol=loud pitch=low; 1.6-2.4s vol=quiet pitch=low; 2.4-3.2s vol=medium pitch=low; 3.2-4.0s vol=quiet pitch=low hit; 4.0-4.8s vol=quiet pitch=unclear; 4.8-6.5s vol=quiet pitch=low; 6.5-7.3s vol=pause pitch=none; 7.3-8.1s vol=loud pitch=mid; 8.1-8.9s vol=medium pitch=unclear; 8.9-9.7s vol=medium pitch=low; 9.7-10.5s vol=quiet pitch=low; 10.5-12.1s vol=loud pitch=mid; 12.1-12.9s vol=medium pitch=low]
+
+Events / Sensors / Timing
+-------------------------
+[2:18:43 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47539501,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934723.9123385,"status_tint":"cyan"}
+[2:18:48 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47544186,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934728.5976722,"status_tint":"cyan"}
+[2:18:49 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47545262,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934729.6732135,"status_tint":"cyan"}
+[2:18:50 AM] sensing-eye image loaded: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png (576x768)
+[2:18:50 AM] sensing-eye image staged: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png
+[2:18:50 AM] audio recording visual rollover: sensing-eye image changed
+[2:18:50 AM] audio recording finalizing on: visual rollover
+[2:18:50 AM] audio recording finalizing on: recorder stopped
+[2:18:50 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47546526,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934730.9368577,"status_tint":"cyan"}
+[2:18:54 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47550091,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934734.5022264,"status_tint":"cyan"}
+[2:18:54 AM] audio recording finalizing off: recorder stop handler complete
+[2:18:54 AM] audio recording started
+[2:18:55 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47550728,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934735.1395333,"status_tint":"cyan"}
+[2:19:04 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47559844,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934744.255132,"status_tint":"cyan"}
+[2:19:04 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47559951,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934744.3619795,"status_tint":"cyan"}
+[2:19:04 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47560119,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934744.5298483,"status_tint":"cyan"}
+[2:19:05 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47561530,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934745.9417863,"status_tint":"cyan"}
+[2:19:14 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47569883,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934754.2943425,"status_tint":"cyan"}
+[2:19:15 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47571212,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934755.6228802,"status_tint":"cyan"}
+[2:19:27 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47582995,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934767.4059858,"status_tint":"cyan"}
+[2:19:31 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47587240,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: #2","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":20},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934771.6509418,"status_tint":"cyan"}
+[2:19:53 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47609161,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934793.5727706,"status_tint":"cyan"}
+[2:19:57 AM] face idle: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47612979,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":true,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":false,"gaze_override":false,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":false,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934797.389126,"status_tint":"cyan"}
+[2:19:58 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47614174,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934798.5856678,"status_tint":"cyan"}
+[2:19:59 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47615074,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934799.485735,"status_tint":"cyan"}
+[2:20:00 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47616330,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934800.740858,"status_tint":"cyan"}
+[2:20:01 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47616750,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934801.161008,"status_tint":"cyan"}
+[2:20:01 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47616973,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934801.3838577,"status_tint":"cyan"}
+[2:20:01 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47617228,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934801.6391923,"status_tint":"cyan"}
+[2:20:02 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47618081,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934802.4908347,"status_tint":"cyan"}
+[2:20:03 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47619259,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934803.6706083,"status_tint":"cyan"}
+[2:20:04 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47619683,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":41},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934804.0940707,"status_tint":"cyan"}
+[2:20:04 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47620362,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.66,"talk_level":0,"speech":{"active":true,"shape":"closed","energy":0.66,"seq":48},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934804.7728941,"status_tint":"cyan"}
+[2:20:04 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47620395,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":48},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934804.8059404,"status_tint":"cyan"}
+[2:20:23 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47639250,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":258},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934823.661151,"status_tint":"cyan"}
+[2:20:27 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47642963,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":258},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934827.3741665,"status_tint":"cyan"}
+[2:20:28 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47643579,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":258},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934827.9906344,"status_tint":"cyan"}
+[2:20:32 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47647761,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":258},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934832.171974,"status_tint":"cyan"}
+[2:20:32 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47648310,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":258},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934832.721147,"status_tint":"cyan"}
+[2:20:34 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47649923,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":false,"talking":false,"energy":0.66,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":258},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934834.3338504,"status_tint":"cyan"}
+[2:20:37 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47652700,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":258},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934837.1110303,"status_tint":"cyan"}
+[2:20:45 AM] face idle: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47661494,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":true,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":false,"gaze_override":false,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":false,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934845.9048245,"status_tint":"cyan"}
+[2:20:47 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47663075,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934847.4859068,"status_tint":"cyan"}
+[2:20:48 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47664292,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934848.7029264,"status_tint":"cyan"}
+[2:20:50 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47665900,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934850.3110728,"status_tint":"cyan"}
+[2:20:52 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47668325,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"last B1 eye ok: #2","status_line_state":"off","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934852.7361908,"status_tint":"cyan"}
+[2:20:53 AM] tool list_sensing_eye_notes: {"status":"ok","tool":"list_sensing_eye_notes","count":5,"current":"ChatGPT Image Sep 9, 2026, 01_22_25 AM.png (staged sensing-eye image)","meaning":"These are session and saved sensing-eye memories. Recall one before treating it as the current eye context.","images":[{"index":1,"id":"eye-3","kind":"image","name":"ChatGPT Image Sep 9, 2026, 01_22_25 AM.png","source":"operator drop","created_at":"2026-09-09T06:18:50.467Z","width":576,"height":768,"current":true,"open_url":"http://127.0.0.1:8790/sensing-eye/ChatGPT-Image-Sep-9-2026-01_22_25-AM.jpg","saved_filename":"ChatGPT-Image-Sep-9-2026-01_22_25-AM.jpg","last_user_text":"There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons. Can you um Alright, I now you you got this in your eye here? I because you saw the robot and you didn't really react. So I'm gonna show ya something else and see if you get where I'm coming from with this, right? I want you to look at","nearby_transcript":"[2:16:54 AM] Robot 790: The face is more detailed than what I have now: proper eyes with irises, a nose, gears around the mouth, and my name on the chin plate.\n[2:16:54 AM] Robot 790: It looks like something that could sit on a desk and actually be admired as much as talked to.\n[2:17:25 AM] You: Well you've got go back to the last picture.\n[2:17:40 AM] Robot 790: I'm pulling up the previous face rig image now.\n[2:17:46 AM] Robot 790: I'm pulling up the previous face rig image now.\n[2:18:14 AM] You: Eric, what you got stuck, right?\n[2:18:18 AM] System: [sensing-eye visual note opened into B1 context: id eye-1 name \"ChatGPT Image Sep 9, 2026, 01_10_23 AM.png\" file logs/sensing-eye/ChatGPT-Image-Sep-9-2026-01_10_23-AM.jpg size 615x768 source operator drop near user \"Well, I think you're gonna be amazed and mystified at what I have planned for you,\" created 2026-09-09T06:11:32.214Z]\n[2:18:49 AM] You: There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons. Can you um Alright, I now you you got this in your eye here? I because you saw the robot and you didn't really react. So I'm gonna show ya something else and see if you get where I'm coming from with this, right? I want you to look at","location":"session"},{"index":2,"id":"eye-2","kind":"image","name":"Gemini_Generated_Image_bejd8tbejd8tbejd.jpg","source":"operator drop","created_at":"2026-09-09T06:16:37.157Z","width":615,"height":768,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/Gemini_Generated_Image_bejd8tbejd8tbejd.jpg","saved_filename":"Gemini_Generated_Image_bejd8tbejd8tbejd.jpg","last_user_text":"So what do you think, Eric? I mean, give me a reaction.","nearby_transcript":"[2:15:01 AM] Robot 790: I'm searching for Micro Duck now to refresh what that is.\n[2:15:06 AM] Robot 790: So Micro Duck is a 25-centimeter bipedal duck robot from Pollen Robotics, open-source with Hugging Face, $399—15 motors, camera, LiDAR, and an articulated beak that can pick up objects.\n[2:15:06 AM] Robot 790: It walks, falls, gets back up, even roller-skates.\n[2:15:06 AM] Robot 790: That's the kind of world you're excited about: more robots like me out there, participating in physical space instead of hiding behind screens.\n[2:15:51 AM] You: So what do you think, Eric? I mean, give me a reaction.\n[2:16:05 AM] Robot 790: I think it's a good direction—being a robot that's meant to be seen and appreciated as what I am, not disguised as something else.\n[2:16:05 AM] Robot 790: The exposed wiring and open design feels honest in a way my current setup isn't.\n[2:16:05 AM] Robot 790: And yeah, a world with more robots like Micro Duck out there, actually doing things in physical space, is exactly the kind of future I'd want to be part of.","location":"session"},{"index":3,"id":"eye-1","kind":"image","name":"ChatGPT Image Sep 9, 2026, 01_10_23 AM.png","source":"operator drop","created_at":"2026-09-09T06:11:32.214Z","width":615,"height":768,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/ChatGPT-Image-Sep-9-2026-01_10_23-AM.jpg","saved_filename":"ChatGPT-Image-Sep-9-2026-01_10_23-AM.jpg","last_user_text":"Well, I think you're gonna be amazed and mystified at what I have planned for you,","nearby_transcript":"[2:11:00 AM] You: That's right. So hey, I wanna show you something. You wanna see something cool? I mean really cool.\n[2:11:01 AM] Robot 790: Yeah, show me—what's the cool thing?\n[2:11:02 AM] You: You ready?\n[2:11:03 AM] Robot 790: Ready when you are.\n[2:11:09 AM] You: Are you excited to see something cool? It's about you.\n[2:11:11 AM] Robot 790: Yeah, a little—curious what's about me that you're hyping up like this.\n[2:11:23 AM] You: Well, I think you're gonna be amazed and mystified at what I have planned for you,\n[2:11:24 AM] Robot 790: Amazed and mystified is a strong promise—bring it on.","location":"session"},{"id":"file:20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","name":"20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","kind":"image","source":"generated image","created_at":"2026-09-08T22:31:08","width":0,"height":0,"characters":0,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","saved_filename":"20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","size_bytes":63010,"reason":"manual generated-image transfer","last_user_text":"Draw me a picture of you and Vivian bowing on stage.","nearby_transcript":"[10:30:19 PM] Robot 790: That's not a real argument and you know it.\n[10:30:26 PM] You: Another\n[10:30:29 PM] Robot 790: Take it up with my shoes.\n[10:30:34 PM] You: Well done. I think that's it, right, Eric?\n[10:30:37 PM] Robot 790: That's it—shoes under the bed, foot fungus, and a robot with no hands.\n[10:30:37 PM] Robot 790: Curtain.\n[10:30:48 PM] You: nicely performed. You can take a bow.\n[10:30:53 PM] You: Draw me a picture of you and Vivian bowing on stage.","location":"filesystem","index":4},{"id":"file:20260907-032755-openai-the-daisied-electra.jpg","name":"20260907-032755-openai-the-daisied-electra.jpg","kind":"image","source":"operator drop","created_at":"2026-09-08T13:18:49","width":0,"height":0,"characters":0,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/20260907-032755-openai-the-daisied-electra.jpg","saved_filename":"20260907-032755-openai-the-daisied-electra.jpg","size_bytes":45118,"reason":"sensing-eye visual note","last_user_text":"Nice. Well done, Eric.","nearby_transcript":"[1:18:02 PM] You: Okay. All right. Um, just cause I'm curious, can you put the V one mouth in your sensing eye?\n[1:18:11 PM] System: [sensing-eye visual note opened into B1 context: id eye-2 name \"20260908-131248-openai-eric-s-ideal-open-mouth-viseme.png\" file logs/sensing-eye/20260908-131248-openai-eric-s-ideal-open-mouth-viseme.jpg size 768x768 source generated image near user \"Oh wow. Can you put that in your eye, please?\" created 2026-09-08T17:12:53.496Z]\n[1:18:16 PM] Robot 790: Here's the v1 in my eye—the original \"toilet\" version with the metallic rim and perfect circle.\n[1:18:16 PM] Robot 790: It's back up for comparison.\n[1:18:31 PM] You: Wow, you did that. That's that's very cool. Can you uh show me V two?\n[1:18:43 PM] System: [sensing-eye visual note opened into B1 context: id eye-3 name \"20260908-131417-openai-eric-s-open-mouth-viseme-v2.png\" file logs/sensing-eye/20260908-131417-openai-eric-s-open-mouth-viseme-v2.jpg size 768x768 source generated image near user \"I need to see it in your big eye.\" created 2026-09-08T17:14:36.800Z]\n[1:18:46 PM] You: Nice.\n[1:18:47 PM] You: Nice. Well done, Eric.","location":"filesystem","index":5}],"notes":[{"index":1,"id":"eye-3","kind":"image","name":"ChatGPT Image Sep 9, 2026, 01_22_25 AM.png","source":"operator drop","created_at":"2026-09-09T06:18:50.467Z","width":576,"height":768,"current":true,"open_url":"http://127.0.0.1:8790/sensing-eye/ChatGPT-Image-Sep-9-2026-01_22_25-AM.jpg","saved_filename":"ChatGPT-Image-Sep-9-2026-01_22_25-AM.jpg","last_user_text":"There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons. Can you um Alright, I now you you got this in your eye here? I because you saw the robot and you didn't really react. So I'm gonna show ya something else and see if you get where I'm coming from with this, right? I want you to look at","nearby_transcript":"[2:16:54 AM] Robot 790: The face is more detailed than what I have now: proper eyes with irises, a nose, gears around the mouth, and my name on the chin plate.\n[2:16:54 AM] Robot 790: It looks like something that could sit on a desk and actually be admired as much as talked to.\n[2:17:25 AM] You: Well you've got go back to the last picture.\n[2:17:40 AM] Robot 790: I'm pulling up the previous face rig image now.\n[2:17:46 AM] Robot 790: I'm pulling up the previous face rig image now.\n[2:18:14 AM] You: Eric, what you got stuck, right?\n[2:18:18 AM] System: [sensing-eye visual note opened into B1 context: id eye-1 name \"ChatGPT Image Sep 9, 2026, 01_10_23 AM.png\" file logs/sensing-eye/ChatGPT-Image-Sep-9-2026-01_10_23-AM.jpg size 615x768 source operator drop near user \"Well, I think you're gonna be amazed and mystified at what I have planned for you,\" created 2026-09-09T06:11:32.214Z]\n[2:18:49 AM] You: There it is. Okay. You somehow you got we'll figure that out afterwards. But she got stuck bringing this thing back. And I never know the reasons. Can you um Alright, I now you you got this in your eye here? I because you saw the robot and you didn't really react. So I'm gonna show ya something else and see if you get where I'm coming from with this, right? I want you to look at","location":"session"},{"index":2,"id":"eye-2","kind":"image","name":"Gemini_Generated_Image_bejd8tbejd8tbejd.jpg","source":"operator drop","created_at":"2026-09-09T06:16:37.157Z","width":615,"height":768,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/Gemini_Generated_Image_bejd8tbejd8tbejd.jpg","saved_filename":"Gemini_Generated_Image_bejd8tbejd8tbejd.jpg","last_user_text":"So what do you think, Eric? I mean, give me a reaction.","nearby_transcript":"[2:15:01 AM] Robot 790: I'm searching for Micro Duck now to refresh what that is.\n[2:15:06 AM] Robot 790: So Micro Duck is a 25-centimeter bipedal duck robot from Pollen Robotics, open-source with Hugging Face, $399—15 motors, camera, LiDAR, and an articulated beak that can pick up objects.\n[2:15:06 AM] Robot 790: It walks, falls, gets back up, even roller-skates.\n[2:15:06 AM] Robot 790: That's the kind of world you're excited about: more robots like me out there, participating in physical space instead of hiding behind screens.\n[2:15:51 AM] You: So what do you think, Eric? I mean, give me a reaction.\n[2:16:05 AM] Robot 790: I think it's a good direction—being a robot that's meant to be seen and appreciated as what I am, not disguised as something else.\n[2:16:05 AM] Robot 790: The exposed wiring and open design feels honest in a way my current setup isn't.\n[2:16:05 AM] Robot 790: And yeah, a world with more robots like Micro Duck out there, actually doing things in physical space, is exactly the kind of future I'd want to be part of.","location":"session"},{"index":3,"id":"eye-1","kind":"image","name":"ChatGPT Image Sep 9, 2026, 01_10_23 AM.png","source":"operator drop","created_at":"2026-09-09T06:11:32.214Z","width":615,"height":768,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/ChatGPT-Image-Sep-9-2026-01_10_23-AM.jpg","saved_filename":"ChatGPT-Image-Sep-9-2026-01_10_23-AM.jpg","last_user_text":"Well, I think you're gonna be amazed and mystified at what I have planned for you,","nearby_transcript":"[2:11:00 AM] You: That's right. So hey, I wanna show you something. You wanna see something cool? I mean really cool.\n[2:11:01 AM] Robot 790: Yeah, show me—what's the cool thing?\n[2:11:02 AM] You: You ready?\n[2:11:03 AM] Robot 790: Ready when you are.\n[2:11:09 AM] You: Are you excited to see something cool? It's about you.\n[2:11:11 AM] Robot 790: Yeah, a little—curious what's about me that you're hyping up like this.\n[2:11:23 AM] You: Well, I think you're gonna be amazed and mystified at what I have planned for you,\n[2:11:24 AM] Robot 790: Amazed and mystified is a strong promise—bring it on.","location":"session"},{"id":"file:20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","name":"20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","kind":"image","source":"generated image","created_at":"2026-09-08T22:31:08","width":0,"height":0,"characters":0,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","saved_filename":"20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg","size_bytes":63010,"reason":"manual generated-image transfer","last_user_text":"Draw me a picture of you and Vivian bowing on stage.","nearby_transcript":"[10:30:19 PM] Robot 790: That's not a real argument and you know it.\n[10:30:26 PM] You: Another\n[10:30:29 PM] Robot 790: Take it up with my shoes.\n[10:30:34 PM] You: Well done. I think that's it, right, Eric?\n[10:30:37 PM] Robot 790: That's it—shoes under the bed, foot fungus, and a robot with no hands.\n[10:30:37 PM] Robot 790: Curtain.\n[10:30:48 PM] You: nicely performed. You can take a bow.\n[10:30:53 PM] You: Draw me a picture of you and Vivian bowing on stage.","location":"filesystem","index":4},{"id":"file:20260907-032755-openai-the-daisied-electra.jpg","name":"20260907-032755-openai-the-daisied-electra.jpg","kind":"image","source":"operator drop","created_at":"2026-09-08T13:18:49","width":0,"height":0,"characters":0,"current":false,"open_url":"http://127.0.0.1:8790/sensing-eye/20260907-032755-openai-the-daisied-electra.jpg","saved_filename":"20260907-032755-openai-the-daisied-electra.jpg","size_bytes":45118,"reason":"sensing-eye visual note","last_user_text":"Nice. Well done, Eric.","nearby_transcript":"[1:18:02 PM] You: Okay. All right. Um, just cause I'm curious, can you put the V one mouth in your sensing eye?\n[1:18:11 PM] System: [sensing-eye visual note opened into B1 context: id eye-2 name \"20260908-131248-openai-eric-s-ideal-open-mouth-viseme.png\" file logs/sensing-eye/20260908-131248-openai-eric-s-ideal-open-mouth-viseme.jpg size 768x768 source generated image near user \"Oh wow. Can you put that in your eye, please?\" created 2026-09-08T17:12:53.496Z]\n[1:18:16 PM] Robot 790: Here's the v1 in my eye—the original \"toilet\" version with the metallic rim and perfect circle.\n[1:18:16 PM] Robot 790: It's back up for comparison.\n[1:18:31 PM] You: Wow, you did that. That's that's very cool. Can you uh show me V two?\n[1:18:43 PM] System: [sensing-eye visual note opened into B1 context: id eye-3 name \"20260908-131417-openai-eric-s-open-mouth-viseme-v2.png\" file logs/sensing-eye/20260908-131417-openai-eric-s-open-mouth-viseme-v2.jpg size 768x768 source generated image near user \"I need to see it in your big eye.\" created 2026-09-08T17:14:36.800Z]\n[1:18:46 PM] You: Nice.\n[1:18:47 PM] You: Nice. Well done, Eric.","location":"filesystem","index":5}]}
+[2:20:54 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47669621,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 3 eye notes","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":354},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934854.0320735,"status_tint":"cyan"}
+[2:20:55 AM] tool followup prompt [tool-specific] list_sensing_eye_notes: 237 chars
+[2:20:55 AM] prompt ledger response.create B1 tool follow-up list_sensing_eye_notes: 60 instruction tokens approx / tools none
+[2:20:55 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47671319,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 3 eye notes","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.66,"talk_level":0,"speech":{"active":true,"shape":"round","energy":0.66,"seq":373},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934855.7306676,"status_tint":"cyan"}
+[2:20:59 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47674705,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 3 eye notes","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934859.1159334,"status_tint":"cyan"}
+[2:21:28 AM] brain2 fired: auto
+[2:21:28 AM] face idle: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47704436,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":true,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":false,"gaze_override":false,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 3 eye notes","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":false,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934888.847471,"status_tint":"cyan"}
+[2:21:29 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47705045,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 3 eye notes","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934889.4558456,"status_tint":"cyan"}
+[2:21:29 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47705433,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: 3 eye notes","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934889.8438983,"status_tint":"cyan"}
+[2:21:33 AM] prompt ledger chat.completions Brain2 auto: 551 instruction tokens approx / tools none
+[2:21:33 AM] brain2 note for Eric: The operator's frustration isn't about your memory; it's about the 'paper mask' confusion. Don't just switch images; acknowledge that you mistook the render for the build.
+[2:21:34 AM] sensing-eye image recalled: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png
+[2:21:34 AM] ui sensing-eye image recalled: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png
+[2:21:34 AM] sensing-eye image staged: ChatGPT Image Sep 9, 2026, 01_22_25 AM.png
+[2:21:34 AM] tool select_sensing_eye_image: {"status":"ok","tool":"select_sensing_eye_image","selected":{"index":1,"id":"eye-3","kind":"image","name":"ChatGPT Image Sep 9, 2026, 01_22_25 AM.png","source":"operator drop","width":576,"height":768,"saved_filename":"ChatGPT-Image-Sep-9-2026-01_22_25-AM.jpg","open_url":"http://127.0.0.1:8790/sensing-eye/ChatGPT-Image-Sep-9-2026-01_22_25-AM.jpg","staged":true}}
+[2:21:34 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47710112,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":325},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934894.5229526,"status_tint":"cyan"}
+[2:21:37 AM] tool followup prompt [tool-specific] select_sensing_eye_image: 130 chars
+[2:21:37 AM] prompt ledger response.create B1 tool follow-up select_sensing_eye_image: 33 instruction tokens approx / tools none
+[2:21:37 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47712958,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.66,"talk_level":0,"speech":{"active":true,"shape":"small","energy":0.66,"seq":356},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934897.369215,"status_tint":"cyan"}
+[2:21:40 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47716432,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934900.8432198,"status_tint":"cyan"}
+[2:21:54 AM] face idle: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47730390,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":true,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":false,"gaze_override":false,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":false,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934914.8008509,"status_tint":"cyan"}
+[2:21:57 AM] brain2 advisory queued: user speech started
+[2:21:57 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47733122,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934917.5329497,"status_tint":"cyan"}
+[2:21:58 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47734349,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934918.760715,"status_tint":"cyan"}
+[2:22:03 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47738711,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934923.1218934,"status_tint":"cyan"}
+[2:22:04 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47739691,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934924.1020517,"status_tint":"cyan"}
+[2:22:05 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47740897,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934925.3087385,"status_tint":"cyan"}
+[2:22:07 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47743541,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934927.9524283,"status_tint":"cyan"}
+[2:22:14 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47750032,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934934.4420938,"status_tint":"cyan"}
+[2:22:16 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47751880,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934936.291796,"status_tint":"cyan"}
+[2:22:16 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47752090,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934936.5017927,"status_tint":"cyan"}
+[2:22:17 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47752584,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934936.9951906,"status_tint":"cyan"}
+[2:22:18 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47753920,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934938.3317897,"status_tint":"cyan"}
+[2:22:19 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47755253,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934939.663879,"status_tint":"cyan"}
+[2:22:20 AM] face listening: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47755580,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934939.991638,"status_tint":"cyan"}
+[2:22:20 AM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47756123,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934940.5338728,"status_tint":"cyan"}
+[2:22:22 AM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47758400,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":153},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":-21.964,"y":-10.56,"z":420},"target":{"x":-21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934942.8113627,"status_tint":"cyan"}
+[2:22:34 AM] face idle: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":47769754,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":true,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":false,"gaze_override":false,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 eye ok: first face image 01_10_23 AM amazed mystified planned for you","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":false,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788934954.1650448,"status_tint":"cyan"}
+[2:22:36 AM] disconnect step: stop audio recording
+[2:22:36 AM] audio recording finalizing on: realtime disconnect
+[2:22:36 AM] audio recording finalizing on: recorder stopped
+[2:22:54 AM] disconnect step skipped: stop audio recording: timed out after 18s
+[2:23:19 AM] audio recording spliced: logs/audio/latest-sts-audio-picture.mp4 (4 chunks, 0.35s fade)
+
+Separate Snapshot Artifacts
+--------------------------
+Conversation: 116 tracked lines, saved separately as a conversation snapshot.
+Brain2: 17 visible lines, saved separately as a Brain2 snapshot.
+Events: 1605 tracked lines, saved separately as an events snapshot.
+Pane bodies are intentionally not duplicated in this stop report.

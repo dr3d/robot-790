@@ -1,0 +1,47 @@
+Robot 790 Recording Stop Receipt
+================================
+Curated: 2026-09-08T22:33:08-04:00
+Source report: logs/live/20260908-223304-recording_stop_report.txt
+
+This PM artifact keeps only the final runtime and recording receipts. Prompt
+bodies, loaded-note bodies, tool schemas, and duplicate pane contents remain
+outside the curated bundle.
+
+Recording
+---------
+Final audio artifact: logs/audio/20260908-223249-sts-audio-session-picture.mp4
+Source audio artifact: logs/audio/20260908-223249-sts-audio-session-source.webm
+Cover image: logs/audio/20260908-223247-sts-audio-cover.jpg
+Chunks: 2
+Final splice: 2026-09-09T02:33:01.575Z
+Fade: 0.35 seconds
+Caption events: 44
+
+Runtime Receipt
+---------------
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+Run preset: Custom
+B1 context mode: normal
+Resume form: Raw
+B1 loaded-note dependencies at save: 8 active
+B1 browser memory facts: 0
+B1 search receipts: none
+B1 sensing input at save: 20260908-223107-openai-eric-and-vivian-bowing-on-stage.png
+B1 runtime routines: none
+Brain2 advisory notes available to B1 at save: 0
+Mic at stop: off
+
+Finalization Receipt
+--------------------
+- 10:31:07 PM: generated image caused an audio visual rollover.
+- 10:31:14 PM: first recording segment finalized and a new segment began.
+- 10:32:46 PM: disconnect initiated final recording stop.
+- 10:33:01 PM: the two chunks were successfully spliced.
+- 10:33:04 PM: the stop-audio disconnect step reported a timeout after 18 seconds.
+- 10:33:05 PM to 10:33:08 PM: final pane snapshots were saved.
+
+Note
+----
+The raw browser-generated stop report for this run used a stale, verbose page
+formatter. This compact receipt is the PM copy; the raw local source remains
+available under logs/live for forensic comparison.

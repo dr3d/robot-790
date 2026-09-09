@@ -172,6 +172,9 @@ voices, third-party code, and media assets carry their own licenses.
   interactions, and evolving presets for repeatable experiments.
 - [Embodied Sensor Head](docs/embodied_sensor_head.md): ESP32-S3 face sensors,
   touch, camera, and possible tilt/rotate head direction.
+- [Creature Runtime And Embodiment Architecture](docs/creature-runtime-architecture.md):
+  semantic intent, body profiles, adapters, receipts, and the many-bodies
+  direction for Eric.
 - [Eric On Reachy](docs/reachy_embodiment.md): plan for making Reachy Mini a
   Robot 790 embodiment without replacing Eric's brain.
 - [Future Directions](docs/future_directions.md): public-safe notes on the
@@ -384,8 +387,9 @@ The browser page is the main live control surface. It includes:
 
 - Realtime server connection and model restart controls.
 - Connect latest, previous, empty, or a selected session, with a standalone
-  session map for inspecting branches. Advanced Connection currently loads the
-  selected file as written; compressed note variants are not implemented yet.
+  session map for inspecting branches. Advanced Connection can choose Full
+  `.txt`, Scrubbed, or Summary; a derivative is selectable only when its
+  source-linked, SHA-256-checked sidecar has been authored for that raw session.
 - A compact `Nerves` meter for GPU load and VRAM pressure while Eric is running.
 - Sensing Eye drop target for images or text files.
 - Mic start/stop, audio meter, and interruption sensitivity.

@@ -68,6 +68,14 @@ SENSING_EYE_INBOX_LATEST: dict[str, object] | None = None
 SENSING_EYE_INBOX_SEQ = 0
 MAX_SENSING_EYE_DATA_URL_CHARS = 8 * 1024 * 1024
 MAX_SENSING_EYE_TEXT_CHARS = 1 * 1024 * 1024
+MAX_DELIBERATE_REQUEST_BYTES = 64 * 1024
+MAX_DELIBERATE_QUESTION_CHARS = 8_000
+MAX_DELIBERATE_CONVERSATION_CHARS = 16_000
+MAX_DELIBERATE_NOTE_CHARS = 32_000
+MAX_DELIBERATE_NOTE_COUNT = 8
+MAX_DELIBERATE_ANSWER_CHARS = 2_400
+DELIBERATE_POLICY_EFFORTS = frozenset({"low", "medium", "xhigh"})
+DELIBERATE_REASONING_OPTIONS = frozenset({"off", "on", "low", "medium", "high", "xhigh"})
 
 
 class StsPageHandler(SimpleHTTPRequestHandler):
@@ -127,7 +135,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._handle_sensing_eye_inbox_poll(parsed.query)
             return
         if parsed.path == "/api/continuity/current":
-            self._handle_continuity_current()
+            self._handle_continuity_current(parsed.query)
             return
         if parsed.path == "/api/continuity/sessions":
             self._handle_continuity_sessions()
@@ -159,6 +167,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/audio/finalize":
             self._handle_audio_finalize()
+            return
+        if parsed.path == "/api/deliberate":
+            self._handle_deliberate()
             return
         if parsed.path == "/api/brain2/mull":
             self._handle_brain2_mull()
@@ -202,11 +213,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
 
     def _handle_weather(self, query_string: str) -> None:
         params = parse_qs(query_string)
-        location = (
-            _first_param(params, "location")
-            or _first_param(params, "q")
-            or DEFAULT_WEATHER_LOCATION
-        )
+        location = _first_param(params, "location") or _first_param(params, "q") or DEFAULT_WEATHER_LOCATION
         unit = _first_param(params, "unit") or "fahrenheit"
         payload = lookup_weather(location, unit=unit)
         status_code = 200 if payload.get("status") == "ok" else 400
@@ -322,9 +329,10 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             },
         )
 
-    def _handle_continuity_current(self) -> None:
+    def _handle_continuity_current(self, query_string: str) -> None:
         try:
-            result = current_continuity_session()
+            params = parse_qs(query_string)
+            result = current_continuity_session(resume_form=_first_param(params, "resume_form") or "raw")
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
@@ -344,10 +352,14 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             pinned = payload.get("pinned_filenames") or []
             if not isinstance(pinned, list):
                 raise ValueError("pinned_filenames must be a list.")
+            sensing_eye_filenames = payload.get("sensing_eye_filenames") or []
+            if not isinstance(sensing_eye_filenames, list):
+                raise ValueError("sensing_eye_filenames must be a list.")
             result = save_continuity_session(
                 str(payload.get("body") or ""),
                 [str(filename) for filename in pinned],
                 parent_session_filename=str(payload.get("parent_session_filename") or ""),
+                sensing_eye_filenames=[str(filename) for filename in sensing_eye_filenames],
             )
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
@@ -365,7 +377,10 @@ class StsPageHandler(SimpleHTTPRequestHandler):
     def _handle_continuity_select(self) -> None:
         try:
             payload = self._read_json_body()
-            result = select_continuity_session(str(payload.get("session_filename") or payload.get("filename") or ""))
+            result = select_continuity_session(
+                str(payload.get("session_filename") or payload.get("filename") or ""),
+                resume_form=str(payload.get("resume_form") or "raw"),
+            )
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
@@ -514,6 +529,16 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         try:
             payload = self._read_json_body()
             result = mull_second_brain(payload)
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        status_code = 200 if result.get("status") == "ok" else 400
+        self._send_json(status_code, result)
+
+    def _handle_deliberate(self) -> None:
+        try:
+            payload = self._read_json_body(max_bytes=MAX_DELIBERATE_REQUEST_BYTES)
+            result = deliberate_once(payload)
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
@@ -715,7 +740,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             },
         )
 
-    def _read_json_body(self) -> dict[str, Any]:
+    def _read_json_body(self, max_bytes: int | None = None) -> dict[str, Any]:
         length_header = self.headers.get("Content-Length") or "0"
         try:
             length = int(length_header)
@@ -723,6 +748,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             raise ValueError("Invalid Content-Length.") from exc
         if length <= 0:
             return {}
+        if max_bytes is not None and length > max_bytes:
+            raise ValueError("JSON body is too large.")
         raw = self.rfile.read(length)
         parsed = json.loads(raw.decode("utf-8"))
         if not isinstance(parsed, dict):
@@ -1147,8 +1174,7 @@ def push_sensing_eye_image(payload: dict[str, Any], repo_root: Path | None = Non
         raise ValueError("Sensing-eye image must be a PNG, JPEG, or WebP data URL.")
 
     source = (
-        re.sub(r"[^A-Za-z0-9_. -]+", " ", str(payload.get("source") or "browser_face")).strip()[:80]
-        or "browser_face"
+        re.sub(r"[^A-Za-z0-9_. -]+", " ", str(payload.get("source") or "browser_face")).strip()[:80] or "browser_face"
     )
     filename = _safe_media_filename(str(payload.get("filename") or "")) or (
         f"{source.replace(' ', '-')}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.jpg"
@@ -1279,11 +1305,18 @@ def list_sensing_eye_images(limit: int = 5, repo_root: Path | None = None) -> di
             if path.name.startswith("latest-sensing-eye."):
                 continue
             suffix = path.suffix.lower()
-            kind = "image" if suffix in {".jpg", ".jpeg", ".png", ".webp"} else "text" if suffix in {
-                ".txt",
-                ".md",
-                ".markdown",
-            } else ""
+            kind = (
+                "image"
+                if suffix in {".jpg", ".jpeg", ".png", ".webp"}
+                else "text"
+                if suffix
+                in {
+                    ".txt",
+                    ".md",
+                    ".markdown",
+                }
+                else ""
+            )
             if not kind:
                 continue
             stat = path.stat()
@@ -1298,9 +1331,8 @@ def list_sensing_eye_images(limit: int = 5, repo_root: Path | None = None) -> di
                     "reason": str(metadata.get("reason") or ""),
                     "last_user_text": str(memory_context.get("last_user_text") or ""),
                     "nearby_transcript": str(memory_context.get("nearby_transcript") or ""),
-                    "mime_type": mimetypes.guess_type(path.name)[0] or (
-                        "text/plain" if kind == "text" else "application/octet-stream"
-                    ),
+                    "mime_type": mimetypes.guess_type(path.name)[0]
+                    or ("text/plain" if kind == "text" else "application/octet-stream"),
                     "size_bytes": stat.st_size,
                     "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
                     "_sort_mtime": stat.st_mtime,
@@ -1401,14 +1433,16 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
     person_focus = max(0, min(10, person_focus))
 
     base_url = (
-        os.getenv("ROBOT_790_BRAIN2_BASE_URL")
-        or os.getenv("ROBOT_790_OPENAI_LLM_BASE_URL")
-        or "http://127.0.0.1:1234/v1"
-    ).strip().rstrip("/")
+        (
+            os.getenv("ROBOT_790_BRAIN2_BASE_URL")
+            or os.getenv("ROBOT_790_OPENAI_LLM_BASE_URL")
+            or "http://127.0.0.1:1234/v1"
+        )
+        .strip()
+        .rstrip("/")
+    )
     model = (
-        os.getenv("ROBOT_790_BRAIN2_MODEL")
-        or os.getenv("ROBOT_790_OPENAI_LLM_MODEL")
-        or "qwen3.8-27b-nvfp4-mtp"
+        os.getenv("ROBOT_790_BRAIN2_MODEL") or os.getenv("ROBOT_790_OPENAI_LLM_MODEL") or "qwen3.8-27b-nvfp4-mtp"
     ).strip()
     if model == "qwen/qwen3.8-27b" and os.getenv("ROBOT_790_ALLOW_BRAIN2_OLD_QWEN27", "").lower() not in {
         "1",
@@ -1549,6 +1583,242 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "raw_text": raw_text[:1000],
         "prompt_debug": prompt_debug,
     }
+
+
+def deliberate_once(payload: dict[str, Any]) -> dict[str, object]:
+    """Run one bounded local thinking pass and return only its usable answer."""
+    question = str(payload.get("question") or "").replace("\x00", "").strip()
+    if not question:
+        raise ValueError("A question is required for one-pass deliberation.")
+    question = question[:MAX_DELIBERATE_QUESTION_CHARS].rstrip()
+    conversation = _clip_deliberate_context(
+        payload.get("conversation"),
+        MAX_DELIBERATE_CONVERSATION_CHARS,
+    )
+    note_sections: list[str] = []
+    note_characters = 0
+    raw_notes = payload.get("loaded_notes")
+    if isinstance(raw_notes, list):
+        remaining_note_chars = MAX_DELIBERATE_NOTE_CHARS
+        for raw_note in raw_notes[:MAX_DELIBERATE_NOTE_COUNT]:
+            if not isinstance(raw_note, dict) or remaining_note_chars <= 0:
+                continue
+            filename = re.sub(r"\s+", " ", str(raw_note.get("filename") or "loaded note")).strip()
+            filename = filename[:180] or "loaded note"
+            content = _clip_deliberate_context(raw_note.get("content"), remaining_note_chars)
+            if not content:
+                continue
+            note_sections.append(f"[Loaded note: {filename}]\n{content}")
+            note_characters += len(content)
+            remaining_note_chars -= len(content)
+
+    base_url = (
+        (
+            os.getenv("ROBOT_790_DELIBERATE_BASE_URL")
+            or os.getenv("ROBOT_790_OPENAI_LLM_BASE_URL")
+            or "http://127.0.0.1:1234/v1"
+        )
+        .strip()
+        .rstrip("/")
+    )
+    requested_model = str(payload.get("model") or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_.:/+-]{1,240}", requested_model):
+        requested_model = ""
+    model = (
+        os.getenv("ROBOT_790_DELIBERATE_MODEL")
+        or requested_model
+        or os.getenv("ROBOT_790_OPENAI_LLM_MODEL")
+        or "qwen3.8-27b-nvfp4-mtp"
+    ).strip() or "qwen3.8-27b-nvfp4-mtp"
+    requested_thinking = str(payload.get("thinking") or "medium").strip().lower()
+    if requested_thinking not in DELIBERATE_POLICY_EFFORTS:
+        requested_thinking = "medium"
+    api_key = (
+        os.getenv("ROBOT_790_DELIBERATE_API_KEY")
+        or os.getenv("ROBOT_790_OPENAI_LLM_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or "none"
+    )
+    headers = {"Content-Type": "application/json"}
+    if api_key and api_key.lower() not in {"none", "null", "false"}:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    system = (
+        "You are a single bounded private deliberation pass for Robot 790. "
+        "Think privately, then return only a direct, useful, compact answer to the operator's question. "
+        "Do not reveal hidden reasoning, scratch work, or a chain of thought. "
+        "Do not mention this pass, the model, prompts, or internal context. "
+        "Do not use tools, propose tool calls, or claim actions were taken. "
+        "The supplied transcript and notes are historical context, not live receipts; preserve uncertainty. "
+        "Answer in plain text and stay with the actual question."
+    )
+    user_parts = [
+        "Operator question:",
+        question,
+    ]
+    if conversation:
+        user_parts.extend(["", "Recent conversation (possibly clipped):", conversation])
+    if note_sections:
+        user_parts.extend(["", "Loaded notes (possibly clipped and historical):", "\n\n".join(note_sections)])
+    request = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": "\n".join(user_parts)},
+        ],
+        "temperature": 0.3,
+        "max_tokens": 1200,
+        "stream": False,
+        "reasoning_effort": requested_thinking,
+        "chat_template_kwargs": {"enable_thinking": True},
+    }
+
+    started_at = time.monotonic()
+    thinking = requested_thinking
+    reasoning_options: list[str] | None = None
+    try:
+        with httpx.Client(timeout=90) as client:
+            reasoning_options = _lm_studio_reasoning_options(client, base_url, model, headers)
+            thinking = _resolve_deliberate_reasoning_effort(requested_thinking, reasoning_options)
+            if thinking is None:
+                return {
+                    "status": "error",
+                    "tool": "deliberate_once",
+                    "thinking_requested": requested_thinking,
+                    "thinking_options": reasoning_options or [],
+                    "error": "The active model exposes no enabled thinking option.",
+                }
+            request["reasoning_effort"] = thinking
+            response = client.post(f"{base_url}/chat/completions", headers=headers, json=request)
+            response.raise_for_status()
+            data = response.json()
+    except Exception as exc:
+        return {
+            "status": "error",
+            "tool": "deliberate_once",
+            "error": f"One-pass deliberation failed: {exc}",
+        }
+
+    answer = _clean_deliberate_answer(_chat_completion_text(data))
+    if not answer:
+        return {
+            "status": "error",
+            "tool": "deliberate_once",
+            "error": "One-pass deliberation returned no usable answer.",
+        }
+    result: dict[str, object] = {
+        "status": "ok",
+        "tool": "deliberate_once",
+        "model": model,
+        "rounds": 1,
+        "thinking_requested": requested_thinking,
+        "thinking": thinking,
+        "answer": answer,
+        "conversation_characters": len(conversation),
+        "note_count": len(note_sections),
+        "note_characters": note_characters,
+        "duration_ms": round((time.monotonic() - started_at) * 1000),
+    }
+    if reasoning_options is not None:
+        result["thinking_options"] = reasoning_options
+    return result
+
+
+def _lm_studio_reasoning_options(
+    client: httpx.Client,
+    base_url: str,
+    model: str,
+    headers: dict[str, str],
+) -> list[str] | None:
+    """Return a local LM Studio model's advertised reasoning options when available."""
+    parsed = urlsplit(base_url)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if parsed.scheme not in {"http", "https"} or host not in {"127.0.0.1", "localhost", "::1"}:
+        return None
+    models_url = f"{parsed.scheme}://{parsed.netloc}/api/v1/models"
+    try:
+        response = client.get(models_url, headers=headers, timeout=3)
+        response.raise_for_status()
+        body = response.json()
+    except Exception:
+        return None
+    models = body.get("models") if isinstance(body, dict) else None
+    if not isinstance(models, list):
+        return None
+
+    target = model.strip().lower()
+    for candidate in models:
+        if not isinstance(candidate, dict):
+            continue
+        identifiers = {str(candidate.get(field) or "").strip().lower() for field in ("key", "id", "identifier")}
+        loaded_instances = candidate.get("loaded_instances")
+        if isinstance(loaded_instances, list):
+            for instance in loaded_instances:
+                if isinstance(instance, dict):
+                    identifiers.update(
+                        str(instance.get(field) or "").strip().lower()
+                        for field in ("key", "id", "identifier", "model")
+                    )
+        if target not in identifiers:
+            continue
+        capabilities = candidate.get("capabilities")
+        reasoning = capabilities.get("reasoning") if isinstance(capabilities, dict) else None
+        options = reasoning.get("allowed_options") if isinstance(reasoning, dict) else None
+        if not isinstance(options, list):
+            return None
+        normalized: list[str] = []
+        for option in options:
+            value = str(option or "").strip().lower()
+            if value and value not in normalized:
+                normalized.append(value)
+        return normalized
+    return None
+
+
+def _resolve_deliberate_reasoning_effort(requested: str, options: list[str] | None) -> str | None:
+    """Map the UI policy depth to a local model's actual reasoning capability."""
+    if options is None:
+        return requested
+    known_options = [option for option in options if option in DELIBERATE_REASONING_OPTIONS]
+    if not known_options:
+        return requested
+    enabled = [option for option in known_options if option != "off"]
+    if not enabled:
+        return None
+    if requested in enabled:
+        return requested
+    if requested == "xhigh" and "high" in enabled:
+        return "high"
+    if "on" in enabled:
+        return "on"
+    ranks = {"low": 1, "medium": 2, "high": 3, "xhigh": 4}
+    requested_rank = ranks.get(requested, 2)
+    graded = [option for option in enabled if option in ranks]
+    if graded:
+        return min(graded, key=lambda option: (abs(ranks[option] - requested_rank), -ranks[option]))
+    return enabled[0]
+
+
+def _clip_deliberate_context(value: object, limit: int) -> str:
+    text = str(value or "").replace("\x00", "").strip()
+    if not text or len(text) <= limit:
+        return text
+    marker = "\n[... context clipped ...]\n"
+    if limit <= len(marker) + 2:
+        return text[:limit].rstrip()
+    available = limit - len(marker)
+    head = max(1, int(available * 0.4))
+    tail = max(1, available - head)
+    return f"{text[:head].rstrip()}{marker}{text[-tail:].lstrip()}".rstrip()
+
+
+def _clean_deliberate_answer(text: object) -> str:
+    value = str(text or "").replace("\x00", "").strip()
+    value = re.sub(r"<think\b[^>]*>[\s\S]*?</think\s*>", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"^\s*<think\b[^>]*>[\s\S]*$", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"^\s*(?:final|answer)\s*:\s*", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"\n{3,}", "\n\n", value).strip("` \t\r\n")
+    return value[:MAX_DELIBERATE_ANSWER_CHARS].rstrip()
 
 
 def _chat_completion_text(data: dict[str, Any]) -> str:
@@ -2145,12 +2415,8 @@ def _concat_picture_audio_mp4s_with_crossfade(
                 fade_out_start = max(0.0, duration - fade_s)
                 video_filters.append(f"fade=t=out:st={fade_out_start:.3f}:d={fade_text}")
                 audio_filters.append(f"afade=t=out:st={fade_out_start:.3f}:d={fade_text}")
-            filters.append(
-                f"{','.join(video_filters)}[v{index}]"
-            )
-            filters.append(
-                f"{','.join(audio_filters)}[a{index}]"
-            )
+            filters.append(f"{','.join(video_filters)}[v{index}]")
+            filters.append(f"{','.join(audio_filters)}[a{index}]")
 
         concat_inputs = "".join(f"[v{index}][a{index}]" for index in range(len(video_paths)))
         filters.append(f"{concat_inputs}concat=n={len(video_paths)}:v=1:a=1[vout][aout]")
@@ -2266,11 +2532,7 @@ def _selected_recording_image(repo_root: Path, image_filename: str = "") -> Path
             pass
 
     image_dir = generated_image_path("placeholder.png", repo_root).parent
-    candidates = [
-        path
-        for path in image_dir.glob("*")
-        if path.is_file() and _is_ffmpeg_image(path)
-    ]
+    candidates = [path for path in image_dir.glob("*") if path.is_file() and _is_ffmpeg_image(path)]
     if candidates:
         return max(candidates, key=lambda path: path.stat().st_mtime)
     return _write_recording_placeholder(repo_root)
@@ -2565,9 +2827,7 @@ def _write_recording_caption_file(path: Path, captions: list[dict[str, object]],
     for start_s, end_s, text in cards:
         if end_s <= start_s:
             continue
-        lines.append(
-            f"Dialogue: 0,{_ass_time(start_s)},{_ass_time(end_s)},Default,,0,0,0,,{_ass_escape(text)}"
-        )
+        lines.append(f"Dialogue: 0,{_ass_time(start_s)},{_ass_time(end_s)},Default,,0,0,0,,{_ass_escape(text)}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return True
 

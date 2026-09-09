@@ -1,0 +1,10 @@
+{
+  "created": "2026-09-08T22:31:07",
+  "filename": "20260908-223107-openai-eric-and-vivian-bowing-on-stage.png",
+  "provider": "openai",
+  "model": "gpt-image-1-mini",
+  "prompt": "A small animatronic robot head with a simple digital face and a cartoon-style woman named Vivian standing side by side on a tiny stage, both bowing to an audience under warm spotlight, sitcom curtain call atmosphere, clean stylized illustration",
+  "revised_prompt": "",
+  "size": "1024x1024",
+  "quality": "low"
+}

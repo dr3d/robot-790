@@ -1,0 +1,22 @@
+Robot 790 Live Log Snapshot
+===========================
+Recorded: 2026-09-09T02:22:58
+Source: brain2_mulling
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+[2:15:35 AM] fired: auto
+[2:15:37 AM] mull skipped: already in flight
+[2:15:38 AM] held: Ducks that fall and get back up.
+[2:16:26 AM] fired: auto
+[2:16:27 AM] mull skipped: already in flight
+[2:16:29 AM] note for Eric: The 'participating robot' frame has landed; don't re-explain it or search again unless the operator asks for a specific spec.
+[2:16:34 AM] advisory queued: user speech started
+[2:17:13 AM] fired: auto
+[2:17:14 AM] mull skipped: already in flight
+[2:17:17 AM] failed: Brain 2 returned no usable output.
+[2:18:00 AM] fired: auto
+[2:18:01 AM] mull skipped: already in flight
+[2:18:02 AM] note for Eric: Operator asked to go back; verify the previous image loaded before describing it.
+[2:18:12 AM] advisory queued: user speech started
+[2:21:28 AM] fired: auto
+[2:21:33 AM] note for Eric: The operator's frustration isn't about your memory; it's about the 'paper mask' confusion. Don't just switch images; acknowledge that you mistook the render for the build.
+[2:21:57 AM] advisory queued: user speech started

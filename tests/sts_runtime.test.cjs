@@ -24,6 +24,16 @@ test('session map reuses the STS diamond-metal texture and title family', () => 
   assert.match(sessionMapPage, /rgba\(var\(--accent\), 0\.11\) 35%/);
 });
 
+test('live pane dividers have compact, plain resize rails', () => {
+  assert.match(page, /--panel-divider-size: 10px/);
+  assert.match(page, /id="conversationResizeHandle"[^>]+role="separator"[^>]+tabindex="0"/);
+  assert.match(page, /id="lowerLogResizeHandle"[^>]+role="separator"[^>]+tabindex="0"/);
+  assert.match(page, /\.conversation-resize-handle\s*\{[^}]*touch-action: none/);
+  assert.match(page, /\.lower-log-resize-handle\s*\{[^}]*touch-action: none/);
+  assert.match(page, /function beginConversationPaneResize\(event\)/);
+  assert.match(page, /function beginLowerLogPaneResize\(event\)/);
+});
+
 test('browser face stays shrinkable and centered without a resize script', () => {
   assert.match(facePage, /html, body\s*\{[^}]*min-width: 0/);
   assert.match(facePage, /\.stage\s*\{[^}]*place-items: center;[^}]*min-width: 0/);
@@ -52,6 +62,36 @@ test('local file tools can write source without granting execution', () => {
   assert.match(page, /Writing a source file does not execute it/);
   assert.match(page, /localFileNoun = "[^"\n]*python[^"\n]*program/);
   assert.match(page, /Do not say you cannot write a file while write_text_file is available/);
+});
+
+test('bounded adaptive deliberation is an Eric action, with Typed Think retained as a lab shortcut', () => {
+  const prompt = fs.readFileSync(path.join(__dirname, '../prompts/robot-790-realtime-system.md'), 'utf8');
+  assert.match(page, /const deliberationTools = \[/);
+  assert.match(page, /name: "deliberate_once"/);
+  assert.match(page, /async function deliberateOnceForEric\(args = \{\}\)/);
+  assert.match(page, /\.\.\.deliberationTools/);
+  assert.match(page, /Use the deliberate_once result as private, fallible support/);
+  assert.match(prompt, /When the operator explicitly asks you to think harder[\s\S]*call deliberate_once before answering/);
+  assert.match(prompt, /careful multi-step diagnosis, tradeoff, plan, or technical assessment/);
+  assert.match(prompt, /If the operator says just answer, fast, or do not overthink, answer directly/);
+  assert.match(prompt, /controller maps it to the active brain's actual capability/);
+  assert.match(prompt, /It is one private bounded pass, never a routine, loop, or substitute for clarification/);
+  assert.match(page, /id="typedThink"[^>]*>Think<\/button>/);
+  assert.match(page, /id="typedThinkEffort"[^>]*aria-label="Think depth"/);
+  assert.match(page, /option value="low">Low<\/option>/);
+  assert.match(page, /option value="medium" selected>Medium<\/option>/);
+  assert.match(page, /option value="xhigh">Hard<\/option>/);
+  assert.match(page, /id="deliberateIndicator"[\s\S]*?THINK READY/);
+  assert.match(page, /async function sendTypedDeliberateTurn\(text\)/);
+  assert.match(page, /fetch\("\/api\/deliberate"/);
+  assert.match(page, /THINKING \$\{effortLabel\}/);
+  assert.match(page, /THINK \$\{resultEffortLabel\} OK/);
+  assert.match(page, /effort === "on"\) return "ON"/);
+  assert.match(page, /active brain's advertised reasoning capability/);
+  assert.match(page, /THINK FALLBACK/);
+  assert.match(page, /thinking: currentTypedThinkEffort\(\)/);
+  assert.match(page, /tool_choice: "none"/);
+  assert.match(page, /Do not mention a worker, model, hidden reasoning, prompt, private note, or chain of thought/);
 });
 
 test('PM prompt ledgers retain receipts without copying prompt or loaded-note bodies', () => {
@@ -249,10 +289,12 @@ test('Connect Select exposes one-item checklist management and archive', () => {
   assert.match(page, /id="archiveContinuitySession"[^>]*>Archive<\/button>/);
   assert.match(page, /id="advancedConnectionExpando"/);
   assert.match(page, /id="continuityScrubMode"/);
-  assert.match(page, /value="raw">Raw/);
-  assert.match(page, /value="cleaned_raw" disabled>Scrubbed \(unavailable\)/);
-  assert.match(page, /value="dense_summary" disabled>Summary \(unavailable\)/);
+  assert.match(page, /value="raw">Full \.txt/);
+  assert.match(page, /value="scrubbed">Scrubbed/);
+  assert.match(page, /value="summary">Summary/);
   assert.match(page, /function continuityScrubModeLabel/);
+  assert.match(page, /function continuityVariantRecord/);
+  assert.match(page, /resume_form/);
   assert.match(page, /loadContinuityScrubMode\(\)/);
   assert.match(page, /Connection note flavor is/);
   assert.match(page, /function setSelectedContinuitySessionFilename\(filename\)/);
@@ -262,7 +304,19 @@ test('Connect Select exposes one-item checklist management and archive', () => {
   assert.match(page, /function handleSessionMapMessage\(event\)/);
   assert.match(page, /robot790-continuity-session-map/);
   assert.match(page, /const refreshed = await fetchContinuitySessions\(\)/);
-  assert.match(page, /notes\/sessions\/archived/);
+  assert.match(page, /Nothing is destroyed/);
+});
+
+test('session saves carry sensing-eye capture receipts into their archive package', () => {
+  assert.match(page, /const sensingEyeSessionAssetFilenames = new Set\(\)/);
+  assert.match(page, /function rememberSensingEyeSessionAsset\(filename\)/);
+  assert.match(page, /sensing_eye_filenames: Array\.isArray\(sensingEyeFilenames\)/);
+  assert.match(page, /sensingEyeSessionAssetFilenames\.clear\(\)/);
+  assert.match(page, /function flushSensingEyeInboxForSessionSave\(\)/);
+  assert.match(page, /await flushSensingEyeInboxForSessionSave\(\)/);
+  assert.match(page, /session-scoped sensing-eye captures will move with it/);
+  assert.match(sessionMapPage, /\["Eye captures", `\$\{Number\(item\.sensing_eye_asset_count \|\| 0\)\.toLocaleString\(\)\} session-scoped`\]/);
+  assert.match(sessionMapPage, /session-scoped eye captures/);
 });
 
 test('session map page ships as a standalone chooser', () => {
@@ -270,9 +324,73 @@ test('session map page ships as a standalone chooser', () => {
   assert.match(sessionMapPage, /\/api\/continuity\/sessions/);
   assert.match(sessionMapPage, /\/api\/continuity\/archive/);
   assert.match(sessionMapPage, /robot790-continuity-session-map/);
+  assert.match(sessionMapPage, /Resume form/);
+  assert.match(sessionMapPage, /resume_form: resumeForm/);
+  assert.doesNotMatch(sessionMapPage, /className = "session-path"/);
+  assert.match(sessionMapPage, /\["Source", sessionPathDisplay\(item\.filename\)\]/);
+  assert.doesNotMatch(sessionMapPage, /id="archive"/);
+  assert.match(sessionMapPage, /parentButton\.textContent = "Previous"/);
+  assert.match(sessionMapPage, /archiveButton\.textContent = "Archive"/);
+  assert.match(sessionMapPage, /\.detail-actions\s*\{\s*display: grid;\s*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.match(sessionMapPage, /\.detail-actions button\s*\{\s*min-width: 0;\s*min-height: 30px;/);
+  assert.doesNotMatch(sessionMapPage, /id="selectInSts"/);
+  assert.match(sessionMapPage, /let collapsedLineageNodes = new Set\(\)/);
+  assert.match(sessionMapPage, /className = "tree-toggle"/);
+  assert.match(sessionMapPage, /aria-expanded/);
+  assert.match(sessionMapPage, /toggle\.textContent = expanded \? "-" : "\+"/);
+  assert.match(sessionMapPage, /\.root\s*\{\s*padding-left: 18px;\s*border-left: 0;/);
+  assert.doesNotMatch(sessionMapPage, /\.root > \.branch-row \.tree-toggle/);
+  const renderBranchStart = sessionMapPage.indexOf('function renderBranch(');
+  const renderBranchEnd = sessionMapPage.indexOf('\n    function renderNode(', renderBranchStart);
+  const renderBranchSource = sessionMapPage.slice(renderBranchStart, renderBranchEnd);
+  assert.ok(renderBranchSource.indexOf('branch.append(renderBranch(child, children, visited));')
+    < renderBranchSource.indexOf('branch.append(renderNode(item, { hasChildren, expanded }));'));
   const scripts = Array.from(sessionMapPage.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/g), match => match[1]);
   assert.ok(scripts.length);
   scripts.forEach((source, index) => new vm.Script(source, { filename: `session-map-inline-${index}.js` }));
+});
+
+test('session map panels have compact, plain resize rails', () => {
+  assert.match(sessionMapPage, /--panel-divider-size: 10px/);
+  assert.match(sessionMapPage, /id="sessionsResizeHandle"[^>]+role="separator"[^>]+tabindex="0"/);
+  assert.match(sessionMapPage, /id="detailsResizeHandle"[^>]+role="separator"[^>]+tabindex="0"/);
+  assert.match(sessionMapPage, /\.panel-divider\s*\{[^}]*touch-action: none/);
+  assert.match(sessionMapPage, /function beginPanelResize\(event, kind, handle\)/);
+  assert.match(sessionMapPage, /function resizePanelFromKeyboard\(event, kind\)/);
+  assert.match(sessionMapPage, /PANEL_LAYOUT_STORAGE_KEY/);
+  assert.match(sessionMapPage, /localStorage\.setItem\(PANEL_LAYOUT_STORAGE_KEY/);
+  assert.doesNotMatch(sessionMapPage, /ResizeObserver|addEventListener\("resize"/);
+});
+
+test('session titles keep timestamps in the filename record rather than the bold caption', () => {
+  const filename = 'sessions/20260907-175329-daily-driver-empty-boot.txt';
+  const mapContext = loadFunctions(['noteBasename', 'sessionTitle', 'sessionDisplayName', 'normalizeFilename', 'sessionPathDisplay'], {}, sessionMapPage);
+  const stsContext = loadFunctions(['notePathBasename', 'sessionNoteTitle', 'sessionNoteStamp', 'sessionNoteDisplayName'], {});
+  assert.equal(mapContext.sessionTitle(filename), 'daily driver empty boot');
+  assert.equal(mapContext.sessionDisplayName(filename), 'daily driver empty boot - 2026-09-07 17:53:29');
+  assert.equal(mapContext.sessionPathDisplay(filename), '20260907-175329-daily-driver-empty-boot.txt');
+  assert.equal(mapContext.sessionPathDisplay('notes/core/robot.txt'), 'notes/core/robot.txt');
+  assert.equal(stsContext.sessionNoteTitle(filename), 'daily driver empty boot');
+  assert.equal(stsContext.sessionNoteStamp(filename), '20260907-175329');
+  assert.equal(stsContext.sessionNoteDisplayName(filename), 'daily driver empty boot - 2026-09-07 17:53:29');
+  assert.match(sessionMapPage, /title\.textContent = `\$\{item\.filename === currentFilename \? "\* " : ""\}\$\{sessionTitle\(item\.filename\)\}`/);
+  assert.match(sessionMapPage, /title\.textContent = sessionTitle\(item\.filename\);/);
+  assert.match(page, /const displayName = sessionNoteTitle\(filename\);/);
+  assert.match(page, /meta\.textContent = sessionNoteStamp\(filename\);/);
+});
+
+test('selecting a hidden lineage descendant reopens its ancestors', () => {
+  const collapsed = new Set(['sessions/root.txt', 'sessions/parent.txt']);
+  const context = loadFunctions(['normalizeFilename', 'lineageKey', 'expandLineageTo'], {
+    sessions: [
+      { filename: 'sessions/root.txt', parent_session_filename: '' },
+      { filename: 'sessions/parent.txt', parent_session_filename: 'sessions/root.txt' },
+      { filename: 'sessions/child.txt', parent_session_filename: 'sessions/parent.txt' },
+    ],
+    collapsedLineageNodes: collapsed,
+  }, sessionMapPage);
+  context.expandLineageTo('sessions/child.txt');
+  assert.deepEqual(Array.from(collapsed), []);
 });
 
 test('Context Map cards keep their own open state out of panel status', () => {
@@ -349,13 +467,31 @@ test('eye salience defaults to seven while preserving an explicit saved zero', (
   }
 });
 
-test('unimplemented note flavors cannot claim that a raw load was summarized', () => {
+test('note flavors only select source-linked variants that are actually available', () => {
   const stored = new Map([['note-flavor', 'dense_summary']]);
   const context = loadFunctions([
-    'currentContinuityScrubMode', 'continuityScrubModeLabel', 'continuityScrubModeStatusText',
+    'selectedContinuitySessionFilename', 'normalizeContinuityScrubMode', 'continuityScrubModeLabel',
+    'continuitySessionRecord', 'continuityVariantRecord', 'continuityScrubModeAvailable',
+    'currentContinuityScrubMode', 'continuityScrubModeStatusText',
     'updateContinuityScrubModeUi', 'loadContinuityScrubMode',
   ], {
-    continuityScrubMode: { value: 'dense_summary' },
+    continuitySessionSelect: { value: 'sessions/chosen.txt' },
+    continuitySessions: [{
+      filename: 'sessions/chosen.txt',
+      variants: [
+        { key: 'raw', status: 'available' },
+        { key: 'scrubbed', status: 'available' },
+        { key: 'summary', status: 'missing' },
+      ],
+    }],
+    continuityScrubMode: {
+      value: 'dense_summary',
+      options: [
+        { value: 'raw', disabled: false, textContent: '' },
+        { value: 'scrubbed', disabled: false, textContent: '' },
+        { value: 'summary', disabled: false, textContent: '' },
+      ],
+    },
     continuityScrubModeStatus: { textContent: '' },
     continuityScrubModeStorageKey: 'note-flavor',
     localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
@@ -363,8 +499,16 @@ test('unimplemented note flavors cannot claim that a raw load was summarized', (
   context.loadContinuityScrubMode();
   assert.equal(context.continuityScrubMode.value, 'raw');
   assert.equal(stored.get('note-flavor'), 'raw');
-  assert.equal(context.continuityScrubModeLabel(), 'Raw');
+  assert.equal(context.continuityScrubModeLabel(), 'Full .txt');
   assert.match(context.continuityScrubModeStatus.textContent, /as written/);
+  assert.equal(context.continuityScrubMode.options[2].disabled, true);
+
+  context.continuitySessions[0].variants[2].status = 'available';
+  context.continuityScrubMode.value = 'summary';
+  context.updateContinuityScrubModeUi();
+  assert.equal(context.continuityScrubMode.value, 'summary');
+  assert.equal(stored.get('note-flavor'), 'summary');
+  assert.match(context.continuityScrubModeStatus.textContent, /checked against its source/);
 });
 
 test('continuity pin receipts preserve every named dependency', () => {
@@ -406,6 +550,7 @@ test('continuity restore replaces stale browser pins with the selected session r
     'noteFilenameSet',
     'noteFilenameInSet',
     'continuityPinnedNoteFilenames',
+    'normalizeContinuityScrubMode',
     'fetchContinuitySessionMetadata',
     'resolveContinuitySessionForLoad',
     'continuityLoadReferenceIssues',
@@ -437,6 +582,9 @@ test('continuity restore replaces stale browser pins with the selected session r
         json: async () => ({
           status: 'ok',
           session_filename: 'sessions/chosen.txt',
+          load_filename: 'sessions/chosen.txt',
+          resume_form: 'raw',
+          resume_form_label: 'Full .txt',
           pinned_notes: [
             { filename: 'shared.txt', status: 'ok', current_status: 'changed' },
           ],
@@ -453,6 +601,7 @@ test('continuity restore replaces stale browser pins with the selected session r
   const result = await context.loadCurrentContinuitySession({
     source: 'test',
     sessionFilename: 'sessions/chosen.txt',
+    resumeForm: 'raw',
   });
 
   assert.deepEqual(reads, ['sessions/chosen.txt', 'shared.txt']);
@@ -810,6 +959,15 @@ test('browser face scripts compile', () => {
   const scripts = Array.from(facePage.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/g), match => match[1]);
   assert.ok(scripts.length);
   scripts.forEach(source => new vm.Script(source));
+});
+
+test('browser face turns semantic status tint names into blendable colors', () => {
+  const context = loadFunctions(['statusTintHex'], {}, facePage);
+  assert.equal(context.statusTintHex('cyan', '#54c6d2'), '#2cdce8');
+  assert.equal(context.statusTintHex('PURPLE', '#54c6d2'), '#b482ff');
+  assert.equal(context.statusTintHex('#AbC123', '#54c6d2'), '#AbC123');
+  assert.equal(context.statusTintHex('not-a-color', '#54c6d2'), '#54c6d2');
+  assert.match(facePage, /statusTintHex\(state\?\.status_tint, colorForMood\(mood\)\)/);
 });
 
 test('browser face status text clipping cannot grow in a render loop', () => {

@@ -10,6 +10,28 @@ reveals the seams.
 
 ## Current Controls
 
+`deliberate_once` is a bounded mental action available to Eric in an ordinary
+connected session. He can take one private pass when the operator asks him to
+think harder or when a question clearly needs a multi-step diagnosis, tradeoff,
+plan, or technical assessment. `Low`, `Medium`, and `Hard` are requested
+policies, not a promise that every loaded brain has those exact gears. The
+controller checks the local model's advertised reasoning options, maps the
+request to a real enabled option, and reports the actual setting used. The
+current MTP brain is binary (`off` or `on`), while the standard Qwen preset can
+advertise finer levels. "Just answer," "fast," or "do not overthink" keeps the
+turn direct. This is not a background habit, a recursive worker loop, or a
+replacement for clarification.
+
+The `Think` button in `Typed Input` is a lab shortcut for testing that same
+one-pass action with a selected policy. Both routes clip recent conversation and
+loaded-note context, return only a compact conclusion, and leave Eric's normal
+realtime setting alone. The header pill shows the requested policy while it
+runs, then the actual active-model setting at completion (for example, `THINK
+ON OK` for a binary model). The conclusion is kept private support: Eric is
+instructed to answer naturally without exposing hidden reasoning, model
+internals, or a chain of thought. If the pass is unavailable, he answers from
+the live turn instead.
+
 `Lab goal` is a session-only directed-reasoning target for idle. Use it for
 questions such as "what makes Eric different from a thin seeded creature?" or
 "what should the Mercury run discover?" It is injected ahead of loaded notes and
@@ -182,14 +204,17 @@ for quick selection, quick archive, and ordinary daily operation.
 
 Its `Advanced Connection` sub-panel exposes the note representation:
 
-- `Raw`: load the selected session note exactly as written.
-- `Scrubbed` and `Summary`: unavailable and disabled until actual variants and
-  their loader are implemented.
+- `Full .txt`: load the selected raw session note exactly as written.
+- `Scrubbed` and `Summary`: load an authored source-linked sidecar for that raw
+  session when one is available.
 
-Selecting a label alone does not scrub a note. Current connections load the
-selected file as written. PM may create separate reviewed notes, but automatic
-variant discovery, generation, provenance checking, and budget-based switching
-are future work. See the [context architecture](context-engineering-architecture.md).
+The loader checks a sidecar's recorded source filename and SHA-256 before making
+it selectable. Missing, stale, or malformed variants stay disabled rather than
+quietly falling back to raw. The raw session remains the source of lineage and
+pinned-note receipts; the selected sidecar only changes the session text read
+into the conversation. PM can author reviewed derivatives, while automatic
+generation, semantic review, and budget-based switching remain future work. See
+the [context architecture](context-engineering-architecture.md).
 
 The `Map` button opens `web/sts/session-map.html`, a wider helper view for
 session-note work. The map shows the active session notes, a simple lineage
@@ -199,8 +224,9 @@ room.
 
 The map can be used in two ways:
 
-- Opened from STS as a popup, it can send `Select In STS` or `Connect In STS`
-  back to the main tab.
+- Opened from STS as a popup, its local selection and Resume form control only
+  change the map preview. `Connect In STS` is the explicit action that sends the
+  chosen raw session and form back to the main tab.
 - Opened directly at `http://127.0.0.1:8790/session-map.html`, it still works
   as an isolated read/preview surface, but it may not have an STS opener to
   control.

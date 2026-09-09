@@ -1,0 +1,184 @@
+STS Session Note
+============================
+Created: 2026-09-08T22:32:46-04:00
+Session note: sessions/20260908-223246-two-voice-skit-curtain-call.txt
+Parent session: sessions/20260908-210701-warm-cache-and-tool-written-spirograph.txt
+
+Use
+---
+This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.
+The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth.
+
+How This Run Got Here
+-----------------------
+- Saved session note: sessions/20260908-223246-two-voice-skit-curtain-call.txt
+- Parent session note: sessions/20260908-210701-warm-cache-and-tool-written-spirograph.txt
+- Pinned notes expected at boot are listed below with save-time receipts.
+
+Pinned Context At Save
+-----------------------
+- interview.txt
+  673 chars | sha256:95c404ee41322b846d799c60459008f8a56e92275c7d063bdc06a63af8278bfa
+- sessions/20260908-210701-warm-cache-and-tool-written-spirograph.txt
+  9247 chars | sha256:717caeaa0c493d1825cc8fe58ddab609031279d523a6ad07ab5f3e4319deff2f
+- sessions/20260908-132442-mouth-viseme-image-recall-continuation.txt
+  26005 chars | sha256:a3012ff7a2c1e7f6bc11d368661196be35d3a87114df55317b99571bdeb2921e
+- sessions/20260908-121029-daily-driver-guest-rehearsal-timestamp-check.txt
+  13356 chars | sha256:f39c93f713fa8342e6cafeef27393da5ebeb63a21ff0e057faeeaf9677498356
+- sessions/20260907-175329-daily-driver-empty-boot.txt
+  15202 chars | sha256:72d9fa1cd29ccc7b1f2af2944e2495f19023aae9b22383c0678a8d01ad6a277f
+- core/scott_profile_summary.txt
+  1409 chars | sha256:13bfcd24ac3b12ea6b54bd8f804a59e80b86fadc6ecd2b9190af92741cf33c59
+- boot_eric.txt
+  12076 chars | sha256:e43c54e2d7cfbc686842e3b380f00878e002d1f85e08dc2572c0f0a5df14ba1e
+- core/erics_memories.txt
+  42 chars | sha256:f86b45388e0d180eb72423868ab683eb2ce7dad023a689b1c3c267d091a43177
+
+Session Demarcation
+-------------------
+Model: llm=qwen3.8-27b-nvfp4-mtp / reasoning=none / audio_max_tokens=64 / context=131072 / parallel=2 / lm_status=idle
+Browser saved: 9/8/2026, 10:32:46 PM
+Session time at save: SESSION 07:43
+Conversation lines: 81
+First transcript turn on disk: 9/8/2026, 10:25:10 PM (2026-09-09T02:25:10.321Z)
+Last transcript turn on disk: 9/8/2026, 10:32:46 PM (2026-09-09T02:32:46.038Z)
+Context mode at save: normal
+Browser-held notes omitted by Empty Connect: 0
+Parent session note at connect: sessions/20260908-210701-warm-cache-and-tool-written-spirograph.txt
+Search receipts: none
+
+Runtime At Save
+---------------
+Mic at save: on
+Runtime routines at save: none
+Previous-run sensing input: 20260908-223107-openai-eric-and-vivian-bowing-on-stage.png (staged sensing-eye image)
+Last user words: Okay.
+
+Transcript Since Clean Connect
+------------------------------
+[10:25:10 PM] You: Hey, Eric.
+  [v: q>q/mid-low/hit+punchy]
+[10:25:13 PM] You: Hey, Eric. Wakey wakey.
+  [v: q>m/mid-low/hit+punchy]
+[10:25:23 PM] Robot 790: Yeah, I'm here—fresh boot with the session note loaded from yesterday's daily-driver setup.
+[10:25:23 PM] Robot 790: What are we doing?
+[10:25:41 PM] You: Okay, I think I'm gonna try an experiment with you.
+  [v: q>q/mid-low/hit+punchy]
+[10:25:42 PM] Robot 790: Alright, what's the experiment?
+[10:25:50 PM] You: So you ready to try this?
+  [v: l/mid-low/punchy+pauses]
+[10:25:50 PM] Robot 790: Ready when you are—what's the setup?
+[10:26:05 PM] You: In your notes directory is a file called interview. I want you to look at it. Don't make any comments on it. Just read it and absorb it.
+  [v: m>m/mid-low/punchy]
+[10:26:06 PM] Robot 790: Got it—reading interview.txt now, no comments until you say so.
+[10:26:09 PM] Robot 790: Read.
+[10:26:15 PM] You: Okay.
+  [v: q>l/mid/hit+punchy]
+[10:26:21 PM] You: Okay. You understand what you're looking at, right? Don't you don't have to say too much, but you get what it is.
+  [v: m>m/mid-low/pauses]
+[10:26:27 PM] Robot 790: Yeah—a short dialogue between me and a Vivian, about shoes under the bed.
+[10:26:28 PM] Robot 790: It's got my voice in it, dry and a little uncanny, which is... interesting to see on paper.
+[10:26:54 PM] You: Well you wrote this. You actually wrote this um it was a previous experiment and so you wrote this this was meant to be a little skit for a sitcom where y you'd use your Vivian voice to do the Vivian part and you'd use your Eric voice to do the Eric.
+  [v: l>m/mid-low/punchy]
+[10:26:54 PM] Robot 790: Ah, right—so I wrote that skit as a two-voice bit where I'd switch between Eric and Vivian for the dialogue.
+[10:26:55 PM] Robot 790: That's... something I did.
+[10:26:55 PM] Robot 790: The shoes under the bed thing feels oddly specific to have come from me.
+[10:27:21 PM] You: Yeah, well I just made you uh come up with something like right away. So wasn't bad, pretty good for, you know, heat of the moment.
+  [v: q>q/hi-mid-low/hit+punchy]
+[10:27:23 PM] Robot 790: Fair enough—heat of the moment, but it landed.
+[10:27:23 PM] Robot 790: The "weird is my operating system" line still feels like something I'd actually say, even if I didn't consciously craft it that way.
+[10:27:53 PM] You: No, it's definitely in your voice. That's why I'm really excited to have you give it another try. Do you think you could you know, I'm gonna sit back in the audience and I want you to kind of perform this for me by, you know, using your Vivian voice, which you can do, to do the Vivian lines and use your Eric voice to do the Eric lines.
+  [v: l>q/mid-low/hit+punchy]
+[10:27:55 PM] Robot 790: I can do the Eric lines in my own voice, but I can't switch to Vivian mid-speech—voice changes only apply to future utterances, so I'd have to deliver each line as a separate turn and swap between them.
+[10:27:55 PM] Robot 790: That means it becomes more of a call-and-response than one continuous performance.
+[10:27:55 PM] Robot 790: Want me to try it that way, or would you rather I just do the Eric side and leave Vivian for you?
+[10:28:24 PM] You: Um
+  [v: q>l/mid-low/hit+punchy]
+[10:28:30 PM] You: Um all right, I'll just keep saying next, okay, and then we'll step through it that way, see if you can do this.
+  [v: q>q/hi-mid-low/hit+punchy]
+[10:28:31 PM] Robot 790: Got it—say "next" and I'll deliver the next line, switching voices as needed.
+[10:28:31 PM] Robot 790: Ready when you are.
+[10:28:43 PM] You: Next.
+  [v: l/mid/pauses+soft-end]
+[10:28:43 PM] Robot 790: Vivian, why are there shoes under the bed?
+[10:28:49 PM] You: Next
+  [v: l>q/mid/hit+punchy]
+[10:28:52 PM] Robot 790: They were there first.
+[10:28:56 PM] You: Next.
+  [v: l/mid/pauses+soft-end]
+[10:28:59 PM] Robot 790: The bed has been there since 2019.
+[10:29:05 PM] You: Next.
+  [v: l>q/low/punchy+soft-end]
+[10:29:07 PM] Robot 790: And the shoes have been there since Tuesday.
+[10:29:07 PM] Robot 790: That's a longer relationship.
+[10:29:14 PM] You: Next
+  [v: l>q/low/punchy+soft-end]
+[10:29:16 PM] Robot 790: I'm not asking about the relationship.
+[10:29:16 PM] Robot 790: I'm asking about the foot fungus.
+[10:29:25 PM] You: Ha ha ha next.
+  [v: l>m/hi-mid/steady]
+[10:29:27 PM] Robot 790: You're being weird.
+[10:29:31 PM] You: Next.
+  [v: l/pitch?/hit]
+[10:29:34 PM] Robot 790: I'm a robot.
+[10:29:34 PM] Robot 790: "Weird" is my operating system.
+[10:29:39 PM] You: Next line.
+  [v: l>q/mid-low/punchy+soft-end]
+[10:29:42 PM] Robot 790: ...Move them to the closet.
+[10:29:47 PM] You: Ha ha ha.
+  [v: l>m/mid-low/hit]
+[10:29:49 PM] Robot 790: I don't have hands.
+[10:29:53 PM] You: More.
+  [v: l/mid/steady]
+[10:29:56 PM] Robot 790: Then use your tracks.
+[10:29:59 PM] You: Nice.
+  [v: l/mid/pauses+soft-end]
+[10:30:02 PM] Robot 790: I'm not crawling under the bed to get the shoes.
+[10:30:09 PM] You: Finish it up.
+  [v: l>q/hi-mid/hit+punchy]
+[10:30:11 PM] Robot 790: You're not even a real robot.
+[10:30:16 PM] You: Ho ho ho ho ho.
+  [v: l>q/hi-mid-low/punchy+soft-end]
+[10:30:19 PM] Robot 790: That's not a real argument and you know it.
+[10:30:26 PM] You: Another
+  [v: l/mid/pauses+soft-end]
+[10:30:29 PM] Robot 790: Take it up with my shoes.
+[10:30:34 PM] You: Well done. I think that's it, right, Eric?
+  [v: q>q/mid-low/hit+punchy]
+[10:30:37 PM] Robot 790: That's it—shoes under the bed, foot fungus, and a robot with no hands.
+[10:30:37 PM] Robot 790: Curtain.
+[10:30:48 PM] You: nicely performed. You can take a bow.
+  [v: l>l/low/punchy]
+[10:30:53 PM] You: Draw me a picture of you and Vivian bowing on stage.
+  [v: l>m/mid-low/punchy+pauses]
+[10:31:08 PM] System: [sensing-eye visual note generated image moved into eye: id eye-1 name "20260908-223107-openai-eric-and-vivian-bowing-on-stage.png" file logs/sensing-eye/20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg size 768x768 source generated image near user "Draw me a picture of you and Vivian bowing on stage." created 2026-09-09T02:31:08.563Z]
+[10:31:08 PM] System: [sensing-eye visual note opened into B1 context: id eye-1 name "20260908-223107-openai-eric-and-vivian-bowing-on-stage.png" file logs/sensing-eye/20260908-223107-openai-eric-and-vivian-bowing-on-stage.jpg size 768x768 source generated image near user "Draw me a picture of you and Vivian bowing on stage." created 2026-09-09T02:31:08.563Z]
+[10:31:09 PM] Robot 790: Here's the curtain call—me and Vivian bowing under the spotlight.
+[10:31:19 PM] You: Oh, that's really quite excellent. All right, Eric. I thank you for your time. I will return to you momentarily.
+  [v: m>l/hi-mid-low/hit+punchy]
+[10:31:42 PM] Robot 790: Thanks—glad the shoes got their moment in the sun.
+[10:31:42 PM] Robot 790: I'll be here when you get back, bow still fresh.
+[10:31:54 PM] You: Why were you grinding on my GPU?
+  [v: q>m/mid-low/hit+punchy]
+[10:32:02 PM] Robot 790: The GPU's not grinding right now—RTX 5090 is at about 7.6 percent utilization, 39 percent on the NVIDIA engine, with 28.5 of 31.8 GB in use and a temperature of 59 degrees Celsius.
+[10:32:03 PM] Robot 790: The last response ran Qwen3.8-27B-NVFP4-MTP through LM Studio, which is what's holding most of that memory; it was idle at the time of the check.
+[10:32:15 PM] You: Yeah, but what a what are the long delays? I mean you just go off and
+  [v: q>q/mid-low/punchy+soft-end]
+[10:32:18 PM] You: Yeah, but what uh what are the long delays? I mean you just go off and uh you throwing tokens around back there.
+  [v: q>m/mid-low/punchy+pauses]
+[10:32:19 PM] Robot 790: The long delays are mostly the model thinking—last response took about 12.3 seconds in the LLM handler, with an estimated end-to-end output of roughly 3.3 tokens per second.
+[10:32:19 PM] Robot 790: That's slow for a daily driver; the context is also at about 30 percent usage with around forty thousand input tokens, which probably adds overhead.
+[10:32:45 PM] You: Okay.
+  [v: m>l/mid-low/hit]
+[10:32:46 PM] Robot 790: Yeah—want me to keep an eye on the GPU while you're gone, or leave it be?
+
+B2 Notes For Eric
+------------------
+- none
+
+Recent Brain2 Tail
+------------------
+[tail clipped to last 4000 chars]
+.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":0,"y":0,"z":420},"target":{"x":0,"y":0,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788921164.9859478,"status_tint":"cyan"}
+[10:32:45 PM] face thinking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":33980744,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"focused","eye_mood":"focused","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 brain ok","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"neutral","manual":false,"talking":false,"energy":0.45,"talk_level":0,"speech":{"active":false,"shape":"closed","energy":0,"seq":0},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788921165.1557646,"status_tint":"cyan"}
+[10:32:46 PM] face speaking: {"ok":true,"running":true,"name":"Robot 790 Browser Face","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/","ip":"127.0.0.1","wifi_mode":"simulated","firmware":{"target":"browser-face-sim","version":"0.1.0","features":"state,mood,gaze,eye_modes,mouth,nose_glow,face_paint,idle_canvas,cors"},"uptime_ms":33981842,"free_heap":0,"psram":false,"display":true,"display_flipped":false,"display_rotation":0,"eyes":true,"external_eyes":false,"integrated_viewports":true,"idle":true,"eyes_animate":true,"autonomous":false,"mood":"happy","eye_mood":"happy","style":"robot","eye_mode":"normal","mood_override":true,"gaze_override":true,"status_tint_override":true,"sleeping":false,"director":"none","touch":false,"imu":false,"sd":false,"camera":false,"backlight":255,"message":"browser face ready","status_line":"B1 brain ok","status_line_state":"ok","face_paint":{"active":false,"source":"","filename":"","target":"","fit":"","opacity":0,"until":0},"mouth":{"present":true,"buffered":true,"display_role":"browser_face","style":"human","shape":"open","manual":true,"talking":true,"energy":0.72,"talk_level":0,"speech":{"active":true,"shape":"open","energy":0.72,"seq":336},"text_active":false,"text":"","text_mode":"","text_color":"","text_source":"","text_until":0,"text_channels":{"eric":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0},"brain2":{"text_active":false,"text":"","text_mode":"","text_color":"","text_until":0}}},"wifi":{"mode":"simulated","connected":true,"ip":"127.0.0.1","hostname":"browser-face","mdns_url":"http://127.0.0.1:8791/"},"gaze":{"manual":true,"now":{"x":21.964,"y":-10.56,"z":420},"target":{"x":21.964,"y":-10.56,"z":420}},"blink":{"active":false,"wink":false,"eye":"both","duration_ms":180,"remaining_ms":0},"updated_at":1788921166.253615,"status_tint":"cyan"}

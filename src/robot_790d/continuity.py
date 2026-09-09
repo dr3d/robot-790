@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -11,7 +13,9 @@ from robot_790d.note_files import (
     delete_note_file,
     find_existing_note_path,
     list_note_files,
+    notes_root_for_instance,
     read_note_file,
+    resolve_note_path,
     write_note_file,
 )
 
@@ -19,6 +23,15 @@ CONTINUITY_SESSION_HEADER = "STS Session Note"
 LEGACY_CONTINUITY_SESSION_HEADERS = ("Robot 790 Session Note", "Robot 790 Continuity Session")
 DEFAULT_CONTINUITY_SESSION_DIR = "sessions"
 ARCHIVED_CONTINUITY_SESSION_DIR = "sessions/archived"
+CONTINUITY_SESSION_VARIANT_HEADER = "STS Session Variant"
+CONTINUITY_SESSION_VARIANT_DIR = f"{DEFAULT_CONTINUITY_SESSION_DIR}/variants"
+CONTINUITY_SESSION_VARIANT_LABELS = {
+    "raw": "Full .txt",
+    "scrubbed": "Scrubbed",
+    "summary": "Summary",
+}
+SENSING_EYE_ASSETS_HEADER = "Sensing-Eye Assets At Save"
+SENSING_EYE_ASSET_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp", ".txt", ".md", ".markdown"})
 
 
 @dataclass(frozen=True)
@@ -29,8 +42,127 @@ class PinnedNoteReceipt:
     status: str
 
 
+@dataclass(frozen=True)
+class SensingEyeAssetReceipt:
+    filename: str
+    kind: str
+    bytes: int | None
+    sha256: str | None
+    status: str
+
+
+def continuity_session_variant_key(value: str | None) -> str:
+    key = str(value or "raw").strip().lower().replace("-", "_")
+    aliases = {
+        "": "raw",
+        "full": "raw",
+        "full_txt": "raw",
+        "cleaned_raw": "scrubbed",
+        "dense_summary": "summary",
+    }
+    key = aliases.get(key, key)
+    if key not in CONTINUITY_SESSION_VARIANT_LABELS:
+        raise ValueError("Session form must be Full .txt, Scrubbed, or Summary.")
+    return key
+
+
+def continuity_session_variant_filename(
+    session_filename: str,
+    variant: str,
+    instance_path: str | Path | None = None,
+) -> str:
+    source_filename = _normalize_session_filename(instance_path, session_filename)
+    if not source_filename:
+        raise ValueError("No session note filename was provided.")
+    return _continuity_session_variant_filename_for_source(
+        source_filename,
+        continuity_session_variant_key(variant),
+    )
+
+
+def format_continuity_session_variant(
+    *,
+    body: str,
+    source_session_filename: str,
+    source_sha256: str,
+    variant: str,
+    created_label: str = "",
+) -> str:
+    key = continuity_session_variant_key(variant)
+    if key == "raw":
+        raise ValueError("Full .txt is the source session, not a derivative note.")
+    source = str(source_session_filename or "").replace("\\", "/").strip()
+    digest = str(source_sha256 or "").strip().lower()
+    text = str(body or "").strip()
+    if not source:
+        raise ValueError("A session variant needs its source session filename.")
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError("A session variant needs the source session SHA-256.")
+    if not text:
+        raise ValueError("Session variant body is empty.")
+    created = created_label or datetime.now().astimezone().isoformat(timespec="seconds")
+    return "\n".join(
+        [
+            CONTINUITY_SESSION_VARIANT_HEADER,
+            "===================",
+            f"Variant: {key}",
+            f"Source session: {source}",
+            f"Source sha256: {digest}",
+            f"Created: {created}",
+            "",
+            "Use",
+            "---",
+            "This is a reviewed derivative of the named session note.",
+            "The source session remains the authority for lineage and pinned-context receipts.",
+            "Current runtime truth still wins over saved material.",
+            "",
+            text,
+            "",
+        ]
+    )
+
+
+def save_continuity_session_variant(
+    body: str,
+    session_filename: str,
+    variant: str,
+    instance_path: str | Path | None = None,
+    *,
+    created_label: str = "",
+) -> dict[str, object]:
+    key = continuity_session_variant_key(variant)
+    if key == "raw":
+        raise ValueError("Full .txt is already the source session note.")
+    source_filename = _normalize_session_filename(instance_path, session_filename)
+    if not source_filename:
+        raise ValueError("No session note filename was provided.")
+    source = read_note_file(instance_path, source_filename)
+    if not continuity_session_metadata(source.content):
+        raise ValueError(f"{source.filename} is not a session note.")
+    filename = _continuity_session_variant_filename_for_source(source.filename, key)
+    content = format_continuity_session_variant(
+        body=body,
+        source_session_filename=source.filename,
+        source_sha256=hashlib.sha256(source.content.encode("utf-8")).hexdigest(),
+        variant=key,
+        created_label=created_label,
+    )
+    note = write_note_file(instance_path, filename, content)
+    return {
+        "status": "ok",
+        "tool": "save_continuity_session_variant",
+        "session_filename": source.filename,
+        "variant": key,
+        "variant_label": CONTINUITY_SESSION_VARIANT_LABELS[key],
+        "variant_filename": note.filename,
+        "characters": len(note.content),
+    }
+
+
 def current_continuity_session(
     instance_path: str | Path | None = None,
+    *,
+    resume_form: str = "raw",
 ) -> dict[str, object]:
     sessions = list_continuity_sessions(instance_path)["sessions"]
     if not sessions:
@@ -42,22 +174,12 @@ def current_continuity_session(
 
     session_filename = str(sessions[0]["filename"])
     session = read_note_file(instance_path, session_filename)
-    metadata = continuity_session_metadata(session.content)
-    if not metadata:
-        raise ValueError(f"{session.filename} is not a session note.")
-    receipts = _parse_pinned_note_receipts(session.content)
-    return {
-        "status": "ok",
-        "tool": "current_continuity_session",
-        "selection": "latest",
-        "session_filename": session.filename,
-        "parent_session_filename": metadata["parent_session_filename"],
-        "parent_session_status": _continuity_session_reference_status(
-            instance_path, metadata["parent_session_filename"]
-        ),
-        "pinned_notes": [_receipt_with_current_state(instance_path, receipt) for receipt in receipts],
-        "created": metadata["created"],
-    }
+    return _continuity_session_selection(
+        session,
+        instance_path,
+        selection="latest",
+        resume_form=resume_form,
+    )
 
 
 def list_continuity_sessions(
@@ -81,6 +203,8 @@ def list_continuity_sessions(
                 "created": metadata["created"],
                 "parent_session_filename": metadata["parent_session_filename"],
                 "characters": len(note.content),
+                "sensing_eye_asset_count": len(metadata["sensing_eye_assets"]),
+                "variants": _continuity_session_variant_records(instance_path, note),
                 "current": False,
             }
         )
@@ -103,7 +227,25 @@ def list_continuity_sessions(
 def select_continuity_session(
     session_filename: str,
     instance_path: str | Path | None = None,
+    *,
+    resume_form: str = "raw",
 ) -> dict[str, object]:
+    filename = _normalize_session_filename(instance_path, session_filename)
+    if not filename:
+        raise ValueError("No session note filename was provided.")
+    note = read_note_file(instance_path, filename)
+    return _continuity_session_selection(
+        note,
+        instance_path,
+        selection="explicit",
+        resume_form=resume_form,
+    )
+
+
+def continuity_session_variant_records(
+    session_filename: str,
+    instance_path: str | Path | None = None,
+) -> list[dict[str, object]]:
     filename = _normalize_session_filename(instance_path, session_filename)
     if not filename:
         raise ValueError("No session note filename was provided.")
@@ -111,17 +253,44 @@ def select_continuity_session(
     metadata = continuity_session_metadata(note.content)
     if not metadata:
         raise ValueError(f"{note.filename} is not a session note.")
+    return _continuity_session_variant_records(instance_path, note)
+
+
+def _continuity_session_selection(
+    note: Any,
+    instance_path: str | Path | None,
+    *,
+    selection: str,
+    resume_form: str,
+) -> dict[str, object]:
+    metadata = continuity_session_metadata(note.content)
+    if not metadata:
+        raise ValueError(f"{note.filename} is not a session note.")
+    key = continuity_session_variant_key(resume_form)
+    variants = _continuity_session_variant_records(instance_path, note)
+    selected_variant = next((item for item in variants if item["key"] == key), None)
+    if not selected_variant or selected_variant.get("status") != "available":
+        state = str(selected_variant.get("status") if selected_variant else "unavailable")
+        raise ValueError(f"{CONTINUITY_SESSION_VARIANT_LABELS[key]} is {state} for {note.filename}.")
     receipts = _parse_pinned_note_receipts(note.content)
+    sensing_eye_assets = _parse_sensing_eye_asset_receipts(note.content)
     return {
         "status": "ok",
         "tool": "select_continuity_session",
-        "selection": "explicit",
+        "selection": selection,
         "session_filename": note.filename,
+        "load_filename": selected_variant["filename"],
+        "resume_form": key,
+        "resume_form_label": CONTINUITY_SESSION_VARIANT_LABELS[key],
+        "selected_variant": selected_variant,
+        "variants": variants,
         "parent_session_filename": metadata["parent_session_filename"],
         "parent_session_status": _continuity_session_reference_status(
             instance_path, metadata["parent_session_filename"]
         ),
         "pinned_notes": [_receipt_with_current_state(instance_path, receipt) for receipt in receipts],
+        "sensing_eye_assets": [_sensing_eye_asset_receipt_payload(receipt) for receipt in sensing_eye_assets],
+        "sensing_eye_asset_count": len(sensing_eye_assets),
         "created": metadata["created"],
     }
 
@@ -146,8 +315,22 @@ def archive_continuity_session(
     if not metadata:
         raise ValueError(f"{note.filename} is not a session note.")
 
+    variants_to_archive = _existing_continuity_session_variant_notes(instance_path, note.filename)
+    sensing_eye_assets = _parse_sensing_eye_asset_receipts(note.content)
     archived_filename = _unique_archived_session_filename(instance_path, note.filename)
     archived = write_note_file(instance_path, archived_filename, note.content)
+    archived_variants: list[str] = []
+    for variant_note in variants_to_archive:
+        variant_filename = _archived_session_variant_filename(archived.filename, variant_note.filename)
+        archived_variant = write_note_file(instance_path, variant_filename, variant_note.content)
+        delete_note_file(instance_path, variant_note.filename)
+        archived_variants.append(archived_variant.filename)
+    archived_assets = _archive_sensing_eye_assets(
+        instance_path,
+        sensing_eye_assets,
+        source_session_filename=note.filename,
+        archived_session_filename=archived.filename,
+    )
     delete_note_file(instance_path, note.filename)
     refreshed = list_continuity_sessions(instance_path)
     return {
@@ -155,6 +338,11 @@ def archive_continuity_session(
         "tool": "archive_continuity_session",
         "session_filename": note.filename,
         "archived_session_filename": archived.filename,
+        "archived_variant_filenames": archived_variants,
+        "archived_sensing_eye_assets": archived_assets["assets"],
+        "archived_sensing_eye_asset_count": archived_assets["archived_count"],
+        "missing_sensing_eye_asset_count": archived_assets["missing_count"],
+        "sensing_eye_asset_archive": archived_assets["archive_directory"],
         "current_session_filename": refreshed["current_session_filename"],
         "sessions": refreshed["sessions"],
     }
@@ -170,6 +358,7 @@ def save_continuity_session(
     created_at: datetime | None = None,
     created_label: str = "",
     filename_timestamp: str = "",
+    sensing_eye_filenames: list[str] | tuple[str, ...] = (),
 ) -> dict[str, object]:
     text = str(body or "").strip()
     if not text:
@@ -188,12 +377,14 @@ def save_continuity_session(
         timestamp=filename_timestamp or created.strftime("%Y%m%d-%H%M%S-%f")[:-3],
     )
     receipts = _pinned_note_receipts(instance_path, pinned_filenames)
+    sensing_eye_assets = _sensing_eye_asset_receipts(instance_path, sensing_eye_filenames)
     content = format_continuity_session_note(
         body=text,
         session_filename=session_filename,
         parent_session_filename=parent,
         created_label=created_label or created.isoformat(timespec="seconds"),
         pinned_notes=receipts,
+        sensing_eye_assets=sensing_eye_assets,
     )
     session = write_note_file(instance_path, session_filename, content)
     return {
@@ -203,6 +394,8 @@ def save_continuity_session(
         "session_filename": session.filename,
         "parent_session_filename": parent or None,
         "pinned_notes": [_receipt_payload(receipt) for receipt in receipts],
+        "sensing_eye_assets": [_sensing_eye_asset_receipt_payload(receipt) for receipt in sensing_eye_assets],
+        "sensing_eye_asset_count": len(sensing_eye_assets),
         "characters": len(session.content),
     }
 
@@ -246,7 +439,99 @@ def continuity_session_metadata(content: str) -> dict[str, object] | None:
         "created": _line_value(text, "Created"),
         "parent_session_filename": _line_value(text, "Parent session"),
         "pinned_notes": [_receipt_payload(receipt) for receipt in _parse_pinned_note_receipts(text)],
+        "sensing_eye_assets": [
+            _sensing_eye_asset_receipt_payload(receipt) for receipt in _parse_sensing_eye_asset_receipts(text)
+        ],
     }
+
+
+def continuity_session_variant_metadata(content: str) -> dict[str, str] | None:
+    text = str(content or "").replace("\r\n", "\n")
+    if not re.search(rf"(?m)^{re.escape(CONTINUITY_SESSION_VARIANT_HEADER)}\s*$", text):
+        return None
+    source_filename = _line_value(text, "Source session")
+    source_sha256 = _line_value(text, "Source sha256").lower()
+    try:
+        key = continuity_session_variant_key(_line_value(text, "Variant"))
+    except ValueError:
+        return None
+    if key == "raw" or not source_filename or not re.fullmatch(r"[0-9a-f]{64}", source_sha256):
+        return None
+    return {
+        "variant": key,
+        "source_session_filename": source_filename.replace("\\", "/"),
+        "source_sha256": source_sha256,
+        "created": _line_value(text, "Created"),
+    }
+
+
+def _continuity_session_variant_filename_for_source(source_filename: str, key: str) -> str:
+    if key == "raw":
+        return str(source_filename).replace("\\", "/")
+    source_path = Path(str(source_filename).replace("\\", "/"))
+    return f"{CONTINUITY_SESSION_VARIANT_DIR}/{source_path.stem}.{key}.txt"
+
+
+def _continuity_session_variant_records(
+    instance_path: str | Path | None,
+    source_note: Any,
+) -> list[dict[str, object]]:
+    source_filename = str(source_note.filename).replace("\\", "/")
+    source_sha256 = hashlib.sha256(source_note.content.encode("utf-8")).hexdigest()
+    records: list[dict[str, object]] = [
+        {
+            "key": "raw",
+            "label": CONTINUITY_SESSION_VARIANT_LABELS["raw"],
+            "filename": source_filename,
+            "status": "available",
+            "characters": len(source_note.content),
+        }
+    ]
+    for key in ("scrubbed", "summary"):
+        filename = _continuity_session_variant_filename_for_source(source_filename, key)
+        path = resolve_note_path(filename, instance_path)
+        record: dict[str, object] = {
+            "key": key,
+            "label": CONTINUITY_SESSION_VARIANT_LABELS[key],
+            "filename": filename,
+            "status": "missing",
+            "characters": 0,
+        }
+        if not path.exists():
+            records.append(record)
+            continue
+        try:
+            note = read_note_file(instance_path, filename)
+        except (FileNotFoundError, OSError, ValueError):
+            record["status"] = "invalid"
+            records.append(record)
+            continue
+        record["filename"] = note.filename
+        record["characters"] = len(note.content)
+        metadata = continuity_session_variant_metadata(note.content)
+        if not metadata or metadata["variant"] != key:
+            record["status"] = "invalid"
+        elif metadata["source_session_filename"].lower() != source_filename.lower():
+            record["status"] = "invalid"
+        elif metadata["source_sha256"] != source_sha256:
+            record["status"] = "stale"
+        else:
+            record["status"] = "available"
+        records.append(record)
+    return records
+
+
+def _existing_continuity_session_variant_notes(
+    instance_path: str | Path | None,
+    source_filename: str,
+) -> list[Any]:
+    notes: list[Any] = []
+    for key in ("scrubbed", "summary"):
+        filename = _continuity_session_variant_filename_for_source(source_filename, key)
+        if not resolve_note_path(filename, instance_path).exists():
+            continue
+        notes.append(read_note_file(instance_path, filename))
+    return notes
 
 
 def format_continuity_session_note(
@@ -256,6 +541,7 @@ def format_continuity_session_note(
     parent_session_filename: str,
     created_label: str,
     pinned_notes: list[PinnedNoteReceipt],
+    sensing_eye_assets: list[SensingEyeAssetReceipt],
 ) -> str:
     lines = [
         CONTINUITY_SESSION_HEADER,
@@ -267,10 +553,7 @@ def format_continuity_session_note(
         "Use",
         "---",
         "This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.",
-        (
-            "The filename should carry the PM caption. "
-            "Current sensors, tools, and time still need fresh runtime truth."
-        ),
+        ("The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth."),
         "",
         "How This Run Got Here",
         "-----------------------",
@@ -278,9 +561,25 @@ def format_continuity_session_note(
         f"- Parent session note: {parent_session_filename or 'none'}",
         "- Pinned notes expected at boot are listed below with save-time receipts.",
         "",
-        "Pinned Context At Save",
-        "-----------------------",
+        SENSING_EYE_ASSETS_HEADER,
+        "---------------------------",
     ]
+    if sensing_eye_assets:
+        for receipt in sensing_eye_assets:
+            lines.append(f"- {receipt.filename}")
+            if receipt.status == "ok":
+                lines.append(f"  {receipt.kind} | {receipt.bytes} bytes | sha256:{receipt.sha256}")
+            else:
+                lines.append("  missing when session was saved")
+    else:
+        lines.append("- none")
+    lines.extend(
+        [
+            "",
+            "Pinned Context At Save",
+            "-----------------------",
+        ]
+    )
     if pinned_notes:
         for receipt in pinned_notes:
             lines.append(f"- {receipt.filename}")
@@ -329,6 +628,71 @@ def _pinned_note_receipts(
     return receipts
 
 
+def _sensing_eye_asset_receipts(
+    instance_path: str | Path | None,
+    filenames: list[str] | tuple[str, ...] | Any,
+) -> list[SensingEyeAssetReceipt]:
+    root = _sensing_eye_asset_root(instance_path)
+    receipts: list[SensingEyeAssetReceipt] = []
+    for filename in _dedupe_sensing_eye_asset_filenames(filenames):
+        path = root / filename
+        if not path.is_file():
+            receipts.append(
+                SensingEyeAssetReceipt(
+                    filename=filename,
+                    kind=_sensing_eye_asset_kind(filename),
+                    bytes=None,
+                    sha256=None,
+                    status="missing",
+                )
+            )
+            continue
+        receipts.append(
+            SensingEyeAssetReceipt(
+                filename=filename,
+                kind=_sensing_eye_asset_kind(filename),
+                bytes=path.stat().st_size,
+                sha256=_file_sha256(path),
+                status="ok",
+            )
+        )
+    return receipts
+
+
+def _parse_sensing_eye_asset_receipts(content: str) -> list[SensingEyeAssetReceipt]:
+    section = _section_text(content, SENSING_EYE_ASSETS_HEADER, "Pinned Context At Save")
+    receipts: list[SensingEyeAssetReceipt] = []
+    lines = section.splitlines()
+    index = 0
+    while index < len(lines):
+        match = re.match(r"^\s*-\s+(.+?)\s*$", lines[index])
+        if not match:
+            index += 1
+            continue
+        filename = _safe_sensing_eye_asset_filename(match.group(1))
+        index += 1
+        if not filename:
+            continue
+        detail = lines[index].strip() if index < len(lines) and lines[index].startswith("  ") else ""
+        if detail:
+            index += 1
+        detail_match = re.match(
+            r"^(image|text) \| (\d+) bytes \| sha256:([0-9a-f]{64})$",
+            detail,
+            flags=re.IGNORECASE,
+        )
+        receipts.append(
+            SensingEyeAssetReceipt(
+                filename=filename,
+                kind=detail_match.group(1).lower() if detail_match else _sensing_eye_asset_kind(filename),
+                bytes=int(detail_match.group(2)) if detail_match else None,
+                sha256=detail_match.group(3).lower() if detail_match else None,
+                status="ok" if detail_match else "missing",
+            )
+        )
+    return receipts
+
+
 def _parse_pinned_note_receipts(content: str) -> list[PinnedNoteReceipt]:
     section = _section_text(content, "Pinned Context At Save", "Session Demarcation")
     receipts: list[PinnedNoteReceipt] = []
@@ -358,13 +722,88 @@ def _parse_pinned_note_receipts(content: str) -> list[PinnedNoteReceipt]:
     return receipts
 
 
+def _archive_sensing_eye_assets(
+    instance_path: str | Path | None,
+    receipts: list[SensingEyeAssetReceipt],
+    *,
+    source_session_filename: str,
+    archived_session_filename: str,
+) -> dict[str, object]:
+    root = _sensing_eye_asset_root(instance_path)
+    package_dir = _archived_session_package_path(instance_path, archived_session_filename)
+    archive_relative = f"{Path(archived_session_filename).parent.as_posix()}/sensing-eye"
+    archive_dir = package_dir / "sensing-eye"
+    archived: list[dict[str, object]] = []
+
+    for receipt in receipts:
+        source = root / receipt.filename
+        record = _sensing_eye_asset_receipt_payload(receipt)
+        record["archive_filename"] = receipt.filename
+        if receipt.status != "ok" or not source.is_file():
+            record["archive_status"] = "missing"
+            archived.append(record)
+            continue
+        try:
+            current_digest = _file_sha256(source)
+        except OSError as exc:
+            record["archive_status"] = "error"
+            record["error"] = str(exc)
+            archived.append(record)
+            continue
+        if receipt.sha256 and current_digest != receipt.sha256:
+            record["archive_status"] = "changed"
+            archived.append(record)
+            continue
+
+        target = archive_dir / receipt.filename
+        if target.exists():
+            record["archive_status"] = "collision"
+            archived.append(record)
+            continue
+        try:
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(source), str(target))
+            record["archive_status"] = "archived"
+            sidecar = _sensing_eye_sidecar_path(source)
+            if sidecar.is_file():
+                try:
+                    shutil.move(str(sidecar), str(_sensing_eye_sidecar_path(target)))
+                    record["metadata_status"] = "archived"
+                except OSError as exc:
+                    record["metadata_status"] = "error"
+                    record["metadata_error"] = str(exc)
+            else:
+                record["metadata_status"] = "missing"
+        except OSError as exc:
+            record["archive_status"] = "error"
+            record["error"] = str(exc)
+        archived.append(record)
+
+    if archived:
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        manifest = {
+            "source_session_filename": source_session_filename,
+            "archived_session_filename": archived_session_filename,
+            "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+            "assets": archived,
+        }
+        (package_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    return {
+        "assets": archived,
+        "archived_count": sum(item.get("archive_status") == "archived" for item in archived),
+        "missing_count": sum(item.get("archive_status") == "missing" for item in archived),
+        "archive_directory": archive_relative if archived else "",
+    }
+
+
 def _section_text(content: str, heading: str, next_heading: str) -> str:
     match = re.search(rf"(?m)^{re.escape(heading)}\s*\n-+\s*\n", str(content or ""))
     if not match:
         return ""
-    body = str(content)[match.end():]
+    body = str(content)[match.end() :]
     boundary = re.search(rf"(?m)^{re.escape(next_heading)}\s*\n-+\s*\n", body)
-    return body[:boundary.start()].strip() if boundary else body.strip()
+    return body[: boundary.start()].strip() if boundary else body.strip()
 
 
 def _receipt_payload(receipt: PinnedNoteReceipt) -> dict[str, Any]:
@@ -374,6 +813,67 @@ def _receipt_payload(receipt: PinnedNoteReceipt) -> dict[str, Any]:
         "sha256": receipt.sha256,
         "status": receipt.status,
     }
+
+
+def _sensing_eye_asset_receipt_payload(receipt: SensingEyeAssetReceipt) -> dict[str, Any]:
+    return {
+        "filename": receipt.filename,
+        "kind": receipt.kind,
+        "bytes": receipt.bytes,
+        "sha256": receipt.sha256,
+        "status": receipt.status,
+    }
+
+
+def _sensing_eye_asset_root(instance_path: str | Path | None) -> Path:
+    return notes_root_for_instance(instance_path).resolve().parent / "logs" / "sensing-eye"
+
+
+def _archived_session_package_path(
+    instance_path: str | Path | None,
+    archived_session_filename: str,
+) -> Path:
+    return resolve_note_path(archived_session_filename, instance_path).parent
+
+
+def _sensing_eye_asset_kind(filename: str) -> str:
+    return "image" if Path(filename).suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"} else "text"
+
+
+def _sensing_eye_sidecar_path(path: Path) -> Path:
+    return path.with_name(f"{path.name}.json")
+
+
+def _safe_sensing_eye_asset_filename(value: str) -> str:
+    filename = str(value or "").replace("\\", "/").strip()
+    if not filename or "/" in filename or filename != Path(filename).name:
+        return ""
+    if len(filename) > 240 or Path(filename).suffix.lower() not in SENSING_EYE_ASSET_SUFFIXES:
+        return ""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._ -]*", filename):
+        return ""
+    return filename
+
+
+def _dedupe_sensing_eye_asset_filenames(values: list[str] | tuple[str, ...] | Any) -> list[str]:
+    seen: set[str] = set()
+    filenames: list[str] = []
+    for value in values or []:
+        filename = _safe_sensing_eye_asset_filename(str(value or ""))
+        key = filename.lower()
+        if not filename or key in seen:
+            continue
+        seen.add(key)
+        filenames.append(filename)
+    return filenames
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _receipt_with_current_state(
@@ -452,14 +952,20 @@ def _unique_archived_session_filename(instance_path: str | Path | None, filename
     stem = source_path.stem or "session"
     suffix = source_path.suffix or ".txt"
     for extra in ["", *[f"-{index:02d}" for index in range(2, 100)]]:
-        candidate = f"{ARCHIVED_CONTINUITY_SESSION_DIR}/{stem}{extra}{suffix}"
+        candidate = f"{ARCHIVED_CONTINUITY_SESSION_DIR}/{stem}{extra}/session{suffix}"
         try:
-            path = find_existing_note_path(candidate, instance_path)
+            path = resolve_note_path(candidate, instance_path)
         except ValueError:
             continue
-        if not path.exists():
+        if not path.parent.exists():
             return candidate
     raise ValueError("Could not find an unused archived session-note filename.")
+
+
+def _archived_session_variant_filename(archived_session_filename: str, filename: str) -> str:
+    package = Path(str(archived_session_filename).replace("\\", "/")).parent.as_posix()
+    source_name = Path(str(filename).replace("\\", "/")).name or "session-variant.txt"
+    return f"{package}/variants/{source_name}"
 
 
 def safe_note_folder(value: str) -> str:

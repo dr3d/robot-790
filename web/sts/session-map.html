@@ -32,7 +32,7 @@
       font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       overflow: hidden;
     }
-    button, input {
+    button, input, select {
       font: inherit;
     }
     button {
@@ -107,7 +107,7 @@
     .toolbar {
       grid-area: toolbar;
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) repeat(4, auto);
+      grid-template-columns: minmax(220px, 1fr) repeat(2, auto);
       gap: 8px;
       align-items: center;
       min-width: 0;
@@ -125,9 +125,17 @@
       padding: 7px 10px;
     }
     main {
+      --panel-divider-size: 10px;
+      --sessions-pane-width: 29%;
+      --details-pane-width: 31%;
       display: grid;
-      grid-template-columns: minmax(330px, 0.9fr) minmax(360px, 1.2fr) minmax(360px, 1fr);
-      gap: 10px;
+      grid-template-columns:
+        minmax(190px, var(--sessions-pane-width))
+        var(--panel-divider-size)
+        minmax(280px, 1fr)
+        var(--panel-divider-size)
+        minmax(250px, var(--details-pane-width));
+      gap: 0;
       min-height: 0;
       padding: 10px 18px 16px;
       overflow: hidden;
@@ -150,9 +158,42 @@
         linear-gradient(180deg, rgba(var(--accent), 0.055), transparent 210px),
         var(--panel);
     }
-    section:nth-child(1) { --accent: 96, 211, 148; }
-    section:nth-child(2) { --accent: 104, 199, 255; }
-    section:nth-child(3) { --accent: 255, 209, 102; }
+    .sessions-panel { --accent: 96, 211, 148; }
+    .lineage-panel { --accent: 104, 199, 255; }
+    .details-panel { --accent: 255, 209, 102; }
+    .panel-divider {
+      position: relative;
+      z-index: 2;
+      min-height: 0;
+      cursor: col-resize;
+      touch-action: none;
+      user-select: none;
+      outline: none;
+    }
+    .panel-divider::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 50%;
+      width: 1px;
+      background: rgba(139, 160, 176, 0.46);
+      transform: translateX(-50%);
+      transition: background 120ms ease, box-shadow 120ms ease, width 120ms ease;
+    }
+    .panel-divider::after {
+      content: none;
+    }
+    .panel-divider:hover::before,
+    .panel-divider:focus-visible::before,
+    .panel-divider.is-dragging::before {
+      width: 2px;
+      background: rgba(104, 199, 255, 0.94);
+      box-shadow: 0 0 8px rgba(104, 199, 255, 0.36);
+    }
+    body.is-panel-resizing,
+    body.is-panel-resizing * {
+      cursor: col-resize !important;
+      user-select: none !important;
+    }
     h2 {
       margin: 0;
       padding: 10px 12px 8px;
@@ -195,14 +236,10 @@
       font-weight: 780;
       line-height: 1.25;
     }
-    .session-meta,
-    .session-path {
+    .session-meta {
       color: var(--muted);
       font-size: 12px;
       overflow-wrap: anywhere;
-    }
-    .session-path {
-      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
     }
     .tree {
       display: grid;
@@ -217,8 +254,31 @@
       border-left: 1px solid rgba(104, 199, 255, 0.25);
     }
     .root {
-      padding-left: 0;
+      padding-left: 18px;
       border-left: 0;
+    }
+    .branch-row {
+      position: relative;
+      min-width: min-content;
+    }
+    .tree-toggle {
+      position: absolute;
+      z-index: 1;
+      left: -26px;
+      top: 10px;
+      width: 16px;
+      min-width: 16px;
+      min-height: 16px;
+      height: 16px;
+      padding: 0;
+      border-color: rgba(104, 199, 255, 0.75);
+      border-radius: 3px;
+      background: #14252f;
+      color: var(--blue);
+      font: 700 13px/12px ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .tree-toggle:hover:not(:disabled) {
+      background: #1b3a49;
     }
     .node {
       position: relative;
@@ -233,7 +293,7 @@
       width: 18px;
       border-top: 1px solid rgba(104, 199, 255, 0.25);
     }
-    .root > .node::before {
+    .root > .branch-row .node::before {
       display: none;
     }
     .node.current {
@@ -250,8 +310,15 @@
     }
     .detail-actions {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .detail-actions button {
+      min-width: 0;
+      min-height: 30px;
+      padding: 4px 6px;
+      font-size: 12px;
+      white-space: nowrap;
     }
     .detail-grid {
       display: grid;
@@ -260,6 +327,22 @@
       border: 1px solid rgba(255, 209, 102, 0.18);
       border-radius: 7px;
       background: rgba(9, 12, 15, 0.46);
+    }
+    .variant-control {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+    }
+    .variant-control select {
+      min-width: 0;
+      min-height: 32px;
+      border: 1px solid rgba(255, 209, 102, 0.46);
+      border-radius: 5px;
+      background: #10141a;
+      color: var(--text);
+      padding: 4px 7px;
     }
     .preview {
       min-height: 0;
@@ -285,6 +368,7 @@
         height: auto;
         min-height: calc(100vh - 1px);
       }
+      .panel-divider { display: none; }
       section {
         min-height: 320px;
       }
@@ -309,6 +393,11 @@
       .toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       #filter { grid-column: 1 / -1; }
     }
+    @media (max-width: 480px) {
+      .detail-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
   </style>
 </head>
 <body>
@@ -318,21 +407,21 @@
     <div class="toolbar">
       <input id="filter" placeholder="Filter sessions" spellcheck="false">
       <button id="refresh" type="button">Refresh</button>
-      <button id="selectInSts" type="button" disabled>Select In STS</button>
       <button id="connectInSts" class="primary" type="button" disabled>Connect In STS</button>
-      <button id="archive" class="warn" type="button" disabled>Archive</button>
     </div>
   </header>
-  <main>
-    <section>
+  <main id="mapWorkspace">
+    <section class="sessions-panel">
       <h2>Sessions</h2>
       <div id="list" class="list"></div>
     </section>
-    <section>
+    <div id="sessionsResizeHandle" class="panel-divider" role="separator" aria-label="Resize Sessions and Lineage panels" aria-orientation="vertical" tabindex="0" title="Drag to resize panels. Double-click to reset."></div>
+    <section class="lineage-panel">
       <h2>Lineage</h2>
       <div id="graph" class="graph"></div>
     </section>
-    <section>
+    <div id="detailsResizeHandle" class="panel-divider" role="separator" aria-label="Resize Lineage and Selected panels" aria-orientation="vertical" tabindex="0" title="Drag to resize panels. Double-click to reset."></div>
+    <section class="details-panel">
       <h2>Selected</h2>
       <div id="details" class="details"></div>
     </section>
@@ -341,20 +430,215 @@
     const statusEl = document.querySelector("#status");
     const filterEl = document.querySelector("#filter");
     const refreshButton = document.querySelector("#refresh");
-    const selectButton = document.querySelector("#selectInSts");
     const connectButton = document.querySelector("#connectInSts");
-    const archiveButton = document.querySelector("#archive");
     const listEl = document.querySelector("#list");
     const graphEl = document.querySelector("#graph");
     const detailsEl = document.querySelector("#details");
+    const workspaceEl = document.querySelector("#mapWorkspace");
+    const sessionsPanelEl = document.querySelector(".sessions-panel");
+    const detailsPanelEl = document.querySelector(".details-panel");
+    const sessionsResizeHandle = document.querySelector("#sessionsResizeHandle");
+    const detailsResizeHandle = document.querySelector("#detailsResizeHandle");
 
     let sessions = [];
     let selectedFilename = "";
     let currentFilename = "";
+    let collapsedLineageNodes = new Set();
+    const resumeFormBySession = new Map();
+    const requestedResumeForm = new URLSearchParams(location.search).get("resume_form") || "raw";
+    const PANEL_LAYOUT_STORAGE_KEY = "robot790-session-map-panel-layout-v1";
+    const MIN_SESSIONS_PANEL_WIDTH = 190;
+    const MIN_LINEAGE_PANEL_WIDTH = 280;
+    const MIN_DETAILS_PANEL_WIDTH = 250;
+    let panelResizeDrag = null;
+    let panelResizeFrame = 0;
+
+    function desktopPanelLayoutActive() {
+      return window.matchMedia("(min-width: 981px)").matches;
+    }
+
+    function clamp(value, minimum, maximum) {
+      return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+    }
+
+    function panelContentBounds() {
+      const rect = workspaceEl.getBoundingClientRect();
+      const style = getComputedStyle(workspaceEl);
+      const left = rect.left + (Number.parseFloat(style.paddingLeft) || 0);
+      const right = rect.right - (Number.parseFloat(style.paddingRight) || 0);
+      return { left, right, width: Math.max(1, right - left) };
+    }
+
+    function panelDividerTotalWidth() {
+      const size = Number.parseFloat(getComputedStyle(workspaceEl).getPropertyValue("--panel-divider-size")) || 16;
+      return size * 2;
+    }
+
+    function panelWidths() {
+      return {
+        sessions: sessionsPanelEl.getBoundingClientRect().width,
+        details: detailsPanelEl.getBoundingClientRect().width
+      };
+    }
+
+    function panelWidthLimits(kind) {
+      const bounds = panelContentBounds();
+      const widths = panelWidths();
+      const minimum = kind === "sessions" ? MIN_SESSIONS_PANEL_WIDTH : MIN_DETAILS_PANEL_WIDTH;
+      const other = kind === "sessions" ? widths.details : widths.sessions;
+      const maximum = bounds.width - panelDividerTotalWidth() - MIN_LINEAGE_PANEL_WIDTH - other;
+      return { minimum, maximum: Math.max(minimum, maximum) };
+    }
+
+    function updatePanelDividerAccessibility() {
+      if (!desktopPanelLayoutActive()) return;
+      const widths = panelWidths();
+      for (const [kind, handle, width] of [
+        ["sessions", sessionsResizeHandle, widths.sessions],
+        ["details", detailsResizeHandle, widths.details]
+      ]) {
+        const limits = panelWidthLimits(kind);
+        handle.setAttribute("aria-valuemin", String(Math.round(limits.minimum)));
+        handle.setAttribute("aria-valuemax", String(Math.round(limits.maximum)));
+        handle.setAttribute("aria-valuenow", String(Math.round(width)));
+        handle.setAttribute("aria-valuetext", `${Math.round(width)} pixels wide`);
+      }
+    }
+
+    function setPanelWidth(kind, requestedWidth) {
+      if (!desktopPanelLayoutActive()) return;
+      const bounds = panelContentBounds();
+      const limits = panelWidthLimits(kind);
+      const width = clamp(requestedWidth, limits.minimum, limits.maximum);
+      const property = kind === "sessions" ? "--sessions-pane-width" : "--details-pane-width";
+      workspaceEl.style.setProperty(property, `${((width / bounds.width) * 100).toFixed(3)}%`);
+      updatePanelDividerAccessibility();
+    }
+
+    function persistPanelLayout() {
+      if (!desktopPanelLayoutActive()) return;
+      const bounds = panelContentBounds();
+      const widths = panelWidths();
+      try {
+        localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify({
+          sessionsPercent: Number(((widths.sessions / bounds.width) * 100).toFixed(3)),
+          detailsPercent: Number(((widths.details / bounds.width) * 100).toFixed(3))
+        }));
+      } catch (_) {
+        // Local storage is optional for a standalone map window.
+      }
+    }
+
+    function restorePanelLayout() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY) || "null");
+        if (Number.isFinite(saved?.sessionsPercent) && saved.sessionsPercent > 0 && saved.sessionsPercent < 100) {
+          workspaceEl.style.setProperty("--sessions-pane-width", `${saved.sessionsPercent}%`);
+        }
+        if (Number.isFinite(saved?.detailsPercent) && saved.detailsPercent > 0 && saved.detailsPercent < 100) {
+          workspaceEl.style.setProperty("--details-pane-width", `${saved.detailsPercent}%`);
+        }
+      } catch (_) {
+        // Invalid or unavailable storage should leave the default proportions intact.
+      }
+      requestAnimationFrame(updatePanelDividerAccessibility);
+    }
+
+    function resetPanelLayout() {
+      workspaceEl.style.removeProperty("--sessions-pane-width");
+      workspaceEl.style.removeProperty("--details-pane-width");
+      try {
+        localStorage.removeItem(PANEL_LAYOUT_STORAGE_KEY);
+      } catch (_) {
+        // Local storage is optional for a standalone map window.
+      }
+      requestAnimationFrame(updatePanelDividerAccessibility);
+    }
+
+    function resizePanelFromPointer(kind, clientX) {
+      const bounds = panelContentBounds();
+      const dividerSize = panelDividerTotalWidth() / 2;
+      const requestedWidth = kind === "sessions"
+        ? clientX - bounds.left - dividerSize / 2
+        : bounds.right - clientX - dividerSize / 2;
+      setPanelWidth(kind, requestedWidth);
+    }
+
+    function queuePanelResize(clientX) {
+      if (!panelResizeDrag) return;
+      panelResizeDrag.clientX = clientX;
+      if (panelResizeFrame) return;
+      panelResizeFrame = requestAnimationFrame(() => {
+        panelResizeFrame = 0;
+        if (panelResizeDrag) resizePanelFromPointer(panelResizeDrag.kind, panelResizeDrag.clientX);
+      });
+    }
+
+    function beginPanelResize(event, kind, handle) {
+      if (event.button !== 0 || !desktopPanelLayoutActive()) return;
+      event.preventDefault();
+      panelResizeDrag = { kind, handle, pointerId: event.pointerId, clientX: event.clientX };
+      handle.setPointerCapture(event.pointerId);
+      handle.classList.add("is-dragging");
+      document.body.classList.add("is-panel-resizing");
+      queuePanelResize(event.clientX);
+    }
+
+    function movePanelResize(event) {
+      if (!panelResizeDrag || event.pointerId !== panelResizeDrag.pointerId) return;
+      queuePanelResize(event.clientX);
+    }
+
+    function endPanelResize(event) {
+      if (!panelResizeDrag || event.pointerId !== panelResizeDrag.pointerId) return;
+      const drag = panelResizeDrag;
+      if (panelResizeFrame) {
+        cancelAnimationFrame(panelResizeFrame);
+        panelResizeFrame = 0;
+      }
+      resizePanelFromPointer(drag.kind, Number.isFinite(event.clientX) ? event.clientX : drag.clientX);
+      if (drag.handle.hasPointerCapture(event.pointerId)) drag.handle.releasePointerCapture(event.pointerId);
+      drag.handle.classList.remove("is-dragging");
+      document.body.classList.remove("is-panel-resizing");
+      panelResizeDrag = null;
+      persistPanelLayout();
+    }
+
+    function resizePanelFromKeyboard(event, kind) {
+      if (!desktopPanelLayoutActive()) return;
+      const step = event.shiftKey ? 48 : 16;
+      const widths = panelWidths();
+      const current = kind === "sessions" ? widths.sessions : widths.details;
+      if (event.key === "Home") {
+        event.preventDefault();
+        setPanelWidth(kind, panelWidthLimits(kind).minimum);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setPanelWidth(kind, panelWidthLimits(kind).maximum);
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        setPanelWidth(kind, current + (kind === "sessions" ? direction : -direction) * step);
+      } else {
+        return;
+      }
+      persistPanelLayout();
+    }
 
     function noteBasename(filename) {
       const text = String(filename || "").trim();
       return text.split(/[\\/]/).pop() || text;
+    }
+
+    function sessionTitle(filename) {
+      const base = noteBasename(filename)
+        .replace(/\.txt$/i, "")
+        .replace(/^session-/i, "")
+        .replace(/^continuity-session-/i, "");
+      const match = base.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-\d{3})?(?:-(.+))?$/);
+      if (!match) return base;
+      const [, year, month, day, hour, minute, second, caption] = match;
+      return caption ? caption.replace(/-/g, " ") : "Session note";
     }
 
     function sessionDisplayName(filename) {
@@ -366,16 +650,83 @@
       if (!match) return base;
       const [, year, month, day, hour, minute, second, caption] = match;
       const stamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-      return caption ? `${caption.replace(/-/g, " ")} - ${stamp}` : stamp;
+      return caption ? `${sessionTitle(filename)} - ${stamp}` : stamp;
     }
 
     function normalizeFilename(filename) {
       return String(filename || "").replace(/\\/g, "/").trim();
     }
 
+    function sessionPathDisplay(filename) {
+      const normalized = normalizeFilename(filename);
+      return normalized.replace(/^sessions\//i, "");
+    }
+
+    function lineageKey(filename) {
+      return normalizeFilename(filename).toLowerCase();
+    }
+
+    function expandLineageTo(filename) {
+      const byFilename = new Map(sessions.map((item) => [lineageKey(item.filename), item]));
+      const seen = new Set();
+      let item = byFilename.get(lineageKey(filename));
+      while (item) {
+        const parentKey = lineageKey(item.parent_session_filename);
+        if (!parentKey || seen.has(parentKey)) break;
+        collapsedLineageNodes.delete(parentKey);
+        seen.add(parentKey);
+        item = byFilename.get(parentKey);
+      }
+    }
     function selectedSession() {
       const key = selectedFilename.toLowerCase();
       return sessions.find((item) => normalizeFilename(item.filename).toLowerCase() === key) || null;
+    }
+
+    function normalizeResumeForm(value) {
+      const form = String(value || "raw").trim().toLowerCase().replace(/-/g, "_");
+      if (form === "cleaned_raw") return "scrubbed";
+      if (form === "dense_summary") return "summary";
+      return ["raw", "scrubbed", "summary"].includes(form) ? form : "raw";
+    }
+
+    function resumeFormRecord(item, form = "raw") {
+      const key = normalizeResumeForm(form);
+      const record = Array.isArray(item?.variants)
+        ? item.variants.find((candidate) => String(candidate?.key || "").toLowerCase() === key)
+        : null;
+      if (record) return record;
+      if (key === "raw") {
+        return {
+          key,
+          label: "Full .txt",
+          filename: item?.filename || "",
+          status: "available",
+          characters: Number(item?.characters || 0)
+        };
+      }
+      return { key, label: key === "scrubbed" ? "Scrubbed" : "Summary", status: "missing" };
+    }
+
+    function resumeFormLabel(record) {
+      if (record?.status === "available") return record.label;
+      const state = record?.status === "missing" ? "not authored" : (record?.status || "unavailable");
+      return `${record?.label || "Form"} (${state})`;
+    }
+
+    function selectedResumeForm(item = selectedSession()) {
+      if (!item) return "raw";
+      const key = lineageKey(item.filename);
+      const requested = normalizeResumeForm(resumeFormBySession.get(key) || requestedResumeForm);
+      return resumeFormRecord(item, requested).status === "available" ? requested : "raw";
+    }
+
+    function setSelectedResumeForm(form, item = selectedSession()) {
+      if (!item) return;
+      const key = normalizeResumeForm(form);
+      if (resumeFormRecord(item, key).status !== "available") return;
+      resumeFormBySession.set(lineageKey(item.filename), key);
+      void loadDetails();
     }
 
     function filteredSessions() {
@@ -395,6 +746,7 @@
 
     function setSelected(filename) {
       selectedFilename = normalizeFilename(filename);
+      expandLineageTo(selectedFilename);
       render();
       void loadDetails();
     }
@@ -417,6 +769,11 @@
         parent_session_filename: normalizeFilename(item.parent_session_filename)
       })) : [];
       currentFilename = normalizeFilename(result.current_session_filename);
+      const sessionKeys = new Set(sessions.map((item) => lineageKey(item.filename)));
+      collapsedLineageNodes = new Set([...collapsedLineageNodes].filter((key) => sessionKeys.has(key)));
+      for (const key of resumeFormBySession.keys()) {
+        if (!sessionKeys.has(key)) resumeFormBySession.delete(key);
+      }
       if (!selectedFilename || !sessions.some((item) => item.filename.toLowerCase() === selectedFilename.toLowerCase())) {
         selectedFilename = currentFilename || sessions[0]?.filename || "";
       }
@@ -429,9 +786,7 @@
       renderList();
       renderGraph();
       const hasSelection = Boolean(selectedSession());
-      selectButton.disabled = !hasSelection;
       connectButton.disabled = !hasSelection;
-      archiveButton.disabled = !hasSelection || sessions.length <= 1;
     }
 
     function renderList() {
@@ -452,14 +807,11 @@
         button.addEventListener("click", () => setSelected(item.filename));
         const title = document.createElement("span");
         title.className = "session-title";
-        title.textContent = `${item.filename === currentFilename ? "* " : ""}${sessionDisplayName(item.filename)}`;
+        title.textContent = `${item.filename === currentFilename ? "* " : ""}${sessionTitle(item.filename)}`;
         const meta = document.createElement("span");
         meta.className = "session-meta";
         meta.textContent = `${item.created || "undated"} / ${Number(item.characters || 0).toLocaleString()} chars`;
-        const path = document.createElement("span");
-        path.className = "session-path";
-        path.textContent = item.filename;
-        button.append(title, meta, path);
+        button.append(title, meta);
         listEl.append(button);
       }
     }
@@ -496,20 +848,42 @@
     }
 
     function renderBranch(item, children, visited, isRoot = false) {
-      const key = item.filename.toLowerCase();
+      const key = lineageKey(item.filename);
       const branch = document.createElement("div");
       branch.className = `branch${isRoot ? " root" : ""}`;
       if (visited.has(key)) return branch;
       visited.add(key);
-      branch.append(renderNode(item));
       const kids = children.get(key) || [];
-      for (const child of kids) {
-        branch.append(renderBranch(child, children, visited));
+      const hasChildren = kids.length > 0;
+      const expanded = hasChildren && !collapsedLineageNodes.has(key);
+      if (expanded) {
+        for (const child of kids) {
+          branch.append(renderBranch(child, children, visited));
+        }
       }
+      branch.append(renderNode(item, { hasChildren, expanded }));
       return branch;
     }
 
-    function renderNode(item) {
+    function renderNode(item, { hasChildren = false, expanded = false } = {}) {
+      const row = document.createElement("div");
+      row.className = "branch-row";
+      if (hasChildren) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "tree-toggle";
+        toggle.textContent = expanded ? "-" : "+";
+        toggle.setAttribute("aria-expanded", String(expanded));
+        toggle.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} descendants of ${sessionTitle(item.filename)}`);
+        toggle.title = expanded ? "Collapse descendants" : "Expand descendants";
+        toggle.addEventListener("click", () => {
+          const key = lineageKey(item.filename);
+          if (collapsedLineageNodes.has(key)) collapsedLineageNodes.delete(key);
+          else collapsedLineageNodes.add(key);
+          renderGraph();
+        });
+        row.append(toggle);
+      }
       const node = document.createElement("button");
       node.type = "button";
       node.className = "node";
@@ -520,12 +894,10 @@
       node.addEventListener("click", () => setSelected(item.filename));
       const title = document.createElement("div");
       title.className = "session-title";
-      title.textContent = sessionDisplayName(item.filename);
-      const path = document.createElement("div");
-      path.className = "session-path";
-      path.textContent = item.filename;
-      node.append(title, path);
-      return node;
+      title.textContent = sessionTitle(item.filename);
+      node.append(title);
+      row.append(node);
+      return row;
     }
 
     async function loadDetails() {
@@ -540,31 +912,60 @@
       }
       const actions = document.createElement("div");
       actions.className = "detail-actions";
+      const resumeForm = selectedResumeForm(item);
+      const formRecord = resumeFormRecord(item, resumeForm);
+      const loadFilename = String(formRecord.filename || item.filename);
       const openButton = document.createElement("button");
       openButton.type = "button";
-      openButton.textContent = "Open Note";
+      openButton.textContent = "Open Form";
       openButton.addEventListener("click", () => {
-        window.open(`/api/notes/read?filename=${encodeURIComponent(item.filename)}`, "_blank", "noopener");
+        window.open(`/api/notes/read?filename=${encodeURIComponent(loadFilename)}`, "_blank", "noopener");
       });
       const copyButton = document.createElement("button");
       copyButton.type = "button";
-      copyButton.textContent = "Copy Path";
+      copyButton.textContent = "Copy Source";
       copyButton.addEventListener("click", () => navigator.clipboard?.writeText(item.filename));
       const parentButton = document.createElement("button");
       parentButton.type = "button";
-      parentButton.textContent = "Parent";
+      parentButton.textContent = "Previous";
       parentButton.disabled = !item.parent_session_filename;
       parentButton.addEventListener("click", () => setSelected(item.parent_session_filename));
-      actions.append(openButton, copyButton, parentButton);
+      const archiveButton = document.createElement("button");
+      archiveButton.type = "button";
+      archiveButton.className = "warn";
+      archiveButton.textContent = "Archive";
+      archiveButton.disabled = sessions.length <= 1;
+      archiveButton.addEventListener("click", () => archiveSelected().catch((error) => setStatus(error.message)));
+      actions.append(openButton, copyButton, parentButton, archiveButton);
 
       const grid = document.createElement("div");
       grid.className = "detail-grid";
+      const variantControl = document.createElement("label");
+      variantControl.className = "variant-control";
+      const variantLabel = document.createElement("span");
+      variantLabel.textContent = "Resume form";
+      const variantSelect = document.createElement("select");
+      variantSelect.setAttribute("aria-label", "Session resume form");
+      for (const key of ["raw", "scrubbed", "summary"]) {
+        const record = resumeFormRecord(item, key);
+        const option = document.createElement("option");
+        option.value = key;
+        option.textContent = resumeFormLabel(record);
+        option.disabled = record.status !== "available";
+        variantSelect.append(option);
+      }
+      variantSelect.value = resumeForm;
+      variantSelect.addEventListener("change", () => setSelectedResumeForm(variantSelect.value, item));
+      variantControl.append(variantLabel, variantSelect);
+      grid.append(variantControl);
       for (const [label, value] of [
-        ["Name", sessionDisplayName(item.filename)],
-        ["File", item.filename],
-        ["Parent", item.parent_session_filename || "none"],
+        ["Name", sessionTitle(item.filename)],
+        ["Source", sessionPathDisplay(item.filename)],
+        ["Load file", sessionPathDisplay(loadFilename)],
+        ["Parent", item.parent_session_filename ? sessionPathDisplay(item.parent_session_filename) : "none"],
         ["Created", item.created || "unknown"],
-        ["Size", `${Number(item.characters || 0).toLocaleString()} chars`],
+        ["Eye captures", `${Number(item.sensing_eye_asset_count || 0).toLocaleString()} session-scoped`],
+        ["Form size", `${Number(formRecord.characters || item.characters || 0).toLocaleString()} chars`],
       ]) {
         const row = document.createElement("div");
         row.innerHTML = `<strong>${label}:</strong> `;
@@ -580,7 +981,7 @@
       detailsEl.append(actions, grid, preview);
       try {
         const url = new URL("/api/notes/read", location.href);
-        url.searchParams.set("filename", item.filename);
+        url.searchParams.set("filename", loadFilename);
         const note = await apiJson(url);
         preview.textContent = String(note.content || "").slice(0, 24000);
       } catch (error) {
@@ -591,36 +992,29 @@
     function postToSts(action) {
       const item = selectedSession();
       if (!item) return;
+      const resumeForm = selectedResumeForm(item);
+      const formRecord = resumeFormRecord(item, resumeForm);
+      const loadFilename = String(formRecord.filename || item.filename);
       if (window.opener && !window.opener.closed) {
         window.opener.postMessage({
           type: "robot790-continuity-session-map",
           action,
-          filename: item.filename
+          filename: item.filename,
+          resume_form: resumeForm
         }, location.origin);
         setStatus(`${action} sent to STS`);
       } else {
-        navigator.clipboard?.writeText(item.filename);
-        setStatus("no STS opener; copied filename");
+        navigator.clipboard?.writeText(loadFilename);
+        setStatus("no STS opener; copied selected form path");
       }
-    }
-
-    async function selectInSts() {
-      const item = selectedSession();
-      if (!item) return;
-      await apiJson(new URL("/api/continuity/select", location.href), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_filename: item.filename })
-      });
-      postToSts("select");
     }
 
     async function archiveSelected() {
       const item = selectedSession();
       if (!item) return;
-      if (!confirm(`Move "${sessionDisplayName(item.filename)}" out of Connect Select?`)) return;
+      if (!confirm(`Move "${sessionDisplayName(item.filename)}" and its session-scoped eye captures out of Connect Select?`)) return;
       setStatus("archiving");
-      await apiJson(new URL("/api/continuity/archive", location.href), {
+      const result = await apiJson(new URL("/api/continuity/archive", location.href), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_filename: item.filename })
@@ -628,13 +1022,26 @@
       postToSts("refresh");
       selectedFilename = "";
       await refreshSessions();
+      const assetCount = Number(result.archived_sensing_eye_asset_count) || 0;
+      setStatus(`archived${assetCount ? ` with ${assetCount} eye capture${assetCount === 1 ? "" : "s"}` : ""}`);
     }
 
     refreshButton.addEventListener("click", () => refreshSessions().catch((error) => setStatus(error.message)));
     filterEl.addEventListener("input", render);
-    selectButton.addEventListener("click", () => selectInSts().catch((error) => setStatus(error.message)));
     connectButton.addEventListener("click", () => postToSts("connect"));
-    archiveButton.addEventListener("click", () => archiveSelected().catch((error) => setStatus(error.message)));
+    for (const [kind, handle] of [
+      ["sessions", sessionsResizeHandle],
+      ["details", detailsResizeHandle]
+    ]) {
+      handle.addEventListener("pointerdown", (event) => beginPanelResize(event, kind, handle));
+      handle.addEventListener("pointermove", movePanelResize);
+      handle.addEventListener("pointerup", endPanelResize);
+      handle.addEventListener("pointercancel", endPanelResize);
+      handle.addEventListener("dblclick", resetPanelLayout);
+      handle.addEventListener("keydown", (event) => resizePanelFromKeyboard(event, kind));
+    }
+
+    restorePanelLayout();
 
     refreshSessions().catch((error) => setStatus(error.message));
   </script>

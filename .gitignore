@@ -3,6 +3,12 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.claude/
+.codex-pytest-temp/
+.playwright-mcp/
+.tmp/
+.pytest-tmp-*/
+session-map-*.png
 *.egg-info/
 dist/
 build/

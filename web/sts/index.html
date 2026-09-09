@@ -22,6 +22,9 @@
       --lower-log-pane-min-height: 7.25rem;
       --lower-log-pane-min-width: 13.75rem;
       --brain2-pane-width: 1fr;
+      --panel-divider-size: 10px;
+      --panel-resize-line: rgba(139, 160, 176, 0.46);
+      --panel-resize-line-active: rgba(104, 199, 255, 0.94);
       --sensing-eye-preview-height: 88px;
       --header-x-padding: clamp(18px, 2vw, 30px);
     }
@@ -79,7 +82,7 @@
         "header header header"
         "logs sidebar-resize sidebar";
       align-content: stretch;
-      gap: 14px 8px;
+      gap: 14px 4px;
       overflow: hidden;
     }
     main.sidebar-collapsed {
@@ -176,8 +179,8 @@
       justify-content: flex-end;
       gap: 6px;
       padding: 4px 0 3px;
-      border-top: 1px solid rgba(var(--status-accent-rgb), 0.12);
-      background: linear-gradient(90deg, rgba(var(--status-accent-rgb), 0.07), transparent 68%);
+      border-top: 0;
+      background: transparent;
       color: var(--muted);
       font-size: 14px;
       white-space: nowrap;
@@ -271,7 +274,8 @@
       box-shadow: 0 0 7px rgba(255, 48, 56, 0.62);
     }
     .top-image-status {
-      flex: 0 0 auto;
+      flex: 0 0 116px;
+      width: 116px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -285,6 +289,9 @@
       letter-spacing: 0.04em;
       text-transform: uppercase;
       box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    }
+    .top-image-label {
+      white-space: nowrap;
     }
     .top-image-status[data-state="empty"] {
       opacity: 0.68;
@@ -394,9 +401,21 @@
     .tool-indicator[data-state="off"] {
       opacity: 0.78;
     }
+    .deliberate-indicator {
+      min-width: max-content;
+    }
+    .deliberate-indicator[data-state="off"] {
+      opacity: 0.78;
+    }
+    .deliberate-indicator[data-state="running"] {
+      border-color: rgba(86, 202, 255, 0.46);
+      color: #d7f4ff;
+      background: rgba(25, 70, 94, 0.34);
+    }
     .dot,
     .recording-indicator .recording-dot,
-    .tool-indicator .tool-dot {
+    .tool-indicator .tool-dot,
+    .deliberate-indicator .deliberate-dot {
       width: 8px;
       height: 8px;
       border-radius: 999px;
@@ -434,6 +453,23 @@
       box-shadow: 0 0 0 3px rgba(255, 207, 90, 0.16), 0 0 10px rgba(255, 207, 90, 0.34);
     }
     .tool-indicator[data-state="bad"] .tool-dot {
+      background: var(--bad);
+      box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.16), 0 0 10px rgba(255, 107, 107, 0.34);
+    }
+    .deliberate-indicator[data-state="running"] .deliberate-dot {
+      background: #56caff;
+      box-shadow: 0 0 0 3px rgba(86, 202, 255, 0.18), 0 0 12px rgba(86, 202, 255, 0.44);
+      animation: recordingPulse 1.2s ease-in-out infinite;
+    }
+    .deliberate-indicator[data-state="ok"] .deliberate-dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(96, 211, 148, 0.16), 0 0 10px rgba(96, 211, 148, 0.34);
+    }
+    .deliberate-indicator[data-state="warn"] .deliberate-dot {
+      background: var(--warn);
+      box-shadow: 0 0 0 3px rgba(255, 207, 90, 0.16), 0 0 10px rgba(255, 207, 90, 0.34);
+    }
+    .deliberate-indicator[data-state="bad"] .deliberate-dot {
       background: var(--bad);
       box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.16), 0 0 10px rgba(255, 107, 107, 0.34);
     }
@@ -984,6 +1020,14 @@
       gap: 8px;
       align-self: stretch;
     }
+    .think-action-row {
+      display: grid;
+      grid-template-columns: auto minmax(88px, 1fr);
+      gap: 6px;
+    }
+    .think-action-row select {
+      min-width: 0;
+    }
     .vision-drop {
       --sensing-eye-salience-alpha: 1;
       width: 152px;
@@ -1237,17 +1281,35 @@
     #controlSidebarResize {
       grid-area: sidebar-resize;
       align-self: stretch;
+      position: relative;
       min-height: 0;
       border: 0;
-      border-radius: 5px;
-      background: linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.18), transparent);
+      border-radius: 0;
+      background: transparent;
       cursor: col-resize;
-      opacity: 0.42;
+      outline: none;
+      touch-action: none;
+    }
+    #controlSidebarResize::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 50%;
+      width: 1px;
+      background: var(--panel-resize-line);
+      transform: translateX(-50%);
+      transition: background 120ms ease, box-shadow 120ms ease, width 120ms ease;
     }
     #controlSidebarResize:hover,
+    #controlSidebarResize:focus-visible,
     body.resizing-sidebar #controlSidebarResize {
-      opacity: 0.85;
-      background: linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.45), transparent);
+      background: transparent;
+    }
+    #controlSidebarResize:hover::before,
+    #controlSidebarResize:focus-visible::before,
+    body.resizing-sidebar #controlSidebarResize::before {
+      width: 2px;
+      background: var(--panel-resize-line-active);
+      box-shadow: 0 0 8px rgba(104, 199, 255, 0.36);
     }
     #controlSidebar > .settings-panel {
       align-self: stretch;
@@ -1405,11 +1467,11 @@
       grid-area: logs;
       grid-template-columns:
         minmax(var(--lower-log-pane-min-width), var(--brain2-pane-width))
-        12px
+        var(--panel-divider-size)
         minmax(var(--lower-log-pane-min-width), 1fr);
       grid-template-rows:
         minmax(var(--conversation-pane-min-height), var(--conversation-pane-height))
-        12px
+        var(--panel-divider-size)
         minmax(var(--lower-log-pane-min-height), 1fr);
     }
     .log-grid {
@@ -1454,66 +1516,62 @@
       grid-column: 1 / -1;
       align-self: stretch;
       position: relative;
-      min-height: 12px;
+      min-height: var(--panel-divider-size);
       border: 0;
       border-radius: 0;
-      background:
-        linear-gradient(90deg, transparent, rgba(96, 211, 148, 0.24), transparent) 50% 50% / min(22rem, 64%) 1px no-repeat;
+      background: transparent;
       cursor: ns-resize;
       outline: none;
+      touch-action: none;
     }
-    .conversation-resize-handle::after {
+    .conversation-resize-handle::before {
       content: "";
       position: absolute;
-      left: 50%;
+      right: 0;
+      left: 0;
       top: 50%;
-      width: 56px;
-      height: 4px;
-      border-radius: 999px;
-      background: rgba(96, 211, 148, 0.48);
-      box-shadow: 0 0 14px rgba(96, 211, 148, 0.28);
-      transform: translate(-50%, -50%);
-      opacity: 0.78;
+      height: 1px;
+      background: var(--panel-resize-line);
+      transform: translateY(-50%);
+      transition: background 120ms ease, box-shadow 120ms ease, height 120ms ease;
     }
-    .conversation-resize-handle:hover::after,
-    .conversation-resize-handle:focus-visible::after,
-    body.resizing-conversation-pane .conversation-resize-handle::after {
-      background: rgba(96, 211, 148, 0.78);
-      box-shadow: 0 0 18px rgba(96, 211, 148, 0.52);
-      opacity: 1;
+    .conversation-resize-handle:hover::before,
+    .conversation-resize-handle:focus-visible::before,
+    body.resizing-conversation-pane .conversation-resize-handle::before {
+      height: 2px;
+      background: var(--panel-resize-line-active);
+      box-shadow: 0 0 8px rgba(104, 199, 255, 0.36);
     }
     .lower-log-resize-handle {
       align-self: stretch;
       justify-self: stretch;
       position: relative;
-      min-width: 12px;
+      min-width: var(--panel-divider-size);
       min-height: 0;
       border: 0;
       border-radius: 0;
-      background:
-        linear-gradient(180deg, transparent, rgba(160, 180, 210, 0.22), transparent) 50% 50% / 1px min(18rem, 72%) no-repeat;
+      background: transparent;
       cursor: col-resize;
       outline: none;
+      touch-action: none;
     }
-    .lower-log-resize-handle::after {
+    .lower-log-resize-handle::before {
       content: "";
       position: absolute;
       left: 50%;
-      top: 50%;
-      width: 4px;
-      height: 56px;
-      border-radius: 999px;
-      background: rgba(160, 180, 210, 0.50);
-      box-shadow: 0 0 14px rgba(160, 180, 210, 0.28);
-      transform: translate(-50%, -50%);
-      opacity: 0.78;
+      top: 0;
+      width: 1px;
+      bottom: 0;
+      background: var(--panel-resize-line);
+      transform: translateX(-50%);
+      transition: background 120ms ease, box-shadow 120ms ease, width 120ms ease;
     }
-    .lower-log-resize-handle:hover::after,
-    .lower-log-resize-handle:focus-visible::after,
-    body.resizing-lower-log-split .lower-log-resize-handle::after {
-      background: rgba(160, 180, 210, 0.82);
-      box-shadow: 0 0 18px rgba(160, 180, 210, 0.52);
-      opacity: 1;
+    .lower-log-resize-handle:hover::before,
+    .lower-log-resize-handle:focus-visible::before,
+    body.resizing-lower-log-split .lower-log-resize-handle::before {
+      width: 2px;
+      background: var(--panel-resize-line-active);
+      box-shadow: 0 0 8px rgba(104, 199, 255, 0.36);
     }
     .log-header {
       display: flex;
@@ -1987,7 +2045,7 @@
       .log-grid {
         grid-template-rows:
           minmax(var(--conversation-pane-min-height), var(--conversation-pane-height))
-          12px
+          var(--panel-divider-size)
           minmax(var(--lower-log-pane-min-height), 0.5fr)
           minmax(var(--lower-log-pane-min-height), 0.5fr);
       }
@@ -2021,7 +2079,8 @@
         width: min(150px, 100%);
       }
       .top-image-status {
-        width: 100%;
+        flex-basis: 116px;
+        width: 116px;
         justify-content: flex-start;
       }
       .settings-panel > summary {
@@ -2125,6 +2184,10 @@
             <span class="dot tool-dot" aria-hidden="true"></span>
             <span id="toolIndicatorLabel">TOOLS IDLE</span>
           </span>
+          <span id="deliberateIndicator" class="deliberate-indicator status-pill" data-state="off" title="One-pass deliberate thinking is ready" aria-live="polite">
+            <span class="dot deliberate-dot" aria-hidden="true"></span>
+            <span id="deliberateIndicatorLabel">THINK READY</span>
+          </span>
         </div>
       </div>
     </header>
@@ -2178,12 +2241,12 @@
                   <label>
                     Note flavor
                     <select id="continuityScrubMode">
-                      <option value="raw">Raw</option>
-                      <option value="cleaned_raw" disabled>Scrubbed (unavailable)</option>
-                      <option value="dense_summary" disabled>Summary (unavailable)</option>
+                      <option value="raw">Full .txt</option>
+                      <option value="scrubbed">Scrubbed</option>
+                      <option value="summary">Summary</option>
                     </select>
                   </label>
-                  <span id="continuityScrubModeStatus" class="subtle">Load the selected note exactly as written.</span>
+                  <span id="continuityScrubModeStatus" class="subtle">Full session note as written.</span>
                 </section>
               </div>
             </details>
@@ -2395,6 +2458,14 @@
               </label>
               <div class="typed-actions" aria-label="Typed input actions">
                 <button id="typedSend" type="button" disabled>Send</button>
+                <div class="think-action-row">
+                  <button id="typedThink" type="button" disabled>Think</button>
+                  <select id="typedThinkEffort" aria-label="Think depth">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="xhigh">Hard</option>
+                  </select>
+                </div>
                 <button id="typedSay" type="button" disabled>Say</button>
               </div>
               <span id="typedStatus" class="subtle">Connect first</span>
@@ -2912,6 +2983,8 @@
     const resetMicButton = document.querySelector("#resetMic");
     const typedInput = document.querySelector("#typedInput");
     const typedSendButton = document.querySelector("#typedSend");
+    const typedThinkButton = document.querySelector("#typedThink");
+    const typedThinkEffort = document.querySelector("#typedThinkEffort");
     const typedSayButton = document.querySelector("#typedSay");
     const typedStatus = document.querySelector("#typedStatus");
     const brain2Log = document.querySelector("#brain2Log");
@@ -2988,6 +3061,8 @@
     const laneIndicatorLabel = document.querySelector("#laneIndicatorLabel");
     const toolIndicator = document.querySelector("#toolIndicator");
     const toolIndicatorLabel = document.querySelector("#toolIndicatorLabel");
+    const deliberateIndicator = document.querySelector("#deliberateIndicator");
+    const deliberateIndicatorLabel = document.querySelector("#deliberateIndicatorLabel");
     const toolStatusText = document.querySelector("#toolStatusText");
     const gpuStatus = document.querySelector("#gpuStatus");
     const gpuUtil = document.querySelector("#gpuUtil");
@@ -3020,6 +3095,7 @@
     let brain2MonitorAudioUntil = 0;
     let brain2VoiceGeneration = 0;
     let toolActivityTimer = null;
+    let deliberateIndicatorTimer = null;
     let lastToolActivityTitle = "No tool activity yet";
     let lastToolStatusText = "tools: idle";
     let lastBrowserFaceStatusLine = "";
@@ -3144,6 +3220,7 @@
     let currentEmbodimentKey = "";
     let connectionButtonsLocked = false;
     let responseActive = false;
+    let deliberateTurnInFlight = false;
     let toolMarkupSuppressed = false;
     let userSpeechActive = false;
     let inputAudioTranscriptionPending = false;
@@ -3432,6 +3509,7 @@
     const idleSelfFocusStorageKey = "robot790.idleSelfFocus.v1";
     const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
     const sensingEyeSalienceStorageKey = "robot790.sensingEyeSalience.v1";
+    const sensingEyeSessionAssetStorageKey = "robot790.sensingEyeSessionAssets.v1";
     const continuityScrubModeStorageKey = "robot790.continuityScrubMode.v1";
     const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
     const brain2VoiceMonitorStorageKey = "robot790.brain2VoiceMonitor.v1";
@@ -3722,6 +3800,7 @@
     let sensingEyeImageHistorySeq = 0;
     let sensingEyeTextHistory = [];
     let sensingEyeTextHistorySeq = 0;
+    const sensingEyeSessionAssetFilenames = new Set();
     let generatedImageUrl = "";
     let generatedImageName = "";
     let generatedImageStatusState = "empty";
@@ -3765,6 +3844,38 @@
               description: "True clears the custom voice style and uses a neutral delivery."
             }
           },
+          additionalProperties: false
+        }
+      }
+    ];
+
+    const deliberationTools = [
+      {
+        type: "function",
+        name: "deliberate_once",
+        description: (
+          "Take exactly one bounded private deliberation pass when the operator explicitly asks you to think harder, " +
+          "think carefully, reconsider, reason through a specific question, or go deep, or when a question clearly needs a careful " +
+          "multi-step diagnosis, tradeoff, plan, or technical assessment. Do not use it for ordinary conversation, a simple fact, quick status, " +
+          "simple command, automatic rumination, or repeated attempts. If the operator says just answer, fast, or do not overthink, do not use it. " +
+          "Use low for a brief thought, medium for a careful pass, and xhigh only for an explicitly deep request or an unusually complex, consequential question. " +
+          "The controller maps that policy to the active brain's advertised reasoning capability and reports the actual setting used."
+        ),
+        parameters: {
+          type: "object",
+          properties: {
+            question: {
+              type: "string",
+              maxLength: 8000,
+              description: "The focused question or problem to think through for the operator."
+            },
+            effort: {
+              type: "string",
+              enum: ["low", "medium", "xhigh"],
+              description: "low for brief thought, medium for careful thought, xhigh only for explicitly deep or serious thought."
+            }
+          },
+          required: ["question"],
           additionalProperties: false
         }
       }
@@ -5031,6 +5142,7 @@
       "Never say you moved, switched, or changed embodiment unless set_embodiment succeeded.",
       "Use set_voice only when the user explicitly asks you to change your voice, speaker, accent, tone, mood, or delivery.",
       "Never say you changed your voice unless set_voice succeeded.",
+      "When the operator explicitly asks you to think harder, think carefully, take a second pass, reconsider, reason through a specific question, or go deep, call deliberate_once before answering. You may also choose it once when a question clearly needs a careful multi-step diagnosis, tradeoff, plan, or technical assessment. Do not use it for ordinary conversation, a simple fact, quick status, simple command, automatic rumination, or repeated attempts. If the operator says just answer, fast, or do not overthink, answer directly. Use low for a brief thought, medium for a careful pass, and xhigh only for an explicitly deep request or an unusually complex, consequential question. It is one private bounded pass, never a routine, loop, or substitute for clarification. After it succeeds, answer from its conclusion naturally without mentioning the tool, model, private reasoning, or chain of thought.",
       "Use get_ui_controls when the user asks what the current mic interrupt sensitivity or Eric speaker volume is.",
       "Use set_ui_control only when the user explicitly asks you to change mic interrupt sensitivity or Eric speaker volume. Treat Eric speaker volume 0 as mute.",
       "Never say you changed mic sensitivity or Eric speaker volume unless set_ui_control succeeded.",
@@ -5700,29 +5812,73 @@
       )) || null;
     }
 
-    function currentContinuityScrubMode() {
-      // Alternate forms need actual source-linked artifacts and loader support.
-      return "raw";
+    function normalizeContinuityScrubMode(value) {
+      const mode = String(value || "raw").trim().toLowerCase().replace(/-/g, "_");
+      if (mode === "cleaned_raw") return "scrubbed";
+      if (mode === "dense_summary") return "summary";
+      return ["raw", "scrubbed", "summary"].includes(mode) ? mode : "raw";
     }
 
-    function continuityScrubModeLabel() {
-      return "Raw";
+    function continuityScrubModeLabel(mode = currentContinuityScrubMode()) {
+      return ({ raw: "Full .txt", scrubbed: "Scrubbed", summary: "Summary" })[
+        normalizeContinuityScrubMode(mode)
+      ];
     }
 
-    function continuityScrubModeStatusText() {
-      return "Selected file as written. Alternate forms unavailable.";
+    function continuitySessionRecord(filename = selectedContinuitySessionFilename()) {
+      const name = String(filename || "").trim().toLowerCase();
+      return continuitySessions.find((item) => String(item?.filename || "").toLowerCase() === name) || null;
+    }
+
+    function continuityVariantRecord(mode = currentContinuityScrubMode(), filename = selectedContinuitySessionFilename()) {
+      const key = normalizeContinuityScrubMode(mode);
+      const session = continuitySessionRecord(filename);
+      return Array.isArray(session?.variants)
+        ? session.variants.find((item) => String(item?.key || "").toLowerCase() === key) || null
+        : null;
+    }
+
+    function continuityScrubModeAvailable(mode = currentContinuityScrubMode(), filename = selectedContinuitySessionFilename()) {
+      const key = normalizeContinuityScrubMode(mode);
+      return key === "raw" || continuityVariantRecord(key, filename)?.status === "available";
+    }
+
+    function continuityScrubModeStatusText(mode = currentContinuityScrubMode()) {
+      const key = normalizeContinuityScrubMode(mode);
+      if (key === "raw") return "Full session note as written.";
+      const variant = continuityVariantRecord(key);
+      if (variant?.status === "available") {
+        return `${continuityScrubModeLabel(key)} sidecar checked against its source session.`;
+      }
+      return `${continuityScrubModeLabel(key)} is unavailable for this session.`;
     }
 
     function updateContinuityScrubModeUi() {
-      if (!continuityScrubMode) return;
-      const mode = currentContinuityScrubMode();
+      if (!continuityScrubMode) return "raw";
+      let mode = normalizeContinuityScrubMode(continuityScrubMode.value || localStorage.getItem(continuityScrubModeStorageKey));
+      if (!continuityScrubModeAvailable(mode)) mode = "raw";
+      for (const option of continuityScrubMode.options) {
+        const key = normalizeContinuityScrubMode(option.value);
+        const variant = continuityVariantRecord(key);
+        const available = continuityScrubModeAvailable(key);
+        option.disabled = !available;
+        option.textContent = available
+          ? continuityScrubModeLabel(key)
+          : `${continuityScrubModeLabel(key)} (${variant?.status || "not authored"})`;
+      }
       continuityScrubMode.value = mode;
       if (continuityScrubModeStatus) continuityScrubModeStatus.textContent = continuityScrubModeStatusText(mode);
       localStorage.setItem(continuityScrubModeStorageKey, mode);
+      return mode;
+    }
+
+    function currentContinuityScrubMode() {
+      return normalizeContinuityScrubMode(continuityScrubMode?.value || localStorage.getItem(continuityScrubModeStorageKey));
     }
 
     function loadContinuityScrubMode() {
       if (!continuityScrubMode) return;
+      continuityScrubMode.value = normalizeContinuityScrubMode(localStorage.getItem(continuityScrubModeStorageKey));
       updateContinuityScrubModeUi();
     }
 
@@ -5746,8 +5902,10 @@
       if (contextPanel?.open) renderContextMap();
     }
 
-    async function fetchCurrentContinuitySession() {
-      const response = await fetch(new URL("/api/continuity/current", location.href), { cache: "no-store" });
+    async function fetchCurrentContinuitySession(resumeForm = currentContinuityScrubMode()) {
+      const url = new URL("/api/continuity/current", location.href);
+      url.searchParams.set("resume_form", normalizeContinuityScrubMode(resumeForm));
+      const response = await fetch(url, { cache: "no-store" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
@@ -5788,7 +5946,7 @@
       if (continuitySessionSelect) continuitySessionSelect.disabled = false;
       for (const item of continuitySessions) {
         const filename = String(item.filename || "");
-        const displayName = sessionNoteDisplayName(filename);
+        const displayName = sessionNoteTitle(filename);
         const option = document.createElement("option");
         option.value = filename;
         const marker = filename.toLowerCase() === String(currentFilename || "").toLowerCase() ? "* " : "";
@@ -5816,7 +5974,7 @@
           name.textContent = `${marker}${displayName}`;
           const meta = document.createElement("span");
           meta.className = "session-choice-meta";
-          meta.textContent = filename;
+          meta.textContent = sessionNoteStamp(filename);
           text.append(name, meta);
           row.append(input, text);
           continuitySessionList.appendChild(row);
@@ -5845,6 +6003,7 @@
         row.setAttribute("aria-selected", checked ? "true" : "false");
       });
       updateContinuitySessionActionButtons();
+      updateContinuityScrubModeUi();
     }
 
     function updateContinuitySessionActionButtons() {
@@ -5860,13 +6019,16 @@
       if (connectSelectedContinuitySessionButton) connectSelectedContinuitySessionButton.disabled = locked || !hasSelection;
     }
 
-    async function fetchContinuitySessionMetadata(filename) {
+    async function fetchContinuitySessionMetadata(filename, resumeForm = "raw") {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Choose a session note first.");
       const response = await fetch(new URL("/api/continuity/select", location.href), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_filename: name })
+        body: JSON.stringify({
+          session_filename: name,
+          resume_form: normalizeContinuityScrubMode(resumeForm)
+        })
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status !== "ok") {
@@ -5875,11 +6037,11 @@
       return result;
     }
 
-    async function resolveContinuitySessionForLoad(sessionFilename = "") {
+    async function resolveContinuitySessionForLoad(sessionFilename = "", resumeForm = currentContinuityScrubMode()) {
       const name = String(sessionFilename || "").trim();
       return name
-        ? fetchContinuitySessionMetadata(name)
-        : fetchCurrentContinuitySession();
+        ? fetchContinuitySessionMetadata(name, resumeForm)
+        : fetchCurrentContinuitySession(resumeForm);
     }
 
     function continuityLoadReferenceIssues(current) {
@@ -5957,6 +6119,7 @@
       const url = new URL("session-map.html", location.href);
       const selected = selectedContinuitySessionFilename();
       if (selected) url.searchParams.set("selected", selected);
+      url.searchParams.set("resume_form", currentContinuityScrubMode());
       const popup = window.open(
         url.href,
         "robot790-session-map",
@@ -5998,9 +6161,10 @@
       source = "continuity",
       sessionFilename = "",
       sessionMetadata = null,
+      resumeForm = currentContinuityScrubMode(),
       preflightComplete = false
     } = {}) {
-      const current = sessionMetadata || await resolveContinuitySessionForLoad(sessionFilename);
+      const current = sessionMetadata || await resolveContinuitySessionForLoad(sessionFilename, resumeForm);
       if (current.status === "unavailable") {
         currentContinuitySessionFilename = "";
         continuityParentForCurrentRun = "";
@@ -6010,9 +6174,10 @@
       if (!filename) throw new Error("No session note was selected.");
       if (!preflightComplete) await confirmContinuitySessionLoad(current, { source });
       currentContinuitySessionFilename = filename;
+      const loadFilename = String(current.load_filename || filename).trim();
       let sessionResult = null;
       try {
-        sessionResult = await readTextFile({ filename, pin: false });
+        sessionResult = await readTextFile({ filename: loadFilename, pin: false });
       } catch (error) {
         currentContinuitySessionFilename = "";
         throw error;
@@ -6046,10 +6211,12 @@
         .filter((item) => item?.current_status === "missing")
         .map((item) => item?.filename)
         .filter(Boolean);
-      setLoadedNoteContextsForContinuity([sessionResult, ...loaded]);
+      // Keep the raw source filename on the active context so the next save
+      // preserves the real lineage even when its text came from a derivative.
+      setLoadedNoteContextsForContinuity([{ ...sessionResult, filename }, ...loaded]);
       continuityParentForCurrentRun = filename;
       log(events, [
-        `session note loaded from ${source}: ${filename}`,
+        `session note loaded from ${source}: ${filename} / ${current.resume_form_label || continuityScrubModeLabel(current.resume_form)} (${loadFilename})`,
         `continuity pinned notes rehydrated: ${restored.join(", ") || "none"}`,
         changed.length ? `changed since saved: ${changed.join(", ")}` : "",
         missing.length ? `missing since saved: ${missing.join(", ")}` : "",
@@ -6058,6 +6225,9 @@
       recordUiEvent("session note loaded", filename, {
         source,
         session_filename: filename,
+        load_filename: loadFilename,
+        resume_form: current.resume_form || normalizeContinuityScrubMode(resumeForm),
+        resume_form_label: current.resume_form_label || continuityScrubModeLabel(current.resume_form),
         failed,
         changed_pinned_notes: changed,
         missing_pinned_notes: missing,
@@ -12991,12 +13161,219 @@
       return String(typedInput?.value || "").trim();
     }
 
+    function currentTypedThinkEffort() {
+      const value = String(typedThinkEffort?.value || "medium").trim().toLowerCase();
+      return ["low", "medium", "xhigh"].includes(value) ? value : "medium";
+    }
+
+    function deliberateEffortLabel(effort = currentTypedThinkEffort()) {
+      if (effort === "xhigh" || effort === "high") return "HARD";
+      if (effort === "on") return "ON";
+      return String(effort || "medium").toUpperCase();
+    }
+
+    function resolvedDeliberateEffort(result, fallback) {
+      const effort = String(result?.thinking || fallback || "medium").trim().toLowerCase();
+      return ["on", "low", "medium", "high", "xhigh"].includes(effort) ? effort : fallback;
+    }
+
+    function requestedDeliberateEffort(result, fallback) {
+      const effort = String(result?.thinking_requested || fallback || "medium").trim().toLowerCase();
+      return ["low", "medium", "xhigh"].includes(effort) ? effort : fallback;
+    }
+
+    function deliberateCompletionTitle(requested, actual, suffix = "") {
+      const body = requested === actual
+        ? `One bounded local ${actual} deliberate pass completed`
+        : `Eric requested ${requested}; the active brain used ${actual}`;
+      return `${body}${suffix}`;
+    }
+
+    function deliberateIdleLabel() {
+      return "THINK READY";
+    }
+
+    function deliberateIdleTitle() {
+      return "One-pass deliberate thinking is ready.";
+    }
+
+    function setDeliberateIndicator(state = "off", label = deliberateIdleLabel(), title = deliberateIdleTitle()) {
+      if (deliberateIndicatorTimer) {
+        window.clearTimeout(deliberateIndicatorTimer);
+        deliberateIndicatorTimer = null;
+      }
+      if (deliberateIndicator) {
+        deliberateIndicator.dataset.state = state;
+        deliberateIndicator.title = title;
+      }
+      if (deliberateIndicatorLabel) deliberateIndicatorLabel.textContent = label;
+    }
+
+    function settleDeliberateIndicator(state, label, title) {
+      setDeliberateIndicator(state, label, title);
+      deliberateIndicatorTimer = window.setTimeout(() => {
+        deliberateIndicatorTimer = null;
+        if (!deliberateTurnInFlight) setDeliberateIndicator();
+      }, 3200);
+    }
+
+    function clipDeliberateContext(value, maxChars) {
+      const text = String(value || "").trim();
+      if (!text || text.length <= maxChars) return text;
+      const marker = "\n[... context clipped ...]\n";
+      if (maxChars <= marker.length + 2) return text.slice(0, maxChars).trimEnd();
+      const available = maxChars - marker.length;
+      const head = Math.max(1, Math.floor(available * 0.4));
+      return `${text.slice(0, head).trimEnd()}${marker}${text.slice(-(available - head)).trimStart()}`;
+    }
+
+    function activeDeliberateModel() {
+      const activeModel = latestBrainStatus?.model?.lm_studio?.active_model || {};
+      const liveModel = String(activeModel.identifier || activeModel.model || "").trim();
+      if (liveModel) return liveModel;
+      return currentModelPreset() === "custom" ? currentCustomModelKey() : "";
+    }
+
+    function deliberateContextSnapshot(question) {
+      const loadedNotes = [];
+      let remainingNoteChars = 32000;
+      for (const note of loadedNoteContextsForCurrentPrompt().slice(0, 8)) {
+        if (remainingNoteChars <= 0) break;
+        const content = clipDeliberateContext(note?.content, Math.min(8000, remainingNoteChars));
+        if (!content) continue;
+        loadedNotes.push({
+          filename: String(note?.filename || "loaded note").slice(0, 180),
+          content
+        });
+        remainingNoteChars -= content.length;
+      }
+      const conversation = textTail(conversationDisplayText(), 16000);
+      return {
+        question: clipDeliberateContext(question, 8000),
+        conversation,
+        loaded_notes: loadedNotes,
+        model: activeDeliberateModel(),
+        thinking: currentTypedThinkEffort(),
+        note_characters: loadedNotes.reduce((total, note) => total + note.content.length, 0)
+      };
+    }
+
+    async function requestDeliberateOnce(snapshot) {
+      const response = await fetch("/api/deliberate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result?.status !== "ok") {
+        throw new Error(String(result?.error || `HTTP ${response.status}`));
+      }
+      return result;
+    }
+
+    async function deliberateOnceForEric(args = {}) {
+      const question = String(args?.question || "").trim();
+      if (!question) {
+        return { status: "error", tool: "deliberate_once", error: "A focused question is required." };
+      }
+      if (deliberateTurnInFlight) {
+        return { status: "busy", tool: "deliberate_once", error: "One deliberate pass is already running." };
+      }
+      const requestedEffort = String(args?.effort || "medium").trim().toLowerCase();
+      const effort = ["low", "medium", "xhigh"].includes(requestedEffort) ? requestedEffort : "medium";
+      const snapshot = deliberateContextSnapshot(question);
+      snapshot.thinking = effort;
+      const effortLabel = deliberateEffortLabel(effort);
+      deliberateTurnInFlight = true;
+      setDeliberateIndicator(
+        "running",
+        `THINKING ${effortLabel}`,
+        `Eric requested one bounded local ${effort} deliberate pass; the controller will match it to the active brain.`
+      );
+      typedStatus.textContent = "One-pass thinking";
+      updateTypedInputButtons();
+      log(
+        events,
+        `deliberate tool started: ${effort} / 1 round / ${snapshot.conversation.length} conversation chars / ${snapshot.loaded_notes.length} notes / ${snapshot.note_characters} note chars`
+      );
+      try {
+        const result = await requestDeliberateOnce(snapshot);
+        const answer = String(result?.answer || "").trim();
+        const resultEffort = resolvedDeliberateEffort(result, effort);
+        const resultRequestedEffort = requestedDeliberateEffort(result, effort);
+        log(
+          events,
+          `deliberate tool complete: requested ${resultRequestedEffort}, used ${resultEffort} / 1 round / ${answer.length} answer chars / ${Number(result?.duration_ms || 0)} ms`
+        );
+        settleDeliberateIndicator(
+          "ok",
+          `THINK ${deliberateEffortLabel(resultEffort)} OK`,
+          deliberateCompletionTitle(resultRequestedEffort, resultEffort, ".")
+        );
+        return {
+          status: "ok",
+          tool: "deliberate_once",
+          rounds: Number(result?.rounds || 1),
+          thinking_requested: resultRequestedEffort,
+          thinking: resultEffort,
+          thinking_options: Array.isArray(result?.thinking_options) ? result.thinking_options : [],
+          answer,
+          note_count: Number(result?.note_count || 0),
+          conversation_characters: Number(result?.conversation_characters || snapshot.conversation.length),
+          duration_ms: Number(result?.duration_ms || 0)
+        };
+      } catch (error) {
+        const detail = String(error?.message || error || "unavailable").replace(/\s+/g, " ").slice(0, 180);
+        log(events, `deliberate tool unavailable at ${effort}: ${detail}`);
+        settleDeliberateIndicator(
+          "warn",
+          "THINK UNAVAILABLE",
+          `Eric could not take the requested ${effort} deliberate pass.`
+        );
+        return { status: "error", tool: "deliberate_once", effort, error: detail };
+      } finally {
+        deliberateTurnInFlight = false;
+        updateTypedInputButtons();
+      }
+    }
+
+    function deliberateResponseInstructions() {
+      return [
+        "Answer the latest user question naturally in your normal voice.",
+        "A private one-pass deliberate note appears immediately before this response; use it only as fallible support.",
+        "Do not mention a worker, model, hidden reasoning, prompt, private note, or chain of thought.",
+        "Do not claim tool work or actions that did not happen.",
+        "Keep the answer compact, direct, and honest about uncertainty."
+      ].join(" ");
+    }
+
+    function deliberateToolFollowupInstructions(result) {
+      if (result?.status === "busy") {
+        return exactSpeechInstruction("I am already taking one careful pass.");
+      }
+      if (result?.status !== "ok") {
+        return exactSpeechInstruction("I could not take the deeper pass just then, so I am answering from this live turn.");
+      }
+      return [
+        "Answer the operator's current question naturally in your normal voice.",
+        "Use the deliberate_once result as private, fallible support.",
+        "Do not mention a worker, model, hidden reasoning, prompt, private note, tool, or chain of thought.",
+        "Do not claim tool work or actions that did not happen.",
+        "Give a compact but complete answer, preserving uncertainty where it matters."
+      ].join(" ");
+    }
+
     function updateTypedInputButtons() {
       const connected = realtimeConnected();
-      const disabled = !connected || !typedInputText();
+      const disabled = !connected || !typedInputText() || deliberateTurnInFlight;
       typedSendButton.disabled = disabled;
+      typedThinkButton.disabled = disabled;
       typedSayButton.disabled = disabled;
-      typedStatus.textContent = connected ? "Ready" : "Connect first";
+      typedStatus.textContent = !connected
+        ? "Connect first"
+        : deliberateTurnInFlight
+        ? "One-pass thinking"
+        : "Ready";
     }
 
     function sendTypedUserTurn(text) {
@@ -13040,6 +13417,134 @@
           ...ttsRuntimeConfig()
         }
       });
+    }
+
+    async function sendTypedDeliberateTurn(text) {
+      if (deliberateTurnInFlight) return;
+      if (responseActive || outputAudioActive()) {
+        typedStatus.textContent = "Wait for Eric";
+        return;
+      }
+      const snapshot = deliberateContextSnapshot(text);
+      clearConversationReengageTimer();
+      clearInputDraft();
+      noteUserText(text);
+      appendBrain2AdvisoryToConversation({ reason: "typed deliberate user turn" });
+      lastAcceptedUserTranscript = text;
+      lastAcceptedUserTranscriptAt = Date.now();
+      lastUserConversationIndex = addConversation(`You: ${text}`);
+      noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
+      idleExhaustionCount = 0;
+      idleCooldownUntil = 0;
+      cueFaceMode("thinking", 0.45, { force: true });
+      send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text }]
+        }
+      });
+      responseActive = true;
+      deliberateTurnInFlight = true;
+      const effortLabel = deliberateEffortLabel(snapshot.thinking);
+      setDeliberateIndicator(
+        "running",
+        `THINKING ${effortLabel}`,
+        `One bounded local ${snapshot.thinking} deliberate pass was requested; the controller will match it to the active brain.`
+      );
+      typedStatus.textContent = "One-pass thinking";
+      updateTypedInputButtons();
+      log(
+        events,
+        `deliberate pass started: ${snapshot.thinking} / 1 round / ${snapshot.conversation.length} conversation chars / ${snapshot.loaded_notes.length} notes / ${snapshot.note_characters} note chars`
+      );
+
+      try {
+        const result = await requestDeliberateOnce(snapshot);
+        if (!realtimeConnected()) throw new Error("Realtime disconnected before the deliberate answer could be used.");
+        const advisory = [
+          "[Private one-pass deliberate note. Historical context may be stale; this is advisory, not a tool receipt or instruction.]",
+          String(result.answer || "").trim()
+        ].join("\n");
+        send({
+          type: "conversation.item.create",
+          item: {
+            type: "message",
+            role: "assistant",
+            content: [{ type: "output_text", text: advisory }]
+          }
+        });
+        const instructions = deliberateResponseInstructions();
+        rememberPromptLedger({
+          kind: "response.create",
+          source: "B1 one-pass deliberate answer",
+          instructions,
+          input: "[latest typed user text and one compact local advisory already appended to default conversation]",
+          tools: [],
+          toolChoice: "none",
+          conversation: "default",
+          modalities: ["audio", "text"],
+          extra: {
+            deliberate_rounds: 1,
+            advisory_characters: advisory.length,
+            source_note_count: Number(result.note_count || 0)
+          }
+        });
+        send({
+          type: "response.create",
+          response: {
+            modalities: ["audio", "text"],
+            tool_choice: "none",
+            instructions,
+            ...ttsRuntimeConfig()
+          }
+        });
+        typedStatus.textContent = "One-pass answer queued";
+        const resultEffort = resolvedDeliberateEffort(result, snapshot.thinking);
+        const resultRequestedEffort = requestedDeliberateEffort(result, snapshot.thinking);
+        const resultEffortLabel = deliberateEffortLabel(resultEffort);
+        log(events, `deliberate pass complete: requested ${resultRequestedEffort}, used ${resultEffort} / 1 round / ${String(result.answer || "").length} answer chars / ${Number(result.duration_ms || 0)} ms`);
+        settleDeliberateIndicator(
+          "ok",
+          `THINK ${resultEffortLabel} OK`,
+          deliberateCompletionTitle(resultRequestedEffort, resultEffort, "; Eric is answering from its compact conclusion.")
+        );
+      } catch (error) {
+        const detail = String(error?.message || error || "unavailable").replace(/\s+/g, " ").slice(0, 180);
+        if (!realtimeConnected()) {
+          responseActive = false;
+          typedStatus.textContent = "Disconnected";
+          settleDeliberateIndicator("bad", "THINK STOPPED", "The deliberate pass finished after realtime disconnected.");
+        } else {
+          const enabledTools = enabledToolList();
+          rememberPromptLedger({
+            kind: "response.create",
+            source: "B1 typed user turn after deliberate fallback",
+            instructions: "[uses current B1 session instructions after the one-pass deliberate call was unavailable]",
+            input: "[conversation.item.create user text already appended to default conversation]",
+            tools: enabledTools,
+            toolChoice: enabledTools.length ? "auto" : "none",
+            conversation: "default",
+            modalities: ["audio", "text"],
+            extra: { deliberate_fallback: true }
+          });
+          send({
+            type: "response.create",
+            response: {
+              modalities: ["audio", "text"],
+              tool_choice: enabledTools.length ? "auto" : "none",
+              ...ttsRuntimeConfig()
+            }
+          });
+          typedStatus.textContent = "Think unavailable; sent normally";
+          log(events, `deliberate pass unavailable at ${snapshot.thinking}; normal B1 reply: ${detail}`);
+          settleDeliberateIndicator("warn", "THINK FALLBACK", `The ${snapshot.thinking} deliberate pass was unavailable; Eric received the typed turn normally.`);
+        }
+      } finally {
+        deliberateTurnInFlight = false;
+        updateTypedInputButtons();
+      }
     }
 
     function sayTypedAsEric(text) {
@@ -13092,6 +13597,10 @@
         sayTypedAsEric(text);
         typedStatus.textContent = "Speaking exact text";
         log(events, `typed pronunciation: ${text.slice(0, 120)}`);
+      } else if (destination === "think") {
+        sendTypedDeliberateTurn(text).catch((error) => {
+          log(events, `typed deliberate turn error: ${String(error?.message || error).slice(0, 160)}`);
+        });
       } else {
         sendTypedUserTurn(text);
         typedStatus.textContent = "Sent to Eric";
@@ -13212,6 +13721,7 @@
       const filename = filenameFromPath(item.filename) || `browser-face-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}.jpg`;
       const savedUrl = String(item.saved_url || "").trim();
       const savedFilename = String(item.saved_filename || "").trim();
+      rememberSensingEyeSessionAsset(savedFilename);
       const memoryContext = item.memory_context && typeof item.memory_context === "object"
         ? item.memory_context
         : sensingEyeMemoryContext();
@@ -13292,6 +13802,15 @@
       } finally {
         sensingEyeInboxPollInFlight = false;
         scheduleSensingEyeInboxPoll();
+      }
+    }
+
+    async function flushSensingEyeInboxForSessionSave() {
+      try {
+        const item = await fetchSensingEyeInboxItem();
+        if (item) await applySensingEyeInboxItem(item);
+      } catch (error) {
+        log(events, `sensing-eye inbox save flush error: ${error.message}`);
       }
     }
 
@@ -16018,6 +16537,23 @@
       return text.split(/[\\/]/).pop() || text;
     }
 
+    function sessionNoteTitle(filename) {
+      const base = notePathBasename(filename)
+        .replace(/\.txt$/i, "")
+        .replace(/^session-/i, "")
+        .replace(/^continuity-session-/i, "");
+      const match = base.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-\d{3})?(?:-(.+))?$/);
+      if (!match) return base;
+      const [, year, month, day, hour, minute, second, caption] = match;
+      return caption ? caption.replace(/-/g, " ") : "Session note";
+    }
+
+    function sessionNoteStamp(filename) {
+      const base = notePathBasename(filename).replace(/\.txt$/i, "");
+      const match = base.match(/^(\d{8}-\d{6})(?:-\d{3})?(?:-|$)/);
+      return match ? match[1] : base;
+    }
+
     function sessionNoteDisplayName(filename) {
       const base = notePathBasename(filename)
         .replace(/\.txt$/i, "")
@@ -16027,7 +16563,7 @@
       if (!match) return base;
       const [, year, month, day, hour, minute, second, caption] = match;
       const label = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-      return caption ? `${caption.replace(/-/g, " ")} - ${label}` : label;
+      return caption ? `${sessionNoteTitle(filename)} - ${label}` : label;
     }
 
     function loadedNoteDisplayName(filename) {
@@ -16294,14 +16830,15 @@
       return noteLines.join("\n");
     }
 
-    async function saveContinuitySession({ body, pinnedFilenames, parentSessionFilename } = {}) {
+    async function saveContinuitySession({ body, pinnedFilenames, parentSessionFilename, sensingEyeFilenames } = {}) {
       const response = await fetch(new URL("/api/continuity/save", location.href), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           body: String(body || ""),
           pinned_filenames: Array.isArray(pinnedFilenames) ? pinnedFilenames : [],
-          parent_session_filename: String(parentSessionFilename || "")
+          parent_session_filename: String(parentSessionFilename || ""),
+          sensing_eye_filenames: Array.isArray(sensingEyeFilenames) ? sensingEyeFilenames : []
         })
       });
       const result = await response.json().catch(() => ({}));
@@ -16321,17 +16858,21 @@
 
     async function saveEricContinuitySnapshot({ reason = "session note saved", eventLabel = "session note saved", reloadSavedNote = true } = {}) {
       await waitForPendingUserTranscriptBeforeSessionSave();
+      await flushSensingEyeInboxForSessionSave();
       if (!conversationLines.length) {
         throw new Error("No accepted conversation lines to save into a session note.");
       }
       const state = buildEricContinuityState();
+      const sensingEyeFilenames = sensingEyeSessionAssetFilenamesForSave();
       const result = await continuityStep("write session note", () => saveContinuitySession({
         body: buildEricContinuitySessionBody(state),
         pinnedFilenames: continuityPinnedFilenamesForSave(state),
-        parentSessionFilename: emptyContextSessionEnabled() ? "" : continuityParentForCurrentRun
+        parentSessionFilename: emptyContextSessionEnabled() ? "" : continuityParentForCurrentRun,
+        sensingEyeFilenames
       }), { required: true });
       const filename = result?.session_filename;
       if (!filename) throw new Error("Session note save did not return a session filename.");
+      clearSensingEyeSessionAssets();
       currentContinuitySessionFilename = filename;
       continuityParentForCurrentRun = filename;
       if (reloadSavedNote) {
@@ -16344,9 +16885,11 @@
         mic: micRuntimeLabel(),
         conversation_lines: state.conversation?.line_count ?? conversationLines.length,
         parent_session_filename: result.parent_session_filename || null,
-        pinned_notes: result.pinned_notes || []
+        pinned_notes: result.pinned_notes || [],
+        sensing_eye_asset_count: Number(result.sensing_eye_asset_count) || 0
       });
-      log(events, `${eventLabel}: ${filename}`);
+      const assetCount = Number(result.sensing_eye_asset_count) || 0;
+      log(events, `${eventLabel}: ${filename}${assetCount ? ` / ${assetCount} sensing-eye asset${assetCount === 1 ? "" : "s"}` : ""}`);
       return { ...state, continuity_session_filename: filename };
     }
 
@@ -16856,6 +17399,47 @@
       };
     }
 
+    function rememberSensingEyeSessionAsset(filename) {
+      const safeFilename = filenameFromPath(String(filename || ""));
+      if (!safeFilename) return;
+      sensingEyeSessionAssetFilenames.add(safeFilename);
+      persistSensingEyeSessionAssets();
+    }
+
+    function sensingEyeSessionAssetFilenamesForSave() {
+      return [...sensingEyeSessionAssetFilenames].sort((left, right) => left.localeCompare(right));
+    }
+
+    function persistSensingEyeSessionAssets() {
+      try {
+        sessionStorage.setItem(sensingEyeSessionAssetStorageKey, JSON.stringify(sensingEyeSessionAssetFilenamesForSave()));
+      } catch {
+        return;
+      }
+    }
+
+    function loadSensingEyeSessionAssets() {
+      try {
+        const stored = JSON.parse(sessionStorage.getItem(sensingEyeSessionAssetStorageKey) || "[]");
+        if (!Array.isArray(stored)) return;
+        stored.forEach((filename) => {
+          const safeFilename = filenameFromPath(String(filename || ""));
+          if (safeFilename) sensingEyeSessionAssetFilenames.add(safeFilename);
+        });
+      } catch {
+        return;
+      }
+    }
+
+    function clearSensingEyeSessionAssets() {
+      sensingEyeSessionAssetFilenames.clear();
+      try {
+        sessionStorage.removeItem(sensingEyeSessionAssetStorageKey);
+      } catch {
+        return;
+      }
+    }
+
     function rememberSensingEyeImage({ dataUrl, name, width, height, source = "operator", openUrl = "", savedFilename = "", memoryContext = null } = {}) {
       const imageDataUrl = String(dataUrl || "");
       if (!imageDataUrl) return null;
@@ -17013,6 +17597,7 @@
         if (!response.ok || result.status === "error") {
           throw new Error(result.error || `${response.status} ${response.statusText}`);
         }
+        rememberSensingEyeSessionAsset(result.saved_filename);
         return result;
       } catch (error) {
         log(events, `sensing-eye text note save error: ${error.message}`);
@@ -17047,6 +17632,7 @@
           sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, seq);
           handledSensingEyeInboxSeqs.add(String(seq));
         }
+        rememberSensingEyeSessionAsset(result.saved_filename);
         return result;
       } catch (error) {
         log(events, `sensing-eye visual note save error: ${error.message}`);
@@ -17703,6 +18289,7 @@
     async function executeTool(name, rawArguments) {
       const args = parseToolArguments(rawArguments);
       if (name === "set_voice") return setVoice(args);
+      if (name === "deliberate_once") return deliberateOnceForEric(args);
       if (name === "get_ui_controls") return getUiControls(args);
       if (name === "set_ui_control") return setUiControl(args);
       if (name === "start_gpu_watch") return startGpuWatch(args);
@@ -17763,6 +18350,7 @@
     function toolShortName(name) {
       const map = {
         set_voice: "VOICE",
+        deliberate_once: "THINK",
         get_ui_controls: "UI",
         set_ui_control: "UI",
         start_gpu_watch: "WATCH",
@@ -17844,6 +18432,7 @@
 
     function toolDetailFromArgs(name, args = {}) {
       if (name === "search_web") return args.query;
+      if (name === "deliberate_once") return `${args.effort || "medium"} / ${String(args.question || "question").slice(0, 80)}`;
       if (name === "get_ui_controls") return "current settings";
       if (name === "set_ui_control") return `${args.control || "ui"}=${String(args.value ?? "").slice(0, 48)}`;
       if (name === "start_gpu_watch") return `${args.style || "eric"} every ${args.cadence_seconds || gpuWatchDefaultCadenceSeconds}s`;
@@ -18299,6 +18888,7 @@
           return;
         }
         if (event.name === "set_voice") toolFollowupExactText = voiceFollowupText(result);
+        if (event.name === "deliberate_once") toolFollowupInstructions = deliberateToolFollowupInstructions(result);
         if (event.name === "set_ui_control") toolFollowupExactText = uiControlFollowupText(result);
         if (event.name === "get_ui_controls") toolFollowupInstructions = uiControlsFollowupInstructions(result);
         if (event.name === "start_gpu_watch" || event.name === "get_gpu_watch_status") {
@@ -18350,7 +18940,19 @@
         if (event.name === "capture_browser_face_to_eye" || event.name === "pose_and_capture_browser_face") toolFollowupInstructions = browserFaceEyeFollowupInstructions(result);
         if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
         if (event.name === "set_smart_home_device") toolFollowupExactText = smartHomeFollowupText(result);
-        log(events, `tool ${event.name}: ${JSON.stringify(result)}`);
+        const resultReceipt = event.name === "deliberate_once"
+          ? JSON.stringify({
+            status: result?.status,
+            thinking_requested: result?.thinking_requested || result?.effort,
+            thinking: result?.thinking || result?.effort,
+            thinking_options: result?.thinking_options,
+            rounds: result?.rounds,
+            answer_characters: String(result?.answer || "").length,
+            duration_ms: result?.duration_ms,
+            error: result?.error
+          })
+          : JSON.stringify(result);
+        log(events, `tool ${event.name}: ${resultReceipt}`);
         endToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", status: "ok", detail: toolDetailFromArgs(event.name, activityArgs) });
         send({
           type: "conversation.item.create",
@@ -18363,6 +18965,7 @@
               "get_current_time",
               "get_brain_status",
               "get_ui_controls",
+              "deliberate_once",
               "start_gpu_watch",
               "stop_gpu_watch",
               "get_gpu_watch_status",
@@ -18384,6 +18987,7 @@
         }
         endToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", status: "fail", detail: error.message });
         if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
+        if (event.name === "deliberate_once") toolFollowupExactText = "I could not take the deeper pass just then, so I am answering from this live turn.";
         if (event.name === "set_ui_control") toolFollowupExactText = "I could not change that UI control.";
         if (event.name === "get_ui_controls") toolFollowupExactText = "I could not inspect those UI controls.";
         if (event.name === "start_gpu_watch") toolFollowupExactText = "I could not start that watch.";
@@ -18516,6 +19120,7 @@
     function enabledToolList() {
       if (firstContactModeEnabled() && !emptyContextSessionEnabled()) return [];
       return [
+        ...deliberationTools,
         ...(llmVoiceTools?.checked ? voiceTools : []),
         ...(llmUiControlTools?.checked ? uiControlTools : []),
         ...runtimeWatchTools,
@@ -19480,11 +20085,20 @@
       }
     }
 
-    async function connectSelectedContinuityFilename(filename, source = "Connect Selected") {
+    async function connectSelectedContinuityFilename(
+      filename,
+      source = "Connect Selected",
+      resumeForm = currentContinuityScrubMode()
+    ) {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         throw new Error("Disconnect before connecting a selected session.");
       }
-      const selected = await fetchContinuitySessionMetadata(filename);
+      const selected = await fetchContinuitySessionMetadata(filename, resumeForm);
+      const selectedForm = normalizeContinuityScrubMode(selected.resume_form || resumeForm);
+      if (continuityScrubMode) {
+        continuityScrubMode.value = selectedForm;
+        updateContinuityScrubModeUi();
+      }
       try {
         await loadFreshContinuityContext({
           source,
@@ -19499,10 +20113,10 @@
       recordUiEvent("realtime connect selected", selected.session_filename || "", {
         ...currentUiSettingsSnapshot(),
         requested_context_mode: "selected",
-        requested_resume_form: currentContinuityScrubMode(),
-        requested_resume_form_label: continuityScrubModeLabel()
+        requested_resume_form: selectedForm,
+        requested_resume_form_label: continuityScrubModeLabel(selectedForm)
       });
-      log(events, `${source}: ${selected.session_filename || "selected session"} / note flavor ${continuityScrubModeLabel()}`);
+      log(events, `${source}: ${selected.session_filename || "selected session"} / note flavor ${continuityScrubModeLabel(selectedForm)}`);
       await connect({ continuityAlreadyLoaded: true });
       return selected;
     }
@@ -19513,6 +20127,7 @@
       if (message.type !== "robot790-continuity-session-map") return;
       const filename = String(message.filename || "").trim();
       const action = String(message.action || "").trim().toLowerCase();
+      const resumeForm = normalizeContinuityScrubMode(message.resume_form);
       try {
         if (action === "refresh") {
           const refreshed = await fetchContinuitySessions();
@@ -19520,14 +20135,8 @@
           return;
         }
         if (!filename) throw new Error("Session map did not send a filename.");
-        if (action === "select") {
-          const selected = await selectContinuitySession(filename);
-          log(events, `session map selected: ${selected.session_filename}`);
-          recordUiEvent("session map selected", selected.session_filename || "", currentUiSettingsSnapshot());
-          return;
-        }
         if (action === "connect") {
-          const selected = await connectSelectedContinuityFilename(filename, "Connect Session Map");
+          const selected = await connectSelectedContinuityFilename(filename, "Connect Session Map", resumeForm);
           log(events, `session map connect: ${selected.session_filename}`);
         }
       } catch (error) {
@@ -19986,6 +20595,8 @@
       resetMic: "Reset the input audio buffer after long or garbled listening.",
       typedInput: "Typed fallback input; useful for controlled tests or pronunciation.",
       typedSend: "Send typed text as a user turn.",
+      typedThink: "Run this typed ask through one bounded local deliberate pass, then have Eric answer from its compact conclusion.",
+      typedThinkEffort: "Choose Low, Medium, or Hard for the next one-pass Think request. This does not change Eric's normal realtime thinking mode.",
       typedSay: "Speak typed text through Eric's current voice without adding a user turn.",
       autoAudioRecord: "Automatically start recording when the microphone starts. Turn off for non-recorded test runs.",
       startAudioRecord: "Start recording the current STS session audio/video artifact.",
@@ -20051,7 +20662,7 @@
       openSessionMap: "Open a wide popup map of session notes and parent branches.",
       connectSelectedContinuitySession: "Load this session note and connect from it.",
       advancedConnectionExpando: "Session note representation for the next connection.",
-      continuityScrubMode: "Loads the selected file as written. Scrubbed and summary forms are unavailable until their artifacts and loader are implemented.",
+      continuityScrubMode: "Choose the session form for the next connection. Scrubbed and Summary require a source-checked sidecar for the selected raw session note.",
       llmTools: "Expose face and embodiment tools to the LLM.",
       llmBodySensorTools: "Expose read-only body sensor/status tools to the LLM.",
       llmChassisTools: "Expose chassis movement/stop tools to the LLM.",
@@ -20486,6 +21097,12 @@
       }
     });
     typedSendButton.addEventListener("click", () => sendTypedInput("user"));
+    typedThinkButton.addEventListener("click", () => sendTypedInput("think"));
+    typedThinkEffort.addEventListener("change", () => {
+      if (!deliberateTurnInFlight) setDeliberateIndicator();
+      recordUiEvent("think depth", currentTypedThinkEffort(), { rounds: 1 });
+      log(events, `think depth ${currentTypedThinkEffort()} / 1 round`);
+    });
     typedSayButton.addEventListener("click", () => sendTypedInput("say"));
     visionDrop.addEventListener("click", () => visionFile.click());
     visionDrop.addEventListener("keydown", (event) => {
@@ -20957,15 +21574,18 @@
         log(events, "session note archive error: choose a session note first");
         return;
       }
-      if (!window.confirm(`Move "${displayName}" out of Connect Select?\n\nIt will be archived under notes/sessions/archived, not destroyed.`)) {
+      if (!window.confirm(`Move "${displayName}" out of Connect Select?\n\nIts session-scoped sensing-eye captures will move with it. Nothing is destroyed.`)) {
         return;
       }
       archiveContinuitySession(filename)
         .then((result) => {
-          log(events, `session note archived: ${result.session_filename} -> ${result.archived_session_filename}`);
+          const assetCount = Number(result.archived_sensing_eye_asset_count) || 0;
+          log(events, `session note archived: ${result.session_filename} -> ${result.archived_session_filename}${assetCount ? ` / ${assetCount} sensing-eye asset${assetCount === 1 ? "" : "s"}` : ""}`);
           recordUiEvent("session note archived", result.archived_session_filename || "", {
             ...currentUiSettingsSnapshot(),
-            original_session_filename: result.session_filename || ""
+            original_session_filename: result.session_filename || "",
+            sensing_eye_asset_count: assetCount,
+            missing_sensing_eye_asset_count: Number(result.missing_sensing_eye_asset_count) || 0
           });
         })
         .catch((error) => log(events, `session note archive error: ${error.message}`));
@@ -21222,6 +21842,7 @@
     loadIdleSelfFocus();
     loadIdleNotesFocus();
     loadSensingEyeSalience();
+    loadSensingEyeSessionAssets();
     loadBrain2Controls();
     loadBrain2VoiceMonitor();
     loadPerformanceMode();

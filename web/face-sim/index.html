@@ -679,6 +679,24 @@
       }[mood] || "#54c6d2";
     }
 
+    function statusTintHex(value, fallback) {
+      const color = String(value || "").trim();
+      const named = {
+        cyan: "#2cdce8",
+        bluegreen: "#2cdce8",
+        white: "#e8faf6",
+        red: "#ff5252",
+        green: "#60d394",
+        blue: "#5aaaff",
+        yellow: "#ffcf5a",
+        pink: "#ff70be",
+        orange: "#ff9648",
+        purple: "#b482ff"
+      };
+      if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+      return named[color.toLowerCase()] || fallback;
+    }
+
     function clamp(value, low, high) {
       return Math.max(low, Math.min(high, value));
     }
@@ -2040,7 +2058,9 @@
       const mood = state?.mood || "curious";
       const mouthShape = renderedMouthShape(state?.mouth || {}, mood);
       const director = state?.director && state.director !== "sim" ? state.director : "none";
-      const color = state?.status_tint_override ? state?.status_tint || colorForMood(mood) : colorForMood(mood);
+      const color = state?.status_tint_override
+        ? statusTintHex(state?.status_tint, colorForMood(mood))
+        : colorForMood(mood);
       const pulse = 0.5 + Math.sin(t * 0.0017) * 0.5;
       const glow = 0.35 + 0.65 * (pulse * pulse * (3 - 2 * pulse));
       const cx = 360;

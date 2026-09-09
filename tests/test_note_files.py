@@ -90,7 +90,10 @@ def test_note_files_allow_named_source_and_data_files(tmp_path: Path, filename: 
     assert filename in list_note_files(tmp_path)
 
 
-@pytest.mark.parametrize("filename", ["../secret.txt", "/tmp/secret.txt", "bad.ps1", "binary.exe", "folder/../secret.txt"])
+@pytest.mark.parametrize(
+    "filename",
+    ["../secret.txt", "/tmp/secret.txt", "bad.ps1", "binary.exe", "folder/../secret.txt"],
+)
 def test_note_files_reject_unsafe_paths(tmp_path: Path, filename: str) -> None:
     with pytest.raises(ValueError):
         resolve_note_path(filename, tmp_path)
@@ -107,7 +110,8 @@ def test_concurrent_appends_preserve_every_update(tmp_path: Path, monkeypatch, p
     write_note_file(tmp_path, "shared.txt", "start")
     executor = (
         ProcessPoolExecutor(max_workers=4, mp_context=get_context("spawn"))
-        if processes else ThreadPoolExecutor(max_workers=4)
+        if processes
+        else ThreadPoolExecutor(max_workers=4)
     )
     with executor:
         futures = [executor.submit(_append_note_batch, str(tmp_path), worker) for worker in range(4)]

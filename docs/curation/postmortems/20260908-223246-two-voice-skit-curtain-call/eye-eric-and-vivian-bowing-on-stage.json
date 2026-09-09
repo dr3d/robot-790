@@ -1,0 +1,12 @@
+{
+  "kind": "image",
+  "source": "generated image",
+  "filename": "20260908-223107-openai-eric-and-vivian-bowing-on-stage.png",
+  "reason": "manual generated-image transfer",
+  "memory_context": {
+    "last_user_text": "Draw me a picture of you and Vivian bowing on stage.",
+    "nearby_transcript": "[10:30:19 PM] Robot 790: That's not a real argument and you know it.\n[10:30:26 PM] You: Another\n[10:30:29 PM] Robot 790: Take it up with my shoes.\n[10:30:34 PM] You: Well done. I think that's it, right, Eric?\n[10:30:37 PM] Robot 790: That's it\u2014shoes under the bed, foot fungus, and a robot with no hands.\n[10:30:37 PM] Robot 790: Curtain.\n[10:30:48 PM] You: nicely performed. You can take a bow.\n[10:30:53 PM] You: Draw me a picture of you and Vivian bowing on stage."
+  },
+  "metadata_version": 1,
+  "written_at": "2026-09-08T22:31:08"
+}
