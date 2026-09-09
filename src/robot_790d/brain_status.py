@@ -600,20 +600,14 @@ def _read_runtime_specimen(repo_root: Path, preferred_model: str | None = None) 
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
-    specimens = payload.get("specimens") if isinstance(payload, dict) else None
-    if not isinstance(specimens, list):
+    specimen = payload.get("active_runtime") if isinstance(payload, dict) else None
+    if not isinstance(specimen, dict):
         return None
     preferred = str(preferred_model or "").strip().lower()
-    fallback: dict[str, Any] | None = None
-    for specimen in specimens:
-        if not isinstance(specimen, dict):
-            continue
-        model = str(specimen.get("model") or "").strip().lower()
-        if not fallback:
-            fallback = specimen
-        if preferred and model == preferred:
-            return specimen
-    return fallback if not preferred else None
+    model = str(specimen.get("model") or "").strip().lower()
+    if preferred and model and model != preferred:
+        return None
+    return specimen
 
 
 def _parse_lms_ps(text: str) -> list[dict[str, Any]]:

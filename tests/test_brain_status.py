@@ -130,7 +130,7 @@ def test_brain_status_context_reports_window_usage(monkeypatch, tmp_path) -> Non
     assert result["context"]["window_usage_percent"] == 25.0
 
 
-def test_brain_status_reports_runtime_specimen(monkeypatch, tmp_path) -> None:
+def test_brain_status_reports_verified_active_runtime_specimen(monkeypatch, tmp_path) -> None:
     logs = tmp_path / "logs"
     config = tmp_path / "config"
     logs.mkdir()
@@ -140,21 +140,19 @@ def test_brain_status_reports_runtime_specimen(monkeypatch, tmp_path) -> None:
     (config / "runtime_specimen.json").write_text(
         """
         {
-          "schema": 1,
-          "specimens": [
-            {
-              "model": "qwen3.8-27b-nvfp4-mtp",
-              "quantization": {
-                "weights": "NVFP4",
-                "kv_cache_key": "q8_0",
-                "kv_cache_value": "q5_0"
-              },
-              "observations": {
-                "vram_gain_gb": 1.2,
-                "audit_status": "pending_ear_test"
-              }
+          "schema": 2,
+          "active_runtime": {
+            "model": "qwen3.8-27b-nvfp4-mtp",
+            "quantization": {
+              "weights": "NVFP4",
+              "kv_cache_key": "q8_0",
+              "kv_cache_value": "q5_0"
+            },
+            "observations": {
+              "vram_gain_gb": 1.2,
+              "audit_status": "verified"
             }
-          ]
+          }
         }
         """,
         encoding="utf-8",
@@ -168,7 +166,40 @@ def test_brain_status_reports_runtime_specimen(monkeypatch, tmp_path) -> None:
     assert specimen["quantization"]["kv_cache_value"] == "q5_0"
     assert specimen["observations"]["vram_gain_gb"] == 1.2
     assert "Runtime specimen records KV cache as k=q8_0, v=q5_0." in result["notes"]
-    assert "Runtime specimen audit status: pending_ear_test." in result["notes"]
+    assert "Runtime specimen audit status: verified." in result["notes"]
+
+
+def test_brain_status_does_not_promote_historical_runtime_experiment(monkeypatch, tmp_path) -> None:
+    logs = tmp_path / "logs"
+    config = tmp_path / "config"
+    logs.mkdir()
+    config.mkdir()
+    (logs / "sts-realtime.out.log").write_text("LLM model: qwen3.8-27b-nvfp4-mtp\n", encoding="utf-8")
+    (logs / "sts-realtime.err.log").write_text("", encoding="utf-8")
+    (config / "runtime_specimen.json").write_text(
+        """
+        {
+          "schema": 2,
+          "active_runtime": null,
+          "historical_experiments": [
+            {
+              "record_type": "rejected_runtime_experiment",
+              "not_current": true,
+              "model": "qwen3.8-27b-nvfp4-mtp",
+              "quantization": { "kv_cache_key": "q8_0", "kv_cache_value": "q5_0" },
+              "observations": { "audit_status": "runtime_load_failed" }
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("robot_790d.brain_status._read_lm_studio_status", lambda _preferred=None: None)
+
+    result = get_brain_status(tmp_path)
+
+    assert "runtime_specimen" not in result["model"]
+    assert not any("KV cache" in note or "specimen audit" in note for note in result["notes"])
 
 
 def test_brain_status_parses_lm_studio_status() -> None:

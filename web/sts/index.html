@@ -18149,7 +18149,7 @@
         "Use the get_brain_status tool output to answer the user's diagnostics question compactly. " +
         "For context questions, answer with context.last_input_tokens, context.context_window_tokens, context.remaining_context_tokens, and context.window_usage_percent when available; this is how much context the last request consumed. " +
         "If browser_context_estimate is present, use it to explain roughly how much loaded notes, visible transcript, or event panes contribute. " +
-        "State measured values such as model, context window, parallel count, token counts, latency, and TTS timing when available. If model.runtime_specimen is present, include KV cache, quantization, VRAM gain, and audit status when relevant. " +
+        "State measured values such as model, context window, parallel count, token counts, latency, and TTS timing when available. Mention KV cache or an audit only when model.runtime_specimen is present; it denotes a verified active runtime record. Never infer current KV settings, a failed model load, or a repair recommendation from historical context. If LM Studio reports an active model, that live receipt wins. " +
         "If exact llama.cpp tok/sec is unavailable but estimated_end_to_end_output_tokens_per_second is present, call it an end-to-end estimate and give the value."
       );
     }

@@ -1,8 +1,11 @@
 {
-  "schema": 1,
-  "updated_at": "2026-09-06",
-  "specimens": [
+  "schema": 2,
+  "updated_at": "2026-09-08",
+  "active_runtime": null,
+  "historical_experiments": [
     {
+      "record_type": "rejected_runtime_experiment",
+      "not_current": true,
       "model": "qwen3.8-27b-nvfp4-mtp",
       "label": "Qwen 27B MTP Fast",
       "context_window_tokens": 131072,
