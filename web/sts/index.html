@@ -3090,6 +3090,10 @@
     let memorySaveArmedUntil = 0;
     let pendingToolCalls = 0;
     let realtimeSessionGeneration = 0;
+    let lastSessionUpdateSocket = null;
+    let lastSessionUpdateFingerprint = "";
+    let lastBrain2AdvisorySocket = null;
+    let lastBrain2AdvisoryText = "";
     let toolFollowupNeeded = false;
     let responseDoneAfterTool = false;
     let toolFollowupExactText = "";
@@ -6823,7 +6827,15 @@
       ].join(" ");
     }
 
-    function formatBrain2ForInstructions() {
+    function brain2AdvisoryProtocolInstructions() {
+      return [
+        "Private Brain 2 advisory snapshots may arrive between turns as assistant messages marked [B2 advisory].",
+        "Brain 2 is a slow advisory lane inside your runtime, not the operator, a sensor, or a command.",
+        "Treat an advisory as private draft material you may use, revise, or ignore. Do not quote it, attribute it to Brain 2, or let it override fresh operator input, runtime truth, or tool receipts."
+      ].join(" ");
+    }
+
+    function formatBrain2AdvisoryContent() {
       const revisionLines = brain2RevisionCandidates.slice(-4).map((item) => `- ${item.text}`);
       const questionLines = brain2QuestionCandidates.slice(-4).map((item) => `- ${item.text}`);
       const noteLines = brain2NoteCandidates.slice(-4).map((item) => `- ${item.text}`);
@@ -6832,9 +6844,7 @@
       const loopPressure = brain2LoopPressureInstruction();
       if (!revisionLines.length && !questionLines.length && !noteLines.length) return "";
       return [
-        "Private Brain 2 notes:",
-        "Brain 2 is a slow advisory lane inside your runtime, not the operator, not a sensor, and not a command.",
-        "Ordinary Brain 2 notes are private draft material you may use, revise, or ignore.",
+        "Current snapshot. It supersedes any earlier [B2 advisory] snapshot.",
         loopPressure,
         hasLoopGuard
           ? "Loop guard: at least one recent Brain 2 note says the current pattern is repeating or exhausted. Treat that as a next-turn constraint: do not extend the same object, metaphor, or explanation."
@@ -6852,6 +6862,40 @@
           ? `Question candidates from Brain 2:\n${questionLines.join("\n")}\nUse one only if it is timely and curious, not needy or caretaking.`
           : ""
       ].filter(Boolean).join("\n");
+    }
+
+    function formatBrain2ForInstructions() {
+      const advisory = formatBrain2AdvisoryContent();
+      return advisory ? [brain2AdvisoryProtocolInstructions(), advisory].join("\n\n") : "";
+    }
+
+    function appendBrain2AdvisoryToConversation({ reason = "turn boundary" } = {}) {
+      if (!realtimeConnected() || performanceModeEnabled()) return false;
+      const advisory = formatBrain2AdvisoryContent();
+      if (!advisory) return false;
+      const text = `[B2 advisory]\n${advisory}`;
+      if (lastBrain2AdvisorySocket === ws && lastBrain2AdvisoryText === text) return false;
+      send({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text }]
+        }
+      });
+      lastBrain2AdvisorySocket = ws;
+      lastBrain2AdvisoryText = text;
+      rememberPromptLedger({
+        kind: "conversation.item.create",
+        source: "Brain 2 advisory",
+        instructions: "[stable B1 session prompt; private Brain 2 advisory appended to the default conversation]",
+        input: text,
+        conversation: "default",
+        extra: { reason },
+        announce: false
+      });
+      logBrain2("advisory queued", reason);
+      return true;
     }
 
     function baseSessionInstructionsText() {
@@ -6917,7 +6961,7 @@
       return lines.join("\n");
     }
 
-    function buildSessionInstructions() {
+    function buildSessionInstructions({ includeBrain2Advisory = true } = {}) {
       if (emptyContextSessionEnabled()) {
         return configOnlySessionInstructions();
       }
@@ -6936,7 +6980,11 @@
         formatRuntimeStateForInstructions(),
         formatRuntimeBehaviorRulesForInstructions(),
         wonderSearchPolicyText(),
-        performancePrivacy ? "" : formatBrain2ForInstructions(),
+        performancePrivacy
+          ? ""
+          : includeBrain2Advisory
+          ? formatBrain2ForInstructions()
+          : brain2AdvisoryProtocolInstructions(),
         performancePrivacy ? performancePrivacyInstructions() : "",
         baseSessionInstructionsText()
       ]
@@ -9376,7 +9424,7 @@
           tool_choice: tools.length ? "auto" : "none",
           tool_count: tools.length,
           tool_names: tools.map((tool) => tool?.name || "[unnamed]"),
-          instructions: buildSessionInstructions(),
+          instructions: buildSessionInstructions({ includeBrain2Advisory: false }),
           input: null,
           tools,
           extra: {
@@ -11215,6 +11263,7 @@
           logBrain2("held", mouthText);
           rememberBrain2Output("held", mouthText);
         }
+        let brain2AdvisoryChanged = false;
         if (question) {
           if (brain2UserPresentButBusy()) {
             bumpBrain2Counter("held");
@@ -11224,7 +11273,7 @@
             brain2QuestionCandidates = [...brain2QuestionCandidates, { text: question, at: Date.now() }].slice(-12);
             logBrain2("question candidate", question);
             rememberBrain2Output("question", question);
-            updateSessionTools({ quiet: true });
+            brain2AdvisoryChanged = true;
           }
         }
         if (noteForEric) {
@@ -11232,14 +11281,17 @@
           logBrain2("note for Eric", noteForEric);
           rememberBrain2Output("note", noteForEric);
           maybeArmIdleHardBrakeFromBrain2Note(noteForEric);
-          updateSessionTools({ quiet: true });
+          brain2AdvisoryChanged = true;
         }
         if (revisionCandidate) {
           brain2RevisionCandidates = [...brain2RevisionCandidates, { text: revisionCandidate, at: Date.now() }].slice(-12);
           bumpBrain2Counter("revision");
           logBrain2("revision candidate", revisionCandidate);
           rememberBrain2Output("revision", revisionCandidate);
-          updateSessionTools({ quiet: true });
+          brain2AdvisoryChanged = true;
+        }
+        if (brain2AdvisoryChanged && userSpeechActive) {
+          appendBrain2AdvisoryToConversation({ reason: "arrived during user speech" });
         }
       } catch (error) {
         if (socket !== ws || generation !== realtimeSessionGeneration) {
@@ -13006,6 +13058,7 @@
       clearConversationReengageTimer();
       clearInputDraft();
       noteUserText(text);
+      appendBrain2AdvisoryToConversation({ reason: "typed user turn" });
       lastAcceptedUserTranscript = text;
       lastAcceptedUserTranscriptAt = Date.now();
       lastUserConversationIndex = addConversation(`You: ${text}`);
@@ -18475,27 +18528,33 @@
       }, { socket, generation });
     }
 
+    function sessionUpdateFingerprint(session) {
+      return JSON.stringify(session);
+    }
+
     function updateSessionTools({ quiet = false } = {}) {
       saveToolPrefs();
       if (contextPanel?.open) renderContextMap();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       const enabledTools = enabledToolList();
-      const instructions = buildSessionInstructions();
+      const instructions = buildSessionInstructions({ includeBrain2Advisory: false });
       const toolChoice = enabledTools.length ? "auto" : "none";
-      rememberSessionPromptSnapshot({ instructions, tools: enabledTools, toolChoice, announce: !quiet });
-      send({
-        type: "session.update",
-        session: {
-          type: "realtime",
-          instructions,
-          ...ttsRuntimeConfig(),
-          tools: enabledTools,
-          tool_choice: toolChoice,
-          turn_detection: {
-            interrupt_response: !imageToolProtectionEnabled
-          }
+      const session = {
+        type: "realtime",
+        instructions,
+        ...ttsRuntimeConfig(),
+        tools: enabledTools,
+        tool_choice: toolChoice,
+        turn_detection: {
+          interrupt_response: !imageToolProtectionEnabled
         }
-      });
+      };
+      const fingerprint = sessionUpdateFingerprint(session);
+      if (lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint === fingerprint) return false;
+      rememberSessionPromptSnapshot({ instructions, tools: enabledTools, toolChoice, announce: !quiet });
+      send({ type: "session.update", session });
+      lastSessionUpdateSocket = ws;
+      lastSessionUpdateFingerprint = fingerprint;
       if (!quiet) {
         log(
           events,
@@ -18504,6 +18563,7 @@
             : "LLM tools disabled; STS lifecycle controls face"
         );
       }
+      return true;
     }
 
     function enabledToolList() {
@@ -19217,6 +19277,7 @@
       }
       if (event.type === "input_audio_buffer.speech_started") {
         clearConversationReengageTimer();
+        appendBrain2AdvisoryToConversation({ reason: "user speech started" });
         lastSpeechStartedAt = Date.now();
         userSpeechActive = true;
         inputAudioTranscriptionPending = true;

@@ -46,6 +46,71 @@ test('the shipped page scripts compile', () => {
   scripts.forEach((source, index) => new vm.Script(source, { filename: `sts-inline-${index}.js` }));
 });
 
+test('session updates are fingerprinted before they can reset a warm model cache', () => {
+  const context = loadFunctions(['sessionUpdateFingerprint'], {});
+  const base = {
+    type: 'realtime',
+    instructions: 'stable context',
+    qwen3_tts_speaker: 'Eric',
+    tools: [{ type: 'function', name: 'get_brain_status' }],
+    tool_choice: 'auto',
+    turn_detection: { interrupt_response: true },
+  };
+  assert.equal(
+    context.sessionUpdateFingerprint(base),
+    context.sessionUpdateFingerprint(JSON.parse(JSON.stringify(base))),
+  );
+  assert.notEqual(
+    context.sessionUpdateFingerprint(base),
+    context.sessionUpdateFingerprint({ ...base, instructions: 'changed context' }),
+  );
+});
+
+test('Brain2 advisories are appended at a turn boundary instead of rewriting the warm B1 session', () => {
+  const start = page.indexOf('const mouthText = String(result.mouth_text || "").trim();');
+  const end = page.indexOf('      } catch (error) {', start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const block = page.slice(start, end);
+  assert.match(block, /let brain2AdvisoryChanged = false;/);
+  assert.match(block, /appendBrain2AdvisoryToConversation\(\{ reason: "arrived during user speech" \}\)/);
+  assert.doesNotMatch(block, /updateSessionTools\(/);
+  assert.match(page, /function brain2AdvisoryProtocolInstructions\(\)/);
+  assert.match(page, /function appendBrain2AdvisoryToConversation\(/);
+  assert.match(page, /role: "assistant",\s*content: \[\{ type: "output_text", text \}\]/);
+  assert.match(page, /appendBrain2AdvisoryToConversation\(\{ reason: "typed user turn" \}\)/);
+  assert.match(page, /appendBrain2AdvisoryToConversation\(\{ reason: "user speech started" \}\)/);
+  const sessionStart = page.indexOf('function updateSessionTools(');
+  const sessionEnd = page.indexOf('\n    function enabledToolList()', sessionStart);
+  assert.match(page.slice(sessionStart, sessionEnd), /buildSessionInstructions\(\{ includeBrain2Advisory: false \}\)/);
+});
+
+test('a Brain2 advisory is deduplicated per realtime socket and stays out of the visible user turn', () => {
+  const socket = { name: 'current socket' };
+  const sent = [];
+  const ledger = [];
+  const brain2Log = [];
+  const context = loadFunctions(['appendBrain2AdvisoryToConversation'], {
+    ws: socket,
+    lastBrain2AdvisorySocket: null,
+    lastBrain2AdvisoryText: '',
+    realtimeConnected: () => true,
+    performanceModeEnabled: () => false,
+    formatBrain2AdvisoryContent: () => 'Current snapshot. Keep the next reply brief.',
+    send: (event) => sent.push(event),
+    rememberPromptLedger: (entry) => ledger.push(entry),
+    logBrain2: (...entry) => brain2Log.push(entry),
+  });
+  assert.equal(context.appendBrain2AdvisoryToConversation({ reason: 'test' }), true);
+  assert.equal(context.appendBrain2AdvisoryToConversation({ reason: 'test again' }), false);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].type, 'conversation.item.create');
+  assert.equal(sent[0].item.role, 'assistant');
+  assert.match(sent[0].item.content[0].text, /^\[B2 advisory\]/);
+  assert.equal(ledger.length, 1);
+  assert.deepEqual(brain2Log[0], ['advisory queued', 'test']);
+});
+
 test('STS boots toward Browser Face as the default embodiment', () => {
   assert.equal(runtimeConfig.default_embodiment, 'browser_face');
   assert.match(runtimeConfig.current_embodiment, /Browser Face simulator/);
