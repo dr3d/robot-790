@@ -25,6 +25,14 @@ selected evidence for `curation/` or `docs/`. A useful fix or public article
 does not require publishing the full postmortem or its raw session bundle.
 Review every included artifact before publication.
 
+PM completion includes naming the active session, even when the report stays
+local. Use the original timestamp plus a short caption, and update the note's
+self-references. First check child references, derivative hashes, and any live
+browser parent; a rename does not repair those automatically. Preserve the raw
+evidence copy and record the old-to-new name in the PM. Verify both the session
+list and load result afterward. Naming the PM folder alone does not title the
+session in STS or the Session Map.
+
 `curation/` itself is tracked and GitHub-visible. It is an editorial area, not
 a local archive. The older `curation/postmortems/` collection is legacy tracked
 review material; do not add routine PMs there. Review individual legacy runs

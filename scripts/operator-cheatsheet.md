@@ -3,6 +3,9 @@
 This is the short operational page: addresses, PowerShell commands, and what
 stays running. Architecture and setup details live elsewhere.
 
+For illustrated controls, connection choices, recording, and session handling,
+see the [STS UI Operator Guide](../docs/sts-ui-guide.md).
+
 ## Turn On Apartment Access
 
 Run this on POWER from any PowerShell window when the ordinary local services

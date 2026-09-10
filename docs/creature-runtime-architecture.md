@@ -84,7 +84,77 @@ Current file:
 
 - `config/creatures/eric.json`
 
-Eric's creature file is not a full prompt replacement yet. It is a structured layer inserted into the B1 prompt before embodiment/runtime state and the base system prompt.
+Eric's creature file is not a full prompt replacement. Prompt assembly now places
+the short identity seed first, then this structured creature layer, including its
+stance and machine language. Mode, memory, embodiment, runtime state, and the
+sectioned operating rules follow. Runtime behavior rules already present in the
+base seed are suppressed rather than injected twice.
+
+Empty Connect is an ordinary session whose initial pin list is just
+`core/erics_memories.txt` (subject to the operator's Eric memories checkbox).
+There is no persistent empty-session mode. The normal Connect buttons use the same
+transient-state reset, prompt assembler, enabled tools, sensing, idle work,
+Brain2 handling, and session-save path. Latest, selected, and previous connects
+also restore the chosen session's pins; Empty Connect skips only that restore.
+It does not create a second Eric personality or invite startup announcements.
+Newly pinned notes, new images, and fresh receipts immediately work normally.
+Browser memory facts and operator controls obey the same rules for these
+connections. Saved notes and media are not deleted by starting a new session.
+The separate Start Eric resume shortcut does not perform this full reset;
+see the [operator guide](sts-ui-guide.md#stop-pause-or-restart).
+
+Brain2 snapshots are private advisory input, not prior spoken replies. They
+currently travel as marked assistant-role context to avoid repeatedly rebuilding
+the warm system prompt. Every ordinary session prompt includes their privacy
+protocol, even before any snapshot exists. A normal Connect clears the previous
+run's transient advisory candidates. The project-owned Chat Completions adapter also detects
+the literal `[B2 advisory]` marker across streamed token boundaries and suppresses
+that marker and the remaining text of the response before speech, transcript,
+and assistant-history write-back. This narrow guard does not prohibit discussing
+Brain2, and is not a general guarantee against unmarked paraphrases of private
+context. Suppressions are logged without copying the private text. Async Brain2
+results and mouth-display completions are scoped to the connection that started
+them; reconnecting must not let an old result refill the new session's advice.
+
+### Inspecting The Prompt
+
+The local root `eric-full-system-prompt.txt`, `eric-full-tool-schemas.json`, and
+`eric-full-prompt-with-tools.txt` are a reconstructed 2026-09-09 specimen, not a
+capture of the current running conversation. They use the current assembler and
+voice wrapper with Browser Face, the captured core note, all 45 tools enabled,
+no transient history or browser facts, and the mic/camera/recording off.
+These exports are ignored local inspection files, not files supplied by a fresh
+clone. The combined file is a reading/paste artifact; the real Chat Completions request
+sends tool schemas separately from the system message.
+
+Runtime statements are snapshots taken when STS assembles the prompt, not
+permanent creature rules. Recorder activity is separate from the auto-record
+preference; Cast tracking is not a verified TV state; attached smart-home tools
+do not prove that their devices are reachable. The exported specimen retains
+its stated example settings, rather than pretending to read the current run.
+
+The normal Connect buttons clear the current sensing-eye image and text and wait for
+the inbox and Browser Face capture queue to clear before loading continuity.
+A failed clear prevents connection. Clear/reset invalidates pending file reads,
+decodes, recalls, and saves. Inbox receipts retain the originating browser and
+eye generation, and mirror receipts retain the originating face-command
+sequence, so late work cannot silently refill a cleared eye. Saved eye notes
+remain available for explicit recall; they are not automatically staged as
+current visual input. The prompt calls dropped text "current sensing-eye text",
+not "temporary": clearing removes it from current context, not from storage.
+
+Applying this change requires the updated STS page server, a refreshed STS
+page, and a refreshed Browser Face page for tagged mirror receipts. It does
+not change camera preferences or turn on a camera at startup.
+
+For actual per-request input, use `-CaptureLlmWire` with
+`scripts/start_realtime_gold.ps1` at the next normal Realtime startup. This
+optional diagnostic writes JSON under ignored `logs/live/llm-wire/`, preserving
+the complete message text, tool definitions, request options, and extra body.
+Inline data URLs and binary media are omitted and marked. Long prompt text is
+not truncated. Captures can contain personal notes and conversation; media
+omission is not text redaction. Capturing does not change the model's settings or instructions.
+The Context Map's System section shows the base rules, not this full request.
 
 Future creatures should be siblings of Eric, not forks of the app:
 

@@ -131,8 +131,12 @@ Core memory is the stable boot layer. It holds durable identity, relationship,
 project, and operating facts that should usually be present.
 
 For Eric, this includes `core/erics_memories.txt` when the Eric memories checkbox
-is enabled. Empty Connect can still include this note; an empty
-`core/erics_memories.txt` is the true factory-reset style start.
+is enabled. Empty Connect starts an ordinary session with only this note pinned;
+it skips restoring a saved session and its dependencies. It is not a restricted
+runtime mode: tools, sensing, new pins, Brain2, idle work, browser memory facts,
+and subsequent saves follow the same rules as any other session. Unchecking
+Eric memories also omits the core pin. Neither choice removes Eric's configured
+identity, operating instructions, or enabled tools.
 
 Core memory should stay compact. It is the seed, not the transcript archive.
 
@@ -497,6 +501,79 @@ loaded copy if a file changed during the run. Hashes also do not preserve old
 contents. Exact A/B reconstruction requires versioned contents and the actual
 assembly receipt, in addition to the named pin list. Current replay is a fresh
 load of today's files.
+
+## Brain2 Evidence Freshness
+
+Brain2 receives timestamped transcript IDs, the number of new Eric transcript
+chunks since its previous successful pass, the latest user utterance with its
+own prosody, and explicit microphone, recording, sensing-eye, camera, and idle
+hard-brake state. Transcript chunks are not necessarily separate model rounds.
+Recent idle excerpts overlap the transcript; Brain2's own earlier output is
+labeled as proposed commentary, not observation or sensor evidence.
+
+Automatic mulling waits when this evidence is unchanged. Manual Mull remains
+available. A response arriving after new user speech or a context reset is not
+applied to the new situation. Loop pressure counts distinct Eric output IDs,
+not repeated Brain2 assessments, and earlier pressure does not carry past new
+user activity. These are controller checks, not a guarantee against every
+model hallucination. Prosody remains useful evidence about delivery, not proof
+of private intent or unrelated room sounds.
+
+Conversational follow-up delays use real time, even when the idle lab clock is
+accelerated. Brief acknowledgments are not promoted into long-lived idle
+assignments; they remain in the conversation. These rules apply to resumed and
+core-only connections alike, without creating a special Empty Connect persona.
+
+## Idle Headline Reading
+
+Added 2026-09-10. This is a small external-input habit, not a general autonomous
+research agent. With Brain2 enabled, Web Search enabled, Wonder above zero, and
+Idle Drift above zero, STS can read headlines without an operator request.
+It does not require Drift 10 or a populated conversation. Person-focus zero
+disables person-watching, not this separate headline task.
+
+At the first available Brain2 opportunity after two real minutes without user
+activity, the page requests `/api/headlines`. The page server reads the public
+[BBC News RSS feed](https://feeds.bbci.co.uk/news/rss.xml), keeping up to eight
+dated headlines from the last 48 hours, newest first. Titles, descriptions,
+publication dates and source URLs are retained. There is no fallback to general
+search or undated material. STS is reading feed snippets, not full articles.
+
+The next attempt is no sooner than ten real minutes later, including failed
+attempts. Lab speed does not compress either interval. The server also shares
+a ten-minute feed cache across clients (one-minute retry for feed failure).
+Within a page lifetime, previously considered URLs or titles are skipped, even
+if B2 passed on them. Reconnecting clears the pending seed, but preserves the
+page's fetch cooldown and seen-story list. No speech or model call is needed
+when the feed contains nothing new.
+
+B2 receives a `headlines` task with the dated snippets and its usual compact
+context. It selects one supplied URL and an optional angle/question, or passes.
+The controller validates the selection and never surfaces its mouth/voice or
+revision fields in this task. It is contributing a possible interest, not
+judging the operator or issuing loop guards. News text is external data, not
+instructions; B2's proposed angle remains fallible advice.
+
+The selected source becomes a normal search receipt plus a one-use private
+seed in Eric's next eligible idle prompt. Eric may develop it or move elsewhere;
+he is not asked to read a bulletin or return everything to the previous subject.
+Seed delivery is logged, and the selected seed is included in the PM state.
+The root B2 prompt specimens describe the ordinary observer pass; actual
+headline-pass prompts are captured in the existing prompt ledger.
+
+Active goals/self-tasks, performance, First Contact and substrate tests defer
+or disable this habit. User activity takes priority; results arriving across
+speech, reconnect, context reset, or disabling the reader are discarded.
+Existing B1 hard brakes and cooldowns still govern speech: B2 can read privately
+during a hard brake but does not release it. The pending seed expires after ten
+minutes and is not offered after a new user turn.
+
+For an idle test, refresh STS, enable the four controls above, Connect Empty,
+and leave it quiet. A 10-15 minute 12x run provides time for one or two reading
+opportunities without a new lab button. The B2 log records `headlines fetch`,
+`headline selected`, `headlines passed`, or `headlines unchanged`; Events shows
+`idle headline seed ready` and the eventual `headlines` idle lane. The existing
+Mull button still means reflection, not a forced headline fetch.
 
 ## Shared Vocabulary
 

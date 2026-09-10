@@ -349,6 +349,9 @@ already, and a clear direction for the work ahead.
 
 ## Further Reading
 
+- [STS UI Operator Guide](../sts-ui-guide.md): illustrated controls and everyday workflows.
+- [Engineering Status](../engineering-status.md): maintained capabilities, limits, and priorities.
+- [Firmware Embodiments](https://github.com/dr3d/robot-790/blob/master/firmware/README.md): active controllers and dual-eye bench projects.
 - [Operator Cheat Sheet](https://github.com/dr3d/robot-790/blob/master/scripts/operator-cheatsheet.md): server commands and addresses.
 - [Context Engineering Architecture](../context-engineering-architecture.md):
   session sources, variants, and context limits.
@@ -360,7 +363,7 @@ already, and a clear direction for the work ahead.
 - [One Body, Many Faces](2026-09-09-one-body-many-faces.md): the removable-mask concept.
 
 *Scope: this report describes the local working project as inspected on
-September 10, 2026, including recent changes not yet published to GitHub.
+September 10, 2026. See Engineering Status above for the maintained technical view.
 Reported behavior comes from observed runs; newly implemented controls and
 future designs are identified separately. No raw private session bundle is
 included with this overview.*

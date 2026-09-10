@@ -66,6 +66,7 @@ Articles are listed newest first by their published artifact time.
 
 ## Project Notes
 
+- [STS UI Operator Guide](sts-ui-guide.md)
 - [Engineering Status](engineering-status.md)
 - [Context Engineering Architecture](context-engineering-architecture.md)
 - [Prosody And Mouth](prosody-and-mouth.md)

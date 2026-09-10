@@ -1,15 +1,15 @@
 {
-    "generated":  "2026-09-10 02:29:28",
+    "generated":  "2026-09-10 03:07:29",
     "articles":  [
                      {
                          "title":  "Robot 790: A Local Robot Built for Conversation and Continuity",
                          "excerpt":  "Robot 790 is an experiment in making a machine worth sharing a room with.",
                          "source":  "articles/2026-09-10-022329-robot-790-project-overview.md",
-                         "bytes":  20413,
+                         "bytes":  20754,
                          "published":  "2026-09-10 02:23",
                          "published_sort":  "20260910022329",
                          "published_source":  "filename",
-                         "modified":  "2026-09-10 02:29"
+                         "modified":  "2026-09-10 03:06"
                      },
                      {
                          "title":  "One Body, Many Faces",

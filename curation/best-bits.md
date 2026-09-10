@@ -41,8 +41,8 @@ public-safe.
 
 - Title: Four diets, one mouth
 - Run: `20260905-215204`
-- Source video: `logs/audio/20260905-215204-sts-audio-picture.mp4`
-- Source postmortem: `curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md`
+- Source video: `../robot-790-archive/20260907-post-continuity-road-sweep/logs/audio/20260905-215204-sts-audio-picture.mp4`
+- Source postmortem: `../robot-790-archive/20260909-unpublished-sessions-clean-slate/curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md`
 - Clip: `00:15-00:28`
 - Handles: default
 - Why it matters: Eric explains the multi-lane architecture in usable public language, then lands the mechanism: different inputs produce different outputs.
@@ -55,8 +55,8 @@ public-safe.
 
 - Title: Four distinct blind spots
 - Run: `20260905-215204`
-- Source video: `logs/audio/20260905-215204-sts-audio-picture.mp4`
-- Source postmortem: `curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md`
+- Source video: `../robot-790-archive/20260907-post-continuity-road-sweep/logs/audio/20260905-215204-sts-audio-picture.mp4`
+- Source postmortem: `../robot-790-archive/20260909-unpublished-sessions-clean-slate/curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md`
 - Clip: `01:19-01:32`
 - Handles: default
 - Why it matters: Eric owns the design risk instead of defending it: independent lanes can disagree, stale verifiers can block or rubber-stamp, and different diets make distinct blind spots.
@@ -69,8 +69,8 @@ public-safe.
 
 - Title: The public voice has final say
 - Run: `20260905-215204`
-- Source video: `logs/audio/20260905-215204-sts-audio-picture.mp4`
-- Source postmortem: `curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md`
+- Source video: `../robot-790-archive/20260907-post-continuity-road-sweep/logs/audio/20260905-215204-sts-audio-picture.mp4`
+- Source postmortem: `../robot-790-archive/20260909-unpublished-sessions-clean-slate/curation/postmortems/20260905-215204-four-diets-note-reload-b2-advisory.md`
 - Clip: `03:45-03:53`
 - Handles: default
 - Why it matters: This defines governance for the architecture. Brain2 is a tap on the shoulder, not another public speaker.
@@ -83,8 +83,8 @@ public-safe.
 
 - Title: The director's notes leaked into the booth
 - Run: `20260905-233311`
-- Source video: `logs/audio/20260905-233244-sts-audio-session-picture.mp4`
-- Source postmortem: `curation/postmortems/20260905-233311-salem-dollar-booth-routine.md`
+- Source video: `../robot-790-archive/20260907-post-continuity-road-sweep/logs/audio/20260905-233244-sts-audio-session-picture.mp4`
+- Source postmortem: `../robot-790-archive/20260909-unpublished-sessions-clean-slate/curation/postmortems/20260905-233311-salem-dollar-booth-routine.md`
 - Clip: `15:52-16:04`
 - Handles: default
 - Why it matters: B2 names the failure exactly: Eric stopped performing the Salem table routine and let internal stage directions reach the public mouth.
@@ -97,8 +97,8 @@ public-safe.
 
 - Title: The stage directions escaped the script
 - Run: `20260905-233311`
-- Source video: `logs/audio/20260905-233244-sts-audio-session-picture.mp4`
-- Source postmortem: `curation/postmortems/20260905-233311-salem-dollar-booth-routine.md`
+- Source video: `../robot-790-archive/20260907-post-continuity-road-sweep/logs/audio/20260905-233244-sts-audio-session-picture.mp4`
+- Source postmortem: `../robot-790-archive/20260909-unpublished-sessions-clean-slate/curation/postmortems/20260905-233311-salem-dollar-booth-routine.md`
 - Clip: `16:05-16:17`
 - Handles: default
 - Why it matters: This is the compact diagnosis of the run: not bad character, bad role-boundary filtering.

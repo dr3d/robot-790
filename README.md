@@ -6,8 +6,8 @@ page, local STT/TTS, local LLMs through LM Studio, and a small Python daemon
 package for robot tools and storage.
 
 The resident character is **Eric Robot 790**: Eric is the personage; Robot 790
-is the platform, body, and series. Eric is defined by a seed prompt, a low
-latency local model, a Qwen3-TTS voice, a visible face, tool access, and a small
+is the platform, body, and series. Eric is defined by a creature prompt, a
+local model, a Qwen3-TTS voice, a visible face, tool access, and a small
 set of plain-text continuity files. The public posture is modest: this is not
 proof of a new kind of mind. It is an unusual local robot arrangement worth
 watching closely.
@@ -26,20 +26,24 @@ is chatbot-class language modeling, but the lived shape is closer to an agentic
 system: tools plus a loop. Like a coding agent with Bash, Python, Playwright,
 and curl, Eric is defined by the tools around the model. His toolbox is
 different: face, eyes, mouth text, voice, notes, memory, web search, camera,
-sensors, media, and hardware controllers. The idle/conversation loop keeps
-feeding those tools and their results back into context. That tool diet and
+sensors, media, and hardware controllers. STS assembles context for each kind
+of work and schedules conversation, idle turns, and bounded tool activity.
+Available capabilities depend on the selected body and enabled tools. That diet and
 feedback loop are a large part of what make him feel like a robot rather than a
 chat box.
 
-That loop matters economically as well as technically. Many hosted agents have
-to fake ongoing attention with cron-like scheduled bursts because every token
-costs money. Robot 790 is built for a local high-throughput machine, so idle
-thinking can be treated as a usable runtime behavior rather than a rare cloud
-event. It still has limits, but the budget shape is different.
+That loop matters economically as well as technically. Robot 790 uses scheduled
+model calls, not continuous model inference. Local inference makes frequent idle
+experiments practical without a per-token API bill, though GPU time, electricity,
+and contention with conversation still matter. Some tools use external services.
 
 Start with the public story, receipts, and open questions:
 
 - [Eric Robot 790 public page](docs/index.md)
+- [Project Overview: Conversation, Continuity, And A Body](docs/articles/2026-09-10-022329-robot-790-project-overview.md)
+- [Listening Companion](https://dr3d.github.io/robot-790/?media=media/videos/Robot-790-Conversation-And-Continuity-Listening-Companion-2026-09-10.mp4#media): an AI-generated interpretation of the overview for people who prefer to listen.
+- [STS UI Operator Guide](docs/sts-ui-guide.md)
+- [Engineering Status](docs/engineering-status.md): current work and known limitations.
 - [The Event Loop Grew A Face](docs/articles/the-event-loop-grew-a-face.md)
 - [The Ledger-Keeper's View](docs/articles/ledger-keepers-view.md)
 - [Receipts And Open Questions](docs/evidence_map.md)
@@ -56,8 +60,11 @@ Start with the public story, receipts, and open questions:
   <img src="docs/media/previews/NapEdge-2026-08-30-Audio-Rumination.jpg" alt="Generated cover art from an Eric idle run" width="340">
 </p>
 
-The short version: Eric is a made creature whose character seems to come from
-the whole assembly: tools plus a loop, not a secret model or one magic prompt.
+The short version: the creature prompt defines Eric's character and operating
+stance. STS is the deterministic apparatus that supplies his changing context,
+schedules work, routes tools and speech, and preserves continuity. The local
+model generates within that arrangement. The prompt and apparatus are separable;
+the robot experience depends on both.
 
 ## Lineage And Contribution
 
@@ -82,8 +89,8 @@ What Robot 790 adds is the arrangement:
   the user is quiet or away
 - a notes/worlds/library structure for giving the robot continuity, reference
   material, and temporary imagined substrates
-- public logs, articles, and curated sessions that show the seams instead of
-  hiding them
+- public articles, selected recordings, and curated sessions that expose the
+  mechanism and its failures; routine PMs and raw captures remain local
 
 The project does not offer a secret new model or a finished theory of mind. It
 offers an inspectable arrangement: an interface, body, timing layer, tool
@@ -106,6 +113,11 @@ that assembly when the machinery is kept visible.
 - `firmware/esp32-s3-face-brain`: parked ESP32-S3 external-eye experiment.
 - `firmware/esp32-chassis`: tracked chassis controller.
 - `firmware/esp32-cam`: ESP32 camera controller experiments.
+- `firmware/esp32-s3-dualeye-lcd-1.28`: working S3 dual-eye bench firmware
+  with animated eyes, blinking, and optional Wi-Fi OTA.
+- `firmware/esp32-c3-dualeye-lcd-0.71`: working C3-hosted tiny dual-eye
+  bench firmware with buffered rendering, blinking, and optional Wi-Fi OTA.
+  Both are visual bring-up projects, not yet STS-controlled embodiments.
 - `src/robot_790d/reachy_embodiment_server.py`: firmware-like Reachy Mini
   embodiment adapter. It presents the Robot 790 face/body HTTP contract while
   proxying to the Reachy daemon, so Reachy can become a body without becoming a
@@ -156,7 +168,8 @@ voices, third-party code, and media assets carry their own licenses.
 - `scripts/`: startup, shutdown, model restart, docs catalog, and media helper
   scripts.
 - `web/`: browser-facing control surfaces.
-- `firmware/`: ESP32 face, chassis, camera, and hardware experiments.
+- `firmware/`: ESP32 face, chassis, camera, active projects, and documented
+  hardware candidates. See [Firmware Embodiments](firmware/README.md).
 - `src/`: Python daemons, tool adapters, and the Qwen3-TTS endpoint.
 - `tests/`: focused tests for the Python helpers and page-server APIs.
 
@@ -164,6 +177,8 @@ voices, third-party code, and media assets carry their own licenses.
 
 - [Public Page](docs/index.md): GitHub Pages landing page and article shelf.
 - [Docs Folder](docs/README.md): how the static site is organized.
+- [STS UI Operator Guide](docs/sts-ui-guide.md): illustrated controls, connection
+  choices, recording, session management, and idle experiments.
 - [Repository Map](docs/repository-map.md): where code, local evidence,
   editorial curation, public docs, and publish packets belong.
 - [Engineering Status](docs/engineering-status.md): current guarantees, known
@@ -327,6 +342,8 @@ The page, face, and realtime launchers default to localhost. For apartment-only
 HTTPS access with microphone/camera support, see [STS LAN setup](scripts/sts-lan.md).
 For the day-to-day commands and addresses, see the
 [Operator Cheat Sheet](scripts/operator-cheatsheet.md).
+For a screenshot-guided tour of the controls and everyday workflows, see the
+[STS UI Operator Guide](docs/sts-ui-guide.md).
 
 If Ctrl-C does not stop a stuck process, use:
 

@@ -8,7 +8,7 @@ listing.
 robot-790/
 |- src/                 Python daemons, storage, and tool adapters
 |- web/                 STS, Browser Face, and the mouth lab
-|- firmware/            ESP32 face, camera, and chassis projects
+|- firmware/            ESP32 projects and documented bench candidates
 |- config/              Runtime, LAN, face, and creature configuration
 |- presets/             Named runtime baselines
 |- prompts/             Editable seed prompts
@@ -28,7 +28,7 @@ robot-790/
 | --- | --- |
 | `src/` | The deterministic daemon code, note/session helpers, page server, tool adapters, and TTS endpoint. |
 | `web/` | Browser code. `web/sts/` is the control surface, `web/face-sim/` is Browser Face, and `web/mouth-lab/` is the isolated animation experiment. |
-| `firmware/` | Separate PlatformIO projects for hardware embodiments. A one-file `src/` folder is normal for these projects, not abandoned structure. |
+| `firmware/` | Separate PlatformIO projects for hardware embodiments and bench bring-up, including the C3 and S3 dual-eye boards. A one-file `src/` folder is normal for active projects, not abandoned structure. See `firmware/README.md` for integration status. |
 | `config/` | Checked-in configuration. `config/creatures/eric.json` is the current creature descriptor; it has a namespace because more creature profiles may arrive. |
 | `presets/` | Named runtime baselines. There is currently one gold preset, which is intentional. |
 | `prompts/` | Human-editable system/seed prompts. |
@@ -46,9 +46,18 @@ specific file is deliberately promoted elsewhere.
 | `logs/` | Live events, audio, generated images, sensing-eye captures, and operator artifacts. Routine PMs belong in `logs/runs/<run-id>/postmortem.md`. |
 | `.local/`, `.tmp/`, `tmp/` | Machine-local server state, test residue, and temporary output. |
 | `backups/`, `samples/` | Ignored local parking places. Their current emptiness does not create a Git cleanup task. |
+| Root prompt exports | The six current `eric-full-*` and `brain2-*.txt` inspection files are explicitly ignored and kept at the operator's request. Canonical instructions remain in `prompts/`, configuration, and the runtime assembler. |
 
 An archive inside an ignored local tree is preservation. An archive inside a
 tracked tree is still visible in GitHub history.
+
+Bulk cold storage lives next door at `../robot-790-archive/`. Each dated sweep
+keeps repository-relative paths and a recovery manifest. The September 9
+unpublished-session cleanup is in `20260909-unpublished-sessions-clean-slate/`;
+published sessions and the then-live run were retained. The subsequent
+`20260909-older-logs-sweep/` holds older unreferenced recordings and live
+snapshots; the latest PM/run, server logs, and referenced assets remain here. See
+`curation/archive-sweeps.md` for the inventory and policy used.
 
 ## Editorial And Publication Paths
 
@@ -71,7 +80,7 @@ The intended promotion path is:
 ```text
 live run
   -> logs/runs/<run-id>/              local PM and raw evidence
-  -> notes/sessions/archived/<id>/    retained local continuity sidecar, when useful
+  -> notes/sessions/archived/         retained local continuity, when useful
   -> curation/                        selected editorial work, only when Git tracking is acceptable
   -> docs/                            consciously public article, media, log, or PM bundle
   -> publish-packets/                 optional ready-to-post platform materials

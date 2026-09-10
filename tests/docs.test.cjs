@@ -137,7 +137,11 @@ test('project overview and listening companion cross-link without publishing the
   const article = fs.readFileSync(path.join(root, 'docs', source), 'utf8');
   assert.ok(article.includes(`?media=${video}#media`));
   assert.match(article, /dream-time scheduler and automatic continuity\s+consolidation are design work/);
-  assert.doesNotMatch(article, /\]\([^)]*(?:sts-ui-guide\.md|firmware\/README\.md)\)/);
+  assert.match(article, /\]\(\.\.\/sts-ui-guide\.md\)/);
+  assert.match(article, /\]\(\.\.\/engineering-status\.md\)/);
+  assert.match(article, /https:\/\/github\.com\/dr3d\/robot-790\/blob\/master\/firmware\/README\.md/);
+  assert.ok(fs.existsSync(path.join(root, 'docs/sts-ui-guide.md')));
+  assert.ok(fs.existsSync(path.join(root, 'firmware/README.md')));
 });
 
 test('media caption links to its article and omits the link for ordinary media', () => {

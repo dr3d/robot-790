@@ -9,6 +9,13 @@ __pycache__/
 .tmp/
 .pytest-tmp-*/
 session-map-*.png
+# Local prompt-inspection snapshots, not canonical prompt sources.
+/eric-full-system-prompt.txt
+/eric-full-prompt-with-tools.txt
+/eric-full-tool-schemas.json
+/brain2-full-system-prompt.txt
+/brain2-full-prompt-with-context.txt
+/brain2-context-example.txt
 *.egg-info/
 dist/
 build/
