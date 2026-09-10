@@ -1,6 +1,26 @@
 {
-    "generated":  "2026-09-09 12:31:29",
+    "generated":  "2026-09-10 02:29:28",
     "articles":  [
+                     {
+                         "title":  "Robot 790: A Local Robot Built for Conversation and Continuity",
+                         "excerpt":  "Robot 790 is an experiment in making a machine worth sharing a room with.",
+                         "source":  "articles/2026-09-10-022329-robot-790-project-overview.md",
+                         "bytes":  20413,
+                         "published":  "2026-09-10 02:23",
+                         "published_sort":  "20260910022329",
+                         "published_source":  "filename",
+                         "modified":  "2026-09-10 02:29"
+                     },
+                     {
+                         "title":  "One Body, Many Faces",
+                         "excerpt":  "Robot 790 does not need to hide his construction to become more legible. One",
+                         "source":  "articles/2026-09-09-one-body-many-faces.md",
+                         "bytes":  1961,
+                         "published":  "2026-09-09 12:32",
+                         "published_sort":  "20260909123244",
+                         "published_source":  "git-added",
+                         "modified":  "2026-09-09 12:31"
+                     },
                      {
                          "title":  "The Brain That Runs Conversation And Dreams",
                          "excerpt":  "Robot 790 is not one language model with a face attached. The live model matters,",
@@ -10,16 +30,6 @@
                          "published_sort":  "20260909041529",
                          "published_source":  "filename",
                          "modified":  "2026-09-09 04:16"
-                     },
-                     {
-                         "title":  "One Body, Many Faces",
-                         "excerpt":  "Robot 790 does not need to hide his construction to become more legible. One",
-                         "source":  "articles/2026-09-09-one-body-many-faces.md",
-                         "bytes":  1961,
-                         "published":  "2026-09-09 00:00",
-                         "published_sort":  "20260909000000",
-                         "published_source":  "filename",
-                         "modified":  "2026-09-09 12:31"
                      },
                      {
                          "title":  "Teaching Eric\u0027s Mouth To Speak",
@@ -526,6 +536,38 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Robot 790: Conversation, Continuity, and a Body",
+                      "kind":  "image",
+                      "role":  "embodiment",
+                      "source":  "media/generated-images/robot-790-conversation-continuity-whiteboard-2026-09-10.png",
+                      "preview":  "media/generated-images/robot-790-conversation-continuity-whiteboard-2026-09-10.png",
+                      "banner_rank":  100,
+                      "bytes":  1645370,
+                      "date":  "2026-09-10 02:23",
+                      "published":  "2026-09-10 02:23",
+                      "published_sort":  "20260910022329",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-10 02:23",
+                      "description":  "Generated whiteboard cover for the September 2026 project overview and listening companion. STS is the deterministic orchestrator; the local model runs on the desktop, while Browser Face and ESP32 controllers provide embodiments. Brain2 offers private advice without tool access; the runtime checks tool actions. Dream-time context processing is explicitly marked as planned. A conceptual map, not a circuit or wiring diagram.",
+                      "article":  "articles/2026-09-10-022329-robot-790-project-overview.md"
+                  },
+                  {
+                      "title":  "Robot 790: Conversation and Continuity - A Listening Companion",
+                      "kind":  "video",
+                      "role":  "embodiment",
+                      "source":  "media/videos/Robot-790-Conversation-And-Continuity-Listening-Companion-2026-09-10.mp4",
+                      "preview":  "media/previews/Robot-790-Conversation-And-Continuity-Listening-Companion-2026-09-10.jpg",
+                      "banner_rank":  45,
+                      "bytes":  17425422,
+                      "date":  "2026-09-10 02:23",
+                      "published":  "2026-09-10 02:23",
+                      "published_sort":  "20260910022329",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-10 02:27",
+                      "description":  "For those who prefer to listen: a 21-minute, 50-second AI-generated interpretation of Robot 790: A Local Robot Built for Conversation and Continuity. It introduces Eric, the deterministic STS runtime, the local model, voice, tools, session memory, private Brain2 advice, and interchangeable embodiments, then looks toward planned dream-time context processing. This is not a live Eric session, a verbatim reading, or new experimental evidence. The source article is the reference for current capabilities and future plans. The whiteboard cover is generated conceptual artwork, not a wiring diagram.",
+                      "article":  "articles/2026-09-10-022329-robot-790-project-overview.md"
+                  },
                   {
                       "title":  "One Body, Many Faces",
                       "kind":  "image",

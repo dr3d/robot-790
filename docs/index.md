@@ -34,8 +34,9 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 <!-- generated-articles:start -->
 Articles are listed newest first by their published artifact time.
 
+- [Robot 790: A Local Robot Built for Conversation and Continuity](articles/2026-09-10-022329-robot-790-project-overview.md) - 2026-09-10 02:23
+- [One Body, Many Faces](articles/2026-09-09-one-body-many-faces.md) - 2026-09-09 12:32
 - [The Brain That Runs Conversation And Dreams](articles/2026-09-09-041529-the-brain-that-runs-conversation-and-dreams.md) - 2026-09-09 04:15
-- [One Body, Many Faces](articles/2026-09-09-one-body-many-faces.md) - 2026-09-09 00:00
 - [Teaching Eric's Mouth To Speak](articles/teaching-erics-mouth-to-speak.md) - 2026-09-08 12:43
 - [Context Engineering Is A Directed Graph](articles/context-engineering-as-directed-graph.md) - 2026-09-08 10:41
 - [A Working Proposition About Lessons](articles/a-working-proposition-about-lessons.md) - 2026-09-06 20:58

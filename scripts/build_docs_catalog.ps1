@@ -414,6 +414,18 @@ if ($mediaSearchDirs.Count -gt 0) {
             if ($description) {
                 $item.description = $description
             }
+            if ($null -ne $mediaNotes) {
+                $entry = $mediaNotes.PSObject.Properties[$source]
+                if ($entry -and $entry.Value -isnot [string]) {
+                    $article = $entry.Value.PSObject.Properties["article"]
+                    if ($article -and $article.Value) {
+                        if ($articles.source -notcontains [string]$article.Value) {
+                            throw "Related article for $source is not on the public article shelf: $($article.Value)"
+                        }
+                        $item.article = [string]$article.Value
+                    }
+                }
+            }
             $item
         } |
         Sort-Object @{ Expression = { $_.published_sort }; Descending = $true },

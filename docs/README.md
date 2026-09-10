@@ -29,6 +29,9 @@ filename whose current artifact needs an explicit time.
 - `index.md`: short Markdown landing copy for humans reading the repository.
 - `repository-map.md`: repo-level map distinguishing local evidence, tracked
   editorial curation, public docs, and social publish packets.
+- `articles/2026-09-10-022329-robot-790-project-overview.md`: published project
+  orientation covering the working baseline, recent progress, and next steps,
+  with a linked listening companion and architectural cover.
 - `catalog.json`: generated site index consumed by `index.html`.
 - `assets/`: CSS and JavaScript for the static page.
 - `articles/`: public Markdown articles and essays.

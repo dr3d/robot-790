@@ -184,6 +184,8 @@ function readArticleAloud() {
 function articleShareUrl(article) {
   const url = new URL(location.href);
   url.searchParams.delete("media");
+  url.searchParams.delete("autoplay");
+  url.searchParams.delete("log");
   url.searchParams.set("article", article.source);
   url.hash = "article-reader";
   return url.toString();
@@ -565,12 +567,16 @@ function selectMedia(media, selectedButton = null, { replaceUrl = true, autoplay
   const description = media.description
     ? escapeHtml(media.description)
     : "No curation note for this item yet.";
+  const articleLink = media.article
+    ? `<p><a href="${escapeHtml(articleShareUrl({ source: media.article }))}">Read the article</a></p>`
+    : "";
   mediaCaption.innerHTML = `
     <div class="media-caption-bar">
       <span>${escapeHtml(meta)}</span>
       <button type="button" class="media-share" data-share-media>Share</button>
     </div>
     <p class="media-analysis" tabindex="0">${description}</p>
+    ${articleLink}
   `;
   mediaCaption.querySelector("[data-share-media]")?.addEventListener("click", (event) => {
     copyMediaShareUrl(currentMedia, event.currentTarget);

@@ -119,6 +119,62 @@ test('public page sorts every shelf using canonical publication time', () => {
   assert.match(page, /function publicationLabel\(item\)/);
 });
 
+test('project overview and listening companion cross-link without publishing the raw audio', () => {
+  const source = 'articles/2026-09-10-022329-robot-790-project-overview.md';
+  const video = 'media/videos/Robot-790-Conversation-And-Continuity-Listening-Companion-2026-09-10.mp4';
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8'));
+  const companion = catalog.media.find(item => item.source === video);
+  assert.ok(catalog.articles.some(article => article.source === source));
+  assert.equal(companion.article, source);
+  assert.ok(companion.bytes < 25 * 1024 * 1024);
+  assert.match(companion.description, /AI-generated interpretation/);
+  assert.match(companion.description, /not a live Eric session/);
+  assert.ok(fs.existsSync(path.join(root, 'docs', companion.preview)));
+  assert.ok(!catalog.media.some(item => item.source.startsWith('media/raw-video/')));
+  for (const item of catalog.media.filter(item => item.article)) {
+    assert.ok(catalog.articles.some(article => article.source === item.article));
+  }
+  const article = fs.readFileSync(path.join(root, 'docs', source), 'utf8');
+  assert.ok(article.includes(`?media=${video}#media`));
+  assert.match(article, /dream-time scheduler and automatic continuity\s+consolidation are design work/);
+  assert.doesNotMatch(article, /\]\([^)]*(?:sts-ui-guide\.md|firmware\/README\.md)\)/);
+});
+
+test('media caption links to its article and omits the link for ordinary media', () => {
+  const elements = new Map();
+  const document = { querySelector(selector) {
+    if (!elements.has(selector)) elements.set(selector, {
+      innerHTML: '', addEventListener() {}, querySelectorAll: () => [], querySelector: () => null,
+    });
+    return elements.get(selector);
+  } };
+  const context = vm.createContext({ document, URL, location: {
+    href: 'https://example.test/robot-790/?media=old.mp4&autoplay=1#media',
+  }, window: { addEventListener() {} }, fetch: () => new Promise(() => {}) });
+  vm.runInContext(fs.readFileSync(path.join(root, 'docs/assets/site.js'), 'utf8'), context);
+  const media = { title: 'Test', kind: 'video', source: 'media/videos/test.mp4',
+    article: 'articles/overview.md', description: '<unsafe>' };
+  context.selectMedia(media, null, { replaceUrl: false });
+  const caption = elements.get('#media-caption').innerHTML;
+  assert.match(caption, /Read the article/);
+  const target = new URL(caption.match(/<a href="([^"]+)"/)[1].replace(/&amp;/g, '&'));
+  assert.equal(target.origin, 'https://example.test');
+  assert.equal(target.searchParams.get('article'), media.article);
+  assert.equal(target.searchParams.has('media'), false);
+  assert.equal(target.searchParams.has('autoplay'), false);
+  assert.equal(target.hash, '#article-reader');
+  assert.match(caption, /&lt;unsafe&gt;/);
+  context.selectMedia({ ...media, article: undefined }, null, { replaceUrl: false });
+  assert.doesNotMatch(elements.get('#media-caption').innerHTML, /Read the article/);
+});
+
+test('public article reader can shrink and wrap its controls on a phone', () => {
+  const css = fs.readFileSync(path.join(root, 'docs/assets/site.css'), 'utf8');
+  assert.match(css, /\.reader-section\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/);
+  assert.match(css, /\.reader-actions\s*\{[^}]*flex-wrap:\s*wrap/);
+  assert.match(css, /\.article-body\s*\{[^}]*min-width:\s*0/);
+});
+
 test('repository Markdown article list is generated from the same newest-first catalog', () => {
   const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
   const index = fs.readFileSync(path.join(root, 'docs/index.md'), 'utf8');

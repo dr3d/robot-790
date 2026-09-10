@@ -1,4 +1,16 @@
 {
+  "media/videos/Robot-790-Conversation-And-Continuity-Listening-Companion-2026-09-10.mp4": {
+    "published": "2026-09-10T02:23:29-04:00",
+    "title": "Robot 790: Conversation and Continuity - A Listening Companion",
+    "article": "articles/2026-09-10-022329-robot-790-project-overview.md",
+    "description": "For those who prefer to listen: a 21-minute, 50-second AI-generated interpretation of Robot 790: A Local Robot Built for Conversation and Continuity. It introduces Eric, the deterministic STS runtime, the local model, voice, tools, session memory, private Brain2 advice, and interchangeable embodiments, then looks toward planned dream-time context processing. This is not a live Eric session, a verbatim reading, or new experimental evidence. The source article is the reference for current capabilities and future plans. The whiteboard cover is generated conceptual artwork, not a wiring diagram."
+  },
+  "media/generated-images/robot-790-conversation-continuity-whiteboard-2026-09-10.png": {
+    "published": "2026-09-10T02:23:29-04:00",
+    "title": "Robot 790: Conversation, Continuity, and a Body",
+    "article": "articles/2026-09-10-022329-robot-790-project-overview.md",
+    "description": "Generated whiteboard cover for the September 2026 project overview and listening companion. STS is the deterministic orchestrator; the local model runs on the desktop, while Browser Face and ESP32 controllers provide embodiments. Brain2 offers private advice without tool access; the runtime checks tool actions. Dream-time context processing is explicitly marked as planned. A conceptual map, not a circuit or wiring diagram."
+  },
   "media/generated-images/concept-embodiment-bare-and-masked-2026-09-09.png": {
     "published": "2026-09-09T01:10:23-04:00",
     "title": "One Body, Many Faces",
