@@ -455,7 +455,7 @@
       updateRecordFaceButton();
     }
 
-    async function captureFaceToEye({ stsUrl = normalizedStsUrl(), reason = "" } = {}) {
+    async function captureFaceToEye({ stsUrl = normalizedStsUrl(), reason = "", commandSeq = 0 } = {}) {
       const targetUrl = new URL("/api/sensing-eye/inbox", normalizedStsUrl(stsUrl));
       const snapshot = browserFaceSnapshot();
       const imageDataUrl = snapshot.dataUrl;
@@ -475,6 +475,7 @@
           source: "browser_face",
           filename,
           image_data_url: imageDataUrl,
+          face_command_seq: commandSeq,
           reason,
           snapshot: faceState.snapshot,
           state: faceState
@@ -565,7 +566,8 @@
           if (command.type === "capture_to_eye") {
             await captureFaceToEye({
               stsUrl: command.sts_url || normalizedStsUrl(),
-              reason: command.reason || "browser face self-capture"
+              reason: command.reason || "browser face self-capture",
+              commandSeq: seq
             });
           } else if (command.type === "face_paint") {
             applyFacePaintCommand(command);

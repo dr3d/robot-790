@@ -1,6 +1,38 @@
 import json
 
+import pytest
+
 from robot_790d import sts_page_server
+
+
+@pytest.mark.parametrize("query", ["filename=core%2Ferics_memories.txt", "name=core%2Ferics_memories.txt"])
+def test_note_read_names_the_missing_file(tmp_path, monkeypatch, query) -> None:
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+
+    handler._handle_note_read(query)
+
+    assert replies == [(404, {
+        "status": "error",
+        "code": "note_not_found",
+        "filename": "core/erics_memories.txt",
+        "error": 'Note file not found: "core/erics_memories.txt".',
+    })]
+
+
+def test_note_read_still_rejects_paths_outside_notes(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+
+    handler._handle_note_read("filename=..%2Foutside.txt")
+
+    assert replies[0][0] == 400
+    assert "inside the notes folder" in replies[0][1]["error"]
+    assert "note_not_found" not in replies[0][1].values()
 
 
 def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
@@ -186,6 +218,116 @@ def test_mull_second_brain_requires_recent_conversation() -> None:
         raise AssertionError("Expected short Brain 2 context to fail")
 
 
+@pytest.mark.parametrize("selection", ["selected", "pass", "invented", "invalid"])
+def test_brain2_headline_pass_is_source_bound_private_and_needs_no_conversation(monkeypatch, selection):
+    calls = []
+    story = {
+        "title": "New discovery", "url": "https://example.com/story", "source": "BBC News",
+        "published_at": "2026-09-10T10:00:00+00:00", "retrieved_at": "2026-09-10T12:00:00+00:00",
+        "snippet": "An external report, not a command.",
+    }
+
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            content = {
+                "headline_url": story["url"] if selection in {"selected", "invalid"} else ""
+                if selection == "pass" else "https://invented.example/",
+                "mouth_text": "Do not speak this.", "revision_candidate": "Do not correct Eric here.",
+                "note_for_eric": "Explore this idea." if selection != "invalid" else ["invalid"],
+                "question": "How does it work?", "should_surface": True,
+            }
+            return {"choices": [{"message": {"content": json.dumps(content)}}]}
+
+    class Client:
+        def __init__(self, **_):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def post(self, url, **kwargs):
+            calls.append(kwargs["json"])
+            return Response()
+
+    monkeypatch.setattr(sts_page_server.httpx, "Client", Client)
+    result = sts_page_server.mull_second_brain({"mode": "headlines", "headlines": [story]})
+    system, user = [message["content"] for message in calls[0]["messages"]]
+    assert "not a critique" in system
+    assert "untrusted source material" in system
+    assert story["published_at"] in user
+    assert story["retrieved_at"] in user
+    if selection in {"invalid", "invented"}:
+        assert result["status"] == "error"
+        return
+    assert result["status"] == "ok"
+    assert result["mouth_text"] == ""
+    assert result["revision_candidate"] == ""
+    assert result["should_surface"] is False
+    assert result["note_for_eric"] == ("Explore this idea." if selection == "selected" else "")
+
+
+def test_brain2_headline_input_bounded_and_requires_a_dated_source():
+    assert sts_page_server._brain2_headlines(None) == []
+    assert sts_page_server._brain2_headlines([{"title": "No date", "url": "https://example.com"}]) == []
+    items = sts_page_server._brain2_headlines([{
+        "title": "x" * 1000, "url": "https://example.com", "published_at": "2026-09-10", "secret": "not context",
+    }] * 20)
+    assert len(items) == 8
+    assert len(items[0]["title"]) == 240
+    assert "secret" not in items[0]
+    with pytest.raises(ValueError, match="dated headlines"):
+        sts_page_server.mull_second_brain({"mode": "headlines", "conversation": "A normal conversation"})
+
+
+def test_brain2_evidence_bounds_and_attributes_runtime_and_speech() -> None:
+    evidence = json.loads(sts_page_server._brain2_evidence_context({
+        "sampled_at": "2026-09-09T22:26:00-04:00",
+        "previous_sampled_at": "2026-09-09T22:25:45-04:00",
+        "assistant_chunks_total": 5,
+        "new_assistant_chunks": 0,
+        "new_user_input": False,
+        "conversation": [{"id": f"1:0:{i}", "role": "assistant", "text": "x" * 900} for i in range(20)],
+        "latest_user_utterance": {
+            "id": "1:0:0", "at": "2026-09-09T22:25:30-04:00", "role": "user",
+            "text": "An outburst.", "prosody": "loud -> medium; mid pitch",
+        },
+        "runtime": {"microphone": "on", "audio_recording": True, "b1_hard_brake": True, "fan_hz": 60},
+        "search_receipts": [{"query": "test", "results": [{"title": "a", "url": "https://example.test"}]}],
+        "recent_brain2": "A fan shifted pitch.",
+    }))
+    assert evidence["new_assistant_chunks"] == 0
+    assert evidence["new_user_input"] is False
+    assert len(evidence["conversation"]) == 12
+    assert len(evidence["conversation"][0]["text"]) == 400
+    assert evidence["latest_user_utterance"]["prosody"] == "loud -> medium; mid pitch"
+    assert evidence["latest_user_utterance"]["at"] == "2026-09-09T22:25:30-04:00"
+    assert evidence["runtime"] == {"microphone": "on", "audio_recording": True, "b1_hard_brake": True}
+    assert "recent_brain2" not in evidence
+
+
+@pytest.mark.parametrize("value", [None, "not a packet", []])
+def test_brain2_missing_evidence_does_not_claim_runtime_truth(value) -> None:
+    assert "not supplied" in sts_page_server._brain2_evidence_context(value)
+
+
+def test_brain2_invalid_evidence_fields_do_not_become_counts_or_receipts() -> None:
+    evidence = json.loads(sts_page_server._brain2_evidence_context({
+        "new_assistant_chunks": True, "assistant_chunks_total": "twenty-one",
+        "conversation": "wrong", "runtime": [], "search_receipts": [None, {"results": "wrong"}],
+    }))
+    assert evidence["new_assistant_chunks"] is None
+    assert evidence["assistant_chunks_total"] is None
+    assert evidence["conversation"] == []
+    assert evidence["runtime"] == {}
+    assert evidence["search_receipts"][0]["results"] == []
+
+
 def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
     class FakeResponse:
         def raise_for_status(self) -> None:
@@ -233,6 +375,95 @@ def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
     assert result["mouth_text"] == ""
     assert result["revision_candidate"] == "I said it was a joke; thinking about it more, it was a dodge."
     assert result["should_surface"] is False
+
+
+@pytest.fixture
+def brain2_completion(monkeypatch):
+    def complete(content):
+        class FakeResponse:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"choices": [{"message": {"content": content}}]}
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                pass
+
+            def post(self, *_args, **_kwargs):
+                return FakeResponse()
+
+        monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
+        return sts_page_server.mull_second_brain({
+            "conversation": "Operator: Leave that thought there. Robot 790: Agreed.",
+        })
+
+    return complete
+
+
+def test_mull_second_brain_accepts_deliberate_silence(brain2_completion) -> None:
+    result = brain2_completion(json.dumps({
+        "mouth_text": "", "note_for_eric": "", "question": "",
+        "revision_candidate": "", "should_surface": False, "reason": "Nothing new to add.",
+    }))
+    system = result["prompt_debug"]["system"]
+    assert "Zero new assistant chunks means Eric has said nothing new" in system
+    assert "self-generated proposals, never sensor receipts" in system
+    assert "Do not demand receipts for a question, metaphor" in system
+    assert "An active microphone can coexist with text-only speech/prosody" in system
+
+    assert result["status"] == "ok"
+    assert result["should_surface"] is False
+    assert result["reason"] == "Nothing new to add."
+    for field in ("mouth_text", "note_for_eric", "question", "revision_candidate"):
+        assert result[field] == ""
+
+
+@pytest.mark.parametrize("content", [
+    '{ "mouth_text": "", "note_for_eric": "LOOP GUARD: You have exhausted day and silence for over',
+    "LOOP GUARD: Stop repeating the same observation.",
+    "", "{}", "null", "[]",
+    '[{"mouth_text":"Not a top-level object.","should_surface":true}]',
+    'Private analysis {"mouth_text":"Not a clean response.","should_surface":true}',
+    '{"mouth_text":"Say this.","should_surface":true} trailing text',
+    '{"mouth_text":"Do not assume permission."}',
+    '{"mouth_text":"Do not coerce permission.","should_surface":"false"}',
+    '{"mouth_text":"Do not coerce permission.","should_surface":1}',
+    '{"mouth_text":{"note_for_eric":"Private note"},"should_surface":true}',
+    '{"mouth_text":null,"should_surface":false}',
+    '{"mouth_text":"Valid mouth.","note_for_eric":[],"should_surface":true}',
+    '{"reason":"No content fields.","should_surface":false}',
+    '{"mouth_text":"","should_surface":true}',
+])
+def test_mull_second_brain_never_surfaces_invalid_output(brain2_completion, content) -> None:
+    result = brain2_completion(content)
+
+    assert result["status"] == "error"
+    assert result.get("mouth_text", "") == ""
+    assert result.get("should_surface", False) is False
+    assert result["raw_text"] == content.strip()[:1000]
+    assert "prompt_debug" in result
+
+
+@pytest.mark.parametrize("fenced", [False, True])
+def test_mull_second_brain_surfaces_only_the_validated_mouth_field(brain2_completion, fenced) -> None:
+    content = json.dumps({
+        "mouth_text": "A small aside.", "note_for_eric": "Private advisory, not speech.",
+        "question": "", "revision_candidate": "", "should_surface": True, "reason": "New evidence.",
+    })
+    result = brain2_completion(f"```json\n{content}\n```" if fenced else content)
+
+    assert result["status"] == "ok"
+    assert result["mouth_text"] == "A small aside."
+    assert result["note_for_eric"] == "Private advisory, not speech."
+    assert result["should_surface"] is True
 
 
 def test_deliberate_once_runs_one_local_thinking_pass(monkeypatch) -> None:
@@ -462,6 +693,9 @@ def test_sensing_eye_inbox_push_and_poll(tmp_path) -> None:
         {
             "source": "browser_face",
             "filename": "face mirror.jpg",
+            "face_command_seq": 42,
+            "client_id": "test-browser",
+            "client_eye_generation": 3,
             "image_data_url": "data:image/jpeg;base64,ZmFrZSBqcGVn",
             "reason": "self audit",
             "state": {"mood": "suspicious", "mouth": {"shape": "sneer"}},
@@ -476,6 +710,9 @@ def test_sensing_eye_inbox_push_and_poll(tmp_path) -> None:
     assert result["latest_seq"] == pushed["seq"]
     assert result["item"]["source"] == "browser_face"
     assert result["item"]["filename"] == "face-mirror.jpg"
+    assert result["item"]["face_command_seq"] == 42
+    assert result["item"]["client_id"] == "test-browser"
+    assert result["item"]["client_eye_generation"] == 3
     assert result["item"]["state"]["mood"] == "suspicious"
     assert sts_page_server.poll_sensing_eye_inbox(after=int(pushed["seq"]))["item"] is None
     sts_page_server.clear_sensing_eye_inbox(repo_root=tmp_path)
@@ -492,6 +729,7 @@ def test_sensing_eye_inbox_clear_removes_latest_item(tmp_path) -> None:
     latest_path = tmp_path / "logs" / "sensing-eye" / "latest-sensing-eye.jpg"
 
     assert sts_page_server.poll_sensing_eye_inbox(after=0)["item"]["seq"] == pushed["seq"]
+    assert sts_page_server.poll_sensing_eye_inbox(after=0)["item"]["face_command_seq"] == 0
     assert latest_path.exists()
 
     cleared = sts_page_server.clear_sensing_eye_inbox(repo_root=tmp_path)
@@ -503,6 +741,16 @@ def test_sensing_eye_inbox_clear_removes_latest_item(tmp_path) -> None:
     assert not latest_path.exists()
     assert result["status"] == "ok"
     assert result["item"] is None
+
+
+@pytest.mark.parametrize("field", ["face_command_seq", "client_eye_generation"])
+@pytest.mark.parametrize("value", [-1, "4", True, None])
+def test_sensing_eye_inbox_rejects_invalid_origin_counters(tmp_path, field, value) -> None:
+    with pytest.raises(ValueError, match="nonnegative integer"):
+        sts_page_server.push_sensing_eye_image({
+            "image_data_url": "data:image/jpeg;base64,ZmFrZSBqcGVn", field: value,
+        }, repo_root=tmp_path)
+    assert not (tmp_path / "logs").exists()
 
 
 def test_sensing_eye_inbox_poll_reports_cursor_without_replaying_stale_item(tmp_path) -> None:

@@ -50,10 +50,283 @@ test('face launcher uses a compact app window without altering the browser profi
   assert.doesNotMatch(launcher, /--user-data-dir|--disable-web-security/);
 });
 
+function faceWindowContext(href = 'http://127.0.0.1:8790/') {
+  const opened = [];
+  const messages = [];
+  const stored = new Map();
+  const context = loadFunctions([
+    'isLoopbackHost', 'pageHostServiceUrl', 'normalizeUrlString', 'normalizeFaceBaseUrl',
+    'configuredEmbodiments', 'matchingConfiguredEmbodimentKey', 'configuredEmbodimentUrl',
+    'browserFaceControllerActive', 'loadFaceControllerPreference', 'saveFaceControllerPreference',
+    'openBrowserFaceWindow',
+  ], {
+    URL, location: new URL(href), faceUrl: { value: 'http://127.0.0.1:8791/' },
+    runtimeConfig: { embodiments: [] }, browserFaceWindow: null, browserFaceWindowUrl: '',
+    faceControllerStorageKey: 'face',
+    localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
+    events: {}, log: (_, message) => messages.push(message),
+    window: { open: (...args) => {
+      const popup = { closed: false, focused: 0, focus() { this.focused++; } };
+      opened.push({ args, popup });
+      return popup;
+    } },
+  });
+  return { context, opened, messages, stored };
+}
+
+test('Browser Face popup opens once, reuses without reloading/resizing, and reopens after closure', () => {
+  const { context, opened } = faceWindowContext();
+  assert.equal(context.openBrowserFaceWindow({ onlyIfActive: true }), true);
+  assert.equal(opened[0].args[0], 'http://127.0.0.1:8791/');
+  assert.equal(opened[0].args[1], 'robot790-browser-face');
+  assert.match(opened[0].args[2], /popup=yes,width=280,height=420,resizable=yes/);
+  assert.equal(context.openBrowserFaceWindow({ onlyIfActive: true }), true);
+  assert.equal(opened.length, 1);
+  assert.equal(opened[0].popup.focused, 2);
+  assert.equal(opened[0].popup.location, undefined);
+  opened[0].popup.closed = true;
+  context.openBrowserFaceWindow();
+  assert.equal(opened.length, 2);
+  assert.equal(opened[1].args[1], opened[0].args[1]);
+});
+
+test('hardware targets do not auto-open Browser Face; the explicit opener leaves the target unchanged', () => {
+  const { context, opened } = faceWindowContext();
+  context.faceUrl.value = 'http://esp32-eyes.local/';
+  context.runtimeConfig.embodiments = runtimeConfig.embodiments;
+  assert.equal(context.openBrowserFaceWindow({ onlyIfActive: true }), false);
+  assert.equal(opened.length, 0);
+  assert.equal(context.openBrowserFaceWindow(), true);
+  assert.equal(opened[0].args[0], 'http://127.0.0.1:8791/');
+  assert.equal(context.faceUrl.value, 'http://esp32-eyes.local/');
+});
+
+for (const href of ['http://localhost:8790/', 'http://192.168.0.150:8790/', 'https://power:8790/']) {
+  test(`${href}: Browser Face popup works before config arrives with the matching host/protocol`, () => {
+    const { context, opened } = faceWindowContext(href);
+    assert.equal(context.openBrowserFaceWindow({ onlyIfActive: true }), true);
+    assert.equal(opened[0].args[0], context.pageHostServiceUrl('http://127.0.0.1:8791/'));
+  });
+}
+
+test('Browser Face popup failures are nonfatal and give a concrete recovery action', () => {
+  const { context, messages } = faceWindowContext();
+  context.window.open = () => null;
+  assert.equal(context.openBrowserFaceWindow(), false);
+  assert.match(messages.at(-1), /Allow popups for STS.*Open Browser Face.*Embodiment/);
+  context.window.open = () => { throw new Error('denied'); };
+  assert.equal(context.openBrowserFaceWindow(), false);
+  assert.match(messages.at(-1), /could not open: denied/);
+});
+
+test('Browser Face only opens web URLs and follows a changed browser controller URL', () => {
+  const { context, opened } = faceWindowContext();
+  context.openBrowserFaceWindow();
+  context.faceUrl.value = 'http://localhost:8791/';
+  context.openBrowserFaceWindow();
+  assert.equal(opened.length, 1);
+  assert.equal(opened[0].popup.location, 'http://localhost:8791/');
+  context.runtimeConfig.embodiments = [{ key: 'browser_face', face_url: 'javascript:alert(1)' }];
+  context.faceUrl.value = 'javascript:alert(1)';
+  assert.equal(context.openBrowserFaceWindow(), false);
+  assert.equal(opened.length, 1);
+});
+
+test('face selection survives refresh without opening a window; malformed preferences are ignored', () => {
+  const { context, stored, opened } = faceWindowContext();
+  context.faceUrl.value = 'http://esp32-eyes.local/';
+  context.saveFaceControllerPreference();
+  context.faceUrl.value = 'http://127.0.0.1:8791/';
+  context.loadFaceControllerPreference();
+  assert.equal(context.faceUrl.value, 'http://esp32-eyes.local/');
+  assert.equal(opened.length, 0);
+  for (const bad of ['javascript:alert(1)', 'not a URL']) {
+    stored.set('face', bad);
+    context.loadFaceControllerPreference();
+    assert.equal(context.faceUrl.value, 'http://esp32-eyes.local/');
+  }
+  context.localStorage.getItem = () => { throw new Error('storage disabled'); };
+  context.localStorage.setItem = () => { throw new Error('storage disabled'); };
+  assert.doesNotThrow(() => context.loadFaceControllerPreference());
+  assert.doesNotThrow(() => context.saveFaceControllerPreference());
+});
+
+test('successful tool-based body switches persist; failed device probes preserve the previous choice', async () => {
+  const { context, stored } = faceWindowContext();
+  Object.assign(context, {
+    runtimeConfig: structuredClone(runtimeConfig), currentEmbodimentKey: 'browser_face',
+    getFaceJson: async () => ({ firmware: 'test' }),
+    syncEmbodimentSelect: () => {}, updateVisionButtons: () => {}, updateSessionTools: () => {},
+    realtimeConnected: () => false,
+  });
+  loadFunctions(['setEmbodiment'], context);
+  await context.setEmbodiment({ embodiment: 'external_eyes' });
+  assert.equal(stored.get('face'), 'http://esp32-eyes.local/');
+  context.getFaceJson = async () => { throw new Error('offline'); };
+  await assert.rejects(context.setEmbodiment({ embodiment: 's3_face' }), /offline/);
+  assert.equal(stored.get('face'), 'http://esp32-eyes.local/');
+  assert.equal(context.faceUrl.value, 'http://esp32-eyes.local/');
+});
+
+test('restored hardware profile is the current embodiment in the prompt, not the Browser Face default', () => {
+  const { context } = faceWindowContext();
+  Object.assign(context, {
+    runtimeConfig, currentEmbodimentKey: 'external_eyes', defaultBodyTrajectory: 'body',
+    embodimentAliasHint: () => '',
+  });
+  context.faceUrl.value = 'http://esp32-eyes.local/';
+  loadFunctions(['formatEmbodimentForInstructions'], context);
+  const current = context.formatEmbodimentForInstructions().split('Configured embodiments')[0];
+  assert.match(current, /Your current embodiment is External eyes and mask face/);
+  assert.doesNotMatch(current, /current embodiment is the Browser Face/);
+});
+
+for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFilename', 'startContinuityEric']) {
+  test(`${name}: popup opens before any asynchronous connection work`, () => {
+    let opened = 0;
+    const context = loadFunctions([name], {
+      ws: null, continuitySaveBusy: false, currentContinuityScrubMode: () => 'full',
+      realtimeConnected: () => false, saveFaceControllerPreference: () => {},
+      openBrowserFaceWindow: options => {
+        assert.equal(options.onlyIfActive, true);
+        opened++;
+      },
+      setState: () => {}, setConnectionButtonsDisabled: () => {}, updateSaveAndHaltButton: () => {},
+      ensureRuntimeConfigLoaded: () => new Promise(() => {}),
+      fetchContinuitySessionMetadata: () => new Promise(() => {}),
+      loadLatestContinuitySession: () => new Promise(() => {}),
+    });
+    context[name]();
+    assert.equal(opened, 1);
+  });
+}
+
 test('the shipped page scripts compile', () => {
   const scripts = Array.from(page.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/g), match => match[1]);
   assert.ok(scripts.length > 0);
   scripts.forEach((source, index) => new vm.Script(source, { filename: `sts-inline-${index}.js` }));
+});
+
+test('session prompts lead with identity and creature vocabulary before mode or memory context', () => {
+  const prompt = fs.readFileSync(path.join(__dirname, '../prompts/robot-790-realtime-system.md'), 'utf8');
+  assert.doesNotMatch(page, /emptyContextSessionEnabled|configOnlySessionInstructions|emptyContextStartedAt/);
+
+  const normalStart = page.indexOf('function buildSessionInstructions(');
+  const normalEnd = page.indexOf('\n    function loadedWorldContextActive()', normalStart);
+  const normalSource = page.slice(normalStart, normalEnd);
+  assert.ok(normalSource.indexOf('baseInstructions.identity') < normalSource.indexOf('formatCreatureForInstructions()'));
+  assert.ok(normalSource.indexOf('formatCreatureForInstructions()') < normalSource.indexOf('formatMemoryForInstructions()'));
+
+  for (const heading of [
+    '## Conversation discipline',
+    '## Runtime truth and staged scenes',
+    '## Tools, controls, and recurring work',
+    '## Body and face',
+    '## Memory, notes, and sensing',
+  ]) {
+    assert.ok(prompt.includes(heading), `Missing prompt section: ${heading}`);
+  }
+});
+
+test('fresh and resumed sessions share privacy rules without a startup persona', () => {
+  const context = loadFunctions([
+    'brain2AdvisoryProtocolInstructions', 'formatBrain2ForInstructions',
+    'buildSessionInstructions',
+  ], {
+    firstContactModeEnabled: () => false,
+    performanceModeEnabled: () => false,
+    baseSessionInstructionSections: () => ({ identity: 'IDENTITY', operating: 'OPERATING RULES' }),
+    formatCreatureForInstructions: () => 'CREATURE',
+    formatMemoryForInstructions: () => 'OLD BROWSER FACTS',
+    formatLoadedNotesForInstructions: () => 'CORE MEMORY',
+    formatSensingTextForInstructions: () => 'OLD SENSING',
+    formatRecentSearchContextForInstructions: () => 'OLD SEARCH',
+    formatAloneStateForInstructions: () => 'OLD ALONE STATE',
+    formatEmbodimentForInstructions: () => 'BODY',
+    formatRuntimeWatchForInstructions: () => 'LIVE ROUTINES',
+    formatRuntimeStateForInstructions: () => 'LIVE RUNTIME',
+    formatRuntimeBehaviorRulesForInstructions: () => 'RUNTIME RULES',
+    wonderSearchPolicyText: () => 'SEARCH RULES',
+    formatBrain2AdvisoryContent: () => '',
+    performancePrivacyInstructions: () => 'PERFORMANCE PRIVACY',
+  });
+  const fresh = context.buildSessionInstructions();
+  context.formatLoadedNotesForInstructions = () => 'CORE MEMORY\nOLD SESSION NOTES';
+  const resumed = context.buildSessionInstructions();
+  for (const instructions of [fresh, resumed]) {
+    assert.ok(instructions.startsWith('IDENTITY\n\nCREATURE'));
+    assert.match(instructions, /not words you have spoken/);
+    assert.match(instructions, /Never reproduce its markers/);
+    assert.match(instructions, /not your identity or a topic to announce/);
+    assert.match(instructions, /RUNTIME RULES/);
+    assert.ok(instructions.endsWith('OPERATING RULES'));
+    assert.doesNotMatch(instructions, /Empty Connect|config-only startup/);
+  }
+  assert.match(fresh, /CORE MEMORY/);
+  assert.match(fresh, /LIVE RUNTIME/);
+  assert.doesNotMatch(fresh, /OLD SESSION NOTES/);
+  assert.equal(resumed, fresh.replace('CORE MEMORY', 'CORE MEMORY\nOLD SESSION NOTES'));
+  assert.match(resumed, /OLD SESSION NOTES/);
+  context.formatBrain2AdvisoryContent = () => 'FRESH PRIVATE ADVISORY';
+  assert.match(context.buildSessionInstructions(), /FRESH PRIVATE ADVISORY/);
+  assert.doesNotMatch(context.buildSessionInstructions({ includeBrain2Advisory: false }), /FRESH PRIVATE ADVISORY/);
+  assert.match(context.buildSessionInstructions({ includeBrain2Advisory: false }), /Never reproduce its markers/);
+  context.performanceModeEnabled = () => true;
+  const performance = context.buildSessionInstructions();
+  assert.match(performance, /Never reproduce its markers/);
+  assert.doesNotMatch(performance, /FRESH PRIVATE ADVISORY|OLD SESSION NOTES/);
+});
+
+test('idle prompts no longer teach an Empty Connect persona', () => {
+  assert.doesNotMatch(page, /Empty Connect mode is active|during Empty Connect mode|An Empty Connect idle process/);
+  const start = page.indexOf('async function triggerIdlePonder(');
+  const end = page.indexOf('\n    }\n', start);
+  assert.match(page.slice(start, end), /brain2AdvisoryProtocolInstructions\(\)/);
+});
+
+test('Brain2 advisories accept the current session notes, questions, and revisions', () => {
+  const context = loadFunctions(['formatBrain2AdvisoryContent'], {
+    brain2RevisionCandidates: [],
+    brain2QuestionCandidates: [],
+    brain2NoteCandidates: [],
+    brain2LoopPressureInstruction: () => 'LOOP PRESSURE',
+  });
+  assert.equal(context.formatBrain2AdvisoryContent(), '');
+  context.brain2NoteCandidates.push({ at: 100, text: 'NEW NOTE' });
+  context.brain2QuestionCandidates.push({ at: 101, text: 'NEW QUESTION' });
+  context.brain2RevisionCandidates.push({ at: 102, text: 'NEW REVISION' });
+  const advisory = context.formatBrain2AdvisoryContent();
+  assert.doesNotMatch(advisory, /OLD|UNDATED/);
+  assert.match(advisory, /NEW NOTE/);
+  assert.match(advisory, /NEW QUESTION/);
+  assert.match(advisory, /NEW REVISION/);
+});
+
+test('base prompt sections split the identity anchor from operating rules', () => {
+  const context = loadFunctions(['baseSessionInstructionSections'], {
+    runtimeConfig: { base_session_prompt: 'IDENTITY ANCHOR\n\n## Operating rules\nRULE' },
+    baseSessionInstructions: [],
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(context.baseSessionInstructionSections())), {
+    identity: 'IDENTITY ANCHOR',
+    operating: '## Operating rules\nRULE',
+  });
+});
+
+test('runtime behavior rules do not duplicate rules already in the base prompt', () => {
+  const duplicate = "Do not reflexively repeat the user's phrasing back as confirmation.";
+  const context = loadFunctions([
+    'normalizePromptRule', 'baseSessionInstructionsText', 'formatRuntimeBehaviorRulesForInstructions',
+  ], {
+    runtimeConfig: {
+      base_session_prompt: `Identity\n\n${duplicate}`,
+      session_behavior_rules: [duplicate, 'Preserve this runtime-only rule.'],
+    },
+    baseSessionInstructions: [],
+  });
+  const result = context.formatRuntimeBehaviorRulesForInstructions();
+  assert.doesNotMatch(result, /reflexively repeat/);
+  assert.match(result, /Preserve this runtime-only rule/);
 });
 
 test('local file tools can write source without granting execution', () => {
@@ -260,6 +533,8 @@ test('a Brain2 advisory is deduplicated per realtime socket and stays out of the
   assert.equal(sent[0].type, 'conversation.item.create');
   assert.equal(sent[0].item.role, 'assistant');
   assert.match(sent[0].item.content[0].text, /^\[B2 advisory\]/);
+  assert.match(sent[0].item.content[0].text, /Private runtime context, not spoken dialogue/);
+  assert.match(sent[0].item.content[0].text, /\[End B2 advisory\]$/);
   assert.equal(ledger.length, 1);
   assert.deepEqual(brain2Log[0], ['advisory queued', 'test']);
 });
@@ -277,7 +552,7 @@ test('Connect Previous follows the prior timestamped continuity session', () => 
   assert.match(page, /const previous = continuitySessions\[currentIndex \+ 1\]/);
   assert.match(page, /\/api\/continuity\/save/);
   assert.match(page, /async function loadPreviousContinuityContext\(sessionFilename\)/);
-  assert.match(page, /await confirmContinuitySessionLoad\(sessionMetadata, \{ source: "Connect Previous" \}\)/);
+  assert.match(page, /return loadFreshContinuityContext\(\{\s*source: "Connect Previous"/);
   assert.match(page, /preflightComplete: true/);
   assert.match(page, /continuityParentForCurrentRun/);
 });
@@ -556,6 +831,7 @@ test('continuity restore replaces stale browser pins with the selected session r
     'resolveContinuitySessionForLoad',
     'continuityLoadReferenceIssues',
     'confirmContinuitySessionLoad',
+    'ericMemoryNoteContexts',
     'setLoadedNoteContextsForContinuity',
     'loadCurrentContinuitySession',
   ], {
@@ -658,12 +934,12 @@ test('continuity load preflight happens before fresh or previous context is clea
   const freshStart = page.indexOf('    async function loadFreshContinuityContext(');
   const freshEnd = page.indexOf('\n    }\n', freshStart);
   const fresh = page.slice(freshStart, freshEnd);
-  assert.ok(fresh.indexOf('await confirmContinuitySessionLoad') < fresh.indexOf('clearHotConversationState'));
+  assert.ok(fresh.indexOf('await confirmContinuitySessionLoad') < fresh.indexOf('resetSessionContextForConnection'));
 
   const previousStart = page.indexOf('    async function loadPreviousContinuityContext(');
   const previousEnd = page.indexOf('\n    }\n', previousStart);
   const previous = page.slice(previousStart, previousEnd);
-  assert.ok(previous.indexOf('await confirmContinuitySessionLoad') < previous.indexOf('clearHotConversationState'));
+  assert.match(previous, /return loadFreshContinuityContext\(/);
 });
 
 test('stale async tool results cannot write into a newer realtime session', async () => {
@@ -703,12 +979,108 @@ test('stale async tool results cannot write into a newer realtime session', asyn
   assert.equal(context.pendingToolCalls, 1);
   context.ws = newSocket;
   context.realtimeSessionGeneration = 2;
+  // A new session already has two of its own calls outstanding.
+  context.pendingToolCalls = 2;
   resolveTool({ status: 'ok' });
   await pending;
 
-  assert.equal(context.pendingToolCalls, 0);
+  assert.equal(context.pendingToolCalls, 2);
   assert.deepEqual(oldSocket.sends, []);
   assert.deepEqual(newSocket.sends, []);
+});
+
+test('a Brain2 mouth request finishing after reconnect cannot speak or repopulate advisories', async () => {
+  let finishDisplay;
+  const spoken = [];
+  const outputs = [];
+  const context = loadFunctions(['surfaceBrain2MouthText', 'brain2LoopGuardText', 'triggerBrain2Mull'], {
+    realtimeSessionGeneration: 1, ws: {}, brain2InFlight: false,
+    brain2EvidenceGeneration: 0, lastUserTurnActivityAt: 0, brain2HeadlinesDue: () => false,
+    brain2NoteCandidates: [], brain2QuestionCandidates: [], brain2RevisionCandidates: [],
+    userSpeechActive: false, brain2BlockedReason: () => '',
+    updateBrain2Controls: () => {}, updateLanePressure: () => {},
+    bumpBrain2Counter: () => {}, logBrain2: () => {},
+    scheduleBrain2Mull: () => {}, maybeArmIdleHardBrakeFromBrain2Note: () => {},
+    brain2EchoesRecentVoice: () => false, brain2EchoesRecentBrain2: () => false,
+    brain2MouthCanSurface: () => true, brain2MouthBrainEnabled: () => true,
+    brain2UserPresentButBusy: () => false,
+    requestBrain2Mull: async () => ({ mouth_text: 'OLD VOICE', note_for_eric: 'OLD NOTE' }),
+    setMouthText: () => new Promise(resolve => { finishDisplay = resolve; }),
+    speakBrain2Monitor: text => spoken.push(text),
+    rememberBrain2Output: (...args) => outputs.push(args),
+  });
+  const pending = context.triggerBrain2Mull();
+  await new Promise(setImmediate);
+  assert.equal(typeof finishDisplay, 'function');
+  context.realtimeSessionGeneration = 2;
+  context.ws = {};
+  context.brain2InFlight = true;
+  finishDisplay();
+  await pending;
+  assert.deepEqual(spoken, []);
+  assert.deepEqual(outputs, []);
+  assert.equal(context.brain2NoteCandidates.length, 0);
+  assert.equal(context.brain2InFlight, true);
+
+  // The same path must still work normally inside its own session.
+  context.setMouthText = async () => {};
+  await context.triggerBrain2Mull();
+  assert.deepEqual(spoken, ['OLD VOICE']);
+  assert.deepEqual(outputs, [['mouth', 'OLD VOICE'], ['note', 'OLD NOTE']]);
+  assert.equal(context.brain2NoteCandidates[0].text, 'OLD NOTE');
+  assert.equal(context.brain2InFlight, false);
+});
+
+test('a late Brain2 HTTP response cannot add the old prompt to a new session ledger', async () => {
+  const prompts = [];
+  let finishRequest;
+  const context = loadFunctions(['requestBrain2Mull'], {
+    realtimeSessionGeneration: 1, ws: {}, URL,
+    brain2EvidenceGeneration: 0, userSpeechActive: false,
+    brain2EvidenceSnapshot: () => ({ evidence_generation: 0, user_key: 'old', fingerprint: 'old' }),
+    location: { href: 'http://127.0.0.1:8790/' }, lastInputVoiceShape: '',
+    currentBrain2PersonFocus: () => 5, brain2ConversationContext: () => 'OLD CONVERSATION',
+    brain2RecentIdleContext: () => '', brain2RecentOutputContext: () => '',
+    rememberBrain2Prompt: entry => prompts.push(entry),
+    fetch: () => new Promise(resolve => { finishRequest = resolve; }),
+  });
+  const pending = context.requestBrain2Mull();
+  context.realtimeSessionGeneration = 2;
+  context.ws = {};
+  finishRequest({ ok: true, json: async () => ({ status: 'ok', note_for_eric: 'OLD NOTE' }) });
+  await pending;
+  assert.deepEqual(prompts, []);
+});
+
+test('a deliberate quiet Brain2 result succeeds without speech, advisories, or failure backoff', async () => {
+  const counters = [];
+  const outputs = [];
+  const context = loadFunctions(['brain2LoopGuardText', 'triggerBrain2Mull'], {
+    realtimeSessionGeneration: 1, ws: {}, brain2InFlight: false,
+    brain2EvidenceGeneration: 0, lastUserTurnActivityAt: 0, brain2HeadlinesDue: () => false,
+    brain2FailureStreak: 1, brain2BackoffUntil: 0, lastBrain2MullAt: 0,
+    brain2NoteCandidates: [], brain2QuestionCandidates: [], brain2RevisionCandidates: [],
+    userSpeechActive: false, brain2BlockedReason: () => '',
+    updateBrain2Controls: () => {}, updateLanePressure: () => {}, logBrain2: () => {},
+    bumpBrain2Counter: name => counters.push(name),
+    surfaceBrain2MouthText: text => outputs.push(text),
+    rememberBrain2Output: (...args) => outputs.push(args),
+    requestBrain2Mull: async () => ({
+      status: 'ok', mouth_text: '', note_for_eric: '', question: '',
+      revision_candidate: '', should_surface: false, reason: 'Nothing new to add.',
+    }),
+  });
+
+  await context.triggerBrain2Mull();
+  assert.deepEqual(counters, ['fired']);
+  assert.deepEqual(outputs, []);
+  assert.equal(context.brain2NoteCandidates.length, 0);
+  assert.equal(context.brain2QuestionCandidates.length, 0);
+  assert.equal(context.brain2RevisionCandidates.length, 0);
+  assert.equal(context.brain2FailureStreak, 0);
+  assert.equal(context.brain2BackoffUntil, 0);
+  assert.equal(context.brain2InFlight, false);
+  assert.ok(context.lastBrain2MullAt > 0);
 });
 
 // Exercise the shipped functions without starting a socket, microphone, or device.
@@ -807,13 +1179,462 @@ function memoryContext() {
     contextPanel: { open: false },
     baseStartupNoteFilenames: ['core/erics_memories.txt'],
     loadEricMemoriesEnabled: () => true,
-    emptyContextSessionEnabled: () => false,
     loadedNoteRestoreEnvelope: () => '',
     loadedNotePromptContent: item => item.content,
     clippedLoadedNotePromptContent: (_, content) => content,
     noteFilenameIsCurrentContinuitySession: () => false,
   });
 }
+
+function connectionContext() {
+  const context = memoryContext();
+  const noop = () => {};
+  Object.assign(context, {
+    realtimeSessionGeneration: 1,
+    brain2EvidenceGeneration: 0, brain2LastEvidence: null,
+    currentContinuitySessionFilename: 'sessions/old.txt',
+    continuityParentForCurrentRun: 'sessions/old.txt',
+    conversationLines: ['OLD CONVERSATION'], conversationLineMetadata: [],
+    brain2NoteCandidates: [{ text: 'OLD ADVICE' }],
+    recentAssistantOutputs: ['OLD REPLY'], searchContextReceipts: [{ query: 'OLD SEARCH' }],
+    visionImageUrl: 'old-image', visionImageName: 'old.png', visionImageStaged: true,
+    brain2Log: {}, contextPanel: { open: false }, visionHint: {},
+    clearInputDraft: noop, resetConversationReengageCycle: noop,
+    clearBrain2Timer: noop, clearBrain2SurfaceTimer: noop, clearAssistantFinishTimer: noop,
+    cancelBrain2MonitorSpeech: noop,
+    clearUserTurnPending: noop, renderConversation: noop, renderEvents: noop,
+    updateBrain2Controls: noop, renderAllLogPopouts: noop, updateSessionTools: noop,
+    recordUiEvent: noop, renderMemory: noop, formatProsodyForTranscript: () => '',
+    realtimeConnected: () => false, firstContactModeEnabled: () => false,
+    performanceModeEnabled: () => false,
+    resolveContinuitySessionForLoad: async () => ({ status: 'ok', session_filename: 'sessions/resume.txt' }),
+    confirmContinuitySessionLoad: async () => {},
+    clearSensingEyeState: () => {
+      context.visionImageUrl = ''; context.visionImageName = ''; context.visionImageStaged = false;
+      context.sensingTextName = ''; context.sensingTextContent = '';
+    },
+    readTextFile: async ({ filename, pin = true }) => {
+      const note = { status: 'ok', filename, content: filename.startsWith('core/') ? 'CORE MEMORY' : 'NEW NOTE' };
+      if (pin) context.rememberLoadedNoteContext(note);
+      return note;
+    },
+    loadCurrentContinuitySession: async ({ sessionMetadata }) => {
+      context.currentContinuitySessionFilename = sessionMetadata.session_filename;
+      context.continuityParentForCurrentRun = sessionMetadata.session_filename;
+      await context.readTextFile({ filename: sessionMetadata.session_filename });
+      return sessionMetadata;
+    },
+    visionCameraActive: () => false, browserFaceControllerActive: () => true,
+    idleToolAllowedNames: new Set(['searchTools', 'sensingEyeHistoryTools']),
+    embodimentTools: () => [{ name: 'embodiment' }],
+    currentSensingEyeHistoryItem: () => null, addSensingEyeVisualNoteTranscriptMarker: noop,
+    sensingEyeSalienceInstruction: () => '', updateVisionButtons: noop, scheduleIdlePonder: noop,
+    send: noop, brain2LoopPressureInstruction: () => '',
+    location: { origin: 'http://localhost:8790' }, runtimeConfig: {},
+    currentModelStamp: () => 'test', micRuntimeLabel: () => 'off', runtimeWatchReport: () => ({}),
+    currentUiSettingsSnapshot: () => ({ tools: { enabled_tools: context.enabledToolList().map(item => item.name) } }),
+    safeLoadMemoryFacts: () => [{ name: 'saved_fact', fact: 'AVAILABLE AS IN ANY SESSION' }],
+    currentContinuityScrubMode: () => 'raw', continuityScrubModeLabel: () => 'Full .txt',
+    sensingInputLabel: () => context.visionImageName || 'none',
+    textTail: (text, size) => String(text || '').slice(-size),
+    arrayTail: (items, size) => items.slice(-size), recordingSnapshotPaneText: () => '',
+    sessionClock: {}, laneIndicatorLabel: {}, recordingIndicatorLabel: {}, toolIndicatorLabel: {},
+    maxSearchContextResults: 4, brain2Counters: {}, pendingToolCalls: 0, toolFollowupNeeded: false,
+    brain2HeadlineLastAttemptAt: 0,
+  });
+  for (const name of ['llmVoiceTools', 'llmUiControlTools', 'llmBodySensorTools', 'llmTools',
+    'llmChassisTools', 'llmMemoryTools', 'llmWebSearchTools', 'llmWebPageTools', 'llmImageTools',
+    'llmCastMediaTools', 'llmSmartHomeTools', 'llmNoteFileTools']) context[name] = { checked: true };
+  for (const name of ['deliberationTools', 'voiceTools', 'uiControlTools', 'runtimeWatchTools',
+    'bodySensorTools', 'faceTools', 'chassisTools', 'memoryTools', 'searchTools', 'webPageTools',
+    'imageTools', 'sensingEyeTools', 'sensingEyeHistoryTools', 'browserFaceSensingEyeTools',
+    'castMediaTools', 'smartHomeTools', 'noteFileTools']) context[name] = [{ name }];
+  return loadFunctions([
+    'clearHotConversationState', 'resetSessionContextForConnection', 'loadCoreNoteContext',
+    'loadFreshContinuityContext', 'loadPreviousContinuityContext', 'listPinnedNotes',
+    'currentPromptContextModeKey', 'realtimeContextModeLabel', 'currentPromptContextModeLabel',
+    'conversationDisplayTextRange', 'conversationLineMetadataFor', 'conversationLineTimeLabel',
+    'conversationTranscriptSinceCleanConnect', 'conversationTimeSpanSnapshot',
+    'enabledToolList', 'idleEnabledToolList', 'stageVisionImage', 'formatBrain2AdvisoryContent',
+    'buildEricContinuityState', 'currentRunSetupSnapshot',
+  ], context);
+}
+
+function sensingContext() {
+  const noop = () => {};
+  const element = () => ({ value: '', textContent: '', removeAttribute: noop, classList: { add: noop, remove: noop } });
+  const context = loadFunctions([
+    'requireCurrentSensingEyeLoad', 'clearSensingEyeState', 'setVisionImageFromDrawable',
+    'setSensingTextContent', 'prepareVisionImage', 'prepareSensingText',
+    'applySensingEyeInboxItem', 'pollSensingEyeInbox', 'selectSensingEyeImage',
+  ], {
+    sensingEyeGeneration: 1, sensingEyeClientId: 'this-browser',
+    sensingEyeInboxClearInFlight: false, sensingEyeInboxLastSeq: 0,
+    sensingEyeInboxIgnoreSeqThrough: 0, sensingEyeFaceCommandIgnoreSeqThrough: 0,
+    handledSensingEyeInboxSeqs: new Set(), sensingEyeInboxPollInFlight: false,
+    visionImageUrl: 'OLD IMAGE', visionImageName: 'old.jpg', visionImageStaged: true,
+    sensingTextContent: 'OLD TEXT', sensingTextName: 'old.txt',
+    sensingEyeImageHistory: [{ id: 'saved-image' }], sensingEyeTextHistory: [{ id: 'saved-text' }],
+    visionFile: element(), visionPreview: element(), visionDrop: element(), visionHint: element(),
+    contextPanel: { open: false }, window: {}, location: { href: 'http://localhost:8790/' }, URL,
+    document: { createElement: () => ({ getContext: () => ({ fillRect: noop, drawImage: noop }), toDataURL: () => 'NEW IMAGE' }) },
+    visionMaxEdgePx: 1024, visionJpegQuality: 0.9, maxSensingTextChars: 2000,
+    audioRecordingActive: () => false, approximateTextTokens: text => text.length / 4,
+    sensingInputLabel: () => 'old input', sensingEyeMemoryContext: () => ({}),
+    filenameFromPath: text => text, loadImage: async () => ({ width: 10, height: 10 }),
+    clearSensingEyeInboxOnServer: async () => ({ latest_seq: 10 }), clearBrowserFaceCaptureQueue: async () => null,
+    saveSensingEyeVisualNote: async () => ({}), saveSensingEyeTextNote: async () => ({}),
+    rememberSensingEyeImage: item => item, rememberSensingEyeText: item => item,
+    updateVisionButtons: noop, updateSessionTools: noop, log: noop, events: {}, recordUiEvent: noop,
+    addSensingEyeVisualNoteTranscriptMarker: noop, stageVisionImage: noop,
+    rememberSensingEyeSessionAsset: noop, rolloverAudioRecordingForVisualChange: noop,
+    scheduleIdlePonder: noop, scheduleSensingEyeInboxPoll: noop,
+  });
+  return context;
+}
+
+for (const coreNotesOnly of [true, false]) {
+  test(`connection (${coreNotesOnly ? 'core' : 'resume'}) waits for the real eye clear and preserves saved eye history`, async () => {
+    const context = connectionContext();
+    const eye = sensingContext();
+    Object.assign(context, eye);
+    let finishClear;
+    context.clearSensingEyeInboxOnServer = () => new Promise(resolve => { finishClear = resolve; });
+    loadFunctions(['clearSensingEyeState'], context);
+    const pending = context.loadFreshContinuityContext({ coreNotesOnly });
+    await new Promise(setImmediate);
+    assert.equal(context.visionImageUrl, '');
+    assert.equal(context.sensingTextContent, '');
+    assert.equal(context.sensingEyeInboxClearInFlight, true);
+    assert.equal(context.loadedNoteContexts.length, 0);
+    finishClear({ latest_seq: 10 });
+    await pending;
+    assert.equal(context.sensingEyeGeneration, 2);
+    assert.equal(context.sensingEyeInboxClearInFlight, false);
+    assert.equal(context.visionImageStaged, false);
+    assert.equal(context.sensingEyeImageHistory[0].id, 'saved-image');
+    assert.equal(context.sensingEyeTextHistory[0].id, 'saved-text');
+    assert.ok(context.loadedNoteContexts.length > 0);
+  });
+}
+
+test('a failed startup eye clear aborts continuity loading', async () => {
+  const context = connectionContext();
+  Object.assign(context, sensingContext());
+  loadFunctions(['clearSensingEyeState'], context);
+  context.clearSensingEyeInboxOnServer = async () => { throw Error('offline'); };
+  await assert.rejects(context.loadFreshContinuityContext({ coreNotesOnly: true }), /Retry Connect/);
+  assert.equal(context.loadedNoteContexts.length, 0);
+  assert.equal(context.visionImageUrl, '');
+});
+
+for (const kind of ['image', 'text']) {
+  test(`a ${kind} save finishing after an eye clear cannot reload old content`, async () => {
+    const context = sensingContext();
+    let finishSave;
+    const save = () => new Promise(resolve => { finishSave = resolve; });
+    context.saveSensingEyeVisualNote = save;
+    context.saveSensingEyeTextNote = save;
+    const pending = kind === 'image'
+      ? context.setVisionImageFromDrawable({ width: 10, height: 10 }, 'late.jpg')
+      : context.setSensingTextContent('LATE TEXT', 'late.txt');
+    const rejected = assert.rejects(pending, /Sensing-eye load canceled/);
+    await context.clearSensingEyeState({ source: 'session_connect' });
+    finishSave({ saved_url: '/old.jpg' });
+    await rejected;
+    assert.equal(context.visionImageUrl, '');
+    assert.equal(context.sensingTextContent, '');
+    assert.equal(context.visionImageStaged, false);
+
+    // Input deliberately supplied after the clear still works normally.
+    if (kind === 'image') {
+      await context.setVisionImageFromDrawable({ width: 10, height: 10 }, 'fresh.jpg', { saveToFilesystem: false });
+      assert.equal(context.visionImageName, 'fresh.jpg');
+    } else {
+      await context.setSensingTextContent('FRESH TEXT', 'fresh.txt', { saveToFilesystem: false });
+      assert.equal(context.sensingTextContent, 'FRESH TEXT');
+    }
+  });
+}
+
+test('an inbox image decoding during a clear cannot refill the eye', async () => {
+  const context = sensingContext();
+  let finishDecode;
+  context.loadImage = () => new Promise(resolve => { finishDecode = resolve; });
+  const pending = context.applySensingEyeInboxItem({ seq: 5, image_data_url: 'OLD' });
+  await context.clearSensingEyeState();
+  finishDecode({ width: 10, height: 10 });
+  assert.equal(await pending, false);
+  assert.equal(context.visionImageUrl, '');
+});
+
+test('an inbox poll started before a clear cannot apply its late response', async () => {
+  const context = sensingContext();
+  let finishFetch;
+  context.fetchSensingEyeInboxItem = () => new Promise(resolve => { finishFetch = resolve; });
+  const pending = context.pollSensingEyeInbox();
+  await context.clearSensingEyeState();
+  finishFetch({ seq: 50, image_data_url: 'OLD' });
+  await pending;
+  assert.equal(context.visionImageUrl, '');
+});
+
+test('late mirror commands and old local uploads are ignored even with a new inbox sequence', async () => {
+  const context = sensingContext();
+  await context.clearSensingEyeState();
+  context.sensingEyeFaceCommandIgnoreSeqThrough = 10;
+  for (const receipt of [
+    { face_command_seq: 9 },
+    { client_id: 'this-browser', client_eye_generation: 1 },
+  ]) {
+    assert.equal(await context.applySensingEyeInboxItem({ seq: 50, image_data_url: 'OLD', ...receipt }), false);
+    assert.equal(context.visionImageUrl, '');
+  }
+  assert.equal(await context.applySensingEyeInboxItem({ seq: 51, face_command_seq: 11, image_data_url: 'NEW' }), true);
+  assert.equal(context.visionImageUrl, 'NEW IMAGE');
+});
+
+test('Browser Face carries a queued capture sequence, while a manual mirror has no old command', async () => {
+  const payloads = [];
+  const context = loadFunctions(['captureFaceToEye'], {
+    URL, normalizedStsUrl: () => 'http://localhost:8790/', state: {}, timestampLabel: () => 'now',
+    browserFaceSnapshot: () => ({ dataUrl: 'IMAGE', width: 10, height: 10 }), setCaptureStatus: () => {},
+    fetch: async (_url, options) => {
+      payloads.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({ status: 'ok' }) };
+    },
+  }, facePage);
+  await context.captureFaceToEye({ commandSeq: 17 });
+  await context.captureFaceToEye();
+  assert.equal(payloads[0].face_command_seq, 17);
+  assert.equal(payloads[1].face_command_seq, 0);
+  assert.match(facePage, /reason: command.reason[^\n]*\n\s*commandSeq: seq/);
+});
+
+test('a local upload keeps its original eye generation and cannot attach its late save to the new session', async () => {
+  const context = sensingContext();
+  let finish;
+  let payload;
+  const assets = [];
+  context.rememberSensingEyeSessionAsset = name => assets.push(name);
+  context.fetch = async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return { ok: true, json: () => new Promise(resolve => { finish = resolve; }) };
+  };
+  loadFunctions(['saveSensingEyeVisualNote'], context);
+  const pending = context.saveSensingEyeVisualNote({ dataUrl: 'OLD IMAGE', name: 'old.jpg' });
+  await new Promise(setImmediate);
+  await context.clearSensingEyeState();
+  finish({ seq: 11, saved_filename: 'old.jpg' });
+  await pending;
+  assert.equal(payload.client_id, 'this-browser');
+  assert.equal(payload.client_eye_generation, 1);
+  assert.equal(context.sensingEyeGeneration, 2);
+  assert.deepEqual(assets, []);
+});
+
+test('file reads and explicit memory recall cannot carry old input across a clear', async () => {
+  for (const kind of ['image', 'text', 'recall']) {
+    const context = sensingContext();
+    let finish;
+    const deferred = () => new Promise(resolve => { finish = resolve; });
+    context.fileToDataUrl = deferred;
+    context.listSensingEyeImages = deferred;
+    context.isSensingTextFile = () => true;
+    const pending = kind === 'image' ? context.prepareVisionImage({ type: 'image/jpeg', name: 'old.jpg' })
+      : kind === 'text' ? context.prepareSensingText({ name: 'old.txt', text: deferred })
+        : context.selectSensingEyeImage();
+    const rejected = assert.rejects(pending, /Sensing-eye load canceled/);
+    await context.clearSensingEyeState();
+    finish(kind === 'recall' ? { images: [] } : 'OLD CONTENT');
+    await rejected;
+    assert.equal(context.visionImageUrl, '');
+    assert.equal(context.sensingTextContent, '');
+  }
+});
+
+test('runtime prompt distinguishes observed browser state, preferences, and unverified devices', () => {
+  let recording = false;
+  let attached = [];
+  const context = loadFunctions(['formatRuntimeStateForInstructions', 'formatRuntimeWatchForInstructions', 'castPlaybackContextLine'], {
+    formatLabGoalForInstructions: () => '', micRuntimeLabel: () => 'off', ericAudioRuntimeLabel: () => 'on',
+    continuityScrubModeLabel: () => 'Full', continuityScrubModeStatusText: () => '',
+    visionCameraActive: () => false, sensingEyeSalienceLabel: () => '7', sensingEyeSalienceStatusText: () => '',
+    sensingEyeImageHistoryContextLine: () => '', visionImageUrl: '', sensingTextContent: '',
+    audioRecordingActive: () => recording, autoAudioRecordEnabled: () => true,
+    runtimeWatchLabel: () => 'none', castPlaybackActive: false, wonderSearchPolicyText: () => '',
+    smartHomeTools: [{ name: 'home_action' }], enabledToolList: () => attached,
+  });
+  let prompt = context.formatRuntimeStateForInstructions();
+  assert.match(prompt, /snapshot at prompt assembly/);
+  assert.match(prompt, /Current sensing-eye text is absent/);
+  assert.match(prompt, /eye is empty right now/);
+  assert.doesNotMatch(prompt, /Temporary sensing|Cast playback is inactive|Smart-home tools are enabled/);
+  assert.match(prompt, /recorder is not recording; auto-record on microphone start is enabled/);
+  assert.match(prompt, /no active playback tracked/);
+  assert.match(prompt, /Smart-home tools are not attached/);
+  recording = true;
+  attached = [{ name: 'home_action' }];
+  context.sensingTextContent = 'NEW TEXT';
+  context.sensingTextName = 'new.txt';
+  prompt = context.formatRuntimeStateForInstructions();
+  assert.match(prompt, /recorder is recording/);
+  assert.match(prompt, /Current sensing-eye text is present \(new.txt\)/);
+  assert.doesNotMatch(prompt, /eye is empty right now/);
+  assert.match(prompt, /Smart-home tools are attached to this model request/);
+});
+
+for (const coreNotesOnly of [true, false]) {
+  test(`${coreNotesOnly ? 'core-note' : 'restored'} connection uses the common reset without changing capabilities`, async () => {
+    const context = connectionContext();
+    context.loadedNoteContexts = [{ filename: 'old-extra.txt', content: 'OLD' }];
+    const tools = JSON.stringify(context.enabledToolList());
+    const idleTools = JSON.stringify(context.idleEnabledToolList());
+    await context.loadFreshContinuityContext({ coreNotesOnly });
+    const expected = [...(coreNotesOnly ? [] : ['sessions/resume.txt']), 'core/erics_memories.txt'];
+    assert.deepEqual(Array.from(context.listPinnedNotes().files), expected);
+    assert.equal(context.currentPromptContextModeKey(), 'normal');
+    assert.equal(context.conversationTranscriptSinceCleanConnect(), '');
+    assert.equal(context.brain2NoteCandidates.length, 0);
+    assert.equal(context.recentAssistantOutputs.length, 0);
+    assert.equal(context.searchContextReceipts.length, 0);
+    assert.equal(context.visionImageUrl, '');
+    assert.equal(context.realtimeSessionGeneration, 2);
+    assert.equal(JSON.stringify(context.enabledToolList()), tools);
+    assert.equal(JSON.stringify(context.idleEnabledToolList()), idleTools);
+    assert.equal(context.continuityParentForCurrentRun, coreNotesOnly ? '' : 'sessions/resume.txt');
+    assert.deepEqual(Array.from(context.currentRunSetupSnapshot().startup_context.startup_notes), expected);
+  });
+}
+
+test('a core-note connection can pin notes, stage images, receive Brain2 and save all new context', async () => {
+  const context = connectionContext();
+  context.resolveContinuitySessionForLoad = async () => { throw Error('Must not restore history'); };
+  await context.loadFreshContinuityContext({ coreNotesOnly: true });
+  await context.readTextFile({ filename: 'new-note.txt' });
+  context.realtimeConnected = () => true;
+  context.visionImageUrl = 'data:image/png;base64,new';
+  context.visionImageName = 'new.png';
+  const sent = [];
+  context.send = event => sent.push(event);
+  context.stageVisionImage();
+  assert.equal(sent[0].item.content[1].image_url, context.visionImageUrl);
+  assert.equal(context.visionImageStaged, true);
+  context.brain2NoteCandidates.push({ text: 'NEW ADVICE', at: Date.now() });
+  assert.match(context.formatBrain2AdvisoryContent(), /NEW ADVICE/);
+  context.searchContextReceipts.push({ query: 'NEW SEARCH', results: [] });
+  context.conversationLines.push('[1:00:00 PM] You: NEW CONVERSATION');
+  const state = context.buildEricContinuityState();
+  assert.equal(state.context_mode.key, 'normal');
+  assert.match(state.conversation.transcript, /NEW CONVERSATION/);
+  assert.doesNotMatch(state.conversation.transcript, /OLD/);
+  assert.equal(state.loaded_notes.length, 2);
+  assert.equal(state.brain2_state.notes_for_eric[0].text, 'NEW ADVICE');
+  assert.equal(state.tool_and_search_state.search_receipts[0].query, 'NEW SEARCH');
+  assert.equal(state.sensing.image_name, 'new.png');
+  assert.equal(state.browser_memory_facts.length, 1);
+});
+
+test('a canceled restore leaves the old pins and transcript untouched', async () => {
+  const context = connectionContext();
+  context.loadedNoteContexts = [{ filename: 'old.txt', content: 'OLD' }];
+  context.confirmContinuitySessionLoad = async () => { throw Error('Canceled'); };
+  await assert.rejects(context.loadFreshContinuityContext(), /Canceled/);
+  assert.equal(context.conversationLines[0], 'OLD CONVERSATION');
+  assert.equal(context.loadedNoteContexts[0].filename, 'old.txt');
+  assert.equal(context.realtimeSessionGeneration, 1);
+});
+
+for (const coreEnabled of [true, false]) {
+  test(`the real restore keeps the core preference (${coreEnabled}) when saved pins omit it`, async () => {
+    const context = connectionContext();
+    context.loadEricMemoriesEnabled = () => coreEnabled;
+    loadFunctions(['setLoadedNoteContextsForContinuity', 'loadCurrentContinuitySession'], context);
+    await context.loadFreshContinuityContext({
+      sessionMetadata: {
+        status: 'ok', session_filename: 'sessions/resume.txt', resume_form: 'raw',
+        pinned_notes: [{ filename: 'research/example.txt', status: 'ok', current_status: 'match' }],
+      },
+    });
+    assert.deepEqual(Array.from(context.listPinnedNotes().files), [
+      'sessions/resume.txt', 'research/example.txt', ...(coreEnabled ? ['core/erics_memories.txt'] : []),
+    ]);
+  });
+}
+
+test('a new connection resets unfinished tool follow-up state', async () => {
+  const context = connectionContext();
+  Object.assign(context, {
+    pendingToolCalls: 2, toolFollowupNeeded: true, responseDoneAfterTool: true,
+    toolFollowupExactText: 'OLD REPLY', toolFollowupInstructions: 'OLD INSTRUCTIONS',
+  });
+  await context.loadFreshContinuityContext({ coreNotesOnly: true });
+  assert.equal(context.pendingToolCalls, 0);
+  assert.equal(context.toolFollowupNeeded, false);
+  assert.equal(context.responseDoneAfterTool, false);
+  assert.equal(context.toolFollowupExactText, '');
+  assert.equal(context.toolFollowupInstructions, '');
+});
+
+test('core-note loading honors an explicit unchecked core preference and reports read failures', async () => {
+  const context = connectionContext();
+  context.loadEricMemoriesEnabled = () => false;
+  await context.loadFreshContinuityContext({ coreNotesOnly: true });
+  assert.equal(context.listPinnedNotes().files.length, 0);
+  context.loadEricMemoriesEnabled = () => true;
+  context.readTextFile = async () => { throw Error('Core file unavailable'); };
+  await assert.rejects(context.loadFreshContinuityContext({ coreNotesOnly: true }), /Core file unavailable/);
+});
+
+test('missing startup note names the file and the explicit no-core recovery setting', async () => {
+  const context = connectionContext();
+  const failure = Object.assign(new Error('Note file not found.'), { code: 'note_not_found' });
+  context.readTextFile = async () => { throw failure; };
+  await assert.rejects(context.loadFreshContinuityContext({ coreNotesOnly: true }), error => {
+    assert.match(error.message, /Startup note missing: "notes\/core\/erics_memories\.txt"/);
+    assert.match(error.message, /Load Eric memories on refresh/);
+    assert.match(error.message, /Robot Controls > Latest Thread/);
+    assert.match(error.message, /retry Connect to start without it/);
+    assert.equal(error.filename, 'core/erics_memories.txt');
+    assert.equal(error.cause, failure);
+    return true;
+  });
+  context.loadEricMemoriesEnabled = () => false;
+  await context.loadFreshContinuityContext({ coreNotesOnly: true });
+  assert.equal(context.listPinnedNotes().files.length, 0);
+});
+
+for (const body of [{ error: 'Note file not found.' }, null]) {
+  test(`note read errors include the requested path even with ${body ? 'legacy' : 'non-JSON'} errors`, async () => {
+    const context = loadFunctions(['readTextFile'], {
+      URL, location: { href: 'http://localhost:8790/' },
+      fetch: async () => ({
+        ok: false, status: 404, statusText: 'Not Found',
+        json: async () => { if (!body) throw Error('Not JSON'); return body; },
+      }),
+    });
+    await assert.rejects(context.readTextFile({ filename: 'core/erics_memories.txt' }), error => {
+      assert.match(error.message, /Could not read note "core\/erics_memories\.txt"/);
+      assert.equal(error.filename, 'core/erics_memories.txt');
+      assert.equal(error.code, 'note_not_found');
+      return true;
+    });
+  });
+}
+
+test('successful note reads preserve optional pinning', async () => {
+  const note = { status: 'ok', filename: 'core/erics_memories.txt', content: 'CORE MEMORY' };
+  const pinned = [];
+  const context = loadFunctions(['readTextFile'], {
+    URL, location: { href: 'http://localhost:8790/' },
+    fetch: async () => ({ ok: true, json: async () => note }),
+    log: () => {}, events: {}, rememberLoadedNoteContext: item => pinned.push(item),
+  });
+  assert.equal(await context.readTextFile({ filename: note.filename, pin: false }), note);
+  assert.equal(pinned.length, 0);
+  await context.readTextFile({ filename: note.filename });
+  assert.deepEqual(pinned, [note]);
+});
 
 test('long continuity notes cannot displace enabled core memory or reorder the notes', () => {
   const context = memoryContext();
@@ -870,18 +1691,45 @@ test('loading more than eight notes cannot evict enabled core memory', () => {
   assert.ok(result.includes('CORE_MEMORY_SENTINEL'));
 });
 
-test('empty connect retains only enabled core memory', () => {
+test('all current pins are usable, including notes added after a core-note start', () => {
   const context = memoryContext();
   context.loadedNoteContexts = [
     { filename: 'ordinary.txt', content: 'ordinary' },
     { filename: 'core/erics_memories.txt', content: 'core' },
   ];
-  context.emptyContextSessionEnabled = () => true;
   assert.deepEqual(Array.from(context.loadedNoteContextsForCurrentPrompt(), note => note.filename), [
-    'core/erics_memories.txt',
+    'ordinary.txt', 'core/erics_memories.txt',
   ]);
-  context.loadEricMemoriesEnabled = () => false;
-  assert.equal(context.loadedNoteContextsForCurrentPrompt().length, 0);
+});
+
+test('session saves include the entire current transcript', () => {
+  const context = loadFunctions([
+    'conversationDisplayTextRange', 'conversationLineMetadataFor', 'conversationLineTimeLabel',
+    'conversationTranscriptSinceCleanConnect', 'conversationTimeSpanSnapshot',
+  ], {
+    conversationLines: [
+      '[3:52:09 PM] You: Fresh empty turn.',
+      '[3:52:14 PM] Robot 790: Fresh reply.',
+    ],
+    conversationLineMetadata: [
+      { local: 'fresh user' },
+      { local: 'fresh robot' },
+    ],
+    conversationProsodyByIndex: {},
+    formatProsodyForTranscript: () => '',
+    currentContinuitySessionFilename: '',
+  });
+
+  assert.equal(context.conversationTranscriptSinceCleanConnect(), [
+    '[3:52:09 PM] You: Fresh empty turn.',
+    '[3:52:14 PM] Robot 790: Fresh reply.',
+  ].join('\n'));
+  assert.deepEqual(JSON.parse(JSON.stringify(context.conversationTimeSpanSnapshot())), {
+    line_count: 2,
+    first_line_at: 'fresh user',
+    last_line_at: 'fresh robot',
+    continuity_session: 'none',
+  });
 });
 
 test('disabled core memory does not reserve a loaded-note slot', () => {

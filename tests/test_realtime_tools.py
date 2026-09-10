@@ -515,6 +515,19 @@ def test_text_file_tools_use_instance_notes_folder(tmp_path, monkeypatch) -> Non
     assert listed == {"status": "ok", "tool": "list_text_files", "files": ["session_summary.txt"]}
 
 
+def test_text_file_tool_names_the_missing_note(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+
+    result = realtime_tools._read_text_file({"path": "core/erics_memories.txt"})
+
+    assert result == {
+        "status": "error",
+        "code": "note_not_found",
+        "filename": "core/erics_memories.txt",
+        "error": 'Note file not found: "core/erics_memories.txt".',
+    }
+
+
 def test_text_file_tools_write_python_source_without_execution(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("ROBOT_790_INSTANCE_PATH", str(tmp_path))
     source = "print('spirograph ready')\n"

@@ -16,6 +16,7 @@ param(
     [string] $TtsDtype = "bfloat16",
     [string] $Speaker = "Eric",
     [string] $TtsInstruct = "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
+    [switch] $CaptureLlmWire,
     [string] $PromptPath = "",
     [string[]] $ExtraArgs = @()
 )
@@ -31,6 +32,12 @@ if ($TextMaxTokens -gt 0) {
     $env:ROBOT_790_TEXT_MAX_TOKENS = [string] $TextMaxTokens
 } else {
     Remove-Item Env:\ROBOT_790_TEXT_MAX_TOKENS -ErrorAction SilentlyContinue
+}
+
+if ($CaptureLlmWire) {
+    $env:ROBOT_790_CAPTURE_LLM_WIRE = "1"
+} else {
+    Remove-Item Env:\ROBOT_790_CAPTURE_LLM_WIRE -ErrorAction SilentlyContinue
 }
 
 $Launcher = Join-Path $PSScriptRoot "start_realtime_server.ps1"
@@ -98,4 +105,7 @@ Write-Host "TTS model: $TtsModel"
 Write-Host "TTS precision: $TtsDtype"
 Write-Host "TTS instruct: $TtsInstruct"
 Write-Host "Prompt: $PromptPath"
+if ($CaptureLlmWire) {
+    Write-Host "LLM wire capture: logs/live/llm-wire"
+}
 & $Launcher -HostAddress $HostAddress -Port $Port -NumPipelines $NumPipelines -StreamBatchSentences $StreamBatchSentences -ExtraArgs $qwenArgs

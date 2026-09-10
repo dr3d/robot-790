@@ -1112,7 +1112,12 @@ def _read_text_file(arguments: dict[str, object]) -> dict[str, object]:
     try:
         note = read_note_file(os.getenv("ROBOT_790_INSTANCE_PATH"), filename)
     except FileNotFoundError:
-        return {"status": "error", "error": "Note file not found"}
+        return {
+            "status": "error",
+            "code": "note_not_found",
+            "filename": filename,
+            "error": f'Note file not found: "{filename}".',
+        }
     except (OSError, ValueError) as exc:
         return {"status": "error", "error": str(exc)}
 

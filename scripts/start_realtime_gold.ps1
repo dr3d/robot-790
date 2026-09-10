@@ -1,3 +1,7 @@
+param(
+    [switch] $CaptureLlmWire
+)
+
 $ErrorActionPreference = "Stop"
 
 $Launcher = Join-Path $PSScriptRoot "start_realtime_eric_qwen3.ps1"
@@ -26,12 +30,18 @@ try {
     throw "Could not preload LM Studio with only $($Model): $($_.Exception.Message)"
 }
 
-& $Launcher `
-    -LlmModel $Model `
-    -ReasoningEffort "none" `
-    -NumPipelines 1 `
-    -StreamBatchSentences 1 `
-    -AudioMaxTokens 64 `
-    -TtsDtype "bfloat16" `
-    -Speaker "Eric" `
-    -TtsInstruct "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation."
+$launcherArgs = @{
+    LlmModel = $Model
+    ReasoningEffort = "none"
+    NumPipelines = 1
+    StreamBatchSentences = 1
+    AudioMaxTokens = 64
+    TtsDtype = "bfloat16"
+    Speaker = "Eric"
+    TtsInstruct = "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation."
+}
+if ($CaptureLlmWire) {
+    $launcherArgs.CaptureLlmWire = $true
+}
+
+& $Launcher @launcherArgs
