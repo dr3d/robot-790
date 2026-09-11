@@ -5,6 +5,25 @@ import pytest
 from robot_790d import sts_page_server
 
 
+def test_audio_interrupt_config_is_bounded_and_rejects_non_numeric_values() -> None:
+    assert sts_page_server._runtime_audio_interrupt({
+        "minimum_active_ms": 0, "maximum_gap_ms": float("nan"), "minimum_rms_ratio": True,
+    }) == {"minimum_active_ms": 100.0, "maximum_gap_ms": 100.0, "minimum_rms_ratio": 0.12}
+    assert sts_page_server._runtime_audio_interrupt({"minimum_active_ms": 10**1000})["minimum_active_ms"] == 200
+
+
+def test_brain2_schema_constrains_headline_urls_and_structural_fields() -> None:
+    schema = sts_page_server._brain2_response_format([{"url": "https://example.test/story"}], [])
+    fields = schema["json_schema"]["schema"]["properties"]
+    assert fields["headline_url"]["enum"] == ["", "https://example.test/story"]
+    assert fields["should_surface"] == {"type": "boolean"}
+    assert fields["note_for_eric"] == {"type": "string"}
+    body = sts_page_server._brain2_response_format(None, ["inspect"])["json_schema"]["schema"]
+    assert body["properties"]["body_beat"]["enum"] == ["", "inspect"]
+    assert body["properties"]["steering"]["properties"]["loop"] == {"type": "boolean"}
+    assert set(body["required"]) == set(body["properties"])
+
+
 @pytest.mark.parametrize("query", ["filename=core%2Ferics_memories.txt", "name=core%2Ferics_memories.txt"])
 def test_note_read_names_the_missing_file(tmp_path, monkeypatch, query) -> None:
     monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
@@ -33,6 +52,40 @@ def test_note_read_still_rejects_paths_outside_notes(tmp_path, monkeypatch) -> N
     assert replies[0][0] == 400
     assert "inside the notes folder" in replies[0][1]["error"]
     assert "note_not_found" not in replies[0][1].values()
+
+
+def test_runtime_config_exposes_idle_timing_from_file(tmp_path) -> None:
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "runtime.json").write_text(json.dumps({"idle_timing": {
+        "attention_enabled": False, "attention_start_s": 8, "attention_fade_s": 90,
+        "attention_warm_s": 20, "post_user_quiet_s": 5, "minimum_gap_s": 40,
+        "drift_base_s": 180, "drift_step_s": 15, "drift_floor_s": 30,
+    }}), encoding="utf-8")
+    timing = sts_page_server.runtime_config(repo_root=tmp_path)["idle_timing"]
+    assert timing == {"attention_enabled": False, "attention_start_s": 8, "attention_fade_s": 90,
+                      "attention_warm_s": 20, "post_user_quiet_s": 5, "minimum_gap_s": 40,
+                      "drift_base_s": 180, "drift_step_s": 15, "drift_floor_s": 30}
+
+
+@pytest.mark.parametrize("value", [None, [], "wrong shape", {}])
+def test_runtime_idle_timing_defaults(value) -> None:
+    timing = sts_page_server._runtime_idle_timing(value)
+    assert timing["attention_enabled"] is True
+    assert timing["attention_start_s"] == 12
+    assert timing["attention_fade_s"] == 180
+    assert timing["minimum_gap_s"] == 90
+
+
+def test_runtime_idle_timing_rejects_non_numbers_and_bounds_unsafe_values() -> None:
+    timing = sts_page_server._runtime_idle_timing({
+        "attention_enabled": "false", "attention_start_s": True,
+        "attention_fade_s": -4, "attention_warm_s": 40,
+        "post_user_quiet_s": float("nan"), "minimum_gap_s": float("inf"),
+        "drift_base_s": 10000, "drift_step_s": -2, "drift_floor_s": 10 ** 1000,
+    })
+    assert timing == {"attention_enabled": True, "attention_start_s": 12, "attention_fade_s": 1,
+                      "attention_warm_s": 1, "post_user_quiet_s": 12, "minimum_gap_s": 90,
+                      "drift_base_s": 3600, "drift_step_s": 0, "drift_floor_s": 45}
 
 
 def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
@@ -87,6 +140,15 @@ def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
             "toolbox": ["big eyes", "mouth captions"],
         }
     ]
+
+
+def test_runtime_config_serves_body_capability_and_compact_idle_facts() -> None:
+    bodies = {body["key"]: body for body in sts_page_server.runtime_config()["embodiments"]}
+    assert bodies["reachy_mini"]["mouth_text"] is False
+    assert "no camera capture" in bodies["reachy_mini"]["idle_context"]
+    assert "no mouth display" in bodies["reachy_mini"]["idle_context"]
+    for key in ("browser_face", "s3_face", "external_eyes"):
+        assert bodies[key]["mouth_text"] is True
 
 
 def test_runtime_config_reads_base_session_prompt(tmp_path) -> None:
@@ -218,6 +280,44 @@ def test_mull_second_brain_requires_recent_conversation() -> None:
         raise AssertionError("Expected short Brain 2 context to fail")
 
 
+def test_brain2_steering_is_structured_and_bound_to_evidence(brain2_completion):
+    steering = {"evidence_id": "1:0:9", "loop": True, "unsupported_claim": True,
+                "next": "new_subject", "topic": "room sounds"}
+    result = brain2_completion(json.dumps({
+        "mouth_text": "", "note_for_eric": "Move to a fresh outward question.",
+        "should_surface": False, "steering": steering,
+    }), evidence={"last_assistant_output_id": "1:0:9", "new_assistant_chunks": 1})
+    assert result["steering"] == {"status": "ok", **steering}
+    assert "LOOP GUARD" not in result["note_for_eric"]
+    assert "Conversational attention is a controller timing state" in result["prompt_debug"]["system"]
+    assert "He need not prefix them with 'I imagine'" in result["prompt_debug"]["system"]
+    assert (
+        "A recurring motif that develops the joke, scene, or thought is not a stuck loop"
+        in result["prompt_debug"]["system"]
+    )
+
+
+@pytest.mark.parametrize("change", [
+    {"evidence_id": "invented"}, {"loop": "true"}, {"unsupported_claim": 1},
+    {"next": "move_motors"}, {"next": []}, {"topic": ""},
+])
+def test_brain2_rejects_invalid_steering_without_prose_guessing(change):
+    steering = {"evidence_id": "a1", "loop": False, "unsupported_claim": False,
+                "next": "continue", "topic": "a thought", **change}
+    result = sts_page_server._validated_brain2_steering(steering, {"last_assistant_output_id": "a1"})
+    assert result == {"status": "invalid"}
+    assert sts_page_server._validated_brain2_steering(None, {}) == {"status": "unavailable"}
+
+
+def test_brain2_cannot_escalate_repetition_without_new_assistant_evidence():
+    steering = {"evidence_id": "a1", "loop": True, "unsupported_claim": False,
+                "next": "new_subject", "topic": "same subject"}
+    result = sts_page_server._validated_brain2_steering(
+        steering, {"last_assistant_output_id": "a1", "new_assistant_chunks": 0}
+    )
+    assert result == {"status": "stale"}
+
+
 @pytest.mark.parametrize("selection", ["selected", "pass", "invented", "invalid"])
 def test_brain2_headline_pass_is_source_bound_private_and_needs_no_conversation(monkeypatch, selection):
     calls = []
@@ -297,7 +397,8 @@ def test_brain2_evidence_bounds_and_attributes_runtime_and_speech() -> None:
             "id": "1:0:0", "at": "2026-09-09T22:25:30-04:00", "role": "user",
             "text": "An outburst.", "prosody": "loud -> medium; mid pitch",
         },
-        "runtime": {"microphone": "on", "audio_recording": True, "b1_hard_brake": True, "fan_hz": 60},
+        "runtime": {"microphone": "on", "audio_recording": True, "b1_hard_brake": True,
+                    "conversational_attention": "engaged", "fan_hz": 60},
         "search_receipts": [{"query": "test", "results": [{"title": "a", "url": "https://example.test"}]}],
         "recent_brain2": "A fan shifted pitch.",
     }))
@@ -307,7 +408,8 @@ def test_brain2_evidence_bounds_and_attributes_runtime_and_speech() -> None:
     assert len(evidence["conversation"][0]["text"]) == 400
     assert evidence["latest_user_utterance"]["prosody"] == "loud -> medium; mid pitch"
     assert evidence["latest_user_utterance"]["at"] == "2026-09-09T22:25:30-04:00"
-    assert evidence["runtime"] == {"microphone": "on", "audio_recording": True, "b1_hard_brake": True}
+    assert evidence["runtime"] == {"microphone": "on", "audio_recording": True, "b1_hard_brake": True,
+                                   "conversational_attention": "engaged"}
     assert "recent_brain2" not in evidence
 
 
@@ -379,7 +481,7 @@ def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:
 
 @pytest.fixture
 def brain2_completion(monkeypatch):
-    def complete(content):
+    def complete(content, **payload):
         class FakeResponse:
             def raise_for_status(self):
                 pass
@@ -403,9 +505,50 @@ def brain2_completion(monkeypatch):
         monkeypatch.setattr(sts_page_server.httpx, "Client", FakeClient)
         return sts_page_server.mull_second_brain({
             "conversation": "Operator: Leave that thought there. Robot 790: Agreed.",
+            **payload,
         })
 
     return complete
+
+
+@pytest.mark.parametrize("key,beat,expected", [
+    ("reachy_mini", "thoughtful", "thoughtful"),
+    ("reachy_mini", "wake", ""),
+    ("reachy_mini", "robot_scan", ""),
+    ("browser_face", "thoughtful", ""),
+])
+def test_brain2_body_cues_are_scoped_and_allowlisted(brain2_completion, key, beat, expected) -> None:
+    result = brain2_completion(json.dumps({
+        "mouth_text": "", "should_surface": False, "body_beat": beat,
+    }), body={"key": key})
+    assert result["status"] == "ok"
+    assert result["body_beat"] == expected
+    assert ("currently inhabits Reachy Mini" in result["prompt_debug"]["system"]) == (key == "reachy_mini")
+
+
+def test_brain2_cue_without_text_is_valid_and_does_not_request_a_mouth(brain2_completion) -> None:
+    result = brain2_completion(json.dumps({
+        "body_beat": "slow_smile", "mouth_text": "Not a mouth display", "should_surface": True,
+    }), body={"key": "reachy_mini"})
+    assert result["status"] == "ok"
+    assert result["body_beat"] == "slow_smile"
+    assert result["mouth_text"] == ""
+    assert result["body_choice"] == {"status": "selected", "proposed": "slow_smile"}
+    prompt = result["prompt_debug"]
+    assert "Task: consider one optional body_beat" in prompt["user"]
+    assert "produce one mouth-display" not in prompt["user"]
+    assert "without waiting for an operator command" in prompt["system"]
+    assert "B1's isolated idle replies cannot call movement tools" in prompt["system"]
+    assert "robot_scan is motor-only" in prompt["system"]
+    assert "He may still imagine or use metaphors" in prompt["system"]
+
+
+@pytest.mark.parametrize("beat,status", [("", "abstained"), ("wake", "rejected"), (123, "invalid output")])
+def test_brain2_body_non_choices_are_auditable(brain2_completion, beat, status) -> None:
+    result = brain2_completion(json.dumps({"body_beat": beat, "should_surface": False}),
+                               body={"key": "reachy_mini"})
+    assert result["body_choice"]["status"] == status
+    assert not result.get("body_beat")
 
 
 def test_mull_second_brain_accepts_deliberate_silence(brain2_completion) -> None:

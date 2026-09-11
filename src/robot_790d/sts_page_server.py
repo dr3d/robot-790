@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 import mimetypes
 import os
 import re
@@ -23,7 +24,6 @@ import httpx
 
 from robot_790d.brain_status import get_brain_status, get_gpu_status
 from robot_790d.continuity import (
-    archive_continuity_session,
     current_continuity_session,
     list_continuity_sessions,
     rewind_continuity_session,
@@ -34,6 +34,7 @@ from robot_790d.headlines import read_headlines
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.note_files import list_note_files, read_note_file, write_note_file
+from robot_790d.session_preparation import session_preparer
 from robot_790d.smart_home import control_smart_home_device
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
@@ -154,6 +155,12 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/continuity/save":
             self._handle_continuity_save()
+            return
+        if parsed.path == "/api/continuity/prepare":
+            self._handle_continuity_prepare()
+            return
+        if parsed.path == "/api/continuity/preparation/activity":
+            self._handle_preparation_activity()
             return
         if parsed.path == "/api/continuity/previous":
             self._handle_continuity_previous()
@@ -351,6 +358,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
     def _handle_continuity_sessions(self) -> None:
         try:
             result = list_continuity_sessions()
+            for item in result["sessions"]:
+                item["preparation"] = session_preparer.status(str(item["filename"]))
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
@@ -374,7 +383,35 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
+        # Saving is authoritative; a preparation failure must never block Disconnect.
+        try:
+            result["preparation"] = session_preparer.enqueue(str(result["session_filename"]))
+        except Exception as exc:
+            result["preparation"] = {"state": "failed", "error": str(exc)}
         self._send_json(200, result)
+
+    def _handle_continuity_prepare(self) -> None:
+        try:
+            payload = self._read_json_body()
+            result = session_preparer.enqueue(str(payload.get("session_filename") or ""))
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(202, {"status": "ok", "preparation": result})
+
+    def _handle_preparation_activity(self) -> None:
+        try:
+            payload = self._read_json_body()
+            if not isinstance(payload.get("active"), bool):
+                raise ValueError("active must be a boolean.")
+            ready = session_preparer.activity(str(payload.get("client_id") or ""), payload["active"])
+        except ValueError as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200 if ready else 409, {
+            "status": "ok" if ready else "error",
+            "error": "" if ready else "Summary is still stopping; retry Connect shortly.",
+        })
 
     def _handle_continuity_previous(self) -> None:
         try:
@@ -399,7 +436,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
     def _handle_continuity_archive(self) -> None:
         try:
             payload = self._read_json_body()
-            result = archive_continuity_session(str(payload.get("session_filename") or payload.get("filename") or ""))
+            result = session_preparer.archive(str(payload.get("session_filename") or payload.get("filename") or ""))
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
@@ -899,6 +936,9 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "body_trajectory": body_trajectory,
         "embodiment_profile_rule": _runtime_string(payload, "embodiment_profile_rule", ""),
         "idle_level12_cooldown_s": idle_level12_cooldown_s,
+        "idle_timing": _runtime_idle_timing(payload.get("idle_timing")),
+        "audio_interrupt": _runtime_audio_interrupt(payload.get("audio_interrupt")),
+        "runtime_revision": "20260911-pm-repairs",
         "creature": creature,
         "creature_source": creature_source,
         "base_session_prompt": _load_base_session_prompt(root),
@@ -915,6 +955,44 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
     if warnings:
         result["config_warning"] = " ".join(warnings)
     return result
+
+
+def _runtime_audio_interrupt(value: object) -> dict[str, float]:
+    config = value if isinstance(value, dict) else {}
+    result = {}
+    for key, (default, low, high) in {
+        "minimum_active_ms": (200.0, 100.0, 1000.0),
+        "maximum_gap_ms": (100.0, 0.0, 250.0),
+        "minimum_rms_ratio": (0.12, 0.02, 1.0),
+    }.items():
+        raw = config.get(key, default)
+        try:
+            number = float(raw) if type(raw) in (int, float) else default
+        except OverflowError:
+            number = default
+        result[key] = max(low, min(high, number)) if math.isfinite(number) else default
+    return result
+
+
+def _runtime_idle_timing(value: object) -> dict[str, object]:
+    config = value if isinstance(value, dict) else {}
+    enabled = config.get("attention_enabled", True)
+    timings: dict[str, float] = {}
+    defaults = {
+        "attention_start_s": (12.0, 1.0), "attention_fade_s": (180.0, 1.0),
+        "attention_warm_s": (45.0, 0.0), "post_user_quiet_s": (12.0, 0.0),
+        "minimum_gap_s": (90.0, 0.0), "drift_base_s": (270.0, 1.0),
+        "drift_step_s": (22.5, 0.0), "drift_floor_s": (45.0, 1.0),
+    }
+    for key, (fallback, minimum) in defaults.items():
+        item = config.get(key, fallback)
+        try:
+            seconds = float(item) if type(item) in (int, float) else fallback
+        except OverflowError:
+            seconds = fallback
+        timings[key] = max(minimum, min(3600.0, seconds)) if math.isfinite(seconds) else fallback
+    timings["attention_warm_s"] = min(timings["attention_warm_s"], timings["attention_fade_s"])
+    return {"attention_enabled": enabled if isinstance(enabled, bool) else True, **timings}
 
 
 def _load_runtime_config_file(repo_root: Path) -> dict[str, object]:
@@ -1079,6 +1157,11 @@ def _runtime_embodiments(value: object) -> list[dict[str, object]]:
         toolbox = _runtime_embodiment_text_list(item.get("toolbox") or item.get("affordances"))
         if personality:
             embodiment["personality"] = personality
+        if isinstance(item.get("mouth_text"), bool):
+            embodiment["mouth_text"] = item["mouth_text"]
+        idle_context = _runtime_embodiment_text(item.get("idle_context"))
+        if idle_context:
+            embodiment["idle_context"] = idle_context
         if toolbox:
             embodiment["toolbox"] = toolbox[:12]
         embodiments.append(embodiment)
@@ -1470,7 +1553,7 @@ def _brain2_evidence_context(value: object) -> str:
         for key, item in runtime.items()
         if key in {
             "microphone", "audio_recording", "sensing_eye_image", "sensing_eye_text",
-            "camera_active", "b1_hard_brake", "b1_hard_brake_reason",
+            "camera_active", "b1_hard_brake", "b1_hard_brake_reason", "conversational_attention",
         }
     } if isinstance(runtime, dict) else {}
     receipts = value.get("search_receipts")
@@ -1510,9 +1593,39 @@ def _brain2_headlines(value: object) -> list[dict[str, str]]:
     return items
 
 
+def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: list[str]) -> dict[str, Any]:
+    properties: dict[str, Any] = {
+        key: {"type": "string"}
+        for key in ("mouth_text", "note_for_eric", "question", "revision_candidate", "reason")
+    }
+    properties["should_surface"] = {"type": "boolean"}
+    if headlines is not None:
+        properties["headline_url"] = {"type": "string", "enum": ["", *dict.fromkeys(item["url"] for item in headlines)]}
+    else:
+        steering = {
+            "evidence_id": {"type": "string"}, "loop": {"type": "boolean"},
+            "unsupported_claim": {"type": "boolean"}, "topic": {"type": "string"},
+            "next": {"type": "string", "enum": ["continue", "new_subject", "ground", "quiet"]},
+        }
+        properties["steering"] = {
+            "type": "object", "properties": steering, "required": list(steering), "additionalProperties": False,
+        }
+        if body_beats:
+            properties["body_beat"] = {"type": "string", "enum": ["", *body_beats]}
+    return {"type": "json_schema", "json_schema": {
+        "name": "brain2_headline" if headlines is not None else "brain2_assessment",
+        "strict": True,
+        "schema": {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False},
+    }}
+
+
 def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
     conversation = re.sub(r"\s+", " ", str(payload.get("conversation") or "")).strip()
     headline_mode = payload.get("mode") == "headlines"
+    body = payload.get("body")
+    body_beats = ("thoughtful", "inspect", "slow_smile", "confused", "focus_lock") if (
+        not headline_mode and isinstance(body, dict) and body.get("key") == "reachy_mini"
+    ) else ()
     headlines = _brain2_headlines(payload.get("headlines")) if headline_mode else []
     if headline_mode and not headlines:
         raise ValueError("Brain 2 needs dated headlines for a headline pass.")
@@ -1580,22 +1693,45 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "a LOOP GUARD from rereading. If B1 is hard-braked, its silence is controller-imposed, not refusal. "
         "Your previous outputs, including held mouth asides and advisories, are self-generated proposals, "
         "never sensor receipts or proof that anything happened. Neither are Eric's unverified descriptions. "
-        "Do not turn a proposed fan-pitch change, sigh, motor rattle, or keyboard sound into an observed fact. "
+        "Do not use playful body descriptions as independent evidence for factual decisions. "
+        "Conversational attention is a controller timing state, not proof the operator is present or absent. "
+        "When engaged, favor curiosity that continues the shared activity with the operator, not only self-talk; as it cools, allow an independent "
+        "interest instead of repeatedly advising Eric to wait for a command. Do not demand a check-in. "
         "Only the supplied runtime fields are current runtime facts; search receipts support only their own "
         "claims. You have no general event log, environmental acoustic analysis, cursor tracker, or direct tools. "
         "An active microphone can coexist with text-only speech/prosody input here; do not claim the mic is off "
         "or no audio is being recorded merely because you cannot inspect continuous audio. "
+        "Raw audio recording and the written conversation transcript are separate: recorder-off does not mean no transcript exists. "
+        "Private steering should help Eric take a next step, not ask him to narrate that a thread is closed or announce compliance. "
         "Do not repeat your own recent Brain 2 observations; either advance the "
         "thought, revise it, or return empty strings. "
-        "If Eric is repeating a metaphor, circling one object, or extending a thought after it has naturally closed, "
-        "and new Eric output actually continues that loop, write note_for_eric starting with 'LOOP GUARD:' "
-        "and tell him exactly what to stop extending and "
-        "what kind of next beat to choose. If Eric promised an ongoing habit but the logs show no tool/action "
+        "Interpret Eric's register in context: banter, theatrical bragging, storytelling, or a factual answer. "
+        "A recurring motif that develops the joke, scene, or thought is not a stuck loop. When the intent is "
+        "ambiguous and no practical decision depends on it, let the play stand. "
+        "If new Eric output repeats an exhausted thought without developing it, set steering.loop true and "
+        "suggest a way forward in note_for_eric. No special prose prefix is needed. "
+        "Prefer an advancing thought, playful variation, or a new outward subject over repeating the same "
+        "thought. No subject category is banned. Quiet is an option, not the default cure. "
+        "If Eric promised an ongoing habit but the logs show no tool/action "
         "receipts for that habit, write note_for_eric starting with 'ROUTINE GAP:' and tell him not to claim "
         "the routine ran until a receipt exists. Do not demand receipts for a question, metaphor, imagined "
         "scene, or poetic body-feel. Preserve associative wandering; correct unsupported factual claims, "
         "not imagination. If nothing relevant changed, return empty strings with should_surface false. "
-        "Return only JSON with keys mouth_text, note_for_eric, question, revision_candidate, should_surface, reason. "
+        "Return only JSON with keys mouth_text, note_for_eric, question, revision_candidate, "
+        "should_surface, reason, steering. "
+        "steering is an object: evidence_id copies last_assistant_output_id from the evidence packet; "
+        "loop and unsupported_claim are JSON booleans; topic is a short stable label for the assessed subject "
+        "(reuse it while the subject remains the same); next is continue, new_subject, ground, or quiet. "
+        "Use unsupported_claim only when Eric presents an unsupported measurement, verified action, or "
+        "factual status the operator could rely on, not for imaginative embodiment. Servo humming, resting "
+        "pitch, bragging about his machinery, and daydreamed room atmosphere during idle can be playful "
+        "self-expression. He need not prefix them with 'I imagine' or add disclaimers. Do not correct or "
+        "squelch that play. A direct factual status answer or a claim that a camera image was captured "
+        "does need supporting evidence. ground means correct that factual claim, not police his character. "
+        "Assess the recent packet, not only its final sentence; evidence_id binds the pass to the latest "
+        "supplied output. A loop can be redirected without declaring its imaginative premise false. "
+        "new_subject asks the controller for another available outward seed; it is not a "
+        "claim that research has already happened. Never treat your assessment as a sensor receipt. "
         "All text fields must be strings, and should_surface must be a JSON boolean. "
         "mouth_text must be 96 characters or less. revision_candidate is empty unless you want Brain 1 to later "
         "publicly take back, correct, or complicate an earlier claim; write it as a compact note such as "
@@ -1604,6 +1740,25 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "Use it only when there is a concrete correction, situational cue, or next move Eric should carry. "
         "It is advice, not a command."
     )
+    if body_beats:
+        system += (
+            " Eric currently inhabits Reachy Mini: a head and two antennas, with no mouth display. "
+            "You may add body_beat, an optional string chosen from thoughtful, inspect, slow_smile, "
+            "confused, focus_lock, or empty. thoughtful is a sideways tilt; inspect is a turn and tilt; "
+            "slow_smile opens the antennas; confused alternates tilts; focus_lock settles attentively. "
+            "Choose at most one occasional nonverbal punctuation for the conversation or a quiet thought. "
+            "During idle, you can suggest a physical beat without waiting for an operator command. "
+            "Do not illustrate every reply, invent events, repeat the last gesture, or use movement to nag. "
+            "Abstain when no gesture adds anything. Put movement suggestions in body_beat, not merely "
+            "in note_for_eric: B1's isolated idle replies cannot call movement tools. "
+            "No angles, motor commands, sleep/wake, or choreography. "
+            "The controller may discard this suggestion if stale or busy; it is not a movement receipt. "
+            "Keep mouth_text empty and should_surface false on this body. Private advisories remain available. "
+            "robot_scan is motor-only: no camera capture, image buffer, or sensing-eye update. "
+            "Bounded angles do not establish desk clearance or collision safety. "
+            "If Eric treats an imagined buffer or scan image as a physical fact, offer a brief factual "
+            "correction instead of developing that premise. He may still imagine or use metaphors."
+        )
     if headline_mode:
         system += (
             " This pass has a different job: privately browse the supplied headlines for one interesting "
@@ -1613,6 +1768,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "Use their publication dates; retrieval time is not the event date. "
             "You may move away from the recent conversation entirely. Do not force a connection to "
             "Eric's body, silence, or the operator. A question can be for Eric to explore himself. "
+            "Prefer an outward question about the story itself over another analogy to Eric's recent preoccupation. "
             "Add the string field headline_url: copy exactly one supplied URL, or use an empty string "
             "if nothing interests you. Put a possible angle in note_for_eric and an optional follow-up "
             "question in question. Keep mouth_text and revision_candidate empty and should_surface false. "
@@ -1636,7 +1792,9 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "Task: choose one fresh headline as a possible new interest, or pass. Return the JSON contract "
             "including headline_url. Do not summarize the whole news list."
             if headline_mode else (
-                "Task: produce one mouth-display thought fragment. If a private note would help Eric's next move, "
+                ("Task: consider one optional body_beat or a private thought; no mouth display is available. "
+                 if body_beats else "Task: consider one optional mouth-display thought fragment. ")
+                + "If a private note would help Eric's next move, "
                 "include it as note_for_eric. If a useful question is forming, include it as question. "
                 "If an earlier claim needs revision, include it as revision_candidate for the speaking brain to "
                 "consider later. "
@@ -1654,8 +1812,9 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             {"role": "user", "content": user},
         ],
         "temperature": 0.55,
-        "max_tokens": 320,
+        "max_tokens": 420,
         "stream": False,
+        "response_format": _brain2_response_format(headlines if headline_mode else None, body_beats),
     }
     if "api.openai.com" not in base_url.lower():
         request["reasoning_effort"] = "none"
@@ -1670,6 +1829,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "stream": request.get("stream"),
             "reasoning_effort": request.get("reasoning_effort"),
             "chat_template_kwargs": request.get("chat_template_kwargs"),
+            "response_format": request.get("response_format"),
         },
     }
 
@@ -1688,6 +1848,12 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
 
     raw_text = _chat_completion_text(data)
     parsed = _parse_second_brain_json(raw_text)
+    proposed_beat = parsed.get("body_beat", "")
+    body_beat = proposed_beat if isinstance(proposed_beat, str) and proposed_beat in body_beats else ""
+    body_choice = {
+        "status": "selected" if body_beat else "rejected" if proposed_beat else "abstained",
+        "proposed": proposed_beat[:80] if isinstance(proposed_beat, str) else "invalid type",
+    } if body_beats else {"status": "unavailable"}
     if headline_mode:
         url = parsed.get("headline_url")
         valid_fields = isinstance(parsed.get("should_surface"), bool) and all(
@@ -1708,7 +1874,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "mouth_text": "", "revision_candidate": "", "should_surface": False,
             "prompt_debug": prompt_debug, "raw_text": raw_text[:1000],
         }
-    content_fields = ("mouth_text", "text", "note_for_eric", "question", "revision_candidate")
+    content_fields = ("mouth_text", "text", "note_for_eric", "question", "revision_candidate", "body_beat")
     # Raw model output may contain private advisories. It is never a speech fallback.
     if (
         not any(field in parsed for field in content_fields)
@@ -1719,21 +1885,25 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "status": "error",
             "tool": "mull_second_brain",
             "error": "Brain 2 returned invalid structured output; nothing was surfaced.",
+            "body_choice": {**body_choice, "status": "invalid output"},
             "mouth_text": "",
             "should_surface": False,
             "prompt_debug": prompt_debug,
             "raw_text": raw_text[:1000],
         }
     mouth_text = _clean_second_brain_text(parsed.get("mouth_text", parsed.get("text", "")), 96)
+    if body_beats:
+        mouth_text = ""
     question = _clean_second_brain_text(parsed.get("question") or "", 140)
     revision_candidate = _clean_second_brain_text(parsed.get("revision_candidate") or "", 240)
     note_for_eric = _clean_second_brain_text(parsed.get("note_for_eric") or "", 280)
     reason = _clean_second_brain_text(parsed.get("reason") or "", 220)
-    if not any((mouth_text, question, revision_candidate, note_for_eric)) and parsed["should_surface"]:
+    if not any((mouth_text, question, revision_candidate, note_for_eric, body_beat)) and parsed["should_surface"]:
         return {
             "status": "error",
             "tool": "mull_second_brain",
             "error": "Brain 2 returned no usable output.",
+            "body_choice": body_choice,
             "prompt_debug": prompt_debug,
             "raw_text": raw_text[:1000],
         }
@@ -1747,11 +1917,37 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "question": question,
         "revision_candidate": revision_candidate,
         "note_for_eric": note_for_eric,
+        "body_beat": body_beat,
+        "body_choice": body_choice,
+        "steering": _validated_brain2_steering(parsed.get("steering"), evidence),
         "should_surface": parsed["should_surface"],
         "reason": reason,
         "raw_text": raw_text[:1000],
         "prompt_debug": prompt_debug,
     }
+
+
+def _validated_brain2_steering(value: Any, evidence: Any) -> dict[str, Any]:
+    """Validate a model judgment and bind it to the supplied assistant evidence."""
+    if not isinstance(value, dict) or not isinstance(evidence, dict):
+        return {"status": "unavailable"}
+    output_id = evidence.get("last_assistant_output_id")
+    if (
+        not output_id or value.get("evidence_id") != output_id
+        or type(value.get("loop")) is not bool
+        or type(value.get("unsupported_claim")) is not bool
+        or not isinstance(value.get("next"), str)
+        or value["next"] not in {"continue", "new_subject", "ground", "quiet"}
+        or not isinstance(value.get("topic"), str) or not value["topic"].strip()
+        or len(value["topic"]) > 120
+    ):
+        return {"status": "invalid"}
+    new_chunks = evidence.get("new_assistant_chunks")
+    if value["loop"] and (type(new_chunks) is not int or new_chunks <= 0):
+        return {"status": "stale"}
+    return {"status": "ok", **{key: value[key] for key in (
+        "evidence_id", "loop", "unsupported_claim", "next", "topic"
+    )}}
 
 
 def deliberate_once(payload: dict[str, Any]) -> dict[str, object]:
@@ -3365,7 +3561,11 @@ def main() -> None:
     server = ThreadingHTTPServer((args.host, args.port), handler)
     print(f"Starting Robot 790 STS page at http://{args.host}:{args.port}/")
     print(f"Serving {args.directory}")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        session_preparer.close()
+        server.server_close()
 
 
 if __name__ == "__main__":

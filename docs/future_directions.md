@@ -205,6 +205,17 @@ That run is the verifier's birth-certificate test. It closes the false
 confession class only if the event log shows ground truth beating the room's
 social pressure.
 
+### Cache-Aware Brain Switching
+
+Keep the different diets while studying how one loaded model can retain useful
+computed context across B1, B2, idle, and exo-brain jobs. An identical shared
+prefix and independently warm per-lane prefixes are complementary possibilities;
+neither requires giving every brain the whole conversation and tool catalogue.
+The current `parallel=2` capacity does not guarantee permanently assigned B1/B2
+caches. Measure actual reuse and response latency before redesigning prompts.
+The detailed [context-engineering notes](context-engineering-architecture.md#direction-cache-aware-context-assembly)
+capture the September 10 discussion, constraints, and proposed experiments.
+
 ## Vision And Media
 
 Robot 790's "sensing eye" can already accept images as conversational context.

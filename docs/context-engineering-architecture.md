@@ -97,9 +97,10 @@ The representation model gives a session three possible flavors:
 
 - `raw`: the saved record, including timestamps, garble, and repetitions. It is
   evidence of what was recorded, not proof that every spoken claim is true.
-- `scrubbed`: transcript-shaped, with noise and repetition reduced and omissions
-  marked. Fidelity must be checked; cleaning cannot promise mathematical
-  losslessness or recover speech that STT never captured.
+- `scrubbed`: transcript-shaped, with omissions marked. The automatic v1 sweep
+  removes save/restore bookkeeping and separate B2 sections, but preserves all
+  transcript words, repetitions, timestamps, and prosody markers. More selective
+  cleanup is future work; cleaning cannot recover speech that STT never captured.
 - `summary`: lossy carry-forward meaning for daily-driver resume or forks.
 
 Raw governs disagreements about the recorded session; current runtime evidence
@@ -108,7 +109,7 @@ preserve uncertainty, corrections, and stale-state warnings.
 
 The raw session note remains the canonical reload manifest: its parent link and
 pinned-note receipts determine lineage and dependency rehydration. A Scrubbed
-or Summary form supplies alternate session text only. PM stores those derivatives
+or Summary form supplies alternate session text only. Preparation or PM stores those derivatives
 as `notes/sessions/variants/<raw-stem>.scrubbed.txt` and
 `notes/sessions/variants/<raw-stem>.summary.txt`. Each sidecar records its form,
 raw source filename, and the source SHA-256.
@@ -119,9 +120,101 @@ session and its SHA-256 still matches. Missing, stale, or malformed derivatives
 stay unavailable and are refused by the API. A selected label therefore never
 pretends that a raw note was transformed on the fly.
 
-PM authors variants deliberately. Automatic generation, semantic fidelity
-review, and budget-driven form selection remain future work; a matching hash
-proves provenance, not that a summary is good.
+STS now queues preparation after a successful continuity save. Saving and
+Disconnect do not wait for the model. The first stage is the deterministic sweep
+above; the second is a separate local 27B request containing only a short summary
+instruction and this session's transcript. No Eric persona, tool schemas, pinned
+notes, or older sessions are sent. Thinking is off, temperature is 0.2, and the
+length target scales from 80 to 400 words with transcript size. Speaker labels
+are defined explicitly; previous-session recaps are claims, not fresh events.
+Generated forms are explicitly not human-reviewed.
+A matching source hash proves provenance, not that a summary is good.
+
+Session Map exposes Prepare forms / Retry preparation and job status. Valid
+existing derivatives are preserved. The queue has one worker; STS Connect first
+cancels any in-flight summary request, then keeps preparation paused through a
+renewable browser activity lease. It resumes after Disconnect. Lost tabs expire
+after three minutes; this is browser coordination, not a system-wide GPU lock.
+Refresh STS tabs after deploying the new page server so they send that heartbeat.
+Closing an HTTP request requests cancellation; the LLM server controls when its
+underlying GPU work actually stops.
+
+The summary call returns structured JSON with a short topic `title` and a
+`summary` array of speaker-attributed items. Each item identifies `operator` or
+`eric` and contains its compact text. STS renders explicit account labels and
+marks the recap as transcript-derived, not sensor/action verification. This
+also covers sound, silence, and body-sensing claims, not only executed tools.
+Existing derivatives are not rewritten. Only rendered text enters the Summary form. The title is saved as
+`<raw-stem>.title.json`, bound to the raw source hash, and exposed as display
+metadata to both session views. It does not rename the source or change lineage,
+receipts, or context loading. Existing valid titles survive regeneration; PM may
+set a reviewed title through `save_continuity_session_title`. Older captioned
+filenames remain a UI fallback. Title metadata travels with archived sessions.
+
+Receipts live beside variants as `<raw-stem>.preparation.json` and include input
+hash, prompt, model, usage when supplied, and completion/error state. Archiving
+moves these with the session. Interrupted jobs require an explicit retry after a
+server restart; startup does not bulk-process old sessions. Empty/malformed
+transcripts, truncated responses, and input beyond 96,000 characters fail
+explicitly rather than silently shortening the evidence. Scrubbed remains usable
+if only summary generation fails. Originals and current selection never change.
+
+Semantic fidelity review and budget-driven form selection remain future work.
+In particular, the proposed two recent detailed sessions plus older summaries
+policy is not enabled: choosing a form still changes only that session's text,
+not the forms of its pinned dependencies.
+
+### Direction: Summaries, Gems, And Feedback
+
+September 11, 2026 design discussion; not implemented by the current preparation
+prompt or loader. The desired balance is useful detail, continuity, attention,
+latency, and Eric's conversational character, not minimum context size alone.
+
+After a session, retain the original and prepare a genuinely selective swept
+form for its next normal reload. Keep recent sessions in swept form, then use
+summaries beyond a configurable recent-history window. Preserve explicit form
+selection for experiments. Missing or failed preparation needs a visible policy,
+not a silent claim that a raw transcript has been swept. Originals and derivatives
+make comparisons of the same history at different context balances reversible.
+
+Summaries should preserve both harvested material and the operator's response
+to it. A list of topics discussed is not sufficient memory for future Eric.
+The intended carry-forward content includes:
+
+- Concrete facts, named things, distinctive details, decisions, and corrections.
+- Open questions, developing interests, and intentions worth returning to.
+- Memorable phrases, associations, and imaginative contributions, attributed
+  as such rather than promoted to physical facts or verified events.
+- Explicit likes, dislikes, and guidance, including their scope. For example,
+  "I don't like insect stories" is direct topic guidance, not merely a negative
+  sentiment score. This example is a design illustration, not a preference
+  inferred from every mention of insects.
+- Evidence of how a gem landed: the associated moment and any explicit feedback.
+  Tentative interpretations of laughter, delivery, or other reactions remain
+  tentative and require actual recorded evidence. Do not invent a reaction or
+  infer durable approval from loudness alone.
+
+Keep the gem linked to its feedback and source session, with enough location or
+quotation to inspect the evidence. If the operator explains what worked, retain
+that explanation. Otherwise distinguish an observed response from a hypothesis
+about why it worked. The lesson may concern a subject, style, timing, or connection,
+not a direction to repeat the same line. Later explicit corrections outweigh
+earlier guesses; quoted old feedback is not a new endorsement.
+
+Extract this material from the source before or alongside summarization. Mining
+only an already-compressed summary cannot recover details it discarded. Reduce
+repeated recaps and redundant idle variations while preserving distinctive
+contributions, including ones made during idle. Do not restrict Eric's live
+imagination to simplify later cleanup. Retain some unfamiliar material so his
+interests can develop rather than becoming a closed loop of successful motifs.
+
+B2 may flag useful moments and candidate preferences through its existing
+observation role. Post-session processing consolidates them; durable continuity
+does not depend on B2 retaining a private conversation between sessions. B1's
+future context should carry concise relevant guidance along with factual and
+associative material. This is a planned improvement beyond today's short
+speaker-attributed summary, not a claim that preference extraction or semantic
+sweeping already runs.
 
 ## Load-Time Stack Projection
 
@@ -173,10 +266,11 @@ notes/sessions/20260907-175329-daily-driver-empty-boot.txt
 - timestamp: machine-sortable time coordinate,
 - caption: human-readable PM name.
 
-STS may initially save a generic filename such as
-`sessions/session-YYYYMMDD-HHMMSS.txt`. PM can rename it after the run has a
-good caption. The UI can display caption first while preserving the timestamp
-and full filename internally.
+STS saves a stable filename such as `sessions/session-YYYYMMDD-HHMMSS-mmm.txt`.
+Preparation generates a display title alongside the summary; PM can refine that
+title in its `.title.json` sidecar. Do not rename the source for captioning:
+descendants, source hashes, and a running browser may already depend on it.
+The UI prefers the saved title, falling back to older captioned filenames.
 
 There is no separate current-session pointer in the canonical path. Plain
 `Connect` chooses the newest timestamped session note. `Connect Select` is an
@@ -337,8 +431,9 @@ Postmortem work closes the loop:
 
 1. A run ends and STS saves a session note plus exit artifacts.
 2. PM reads the transcript, logs, Brain2 tail, and any video/audio.
-3. PM gives the run a short human caption.
-4. The live session note is renamed to timestamp plus caption.
+3. PM reviews the automatically generated title or gives the run a short caption.
+4. The caption is stored with `save_continuity_session_title`, without renaming
+   or editing the original session note.
 5. PM may create source-linked Scrubbed or Summary sidecars from raw, keeping
    the source, SHA-256, and uncertainty visible.
 6. The PM folder stores a copy of the raw session note, scrubbed/summary
@@ -485,10 +580,107 @@ The preservation goal is raw first, derivatives later. Current character caps
 and incomplete capture can still omit material; they must not be described as
 lossless compression.
 
+## Direction: Cache-Aware Context Assembly
+
+Captured September 10, 2026. This is a future investigation, not a deployed
+prompt reordering, slot assignment, or confirmed explanation of latency.
+
+STS has two separate responsibilities: choose the right context for this moment,
+and avoid unnecessary inference work when presenting it. The active context is
+not an immutable, append-only transcript. STS can rebuild instructions and
+selected context as notes, embodiment, runtime state, and the task change,
+while retaining the original conversation as evidence. That flexibility also
+lets one loaded model serve B1, B2, and focused exo-brain tasks with different
+instructions and input diets.
+
+### Sending Context Versus Computing It
+
+Sending the full message history through Chat Completions does not imply
+recomputing the whole history on the GPU. With applicable prompt caching,
+llama.cpp can reuse an available matching token prefix and evaluate the
+remaining suffix. A changed early timestamp or runtime field can make most of
+the following conversation need evaluation again; it does not necessarily
+invalidate the matching tokens before that change. See the upstream
+[prompt-cache contract](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
+
+Ordinary prefix reuse concerns the actual tokenized input, including the chat
+template, roles, and rendered tools, not semantic similarity between passages.
+Identical transcript text after different instructions is not automatically
+identical KV state: its preceding context differed. Other cache mechanisms and
+model-specific constraints may apply; upstream llama.cpp behavior is not proof
+of the exact behavior or options exposed by the installed LM Studio runtime.
+
+The useful performance question is therefore: **how much of this particular
+request was reused, where did it first diverge, and what had to be evaluated?**
+Reported input-token totals alone do not answer that. Neither do character
+estimates of prompt size. This is distinct from model-weight loading and from
+speculative decoding, which concerns generation rather than this prefix match.
+
+### Multiple Brains, One Model
+
+B1 and B2 are candidates for genuinely shared stable context, followed by their
+different jobs. They are not currently built around a deliberately identical
+leading prompt: B1 begins with the creature/identity instructions, while
+`mull_second_brain` begins with B2's private-observer instructions. Their common
+subject matter does not by itself establish substantial shared KV reuse.
+
+There are two complementary experiments, not a decision to merge the brains:
+
+- Put material genuinely needed by both lanes into an identical stable prefix,
+  then branch into role-specific instructions and evidence. Preserve privacy,
+  authority, and the distinction between observations and model-made claims.
+- Keep each lane's distinct prefix warm independently where server scheduling
+  and cache retention allow it. A small B2 may be cheaper than giving it B1's
+  entire tool catalogue and history just to manufacture a large common prefix.
+
+The working `parallel=2` setup allows two concurrent request sequences. It does
+not reserve permanent "B1" and "B2" caches. With unified KV enabled, their
+storage can come from a shared pool rather than rigid per-request partitions;
+sharing storage does not itself prove reuse of computed prefixes. See
+[LM Studio's concurrency and unified-KV explanation](https://lmstudio.ai/blog/0.4.0).
+Idle requests, tool follow-ups, and eligible preparation/exo-brain jobs also
+need consideration when studying slot/cache retention. Two slots are a
+reasonable foundation, not evidence that all these requests already stay warm.
+
+### Measure Before Reordering
+
+Keep this as a controlled performance experiment, not a reason to reduce Eric's
+expressiveness or remove useful live state:
+
+- Capture actual B1, B2, idle, and tool-follow-up requests; compare their
+  tokenized prefixes and locate the first differing section. Include template
+  and tool ordering rather than comparing only visible system-prompt text.
+- Record available cache-hit, evaluated-token, slot, queue, prefill, and
+  first-token timings. Check ordinary turn-to-turn reuse separately from
+  switching lanes and from the first user response after a long idle.
+- Test stable ordering and deliberate placement of volatile fields, without
+  making sensor state stale or promoting untrusted evidence into instructions.
+  Moving a field later in the system message can still invalidate the history
+  after it; placement must be assessed on the complete rendered request.
+- Compare shared-prefix and independently warm-lane strategies using latency,
+  resource use, and behavioral fidelity, not cache-hit percentage alone. Long
+  retained contexts still have costs even when prefill is reused.
+
+The September 10 Reachy PM found two roughly 22k-token return requests taking
+about 6.4-6.5 seconds to first audio, followed by two around 2.2 seconds at nearly
+the same context size. That motivates measuring reuse; it does not prove cache
+eviction, B2 interference, or a need for more parallel slots. Do not change an
+ongoing observation run just to test this hypothesis.
+
+The STS event log now records `B1 session prompt change` when a session update
+changes its instructions or configuration. It includes instruction lengths,
+the common prefix in characters, a short excerpt at the first difference, and
+whether tools changed. This is a client-side diagnostic, not token-level or KV
+telemetry. It does not reorder the prompt or change inference settings.
+
+The goal is agile context selection with less repeated computation, while B1
+keeps its conversational role and other brains keep their focused jobs.
+
 ## Reference Integrity And Replay
 
-Pins and parent references currently use literal filenames. Captioning or
-archiving a note does not automatically update its descendants or a running
+Pins and parent references currently use literal filenames. Changing a display
+title leaves those references untouched. Manually renaming or archiving a note
+does not automatically update its descendants or a running
 browser's parent reference. An archived file is preserved on disk, but a note
 that still names its old path has an unresolved reference. The reload preflight
 shows that direct parent or pin and offers a deliberate partial load or cancel;
@@ -524,6 +716,85 @@ accelerated. Brief acknowledgments are not promoted into long-lived idle
 assignments; they remain in the conversation. These rules apply to resumed and
 core-only connections alike, without creating a special Empty Connect persona.
 
+## Conversational Attention Ramp
+
+Added 2026-09-11. In normal Drift 1-10, one idle scheduler now bridges a pause
+inside a conversation and independent idle. The separate conversational-nudge
+timer is disabled in this mode; there is no competing "still there?" stage.
+
+The initial interval is approximately 12 real seconds after a short reply has
+finished playing. It eases toward the existing Drift interval over three real
+minutes since the accepted operator input or completion of Eric's reply to it,
+whichever is later. Slow inference/playback does not consume that warm window. The decay is smoothstep:
+`p = clamp(quiet_ms / 180000, 0, 1)`, `blend = p*p*(3-2*p)`; the interval blends
+from 12000 ms to the normal idle interval. The ordinary minimum gap between idle
+beats follows the same ramp, so it cannot silently impose the old 90-second
+floor. These defaults are editable in `config/runtime.json` under `idle_timing`,
+not additional UI dials.
+
+| Config key | Default | Meaning |
+| --- | ---: | --- |
+| `attention_enabled` | `true` | Enable the ramp; `false` restores the preceding separate nudge/idle behavior. |
+| `attention_start_s` | 12 | Initial conversational idle interval, in real seconds. |
+| `attention_fade_s` | 180 | Time after the exchange (user input or direct-reply playback completion) to reach ordinary idle. |
+| `attention_warm_s` | 45 | Initial shared-topic context window; cannot exceed the fade duration. |
+| `post_user_quiet_s` | 12 | Existing minimum quiet guard after user activity. |
+| `minimum_gap_s` | 90 | Ordinary minimum gap between idle starts; also eases during the ramp. |
+| `drift_base_s` | 270 | Baseline for ordinary Drift 1-10 delay calculation. |
+| `drift_step_s` | 22.5 | Amount subtracted from that baseline per Drift level. |
+| `drift_floor_s` | 45 | Lower bound on the ordinary Drift delay before Lab Speed scaling. |
+
+The normal interval is `max(drift_floor_s, drift_base_s - level*drift_step_s)`
+before Lab Speed scaling. Other guards still win; a shorter attention start
+does not override a longer post-user quiet guard, playback, or a cooldown.
+Tune at Lab Speed 1x and change one value at a time. The `_s` values are JSON
+numbers in seconds, not strings. Missing/wrong-type/non-finite values use the
+defaults; negative/oversized values are clamped to 0-3600 seconds (minimum 1
+second for start, fade, baseline, and floor). `attention_enabled` must be a JSON
+boolean. Code defaults remain only as the fallback for absent configuration.
+
+After editing the file, refresh the STS page while disconnected. The runtime
+endpoint reads the file on demand, so subsequent timing-only changes do not
+require a server restart. `idle timing loaded` in Events and the idle prompt
+ledger record the effective values for comparison between runs. Configuration
+changes do not mutate an already running browser session halfway through a run.
+
+Each interval is anchored to the last conversation activity, normally completion
+of playback. Repeated scheduler polls cannot extend its deadline. The attention
+weight uses the accepted operator timestamp and completion of the direct reply:
+Eric's autonomous idle speech, B2 advice, and microphone peaks cannot renew it. New user activity still
+blocks idle immediately while transcription is pending; accepted input renews
+attention. Silence is not evidence that the operator physically left, and a
+device-muted microphone is not inferred from the UI's microphone flag.
+
+For the first 45 seconds, the idle request uses a shared-activity conversation
+lane instead of a random independent lane. It invites a relevant question,
+playful choice, or advancing afterthought without requiring questions or attendance
+checks. After that, the usual lane selection
+resumes with context allowing the shared topic to loosen into a new interest.
+After three minutes it is ordinary independent idle. These coarse context
+labels describe a continuous timing curve, not three separate timers. B2 also
+receives `runtime.conversational_attention` (`engaged`, `cooling`, or
+`independent`) and is asked to support this transition rather than repeatedly
+advise waiting for a command. Only the coarse label affects its evidence
+fingerprint; a ticking attention percentage does not trigger extra mulls.
+
+This state is added to the bounded idle/B2 requests, not injected as a rapidly
+changing field into B1's main conversation prefix. The prompt ledger records
+the idle attention phase and weight for PM inspection. The existing short-spoken
+idle response mechanism remains in use; this change does not add a separate
+model-based silent-pass decision.
+
+No accepted user turn means normal idle timing, including a silent Connect
+Empty. Drift 0 remains off. Performance, Substrate, First Contact, and stress
+levels 11/12 retain their specialized behavior. Lab speed does not accelerate
+the three-minute attention clock or reduce the initial human breathing room;
+after the ramp, the ordinary accelerated idle interval applies. At high lab
+speed that independent interval can be shorter than 12 seconds, so use 1x when
+evaluating the conversational feel. Playback, user speech, pending tools, GPU
+work, cooldowns, loop brakes, stale-session checks, and disconnect retain
+priority. No embodiment-specific gesture or motion behavior is changed.
+
 ## Idle Headline Reading
 
 Added 2026-09-10. This is a small external-input habit, not a general autonomous
@@ -542,8 +813,11 @@ search or undated material. STS is reading feed snippets, not full articles.
 The next attempt is no sooner than ten real minutes later, including failed
 attempts. Lab speed does not compress either interval. The server also shares
 a ten-minute feed cache across clients (one-minute retry for feed failure).
-Within a page lifetime, previously considered URLs or titles are skipped, even
-if B2 passed on them. Reconnecting clears the pending seed, but preserves the
+Within a page lifetime, selected URLs or titles are skipped. Unselected stories
+remain in a small cache. A structured B2 request for a new subject may select
+from that unused cache after 30 real seconds without another network fetch.
+A pass marks the offered stories considered to avoid repeated rejected choices.
+Reconnecting clears the pending seed and steering request, but preserves the
 page's fetch cooldown and seen-story list. No speech or model call is needed
 when the feed contains nothing new.
 
@@ -560,6 +834,22 @@ he is not asked to read a bulletin or return everything to the previous subject.
 Seed delivery is logged, and the selected seed is included in the PM state.
 The root B2 prompt specimens describe the ordinary observer pass; actual
 headline-pass prompts are captured in the existing prompt ledger.
+
+The ordinary observer now returns validated `steering`: an `evidence_id` tied to
+the supplied latest assistant output, boolean `loop` and `unsupported_claim`, a
+stable `topic` label, and `next` (`continue`, `new_subject`, `ground`, or `quiet`).
+These are fallible model judgments, never sensor facts. Invalid or stale fields
+cannot drive the new steering path. Natural-language keyword guessing no longer
+sets loop/receipt guards; the old explicit `LOOP GUARD:` marker is recognized only
+for compatibility with legacy advisories. Repeated assessment of one output does
+not add pressure, and different subjects do not share an accumulating loop count.
+The aim is developing thought, not default silence or waiting for an operator.
+B2 interprets Eric's register in context: theatrical bragging, body banter, and
+imaginative scenes are welcome without an "I imagine" qualifier. A recurring
+motif that develops is not a stuck loop. Unsupported-claim steering is for
+factual measurements, verified actions, or status an operator might rely on,
+not an excuse to police Eric's colorful voice. Summaries preserve who said what
+without recasting playful self-expression as either telemetry or an error.
 
 Active goals/self-tasks, performance, First Contact and substrate tests defer
 or disable this habit. User activity takes priority; results arriving across

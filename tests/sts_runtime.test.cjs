@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf8').replace(/\r\n/g, '\n');
 const facePage = fs.readFileSync(path.join(__dirname, '../web/face-sim/index.html'), 'utf8').replace(/\r\n/g, '\n');
 const sessionMapPage = fs.readFileSync(path.join(__dirname, '../web/sts/session-map.html'), 'utf8').replace(/\r\n/g, '\n');
+const lineagePalette = JSON.parse(sessionMapPage.match(/const LINEAGE_HUES = (\[[^\]]+\]);/)[1]);
 const runtimeConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/runtime.json'), 'utf8'));
 
 test('session map reuses the STS diamond-metal texture and title family', () => {
@@ -22,6 +23,14 @@ test('session map reuses the STS diamond-metal texture and title family', () => 
   assert.doesNotMatch(sessionMapPage, /height: calc\(100vh - 113px\)/);
   assert.match(sessionMapPage, /rgba\(var\(--accent\), 0\.21\)/);
   assert.match(sessionMapPage, /rgba\(var\(--accent\), 0\.11\) 35%/);
+});
+
+test('conversation starts directly below the header without inherited section spacing', () => {
+  assert.match(page, /^    main \{[^}]*gap: 0 4px;/m);
+  assert.match(page, /^    header \{[^}]*border-bottom: 0;/m);
+  assert.match(page, /^    \.log-grid \{[^}]*padding: 0;\s*border: 0;/m);
+  const mobile = page.slice(page.indexOf('@media (max-width: 720px)'));
+  assert.match(mobile, /header \{[^}]*grid-template-areas:\s*"title"\s*"buttons"\s*"status"\s*"nerves";/);
 });
 
 test('live pane dividers have compact, plain resize rails', () => {
@@ -193,6 +202,7 @@ for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFile
       },
       setState: () => {}, setConnectionButtonsDisabled: () => {}, updateSaveAndHaltButton: () => {},
       ensureRuntimeConfigLoaded: () => new Promise(() => {}),
+      pauseSessionPreparation: () => new Promise(() => {}),
       fetchContinuitySessionMetadata: () => new Promise(() => {}),
       loadLatestContinuitySession: () => new Promise(() => {}),
     });
@@ -649,10 +659,24 @@ test('session titles keep timestamps in the filename record rather than the bold
   assert.equal(stsContext.sessionNoteTitle(filename), 'daily driver empty boot');
   assert.equal(stsContext.sessionNoteStamp(filename), '20260907-175329');
   assert.equal(stsContext.sessionNoteDisplayName(filename), 'daily driver empty boot - 2026-09-07 17:53:29');
-  assert.match(sessionMapPage, /title\.textContent = `\$\{item\.filename === currentFilename \? "\* " : ""\}\$\{sessionTitle\(item\.filename\)\}`/);
-  assert.match(sessionMapPage, /title\.textContent = sessionTitle\(item\.filename\);/);
-  assert.match(page, /const displayName = sessionNoteTitle\(filename\);/);
+  assert.match(sessionMapPage, /title\.textContent = `\$\{item\.filename === currentFilename \? "\* " : ""\}\$\{sessionTitle\(item\.filename, item\.title\)\}`/);
+  assert.match(sessionMapPage, /title\.textContent = sessionTitle\(item\.filename, item\.title\);/);
+  assert.match(page, /const displayName = sessionNoteTitle\(filename, item\.title\);/);
   assert.match(page, /meta\.textContent = sessionNoteStamp\(filename\);/);
+});
+
+test('session title metadata works for timestamp-only filenames in both views', () => {
+  const filename = 'sessions/session-20260910-105458-357.txt';
+  const title = 'Reachy same poses and slow conversation';
+  const map = loadFunctions(['noteBasename', 'sessionTitle', 'sessionDisplayName'], {}, sessionMapPage);
+  const sts = loadFunctions(['notePathBasename', 'sessionNoteTitle', 'sessionNoteStamp'], {});
+  assert.equal(map.sessionTitle(filename, title), title);
+  assert.equal(sts.sessionNoteTitle(filename, title), title);
+  assert.equal(map.sessionDisplayName(filename, title), `${title} - 2026-09-10 10:54:58`);
+  assert.equal(sts.sessionNoteStamp(filename), '20260910-105458');
+  assert.equal(sts.sessionNoteStamp('sessions/continuity-session-20260910-105458.txt'), '20260910-105458');
+  assert.equal(map.sessionTitle(filename, null), 'Session note');
+  assert.equal(sts.sessionNoteTitle(filename, {}), 'Session note');
 });
 
 test('selecting a hidden lineage descendant reopens its ancestors', () => {
@@ -664,9 +688,152 @@ test('selecting a hidden lineage descendant reopens its ancestors', () => {
       { filename: 'sessions/child.txt', parent_session_filename: 'sessions/parent.txt' },
     ],
     collapsedLineageNodes: collapsed,
+    filteredCollapsedLineageNodes: new Set(),
   }, sessionMapPage);
   context.expandLineageTo('sessions/child.txt');
   assert.deepEqual(Array.from(collapsed), []);
+});
+
+test('lineage tints share a root family, distinguish generations, and remain stable when reordered', () => {
+  const context = loadFunctions(['normalizeFilename', 'lineageKey', 'lineageHash', 'buildLineageTints'], {
+    LINEAGE_HUES: lineagePalette,
+  }, sessionMapPage);
+  const root = { filename: 'sessions/20260910-014111-empty-connect-room-to-speak.txt' };
+  const child = { filename: 'sessions/child.txt', parent_session_filename: root.filename };
+  const grandchild = { filename: 'sessions/grandchild.txt', parent_session_filename: child.filename };
+  const otherRoots = [
+    { filename: 'sessions/20260909-225937-empty-connect-coherent-drift-and-looping.txt' },
+    { filename: 'sessions/20260907-175329-daily-driver-empty-boot.txt' },
+  ];
+  const items = [grandchild, child, root, ...otherRoots];
+  const tints = context.buildLineageTints(items);
+  const rootTint = tints.get(root.filename);
+  for (const item of [child, grandchild]) {
+    const tint = tints.get(item.filename);
+    assert.equal(tint.hue, rootTint.hue);
+    assert.equal(tint.rootKey, root.filename);
+    assert.ok(tint.lightness > rootTint.lightness);
+  }
+  assert.notEqual(tints.get(child.filename).lightness, tints.get(grandchild.filename).lightness);
+  assert.equal(new Set([root, ...otherRoots].map(item => tints.get(item.filename).hue)).size, 3);
+  const reversed = context.buildLineageTints(items.toReversed());
+  for (const [key, tint] of tints) assert.deepEqual(reversed.get(key), tint);
+  assert.match(sessionMapPage, /lineageTints = buildLineageTints\(sessions, lineageTints\)/);
+  assert.doesNotMatch(sessionMapPage.match(/\.node\.current\s*\{([^}]+)\}/)[1], /background:/);
+});
+
+test('lineage tint calculation tolerates normalized paths, missing parents, and cyclic input', () => {
+  const context = loadFunctions(['normalizeFilename', 'lineageKey', 'lineageHash', 'buildLineageTints'], {
+    LINEAGE_HUES: lineagePalette,
+  }, sessionMapPage);
+  const tints = context.buildLineageTints([
+    { filename: 'SESSIONS\\Root.txt' },
+    { filename: 'sessions/child.txt', parent_session_filename: 'sessions/root.txt' },
+    { filename: 'sessions/orphan.txt', parent_session_filename: 'sessions/missing.txt' },
+    { filename: 'sessions/cycle-a.txt', parent_session_filename: 'sessions/cycle-b.txt' },
+    { filename: 'sessions/cycle-b.txt', parent_session_filename: 'sessions/cycle-a.txt' },
+  ]);
+  assert.equal(tints.size, 5);
+  assert.equal(tints.get('sessions/child.txt').hue, tints.get('sessions/root.txt').hue);
+  for (const tint of tints.values()) assert.ok(Number.isFinite(tint.hue) && Number.isFinite(tint.lightness));
+});
+
+test('lineage uses the full spectrum before repeating colors, even when filename hashes collide', () => {
+  const context = loadFunctions(['normalizeFilename', 'lineageKey', 'buildLineageTints'], {
+    LINEAGE_HUES: lineagePalette, lineageHash: () => 0,
+  }, sessionMapPage);
+  const roots = lineagePalette.map((_, index) => ({ filename: `sessions/root-${String(index).padStart(2, '0')}.txt` }));
+  const tints = context.buildLineageTints(roots);
+  assert.equal(new Set([...tints.values()].map(tint => tint.hue)).size, lineagePalette.length);
+  assert.equal(lineagePalette.length, 12);
+  assert.ok(lineagePalette.some(hue => hue >= 200 && hue <= 240));
+  assert.ok(lineagePalette.some(hue => hue >= 260 && hue <= 340));
+  assert.ok(lineagePalette.some(hue => hue >= 0 && hue <= 60));
+  assert.ok(lineagePalette.some(hue => hue >= 120 && hue <= 190));
+  const surviving = roots.slice(1);
+  const next = context.buildLineageTints([{ filename: 'sessions/aaa-new.txt' }, ...surviving], tints);
+  for (const root of surviving) assert.equal(next.get(root.filename).hue, tints.get(root.filename).hue);
+  assert.equal(new Set([...next.values()].map(tint => tint.hue)).size, lineagePalette.length);
+});
+
+test('rainbow fills retain readable title and date text through the lightest generation hover', () => {
+  const luminance = rgb => rgb.map(value => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  }).reduce((total, channel, index) => total + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  const accent = hue => [0, 8, 4].map(offset => {
+    const k = (offset + hue / 30) % 12;
+    return (0.68 - 0.82 * 0.32 * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255;
+  });
+  for (const hue of lineagePalette) {
+    for (const amount of [0.22, 0.27, 0.34, 0.37]) {
+      const background = accent(hue).map((value, index) => value * amount + [17, 24, 32][index] * (1 - amount));
+      for (const text of [[242, 245, 248], [220, 228, 236]]) {
+        assert.ok((luminance(text) + 0.05) / (luminance(background) + 0.05) >= 4.5, `${hue}/${amount}`);
+      }
+    }
+  }
+  assert.match(sessionMapPage, /--lineage-accent: hsl\(var\(--lineage-hue, 210\) 82% 68%\)/);
+  assert.match(sessionMapPage, /border-left: 3px solid var\(--lineage-accent\)/);
+});
+
+test('session-list rows and tree branches reuse the exact same tint, including normalized paths', () => {
+  const context = loadFunctions(['normalizeFilename', 'lineageKey', 'applyLineageTint'], {
+    lineageTints: new Map([
+      ['sessions/child.txt', { hue: 185, lightness: 23 }],
+      ['sessions/root.txt', { hue: 185, lightness: 13 }],
+    ]),
+  }, sessionMapPage);
+  const element = () => {
+    const properties = new Map();
+    return { style: { setProperty: (key, value) => properties.set(key, String(value)) }, properties };
+  };
+  const row = element();
+  const branch = element();
+  context.applyLineageTint(row, 'SESSIONS\\Child.txt');
+  context.applyLineageTint(branch, 'sessions/child.txt');
+  assert.deepEqual(row.properties, branch.properties);
+  assert.equal(row.properties.get('--lineage-hue'), '185');
+  assert.equal(row.properties.get('--lineage-lightness'), '23%');
+  const root = element();
+  context.applyLineageTint(root, 'sessions/root.txt');
+  assert.equal(root.properties.get('--lineage-lightness'), '13%');
+  assert.doesNotThrow(() => context.applyLineageTint(element(), 'sessions/missing.txt'));
+  assert.match(sessionMapPage, /applyLineageTint\(button, item\.filename\)/);
+  assert.match(sessionMapPage, /applyLineageTint\(branch, item\.filename\)/);
+});
+
+test('lineage opens only the newest path by default and preserves manual folding on refresh', () => {
+  const context = loadFunctions(['normalizeFilename', 'lineageKey', 'expandLineageTo', 'applyLineageDefaults'], {
+    sessions: [
+      { filename: 'sessions/newest.txt', parent_session_filename: 'sessions/middle.txt' },
+      { filename: 'sessions/middle.txt', parent_session_filename: 'sessions/root.txt' },
+      { filename: 'sessions/side-leaf.txt', parent_session_filename: 'sessions/side.txt' },
+      { filename: 'sessions/side.txt', parent_session_filename: 'sessions/root.txt' },
+      { filename: 'sessions/old-leaf.txt', parent_session_filename: 'sessions/old-root.txt' },
+      { filename: 'sessions/root.txt' }, { filename: 'sessions/old-root.txt' },
+    ],
+    currentFilename: 'sessions/old-leaf.txt', collapsedLineageNodes: new Set(),
+    filteredCollapsedLineageNodes: new Set(), knownLineageNodes: new Set(), newestLineageKey: '',
+  }, sessionMapPage);
+  context.applyLineageDefaults();
+  assert.equal(context.collapsedLineageNodes.has('sessions/root.txt'), false);
+  assert.equal(context.collapsedLineageNodes.has('sessions/middle.txt'), false);
+  assert.equal(context.collapsedLineageNodes.has('sessions/side.txt'), true);
+  assert.equal(context.collapsedLineageNodes.has('sessions/old-root.txt'), true);
+  context.collapsedLineageNodes.add('sessions/root.txt');
+  context.collapsedLineageNodes.delete('sessions/old-root.txt');
+  context.applyLineageDefaults();
+  assert.equal(context.collapsedLineageNodes.has('sessions/root.txt'), true);
+  assert.equal(context.collapsedLineageNodes.has('sessions/old-root.txt'), false);
+  context.sessions.unshift({ filename: 'sessions/new-arrival.txt', parent_session_filename: 'sessions/newest.txt' });
+  context.applyLineageDefaults();
+  assert.equal(context.collapsedLineageNodes.has('sessions/root.txt'), false);
+  assert.equal(context.collapsedLineageNodes.has('sessions/newest.txt'), false);
+  assert.equal(context.collapsedLineageNodes.has('sessions/side.txt'), true);
+  context.sessions = [];
+  context.applyLineageDefaults();
+  assert.equal(context.collapsedLineageNodes.size, 0);
 });
 
 test('Context Map cards keep their own open state out of panel status', () => {
@@ -1042,6 +1209,7 @@ test('a late Brain2 HTTP response cannot add the old prompt to a new session led
     currentBrain2PersonFocus: () => 5, brain2ConversationContext: () => 'OLD CONVERSATION',
     brain2RecentIdleContext: () => '', brain2RecentOutputContext: () => '',
     rememberBrain2Prompt: entry => prompts.push(entry),
+    brain2BodyContext: () => null,
     fetch: () => new Promise(resolve => { finishRequest = resolve; }),
   });
   const pending = context.requestBrain2Mull();
@@ -1085,6 +1253,22 @@ test('a deliberate quiet Brain2 result succeeds without speech, advisories, or f
 
 // Exercise the shipped functions without starting a socket, microphone, or device.
 function loadFunctions(names, globals, source = page) {
+  globals.realtimeStopRequested ??= false;
+  globals.continuityRestoreAt ??= Date.now();
+  globals.suppressedResponseIds ??= new Set();
+  globals.eyeRecallResponses ??= new Map();
+  globals.lastUserTurnActivityAt ??= 0;
+  if (names.includes('handleFunctionCall')) names = [...names, 'eventResponseId'];
+  if (names.includes('resetSessionContextForConnection') || names.includes('stopPlaybackNow')) {
+    names = [...names, 'resetMicInterruptCandidate'];
+    globals.micInterruptActiveMs ??= 0;
+    globals.micInterruptGapMs ??= 0;
+  }
+  if (names.includes('clearHotConversationState') || names.includes('haltRealtimeActivity')) {
+    names = [...names, 'clearBrain2BodyCue'];
+    globals.brain2PendingBodyCue ??= null;
+    globals.brain2BodyCueTimer ??= null;
+  }
   const context = vm.createContext(globals);
   for (const name of names) {
     const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
@@ -1095,6 +1279,64 @@ function loadFunctions(names, globals, source = page) {
   }
   return context;
 }
+
+test('Reachy wake is explicit; routine idle and other bodies still release normally', async () => {
+  const calls = [];
+  let key = 'reachy_mini';
+  const context = loadFunctions(['setFaceMode', 'executeTool', 'maybeHandleDirectFaceCommand'], {
+    normalizeFaceTintColor: () => '', stopSpeechMouthCue: () => {},
+    clearGazeHold: () => {}, clearFaceVisualHold: () => {},
+    normalizeFaceBaseUrl: () => 'http://127.0.0.1:8792/',
+    matchingConfiguredEmbodimentKey: () => key,
+    postFace: async (route, payload) => { calls.push({ route, payload }); return { ok: true }; },
+    parseToolArguments: args => args, events: {}, log: () => {},
+  });
+  await context.setFaceMode({ mode: 'idle' });
+  assert.equal(calls.at(-1).route, 'release');
+  await context.executeTool('set_robot_mode', { mode: 'idle' });
+  assert.equal(calls.at(-1).route, 'wake');
+  assert.equal(context.maybeHandleDirectFaceCommand('Eric, wake up'), true);
+  assert.equal(calls.at(-1).route, 'wake');
+  for (key of ['browser_face', 'esp32_face', '']) {
+    await context.executeTool('set_robot_mode', { mode: 'idle' });
+    assert.equal(calls.at(-1).route, 'release');
+  }
+});
+
+test('Reachy body sensors expose measured pose and move receipts instead of ESP32 IMU claims', async () => {
+  const state = {
+    firmware: { target: 'reachy-mini-embodiment-adapter' },
+    reachy: { backend_ready: true, motor_mode: 'enabled' },
+    head_pose: { yaw: 0.12 }, body_yaw: 0.02, antennas_position: [0.1, -0.1],
+    motion_enabled: true, last_motion: { status: 'accepted', uuid: 'move-1', completion: 'unverified' },
+    sequence: { name: 'double_take', status: 'running', completed_steps: 1, steps: 4 },
+    last_error: '', state_errors: {}, state_observed_at: 123,
+    capabilities: { camera_stream: false },
+  };
+  const context = loadFunctions(['getBodySensors'], {
+    getFaceJson: async () => state, normalizeFaceBaseUrl: () => 'http://127.0.0.1:8792/',
+  });
+  const result = await context.getBodySensors();
+  assert.equal(result.source, 'reachy_mini_daemon');
+  assert.equal(result.head_pose.yaw, 0.12);
+  assert.equal(result.last_motion.completion, 'unverified');
+  assert.equal(result.sequence.status, 'running');
+  assert.equal(result.sequence.completed_steps, 1);
+  assert.equal(result.state_observed_at, 123);
+  assert.equal(result.imu, undefined);
+  assert.equal(result.capabilities.camera_stream, false);
+  state.firmware = { target: 'esp32-s3-face' };
+  assert.equal((await context.getBodySensors()).source, 'esp32_s3_face_state');
+});
+
+test('Reachy profile names supported actions and distinguishes accepted from completed motion', () => {
+  const profile = runtimeConfig.embodiments.find(item => item.key === 'reachy_mini');
+  const text = profile.toolbox.join(' ');
+  assert.match(text, /accepted.*not completed movement/);
+  assert.match(text, /Camera and IMU readings are not connected/);
+  assert.match(text, /can enable motors/);
+  assert.doesNotMatch(text, /wary glance|drowsy park/);
+});
 
 for (const [prefix, routineName, minimum] of [
   ['GpuWatch', 'gpuWatchRoutine', 500],
@@ -1567,13 +1809,21 @@ test('a new connection resets unfinished tool follow-up state', async () => {
   Object.assign(context, {
     pendingToolCalls: 2, toolFollowupNeeded: true, responseDoneAfterTool: true,
     toolFollowupExactText: 'OLD REPLY', toolFollowupInstructions: 'OLD INSTRUCTIONS',
+    unidentifiedOutputSuppressed: true, pendingEyeRecallResponse: { used: true }, toolFollowupCatalog: { old: true },
   });
+  context.suppressedResponseIds.add('old-response');
+  context.eyeRecallResponses.set('old-response', { used: true });
   await context.loadFreshContinuityContext({ coreNotesOnly: true });
   assert.equal(context.pendingToolCalls, 0);
   assert.equal(context.toolFollowupNeeded, false);
   assert.equal(context.responseDoneAfterTool, false);
   assert.equal(context.toolFollowupExactText, '');
   assert.equal(context.toolFollowupInstructions, '');
+  assert.equal(context.suppressedResponseIds.size, 0);
+  assert.equal(context.eyeRecallResponses.size, 0);
+  assert.equal(context.unidentifiedOutputSuppressed, false);
+  assert.equal(context.pendingEyeRecallResponse, null);
+  assert.equal(context.toolFollowupCatalog, null);
 });
 
 test('core-note loading honors an explicit unchecked core preference and reports read failures', async () => {

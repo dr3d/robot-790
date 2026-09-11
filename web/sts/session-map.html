@@ -213,10 +213,12 @@
     }
     .session-row,
     .node {
+      --lineage-accent: hsl(var(--lineage-hue, 210) 82% 68%);
       width: 100%;
-      border: 1px solid rgba(160, 176, 190, 0.16);
+      border: 1px solid hsl(var(--lineage-hue, 210) 72% 68% / 0.48);
+      border-left: 3px solid var(--lineage-accent);
       border-radius: 7px;
-      background: rgba(9, 13, 17, 0.62);
+      background: color-mix(in srgb, var(--lineage-accent) var(--lineage-lightness, 22%), #111820);
       color: var(--text);
       text-align: left;
     }
@@ -229,6 +231,7 @@
     .session-row.is-selected,
     .node.is-selected {
       border-color: rgba(96, 211, 148, 0.86);
+      border-left-color: var(--lineage-accent);
       box-shadow: 0 0 0 1px rgba(96, 211, 148, 0.18) inset;
     }
     .session-title {
@@ -237,7 +240,7 @@
       line-height: 1.25;
     }
     .session-meta {
-      color: var(--muted);
+      color: #dce4ec;
       font-size: 12px;
       overflow-wrap: anywhere;
     }
@@ -251,7 +254,7 @@
       display: grid;
       gap: 8px;
       padding-left: 18px;
-      border-left: 1px solid rgba(104, 199, 255, 0.25);
+      border-left: 1px solid hsl(var(--lineage-hue, 210) 72% 68% / 0.46);
     }
     .root {
       padding-left: 18px;
@@ -271,19 +274,23 @@
       min-height: 16px;
       height: 16px;
       padding: 0;
-      border-color: rgba(104, 199, 255, 0.75);
+      border-color: hsl(var(--lineage-hue, 210) 72% 68% / 0.8);
       border-radius: 3px;
-      background: #14252f;
-      color: var(--blue);
+      background: color-mix(in srgb, hsl(var(--lineage-hue, 210) 82% 68%) 18%, #111820);
+      color: hsl(var(--lineage-hue, 210) 82% 78%);
       font: 700 13px/12px ui-monospace, SFMono-Regular, Consolas, monospace;
     }
     .tree-toggle:hover:not(:disabled) {
-      background: #1b3a49;
+      background: color-mix(in srgb, hsl(var(--lineage-hue, 210) 82% 68%) 32%, #111820);
     }
     .node {
       position: relative;
       min-width: 280px;
       padding: 8px 10px;
+    }
+    .session-row:hover:not(:disabled),
+    .node:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--lineage-accent) calc(var(--lineage-lightness, 22%) + 3%), #111820);
     }
     .node::before {
       content: "";
@@ -291,14 +298,18 @@
       left: -19px;
       top: 18px;
       width: 18px;
-      border-top: 1px solid rgba(104, 199, 255, 0.25);
+      border-top: 1px solid hsl(var(--lineage-hue, 210) 72% 68% / 0.46);
     }
     .root > .branch-row .node::before {
       display: none;
     }
     .node.current {
       border-color: rgba(255, 209, 102, 0.82);
-      background: rgba(255, 209, 102, 0.09);
+      border-left-color: var(--lineage-accent);
+    }
+    .session-row.is-selected,
+    .node.is-selected {
+      box-shadow: 0 0 0 1px var(--green) inset;
     }
     .node.orphan {
       border-style: dashed;
@@ -441,9 +452,16 @@
     const detailsResizeHandle = document.querySelector("#detailsResizeHandle");
 
     let sessions = [];
+    let preparationPollTimer = null;
+    let sessionsFingerprint = "";
     let selectedFilename = "";
     let currentFilename = "";
     let collapsedLineageNodes = new Set();
+    let filteredCollapsedLineageNodes = new Set();
+    let knownLineageNodes = new Set();
+    let newestLineageKey = "";
+    let lineageTints = new Map();
+    const LINEAGE_HUES = [210, 335, 150, 30, 270, 185, 5, 60, 305, 120, 240, 90];
     const resumeFormBySession = new Map();
     const requestedResumeForm = new URLSearchParams(location.search).get("resume_form") || "raw";
     const PANEL_LAYOUT_STORAGE_KEY = "robot790-session-map-panel-layout-v1";
@@ -630,7 +648,8 @@
       return text.split(/[\\/]/).pop() || text;
     }
 
-    function sessionTitle(filename) {
+    function sessionTitle(filename, title = "") {
+      if (typeof title === "string" && title.trim()) return title.trim();
       const base = noteBasename(filename)
         .replace(/\.txt$/i, "")
         .replace(/^session-/i, "")
@@ -641,16 +660,16 @@
       return caption ? caption.replace(/-/g, " ") : "Session note";
     }
 
-    function sessionDisplayName(filename) {
+    function sessionDisplayName(filename, title = "") {
       const base = noteBasename(filename)
         .replace(/\.txt$/i, "")
         .replace(/^session-/i, "")
         .replace(/^continuity-session-/i, "");
       const match = base.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-\d{3})?(?:-(.+))?$/);
-      if (!match) return base;
+      if (!match) return title || base;
       const [, year, month, day, hour, minute, second, caption] = match;
       const stamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-      return caption ? `${sessionTitle(filename)} - ${stamp}` : stamp;
+      return title || caption ? `${sessionTitle(filename, title)} - ${stamp}` : stamp;
     }
 
     function normalizeFilename(filename) {
@@ -666,6 +685,80 @@
       return normalizeFilename(filename).toLowerCase();
     }
 
+    function lineageHash(value) {
+      let hash = 2166136261;
+      for (const character of value) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0;
+      return hash;
+    }
+
+    function buildLineageTints(items, previousTints = new Map()) {
+      const byFilename = new Map(items.map((item) => [lineageKey(item.filename), item]));
+      const tints = new Map();
+      for (const item of items) {
+        let root = item;
+        let depth = 0;
+        const seen = new Set([lineageKey(item.filename)]);
+        while (byFilename.has(lineageKey(root.parent_session_filename))) {
+          const parentKey = lineageKey(root.parent_session_filename);
+          if (seen.has(parentKey)) break;
+          seen.add(parentKey);
+          root = byFilename.get(parentKey);
+          depth += 1;
+        }
+        const rootKey = lineageKey(root.filename);
+        const key = lineageKey(item.filename);
+        tints.set(key, {
+          hue: 0,
+          lightness: depth ? 27 + (depth - 1) % 4 * 2 + lineageHash(key) % 2 : 22,
+          rootKey,
+          depth
+        });
+      }
+      const roots = [...new Set([...tints.values()].map((tint) => tint.rootKey))].sort();
+      const rootHues = new Map();
+      const used = new Set();
+      // Preserve visible families across refreshes; use the full spectrum before repeating a color.
+      for (const rootKey of roots) {
+        const previous = previousTints.get(rootKey);
+        const previousHue = previous?.rootKey === rootKey ? previous.hue : undefined;
+        if (LINEAGE_HUES.includes(previousHue) && !used.has(previousHue)) {
+          rootHues.set(rootKey, previousHue);
+          used.add(previousHue);
+        }
+      }
+      for (const rootKey of roots) {
+        if (rootHues.has(rootKey)) continue;
+        const preferred = lineageHash(rootKey) % LINEAGE_HUES.length;
+        const chosen = LINEAGE_HUES.map((_, offset) => LINEAGE_HUES[(preferred + offset) % LINEAGE_HUES.length])
+          .find((hue) => !used.has(hue)) ?? LINEAGE_HUES[preferred];
+        rootHues.set(rootKey, chosen);
+        used.add(chosen);
+      }
+      for (const tint of tints.values()) tint.hue = rootHues.get(tint.rootKey);
+      return tints;
+    }
+
+    function applyLineageDefaults() {
+      const keys = new Set(sessions.map((item) => lineageKey(item.filename)));
+      collapsedLineageNodes = new Set([...collapsedLineageNodes].filter((key) => keys.has(key)));
+      for (const item of sessions) {
+        const parentKey = lineageKey(item.parent_session_filename);
+        if (keys.has(parentKey) && !knownLineageNodes.has(parentKey)) collapsedLineageNodes.add(parentKey);
+      }
+      // The sessions endpoint is newest-first. Only reopen its path when it changes.
+      const newest = lineageKey(sessions[0]?.filename);
+      if (newest !== newestLineageKey) expandLineageTo(newest);
+      newestLineageKey = newest;
+      knownLineageNodes = keys;
+    }
+
+    function applyLineageTint(element, filename) {
+      const tint = lineageTints.get(lineageKey(filename));
+      if (!tint) return;
+      element.style.setProperty("--lineage-hue", tint.hue);
+      element.style.setProperty("--lineage-lightness", `${tint.lightness}%`);
+    }
+
     function expandLineageTo(filename) {
       const byFilename = new Map(sessions.map((item) => [lineageKey(item.filename), item]));
       const seen = new Set();
@@ -674,6 +767,7 @@
         const parentKey = lineageKey(item.parent_session_filename);
         if (!parentKey || seen.has(parentKey)) break;
         collapsedLineageNodes.delete(parentKey);
+        filteredCollapsedLineageNodes.delete(parentKey);
         seen.add(parentKey);
         item = byFilename.get(parentKey);
       }
@@ -735,7 +829,7 @@
       return sessions.filter((item) => [
         item.filename,
         item.parent_session_filename,
-        sessionDisplayName(item.filename),
+        sessionDisplayName(item.filename, item.title),
         item.created
       ].some((value) => String(value || "").toLowerCase().includes(query)));
     }
@@ -760,9 +854,24 @@
       return result;
     }
 
-    async function refreshSessions() {
-      setStatus("refreshing");
+    function schedulePreparationPoll() {
+      clearTimeout(preparationPollTimer);
+      if (sessions.some((item) => ["queued", "running", "waiting"].includes(item.preparation?.state))) {
+        preparationPollTimer = setTimeout(() => {
+          refreshSessions({ quiet: true }).catch((error) => setStatus(error.message));
+        }, 3000);
+      }
+    }
+
+    async function refreshSessions({ quiet = false } = {}) {
+      if (!quiet) setStatus("refreshing");
       const result = await apiJson(new URL("/api/continuity/sessions", location.href));
+      const fingerprint = JSON.stringify(result);
+      if (quiet && fingerprint === sessionsFingerprint) {
+        schedulePreparationPoll();
+        return;
+      }
+      sessionsFingerprint = fingerprint;
       sessions = Array.isArray(result.sessions) ? result.sessions.map((item) => ({
         ...item,
         filename: normalizeFilename(item.filename),
@@ -770,7 +879,8 @@
       })) : [];
       currentFilename = normalizeFilename(result.current_session_filename);
       const sessionKeys = new Set(sessions.map((item) => lineageKey(item.filename)));
-      collapsedLineageNodes = new Set([...collapsedLineageNodes].filter((key) => sessionKeys.has(key)));
+      applyLineageDefaults();
+      lineageTints = buildLineageTints(sessions, lineageTints);
       for (const key of resumeFormBySession.keys()) {
         if (!sessionKeys.has(key)) resumeFormBySession.delete(key);
       }
@@ -780,6 +890,7 @@
       render();
       await loadDetails();
       setStatus(`${sessions.length} sessions`);
+      schedulePreparationPoll();
     }
 
     function render() {
@@ -803,11 +914,12 @@
         const button = document.createElement("button");
         button.className = "session-row";
         button.type = "button";
+        applyLineageTint(button, item.filename);
         button.classList.toggle("is-selected", item.filename.toLowerCase() === selectedFilename.toLowerCase());
         button.addEventListener("click", () => setSelected(item.filename));
         const title = document.createElement("span");
         title.className = "session-title";
-        title.textContent = `${item.filename === currentFilename ? "* " : ""}${sessionTitle(item.filename)}`;
+        title.textContent = `${item.filename === currentFilename ? "* " : ""}${sessionTitle(item.filename, item.title)}`;
         const meta = document.createElement("span");
         meta.className = "session-meta";
         meta.textContent = `${item.created || "undated"} / ${Number(item.characters || 0).toLocaleString()} chars`;
@@ -853,9 +965,11 @@
       branch.className = `branch${isRoot ? " root" : ""}`;
       if (visited.has(key)) return branch;
       visited.add(key);
+      applyLineageTint(branch, item.filename);
       const kids = children.get(key) || [];
       const hasChildren = kids.length > 0;
-      const expanded = hasChildren && !collapsedLineageNodes.has(key);
+      const collapsed = filterEl.value.trim() ? filteredCollapsedLineageNodes : collapsedLineageNodes;
+      const expanded = hasChildren && !collapsed.has(key);
       if (expanded) {
         for (const child of kids) {
           branch.append(renderBranch(child, children, visited));
@@ -874,12 +988,13 @@
         toggle.className = "tree-toggle";
         toggle.textContent = expanded ? "-" : "+";
         toggle.setAttribute("aria-expanded", String(expanded));
-        toggle.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} descendants of ${sessionTitle(item.filename)}`);
+        toggle.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} descendants of ${sessionTitle(item.filename, item.title)}`);
         toggle.title = expanded ? "Collapse descendants" : "Expand descendants";
         toggle.addEventListener("click", () => {
           const key = lineageKey(item.filename);
-          if (collapsedLineageNodes.has(key)) collapsedLineageNodes.delete(key);
-          else collapsedLineageNodes.add(key);
+          const collapsed = filterEl.value.trim() ? filteredCollapsedLineageNodes : collapsedLineageNodes;
+          if (collapsed.has(key)) collapsed.delete(key);
+          else collapsed.add(key);
           renderGraph();
         });
         row.append(toggle);
@@ -894,7 +1009,7 @@
       node.addEventListener("click", () => setSelected(item.filename));
       const title = document.createElement("div");
       title.className = "session-title";
-      title.textContent = sessionTitle(item.filename);
+      title.textContent = sessionTitle(item.filename, item.title);
       node.append(title);
       row.append(node);
       return row;
@@ -958,14 +1073,43 @@
       variantSelect.addEventListener("change", () => setSelectedResumeForm(variantSelect.value, item));
       variantControl.append(variantLabel, variantSelect);
       grid.append(variantControl);
+      const preparation = item.preparation || {};
+      const preparing = ["queued", "running", "waiting"].includes(preparation.state);
+      const prepared = ["scrubbed", "summary"].every((key) => resumeFormRecord(item, key).status === "available");
+      const prepareButton = document.createElement("button");
+      prepareButton.type = "button";
+      prepareButton.textContent = ["failed", "interrupted"].includes(preparation.state) ? "Retry preparation" : "Prepare forms";
+      prepareButton.disabled = preparing || prepared;
+      prepareButton.addEventListener("click", async () => {
+        prepareButton.disabled = true;
+        try {
+          await apiJson(new URL("/api/continuity/prepare", location.href), {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_filename: item.filename })
+          });
+          await refreshSessions();
+        } catch (error) {
+          prepareButton.disabled = false;
+          setStatus(error.message);
+        }
+      });
+      grid.append(prepareButton);
+      const preparationStatus = document.createElement("div");
+      preparationStatus.setAttribute("role", "status");
+      preparationStatus.textContent = preparation.error || ({
+        queued: "Preparation queued", running: "Generating summary", waiting: "Summary waiting for disconnect",
+        ready: prepared ? "Forms ready" : "Forms need preparation", not_prepared: "Forms not prepared"
+      }[preparation.state] || (prepared ? "Forms ready" : "Forms not prepared"));
+      grid.append(preparationStatus);
       for (const [label, value] of [
-        ["Name", sessionTitle(item.filename)],
+        ["Name", sessionTitle(item.filename, item.title)],
         ["Source", sessionPathDisplay(item.filename)],
         ["Load file", sessionPathDisplay(loadFilename)],
         ["Parent", item.parent_session_filename ? sessionPathDisplay(item.parent_session_filename) : "none"],
         ["Created", item.created || "unknown"],
         ["Eye captures", `${Number(item.sensing_eye_asset_count || 0).toLocaleString()} session-scoped`],
         ["Form size", `${Number(formRecord.characters || item.characters || 0).toLocaleString()} chars`],
+        ["Review", resumeForm === "raw" ? "Original transcript" : (formRecord.review || "unspecified")],
       ]) {
         const row = document.createElement("div");
         row.innerHTML = `<strong>${label}:</strong> `;
@@ -1012,7 +1156,7 @@
     async function archiveSelected() {
       const item = selectedSession();
       if (!item) return;
-      if (!confirm(`Move "${sessionDisplayName(item.filename)}" and its session-scoped eye captures out of Connect Select?`)) return;
+      if (!confirm(`Move "${sessionDisplayName(item.filename, item.title)}" and its session-scoped eye captures out of Connect Select?`)) return;
       setStatus("archiving");
       const result = await apiJson(new URL("/api/continuity/archive", location.href), {
         method: "POST",
@@ -1027,7 +1171,10 @@
     }
 
     refreshButton.addEventListener("click", () => refreshSessions().catch((error) => setStatus(error.message)));
-    filterEl.addEventListener("input", render);
+    filterEl.addEventListener("input", () => {
+      filteredCollapsedLineageNodes.clear();
+      render();
+    });
     connectButton.addEventListener("click", () => postToSts("connect"));
     for (const [kind, handle] of [
       ["sessions", sessionsResizeHandle],

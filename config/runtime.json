@@ -4,10 +4,27 @@
   "body_trajectory": "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results as the authority on what you can currently do.",
   "embodiment_profile_rule": "Embodiment profiles describe how Eric uses a body; they do not replace Eric with a separate character unless the operator explicitly starts that experiment.",
   "idle_level12_cooldown_s": 12,
+  "audio_interrupt": {
+    "minimum_active_ms": 200,
+    "maximum_gap_ms": 100,
+    "minimum_rms_ratio": 0.12
+  },
+  "idle_timing": {
+    "attention_enabled": true,
+    "attention_start_s": 12,
+    "attention_fade_s": 180,
+    "attention_warm_s": 45,
+    "post_user_quiet_s": 12,
+    "minimum_gap_s": 90,
+    "drift_base_s": 270,
+    "drift_step_s": 22.5,
+    "drift_floor_s": 45
+  },
   "default_embodiment": "browser_face",
   "embodiments": [
     {
       "key": "s3_face",
+      "mouth_text": true,
       "label": "S3 two-inch touch face",
       "face_url": "http://esp32-s3-face.local/",
       "description": "The compact ESP32-S3 portrait face with integrated display, touch hardware probe, and IMU hardware probe.",
@@ -19,6 +36,7 @@
     },
     {
       "key": "external_eyes",
+      "mouth_text": true,
       "label": "External eyes and mask face",
       "face_url": "http://esp32-eyes.local/",
       "description": "The external-display face rig with round eyes, mouth/aux display, and skull-mask enclosure experiments.",
@@ -30,6 +48,7 @@
     },
     {
       "key": "browser_face",
+      "mouth_text": true,
       "label": "Browser face simulator",
       "face_url": "http://127.0.0.1:8791/",
       "description": "A local browser-window embodiment that renders Robot 790's face from the same semantic face API as the ESP32-S3 face.",
@@ -41,14 +60,18 @@
     },
     {
       "key": "reachy_mini",
+      "mouth_text": false,
+      "idle_context": "Reachy gestures, including robot_scan, move motors only: no camera capture, image buffers, or sensing-eye updates. Bounded angles do not measure clearance or guarantee collision safety. There is no mouth display.",
       "label": "Reachy Mini body",
       "face_url": "http://127.0.0.1:8792/",
       "description": "A local firmware-like adapter for Reachy Mini Wireless. Eric remains the personage; this controller maps semantic Robot 790 face/body verbs onto bounded Reachy motion and live state.",
       "personality": "Reachy Mini contributes a designed tabletop social body: friendly head tilts, antenna punctuation, small curious beats, and approachable toy-like presence. Eric should use those affordances as his body language while remaining Eric, not the stock Reachy conversation character.",
       "toolbox": [
-        "Treat Reachy's head, antennas, body yaw, camera/media state, and motor receipts as body tools Eric can inhabit.",
-        "Use compact physical punctuation: thoughtful tilt, inspect, double take, drowsy park, wary glance, and slow smile.",
-        "Do not claim Reachy moved unless the adapter reports success, and do not treat Reachy's stock app memory or persona as Eric's memory."
+        "Use Reachy's head, antennas, and small body-yaw gestures. get_body_sensors returns measured pose in meters/radians and motor state. Camera and IMU readings are not connected here; voice remains on the STS workstation.",
+        "robot_scan is motor-only: it does not capture images, create image buffers, or update the sensing eye. Motion limits bound requested angles; they do not measure clearance or guarantee collision avoidance. Pose fields are cached at state_observed_at (age: state_age_s); a new action receipt does not refresh that measurement.",
+        "Supported beats are finite animated gestures: thoughtful tilts; inspect turns and tilts; slow_smile opens the antennas; confused alternates tilts; focus_lock settles attentively; drowsy nods down, rallies, and droops; double_take looks, returns, and looks again; robot_scan sweeps left/right and centers. Supported moods: curious, happy, focused, confused, sleepy, sleep. Moods are smaller single poses, not full gestures. Eye styles, captions, painting, and continuous idle animation are not implemented.",
+        "Move receipts marked accepted are requests, not completed movement. A beat's sequence.status completed means every step received daemon completion; last_motion.completion describes only the most recent step. get_body_sensors reads these receipts and measured pose. Errors, busy, gated, and unverified are not success; unknown network outcomes are not automatically retried. Do not treat Reachy's stock app memory or persona as Eric's memory.",
+        "For an explicit wake request, use set_robot_mode idle; this invokes Reachy's wake routine and can enable motors. Gestures take priority over automatic speech/listening and occasional Brain 2 body cues until the sequence and hold finish. A new explicit command or stop can interrupt them. Ordinary STS idle releases only expired holds. set_robot_mode sleeping runs the physical sleep routine. Adapter stop cancels its own moves only, not motor power."
       ]
     }
   ],

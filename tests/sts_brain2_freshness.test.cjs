@@ -7,6 +7,7 @@ const { test } = require('node:test');
 const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 function load(names, globals = {}) {
+  globals.realtimeStopRequested ??= false;
   const context = vm.createContext(globals);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
@@ -27,6 +28,7 @@ function evidenceContext(extraNames = [], extra = {}) {
     micRuntimeLabel: () => 'on', audioRecordingActive: () => true,
     visionImageUrl: '', visionImageName: '', sensingTextContent: '', sensingTextName: '',
     visionCameraActive: () => false, idleHardBrakeActive: () => false, idleHardBrakeReason: '',
+    conversationAttentionEnabled: () => false,
     searchContextReceipts: [], ...extra,
   });
 }
@@ -50,6 +52,22 @@ test('Brain2 evidence identifies chunks and remains unchanged when only time or 
   context.idleHardBrakeActive = () => true;
   context.idleHardBrakeReason = 'loop guard';
   assert.notEqual(context.brain2EvidenceSnapshot().fingerprint, next.fingerprint);
+});
+
+test('attention reaches B2 as a coarse state, not a ticking clock that retriggers every poll', () => {
+  let phase = 'engaged';
+  const context = evidenceContext([], {
+    conversationAttentionEnabled: () => true,
+    conversationAttentionState: () => ({ phase, weight: 0.9 }),
+  });
+  const first = context.brain2EvidenceSnapshot();
+  assert.equal(first.runtime.conversational_attention, 'engaged');
+  assert.equal(context.brain2EvidenceSnapshot().fingerprint, first.fingerprint);
+  phase = 'cooling';
+  const cooling = context.brain2EvidenceSnapshot();
+  assert.notEqual(cooling.fingerprint, first.fingerprint);
+  assert.equal(cooling.runtime.conversational_attention, 'cooling');
+  assert.equal(context.brain2EvidenceSnapshot().fingerprint, cooling.fingerprint);
 });
 
 test('new speech replaces old prosody; transcript amendment is fresh even without a new line', () => {
@@ -93,6 +111,7 @@ for (const change of ['user', 'reset', 'failure', 'assistant']) {
       currentBrain2PersonFocus: () => 4, brain2ConversationContext: () => 'A recent conversation.',
       brain2RecentIdleContext: () => '', brain2RecentOutputContext: () => '',
       rememberBrain2Prompt: () => {},
+      brain2BodyContext: () => null,
       fetch: (_, options) => {
         posted = JSON.parse(options.body);
         return new Promise(resolve => { finish = resolve; });
@@ -121,6 +140,28 @@ for (const change of ['user', 'reset', 'failure', 'assistant']) {
     }
   });
 }
+
+test('Brain2 logs a body abstention without changing empty-eye evidence or dispatching motion', async () => {
+  const logs = [];
+  let posted;
+  const context = evidenceContext(['requestBrain2Mull'], {
+    ws: {}, URL, location: { href: 'http://127.0.0.1:8790/' }, userSpeechActive: false,
+    currentBrain2PersonFocus: () => 4, brain2ConversationContext: () => 'A recent conversation.',
+    brain2RecentIdleContext: () => '', brain2RecentOutputContext: () => '', rememberBrain2Prompt: () => {},
+    brain2BodyContext: () => ({ key: 'reachy_mini' }), normalizeFaceBaseUrl: () => 'body-url',
+    faceVisualHoldRevision: 1, logBrain2: (...args) => logs.push(args),
+    fetch: async (_, options) => {
+      posted = JSON.parse(options.body);
+      return { ok: true, json: async () => ({ status: 'ok', body_beat: '', body_choice: { status: 'abstained', proposed: '' } }) };
+    },
+  });
+  const result = await context.requestBrain2Mull();
+  assert.equal(posted.evidence.runtime.sensing_eye_image, null);
+  assert.equal(posted.evidence.runtime.sensing_eye_text, null);
+  assert.equal(posted.body.key, 'reachy_mini');
+  assert.equal(result.body_beat, '');
+  assert.deepEqual(logs, [['body choice', '{"status":"abstained","proposed":""}']]);
+});
 
 test('a loop guard cannot count the same Eric output repeatedly or carry pressure past new user input', async () => {
   let outputId = '1:0:1';
@@ -167,6 +208,39 @@ test('acknowledgments fade without weakening actual requests or suppressing thei
     assert.equal(context.idleCueIsAcknowledgment(request), false);
     assert.match(context.formatLastUserIdleCueForInstructions(), /strongest soft cue/);
   }
+});
+
+test('structured steering drives pressure without English keywords and clears when the subject advances', () => {
+  const c = load(['brain2LoopGuardText', 'recentBrain2LoopGuardCount', 'formatBrain2AdvisoryContent'], {
+    brain2NoteCandidates: [], brain2RevisionCandidates: [], brain2QuestionCandidates: [],
+    lastUserTurnActivityAt: 0, brain2LoopPressureInstruction: () => '',
+  });
+  for (let i = 1; i <= 2; i++) c.brain2NoteCandidates.push({
+    text: 'Un autre sujet.', at: i, b1OutputId: `a${i}`,
+    steering: { loop: true, unsupported_claim: true, topic: 'sounds', next: 'new_subject' },
+  });
+  assert.equal(c.recentBrain2LoopGuardCount(), 2);
+  assert.match(c.formatBrain2AdvisoryContent(), /Loop guard/);
+  assert.match(c.formatBrain2AdvisoryContent(), /Receipt guard/);
+  c.brain2NoteCandidates.push({ text: 'stop repeat same receipt', at: 3, b1OutputId: 'a3',
+    steering: { loop: false, unsupported_claim: false, topic: 'new discovery', next: 'continue' } });
+  assert.equal(c.recentBrain2LoopGuardCount(), 0);
+  assert.doesNotMatch(c.formatBrain2AdvisoryContent(), /Loop guard:|Receipt guard:/);
+});
+
+test('prompt-change diagnostics distinguish prefix edits from configuration-only updates', () => {
+  const c = load(['sessionPromptChange']);
+  const before = { instructions: 'Stable identity. Mic off.', tools: [{ name: 'tool' }] };
+  const after = { ...before, instructions: 'Stable identity. Mic on.' };
+  const change = c.sessionPromptChange(before, after);
+  assert.equal(change.common_prefix_chars, 'Stable identity. Mic o'.length);
+  assert.equal(change.tools_changed, false);
+  assert.equal(change.instructions_changed, true);
+  assert.match(change.basis, /not token or KV/);
+  const same = c.sessionPromptChange(before, { ...before, temperature: 0.2 });
+  assert.equal(same.instructions_changed, false);
+  assert.equal(same.common_prefix_chars, before.instructions.length);
+  assert.equal(same.current_excerpt, '');
 });
 
 test('re-engagement observes real human time even at 11x lab speed, including direct trigger checks', () => {

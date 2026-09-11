@@ -87,6 +87,7 @@ def format_continuity_session_variant(
     source_sha256: str,
     variant: str,
     created_label: str = "",
+    reviewed: bool = True,
 ) -> str:
     key = continuity_session_variant_key(variant)
     if key == "raw":
@@ -109,10 +110,11 @@ def format_continuity_session_variant(
             f"Source session: {source}",
             f"Source sha256: {digest}",
             f"Created: {created}",
+            f"Review: {'reviewed' if reviewed else 'generated; not human-reviewed'}",
             "",
             "Use",
             "---",
-            "This is a reviewed derivative of the named session note.",
+            "This is a derivative of the named session note; see its review status above.",
             "The source session remains the authority for lineage and pinned-context receipts.",
             "Current runtime truth still wins over saved material.",
             "",
@@ -129,6 +131,8 @@ def save_continuity_session_variant(
     instance_path: str | Path | None = None,
     *,
     created_label: str = "",
+    expected_source_sha256: str = "",
+    reviewed: bool = True,
 ) -> dict[str, object]:
     key = continuity_session_variant_key(variant)
     if key == "raw":
@@ -139,13 +143,17 @@ def save_continuity_session_variant(
     source = read_note_file(instance_path, source_filename)
     if not continuity_session_metadata(source.content):
         raise ValueError(f"{source.filename} is not a session note.")
+    digest = hashlib.sha256(source.content.encode("utf-8")).hexdigest()
+    if expected_source_sha256 and digest != expected_source_sha256:
+        raise ValueError("Source session changed during preparation; regenerate from the current original.")
     filename = _continuity_session_variant_filename_for_source(source.filename, key)
     content = format_continuity_session_variant(
         body=body,
         source_session_filename=source.filename,
-        source_sha256=hashlib.sha256(source.content.encode("utf-8")).hexdigest(),
+        source_sha256=digest,
         variant=key,
         created_label=created_label,
+        reviewed=reviewed,
     )
     note = write_note_file(instance_path, filename, content)
     return {
@@ -200,6 +208,7 @@ def list_continuity_sessions(
         sessions.append(
             {
                 "filename": note.filename,
+                "title": _continuity_session_title(instance_path, note),
                 "created": metadata["created"],
                 "parent_session_filename": metadata["parent_session_filename"],
                 "characters": len(note.content),
@@ -462,6 +471,7 @@ def continuity_session_variant_metadata(content: str) -> dict[str, str] | None:
         "source_session_filename": source_filename.replace("\\", "/"),
         "source_sha256": source_sha256,
         "created": _line_value(text, "Created"),
+        "review": _line_value(text, "Review") or "unspecified",
     }
 
 
@@ -517,8 +527,69 @@ def _continuity_session_variant_records(
             record["status"] = "stale"
         else:
             record["status"] = "available"
+        if metadata:
+            record["review"] = metadata["review"]
         records.append(record)
     return records
+
+
+def continuity_session_title_filename(session_filename: str, instance_path: str | Path | None = None) -> str:
+    return (
+        continuity_session_variant_filename(session_filename, "summary", instance_path).removesuffix(".summary.txt")
+        + ".title.json"
+    )
+
+
+def validate_continuity_session_title(title: Any) -> str:
+    if not isinstance(title, str) or not title.strip() or len(title.strip()) > 100:
+        raise ValueError("Session title must be 1-100 characters.")
+    if any(ord(char) < 32 for char in title) or "<" in title or ">" in title:
+        raise ValueError("Session title must be plain, single-line text.")
+    title = title.strip()
+    if title.lower() in {"session note", "untitled", "untitled session"}:
+        raise ValueError("Session title must describe this session.")
+    return title
+
+
+def _continuity_session_title(instance_path: str | Path | None, source: Any) -> str:
+    try:
+        filename = continuity_session_title_filename(source.filename, instance_path)
+        metadata = json.loads(read_note_file(instance_path, filename).content)
+        if not isinstance(metadata, dict):
+            return ""
+        if metadata.get("source_sha256") != hashlib.sha256(source.content.encode("utf-8")).hexdigest():
+            return ""
+        return validate_continuity_session_title(metadata.get("title"))
+    except (OSError, ValueError):
+        return ""
+
+
+def save_continuity_session_title(
+    title: str,
+    session_filename: str,
+    instance_path: str | Path | None = None,
+    *,
+    expected_source_sha256: str = "",
+    reviewed: bool = True,
+) -> dict[str, Any]:
+    title = validate_continuity_session_title(title)
+    source = read_note_file(instance_path, session_filename)
+    if not _looks_like_continuity_session_filename(source.filename) or not continuity_session_metadata(source.content):
+        raise ValueError("Title requires an unarchived source session in sessions/.")
+    source_sha256 = hashlib.sha256(source.content.encode("utf-8")).hexdigest()
+    if expected_source_sha256 and source_sha256 != expected_source_sha256:
+        raise ValueError("Source session changed before its title could be saved.")
+    filename = continuity_session_title_filename(source.filename, instance_path)
+    if not reviewed and _continuity_session_title(instance_path, source):
+        return json.loads(read_note_file(instance_path, filename).content)
+    metadata = {
+        "title": title,
+        "source_sha256": source_sha256,
+        "review": "human-reviewed" if reviewed else "generated; not human-reviewed",
+        "created": datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    write_note_file(instance_path, filename, json.dumps(metadata, indent=2))
+    return metadata
 
 
 def _existing_continuity_session_variant_notes(
@@ -531,6 +602,15 @@ def _existing_continuity_session_variant_notes(
         if not resolve_note_path(filename, instance_path).exists():
             continue
         notes.append(read_note_file(instance_path, filename))
+    receipt = (
+        _continuity_session_variant_filename_for_source(source_filename, "summary").removesuffix(".summary.txt")
+        + ".preparation.json"
+    )
+    if resolve_note_path(receipt, instance_path).exists():
+        notes.append(read_note_file(instance_path, receipt))
+    title = continuity_session_title_filename(source_filename, instance_path)
+    if resolve_note_path(title, instance_path).exists():
+        notes.append(read_note_file(instance_path, title))
     return notes
 
 
@@ -553,7 +633,7 @@ def format_continuity_session_note(
         "Use",
         "---",
         "This is the saved latest transcript/context from one sit-down. Load it when resuming from this run.",
-        ("The filename should carry the PM caption. Current sensors, tools, and time still need fresh runtime truth."),
+        "Current sensors, tools, and time still need fresh runtime truth.",
         "",
         "How This Run Got Here",
         "-----------------------",
@@ -734,6 +814,18 @@ def _archive_sensing_eye_assets(
     archive_relative = f"{Path(archived_session_filename).parent.as_posix()}/sensing-eye"
     archive_dir = package_dir / "sensing-eye"
     archived: list[dict[str, object]] = []
+    shared: set[str] = set()
+    names = {receipt.filename for receipt in receipts}
+    for filename in list_note_files(instance_path):
+        if filename == source_session_filename or not _looks_like_continuity_session_filename(filename):
+            continue
+        try:
+            content = read_note_file(instance_path, filename).content
+        except (OSError, ValueError):
+            shared.update(names)  # Unreadable active references must not cause asset removal.
+            continue
+        shared.update(receipt.filename for receipt in _parse_sensing_eye_asset_receipts(content))
+        shared.update(name for name in names if f"file logs/sensing-eye/{name} " in content)
 
     for receipt in receipts:
         source = root / receipt.filename
@@ -762,12 +854,14 @@ def _archive_sensing_eye_assets(
             continue
         try:
             archive_dir.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(source), str(target))
+            transfer = shutil.copy2 if receipt.filename in shared else shutil.move
+            transfer(str(source), str(target))
             record["archive_status"] = "archived"
+            record["retained_for_active_session"] = receipt.filename in shared
             sidecar = _sensing_eye_sidecar_path(source)
             if sidecar.is_file():
                 try:
-                    shutil.move(str(sidecar), str(_sensing_eye_sidecar_path(target)))
+                    transfer(str(sidecar), str(_sensing_eye_sidecar_path(target)))
                     record["metadata_status"] = "archived"
                 except OSError as exc:
                     record["metadata_status"] = "error"

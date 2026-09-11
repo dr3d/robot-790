@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from robot_790d.continuity import (
     archive_continuity_session,
     continuity_session_variant_filename,
@@ -293,6 +295,28 @@ def test_archive_continuity_session_moves_its_sensing_eye_assets(tmp_path: Path)
     assert manifest["assets"][0]["archive_status"] == "archived"
     assert unrelated.is_file()
     assert current_continuity_session(tmp_path)["session_filename"] == newer["session_filename"]
+
+
+@pytest.mark.parametrize("manifest_reference", [True, False])
+def test_archiving_preserves_assets_referenced_by_another_active_session(tmp_path: Path, manifest_reference: bool) -> None:
+    eye = tmp_path / "logs" / "sensing-eye"
+    eye.mkdir(parents=True)
+    image = eye / "shared.jpg"
+    image.write_bytes(b"shared image")
+    sidecar = eye / "shared.jpg.json"
+    sidecar.write_text('{}', encoding="utf-8")
+    original = save_continuity_session("original", [], tmp_path, filename_timestamp="20260911-010000", sensing_eye_filenames=[image.name])
+    save_continuity_session(
+        "recalled file logs/sensing-eye/shared.jpg size 100x100", [], tmp_path,
+        filename_timestamp="20260911-020000", sensing_eye_filenames=[image.name] if manifest_reference else [],
+    )
+    result = archive_continuity_session(original["session_filename"], tmp_path)
+    assert image.read_bytes() == b"shared image"
+    assert sidecar.exists()
+    assert result["archived_sensing_eye_assets"][0]["retained_for_active_session"] is True
+    archived = tmp_path / "notes" / "sessions" / "archived" / "session-20260911-010000" / "sensing-eye"
+    assert (archived / image.name).read_bytes() == image.read_bytes()
+    assert (archived / sidecar.name).exists()
 
 
 def test_selected_session_reports_missing_parent_after_parent_is_archived(tmp_path: Path) -> None:

@@ -82,7 +82,7 @@
         "header header header"
         "logs sidebar-resize sidebar";
       align-content: stretch;
-      gap: 14px 4px;
+      gap: 0 4px;
       overflow: hidden;
     }
     main.sidebar-collapsed {
@@ -130,7 +130,7 @@
       background-size: auto, auto, 190px 190px, auto;
       background-position: center, center, left top, center;
       background-blend-mode: normal, normal, luminosity, normal;
-      border-bottom: 1px solid rgba(var(--status-accent-rgb), 0.28);
+      border-bottom: 0;
       backdrop-filter: blur(10px);
     }
     .header-actions {
@@ -1500,7 +1500,8 @@
       min-height: 0;
       max-height: 100%;
       overflow: hidden;
-      padding-bottom: 0;
+      padding: 0;
+      border: 0;
       gap: 4px;
     }
     .log-grid > .log-pane {
@@ -2073,14 +2074,17 @@
         display: none;
       }
       header {
-        grid-template-columns: minmax(12rem, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
-          "title buttons"
-          "status status"
-          "nerves nerves";
+          "title"
+          "buttons"
+          "status"
+          "nerves";
       }
       .header-buttons {
         justify-content: flex-end;
+        flex-wrap: wrap;
+        max-width: 100%;
       }
       h1 {
         min-height: 29px;
@@ -3156,6 +3160,7 @@
     let lastExitSnapshotAt = 0;
     let lastExitSnapshotReason = "";
     let intentionalExitCleanupInProgress = false;
+    let realtimeStopRequested = false;
     let quickRecordConversationBusy = false;
     let playbackTime = 0;
     const audioFlushMs = 120;
@@ -3166,6 +3171,10 @@
     let audioFlushTimer;
     let activeAudioSources = new Set();
     let lastBargeInAt = 0;
+    let micInterruptActiveMs = 0;
+    let micInterruptGapMs = 0;
+    const audioPlaybackWindows = new WeakMap();
+    let continuityRestoreAt = Date.now();
     let imageToolProtectionUntil = 0;
     let imageToolProtectionTimer;
     let imageToolProtectionEnabled = false;
@@ -3205,6 +3214,9 @@
     let toolFollowupExactText = "";
     let toolFollowupInstructions = "";
     let toolFollowupPromptSources = [];
+    let toolFollowupCatalog = null;
+    let pendingEyeRecallResponse = null;
+    const eyeRecallResponses = new Map();
     let toolFollowupPromptLog = [];
     let promptLedgerLog = [];
     let brain2PromptLog = [];
@@ -3221,6 +3233,7 @@
     let loadedNoteContextDirty = false;
     let searchContextReceipts = [];
     let aloneActivityLog = [];
+    let completedAloneInterval = null;
     let lastRealtimeContextMode = "normal";
     const defaultCurrentEmbodiment = "Your current embodiment is the Browser Face simulator: a local browser-window face with the same semantic face API as the ESP32-S3 face, plus mirror capture and inspection tools.";
     const defaultBodyTrajectory = "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results as the authority on what you can currently do.";
@@ -3249,7 +3262,8 @@
     let connectionButtonsLocked = false;
     let responseActive = false;
     let deliberateTurnInFlight = false;
-    let toolMarkupSuppressed = false;
+    const suppressedResponseIds = new Set();
+    let unidentifiedOutputSuppressed = false;
     let userSpeechActive = false;
     let inputAudioTranscriptionPending = false;
     let userTurnPendingUntil = 0;
@@ -3278,10 +3292,16 @@
     let brain2HeadlinesInFlight = false;
     let brain2HeadlineSeed = null;
     let brain2HeadlineSeen = [];
+    let brain2HeadlineCache = [];
+    let brain2HeadlineRefreshRequested = false;
+    let brain2HeadlineLastSelectionAt = 0;
     let lastBrain2MullAt = 0;
     let brain2BackoffUntil = 0;
     let brain2FailureStreak = 0;
     let brain2DeferredSurface = null;
+    let brain2LastBodyCueAt = 0;
+    let brain2PendingBodyCue = null;
+    let brain2BodyCueTimer = null;
     let idleTimer;
     let idleTimerFireAt = 0;
     let idleSchedulerStatusTimer = null;
@@ -3532,6 +3552,8 @@
     let gazeHoldIndefinite = false;
     let faceVisualHoldUntil = 0;
     let faceVisualHoldIndefinite = false;
+    let faceVisualHoldRevision = 0;
+    let faceVisualRequestsInFlight = 0;
 
     const memoryStorageKey = "robot790.memory.v1";
     const toolPrefsStorageKey = "robot790.toolPrefs.v2";
@@ -3639,6 +3661,7 @@
     let currentContinuitySessionFilename = "";
     let continuityParentForCurrentRun = "";
     let continuitySessions = [];
+    let continuitySessionRefreshTimer = null;
     const contextCardOpenByName = new Map();
     let continuitySaveHalted = false;
     let continuitySaveBusy = false;
@@ -3796,13 +3819,15 @@
     const maxSensingEyeImageHistory = 5;
     const maxSensingTextChars = 30000;
     const bargeInCooldownMs = 1600;
-    const idlePostUserQuietMs = 12000;
+    const defaultIdleTiming = Object.freeze({
+      attention_enabled: true, attention_start_s: 12, attention_fade_s: 180, attention_warm_s: 45,
+      post_user_quiet_s: 12, minimum_gap_s: 90, drift_base_s: 270, drift_step_s: 22.5, drift_floor_s: 45
+    });
     const idlePendingUserTurnMs = 25000;
     const reengageFirstDelayMs = 8000;
     const reengageRepeatDelayMs = 16000;
     const reengageGoneAfterMs = 75000;
     const maxReengageAttempts = 3;
-    const minIdlePonderGapMs = 90000;
     const idleLevel12YackAfterMs = 90 * 1000;
     const idleWebSearchGapMs = 20 * 60 * 1000;
     const idleHeadlineQuietMs = 2 * 60 * 1000;
@@ -4412,11 +4437,18 @@
           face_url: String(item?.face_url || "").trim(),
           description: String(item?.description || "").trim(),
           personality: String(item?.personality || item?.presence || "").trim(),
+          mouth_text: item?.mouth_text !== false,
+          idle_context: String(item?.idle_context || "").trim(),
           toolbox: Array.isArray(item?.toolbox || item?.affordances)
             ? (item.toolbox || item.affordances).map((value) => String(value || "").trim()).filter(Boolean)
             : []
         }))
         .filter((item) => item.key && item.face_url);
+    }
+
+    function embodimentSupportsMouthText() {
+      const key = matchingConfiguredEmbodimentKey(normalizeFaceBaseUrl());
+      return configuredEmbodiments().find((item) => item.key === key)?.mouth_text !== false;
     }
 
     function populateEmbodimentSelect() {
@@ -4901,7 +4933,7 @@
         name: "recall_sensing_eye_note",
         description: (
           "Load one recalled sensing-eye memory back into the current sensing eye and stage it as current image or text context. " +
-          "Use after list_sensing_eye_notes, or when the user asks to load/reload/recall a previous picture memory, text memory, pasted text, or visual note into the sensing eye."
+          "Use after list_sensing_eye_notes. Pass the exact note_id, not a guessed index or a subject query. IDs of saved files remain stable when the current image changes."
         ),
         parameters: {
           type: "object",
@@ -4909,19 +4941,21 @@
             index: {
               type: "number",
               minimum: 1,
-              maximum: maxSensingEyeImageHistory,
-              description: "1-based recent-note index from list_sensing_eye_notes. 1 is newest/current."
+              maximum: 25,
+              description: "Optional 1-based catalogue index. The required note_id takes precedence."
             },
             note_id: {
               type: "string",
-              description: "Optional exact note id from list_sensing_eye_notes."
+              minLength: 1,
+              description: "Required exact note id from list_sensing_eye_notes. Use attributed saved remarks as retrieval clues, then inspect the recalled note itself."
             },
             query: {
               type: "string",
               maxLength: 160,
-              description: "Optional spoken-memory cue to match against the note name, saved filename, source, last user words, and nearby transcript."
+              description: "Optional context only when note_id is supplied. It never overrides the exact id."
             }
           },
+          required: ["note_id"],
           additionalProperties: false
         }
       },
@@ -4952,19 +4986,21 @@
             index: {
               type: "number",
               minimum: 1,
-              maximum: maxSensingEyeImageHistory,
-              description: "1-based recent-note index from list_sensing_eye_images. 1 is newest/current."
+              maximum: 25,
+              description: "Optional 1-based catalogue index. The required image_id takes precedence."
             },
             image_id: {
               type: "string",
-              description: "Optional exact note id from list_sensing_eye_images."
+              minLength: 1,
+              description: "Required exact note id from list_sensing_eye_images. Saved-file IDs remain stable."
             },
             query: {
               type: "string",
               maxLength: 160,
-              description: "Optional spoken-memory cue to match against the note name, saved filename, source, last user words, and nearby transcript."
+              description: "Optional context only when image_id is supplied. It never overrides the exact id."
             }
           },
+          required: ["image_id"],
           additionalProperties: false
         }
       },
@@ -5553,7 +5589,7 @@
       });
       return [
         "Recent web-search receipts:",
-        "These are temporary source-labeled lookup snippets from this browser session, newest first. Use them as working context, not permanent memory. If a receipt source is idle, the STS controller searched during idle; do not deny that idle work happened. If the user asks for latest/current or the receipt is stale, search again.",
+        "These are source-labeled snippets from this browser session, newest first. Use them as working context, not permanent memory. Source idle means the controller searched during idle; idle-headline means it selected a feed headline, not that you searched or read the full article. If the user asks for latest/current or the receipt is stale, search again.",
         blocks.join("\n")
       ].join("\n");
     }
@@ -5573,25 +5609,57 @@
     }
 
     function aloneActivitiesSinceLastUser() {
-      const since = lastAcceptedUserTranscriptAt || lastUserTurnActivityAt || 0;
+      const since = Math.max(lastAcceptedUserTranscriptAt, lastUserTurnActivityAt);
       if (!since) return aloneActivityLog.slice();
       return aloneActivityLog.filter((item) => Number(item.at || 0) > since);
     }
 
+    function captureCompletedAloneInterval() {
+      const lastTurn = Math.max(lastAcceptedUserTranscriptAt, lastUserTurnActivityAt);
+      const since = lastTurn || brain2HeadlineStartedAt;
+      const now = Date.now();
+      if (!since || now - since < reengageGoneAfterMs) return;
+      const activities = aloneActivitiesSinceLastUser();
+      if (!activities.length) return;
+      completedAloneInterval = {
+        since, until: now, activities: activities.slice(),
+        anchor: lastTurn ? "operator turn activity" : "current run context start (no prior operator turn)"
+      };
+    }
+
+    function formatCompletedAloneInterval() {
+      if (!completedAloneInterval) return "";
+      const { since, until, activities, anchor } = completedAloneInterval;
+      const searches = activities.filter((item) => item.type === "idle_search");
+      const headlines = activities.filter((item) => item.type === "idle_headline");
+      return [
+        "Most recent completed quiet interval (historical, not the current silence):",
+        `- Start anchor: ${anchor}.`,
+        `- From ${new Date(since).toISOString()} to ${new Date(until).toISOString()}; duration ${shortDuration(until - since)}.`,
+        `- Retained receipts: ${searches.length} controller web searches; ${headlines.length} selected feed headlines (not full articles).`,
+        `- Latest search: ${searches[0]?.detail || "none"}.`,
+        `- Latest selected headline: ${headlines[0]?.detail || "none"}.`,
+        "- Use this record if asked what happened while the operator was away. Receipt counts describe the retained ledger, not all possible activity; headline selection does not prove you discussed it aloud."
+      ].join("\n");
+    }
+
     function formatAloneStateForInstructions() {
       const now = Date.now();
-      const since = lastAcceptedUserTranscriptAt || lastUserTurnActivityAt || 0;
+      const since = Math.max(lastAcceptedUserTranscriptAt, lastUserTurnActivityAt);
       const activities = aloneActivitiesSinceLastUser();
       const idleBeats = activities.filter((item) => item.type === "idle_beat").length;
       const idleSearches = activities.filter((item) => item.type === "idle_search").length;
+      const headlines = activities.filter((item) => item.type === "idle_headline");
       const lastIdleBeat = activities.find((item) => item.type === "idle_beat");
       const lastIdleSearch = activities.find((item) => item.type === "idle_search");
       const activeSelfTasks = activeIdleSelfTasks();
       const lines = [
         "Alone state:",
-        `- Operator last spoke: ${since ? `${shortDuration(now - since)} ago` : "not yet this session"}.`,
-        `- Idle beats since then: ${idleBeats}.`,
-        `- Idle web searches since then: ${idleSearches}.`,
+        `- Last operator turn activity: ${since ? `${shortDuration(now - since)} ago` : "not yet this session"}.`,
+        `- Retained idle beats since then: ${idleBeats}.`,
+        `- Retained controller web searches since then: ${idleSearches}.`,
+        `- Retained selected feed headlines since then: ${headlines.length} (not full articles).`,
+        `- Latest selected headline: ${headlines[0]?.detail || "none"}.`,
         `- Last idle lane: ${lastIdleBeat?.detail || "none"}.`,
         `- Last idle search receipt: ${lastIdleSearch?.detail || "none"}.`,
         currentLabGoal() ? `- Active lab goal: ${currentLabGoal()}` : "- Active lab goal: none.",
@@ -5601,9 +5669,9 @@
         lines.push("- If asked what happened while the operator was gone, answer from this ledger and the search receipts; do not say you were unable to search during idle.");
         lines.push("- Accurate phrasing: the STS controller ran allowed idle searches and gave you receipts.");
       } else {
-        lines.push("- If asked whether you searched while idle, answer from receipts. If there are no idle search receipts, say no receipt exists.");
+        lines.push("- If asked whether you searched while idle, distinguish controller searches from selected feed headlines; neither proves you read a full article.");
       }
-      return lines.join("\n");
+      return [lines.join("\n"), formatCompletedAloneInterval()].filter(Boolean).join("\n\n");
     }
 
     function formatLastUserIdleCueForInstructions() {
@@ -5936,6 +6004,8 @@
     }
 
     async function fetchContinuitySessions() {
+      clearTimeout(continuitySessionRefreshTimer);
+      continuitySessionRefreshTimer = null;
       const response = await fetch(new URL("/api/continuity/sessions", location.href), { cache: "no-store" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status === "error") {
@@ -5943,6 +6013,11 @@
       }
       continuitySessions = Array.isArray(result.sessions) ? result.sessions : [];
       renderContinuitySessionSelect(result.current_session_filename || "");
+      if (continuitySessions.some((item) => ["queued", "running", "waiting"].includes(item.preparation?.state))) {
+        continuitySessionRefreshTimer = setTimeout(() => {
+          fetchContinuitySessions().catch((error) => log(events, `session refresh failed: ${error.message}`));
+        }, 3000);
+      }
       return result;
     }
 
@@ -5968,7 +6043,7 @@
       if (continuitySessionSelect) continuitySessionSelect.disabled = false;
       for (const item of continuitySessions) {
         const filename = String(item.filename || "");
-        const displayName = sessionNoteTitle(filename);
+        const displayName = sessionNoteTitle(filename, item.title);
         const option = document.createElement("option");
         option.value = filename;
         const marker = filename.toLowerCase() === String(currentFilename || "").toLowerCase() ? "* " : "";
@@ -6350,6 +6425,7 @@
         loadedNoteContexts: loadedNoteContexts.map((item) => ({ ...item })),
         searchContextReceipts: searchContextReceipts.map((item) => ({ ...item, results: item.results.map((result) => ({ ...result })) })),
         aloneActivityLog: aloneActivityLog.map((item) => ({ ...item })),
+        completedAloneInterval,
         performanceMode: performanceMode.checked,
         performanceAutoUntil,
         performancePrompt,
@@ -6381,6 +6457,7 @@
       aloneActivityLog = Array.isArray(state.aloneActivityLog)
         ? state.aloneActivityLog.map((item) => ({ ...item }))
         : [];
+      completedAloneInterval = state.completedAloneInterval || null;
       loadedNoteContextDirty = true;
       performanceMode.checked = state.performanceMode;
       performanceAutoUntil = state.performanceAutoUntil;
@@ -6456,6 +6533,7 @@
       idleResearchThread = null;
       searchContextReceipts = [];
       aloneActivityLog = [];
+      completedAloneInterval = null;
       recentIdleClaimSignatures = [];
       recentIdleOpenings = [];
       recentIdleThemes = [];
@@ -6557,16 +6635,17 @@
       const content = String(item?.content || "");
       const createdLabel = (content.match(/^Created:\s*(.+)$/mi) || [])[1]?.trim() || "";
       const created = continuityCreatedAt(content);
-      const now = new Date();
+      const now = new Date(continuityRestoreAt);
       const lines = [
         "Restore envelope:",
-        `- Current browser time at prompt assembly: ${now.toLocaleString()}.`
+        `- This connection began restoring notes at: ${now.toISOString()}.`,
+        "- This is a fixed handoff receipt, not the current clock; use current runtime time or get_current_time when needed."
       ];
       if (created) {
         lines.push(`- Authoritative session save timestamp: ${createdLabel || created.toISOString()}.`);
         lines.push("- If asked when this session was saved, answer from that Created timestamp. Do not infer it from transcript turns or say the note lacks a date.");
         lines.push(`- Session note was created: ${created.toLocaleString()}.`);
-        lines.push(`- Approximate off-gap since that session: ${shortDuration(Math.max(0, now.getTime() - created.getTime()))}.`);
+        lines.push(`- Approximate off-gap at connection: ${shortDuration(Math.max(0, now.getTime() - created.getTime()))}.`);
       } else {
         lines.push("- Session note creation time was not parseable; do not invent an off-gap.");
       }
@@ -6811,11 +6890,16 @@
       updateLabGoalUi({ quiet: true });
     }
 
-    function formatEmbodimentForInstructions() {
+    function formatEmbodimentForInstructions({ compact = false } = {}) {
       const embodiments = configuredEmbodiments();
       const activeByUrl = embodiments.find((item) => normalizeUrlString(item.face_url) === normalizeFaceBaseUrl());
       const activeKey = currentEmbodimentKey || activeByUrl?.key || "";
       const active = embodiments.find((item) => item.key === activeKey) || activeByUrl || null;
+      if (compact) {
+        return active
+          ? `Current embodiment: ${active.label} (${active.key}). ${active.description || ""} ${active.idle_context || ""}`.trim()
+          : "Current embodiment: no matching profile; do not infer a body from old notes.";
+      }
       const optionLines = embodiments.map((item) => {
         const aliases = embodimentAliasHint(item);
         return `- ${item.key}: ${item.label}${aliases ? ` (${aliases})` : ""}; controller ${normalizeUrlString(item.face_url)}${item.description ? `; ${item.description}` : ""}`;
@@ -6924,6 +7008,8 @@
           body_trajectory: String(result.body_trajectory || defaultBodyTrajectory),
           embodiment_profile_rule: String(result.embodiment_profile_rule || ""),
           idle_level12_cooldown_s: Number(result.idle_level12_cooldown_s) || 12,
+          idle_timing: result.idle_timing && typeof result.idle_timing === "object" ? result.idle_timing : {},
+          audio_interrupt: result.audio_interrupt && typeof result.audio_interrupt === "object" ? result.audio_interrupt : {},
           creature: result.creature && typeof result.creature === "object" ? result.creature : null,
           creature_source: String(result.creature_source || ""),
           session_behavior_rules: Array.isArray(result.session_behavior_rules) ? result.session_behavior_rules : defaultSessionBehaviorRules,
@@ -6940,6 +7026,7 @@
         currentEmbodimentKey = matchingConfiguredEmbodimentKey(normalizeFaceBaseUrl());
         populateEmbodimentSelect();
         log(events, "runtime config loaded");
+        log(events, `idle timing loaded: ${JSON.stringify(idleTiming())}`);
         updateSessionTools();
       } catch (error) {
         runtimeConfig = {
@@ -7076,18 +7163,20 @@
       const questionLines = currentCandidates(brain2QuestionCandidates).map((item) => `- ${item.text}`);
       const notes = currentCandidates(brain2NoteCandidates);
       const noteLines = notes.map((item) => `- ${item.text}`);
-      const hasLoopGuard = notes.some((item) => /\b(loop|repeat|duplicate|exhausted|saturation|stop|drop|do not add|do not extend|same|stuck|circle|orbit)\b/i.test(item.text || ""));
-      const hasReceiptGuard = notes.some((item) => /\b(routine gap|receipt|verified|unverified|without a verified|without a .*receipt|do not claim)\b/i.test(item.text || ""));
+      const assessment = notes.filter((item) => item.steering && item.at > lastUserTurnActivityAt).at(-1)?.steering;
+      const hasLoopGuard = assessment?.loop === true;
+      const hasReceiptGuard = assessment?.unsupported_claim === true;
       const loopPressure = brain2LoopPressureInstruction();
       if (!revisionLines.length && !questionLines.length && !noteLines.length) return "";
       return [
         "Current snapshot. It supersedes any earlier [B2 advisory] snapshot.",
+        assessment ? `Private fallible B2 assessment, not sensor evidence: ${JSON.stringify(assessment)}. Use silently.` : "",
         loopPressure,
         hasLoopGuard
-          ? "Loop guard: at least one recent Brain 2 note says the current pattern is repeating or exhausted. Treat that as a next-turn constraint: do not extend the same object, metaphor, or explanation."
+          ? "Loop guard: advance beyond the repeated thought with a new angle, playful development, or another subject. Your body, imagination, and banter remain welcome; no topic category is banned."
           : "",
         hasReceiptGuard
-          ? "Receipt guard: at least one recent Brain 2 note says you are claiming state without evidence. Treat that as a high-priority next-turn constraint: do not claim actual system damage, reboot, shutdown, stability, completed routines, or tool work unless a current tool/log/status receipt verifies it."
+          ? "Receipt guard: correct the unsupported factual measurement or verified-action claim. Do not turn this into disclaimers for imaginative body talk, bragging, or metaphor. Play does not need a receipt."
           : "",
         noteLines.length
           ? `Advisory notes from Brain 2:\n${noteLines.join("\n")}\nUse at most one as a quiet steering cue for your next reply or idle beat. Do not mention Brain 2 unless the operator asks about the mechanism.`
@@ -7784,7 +7873,9 @@
     function idleResponseInputContent(lane, { firstContactActive = false, performanceActive = false } = {}) {
       const goal = currentLabGoal();
 
-      const normalText = labGoalOneShotEnabled() && goal
+      const normalText = lane.name === "conversation"
+        ? "An afterthought surfaced during a pause in the recent conversation. Continue naturally from that exchange; this is not a new operator request or a request to check whether they are still there."
+        : labGoalOneShotEnabled() && goal
         ? `Internal idle event: a ${lane.name} thought surfaced inside Robot 790 while this one-shot lab goal is active: ${goal}. Treat it as the next job and speak one compact step aloud. The operator did not ask again.`
         : goal
         ? `Internal idle event: a ${lane.name} thought surfaced inside Robot 790. A pinned lab goal is present as background: ${goal}. Let the operator's last setup words, active self-tasks, and fresh receipts steer the thought. Speak it aloud as self-talk; the operator did not ask again.`
@@ -7806,6 +7897,9 @@
     }
 
     function conversationReengagePolicy(level = currentIdleDrift()) {
+      if (conversationAttentionEnabled(level)) {
+        return { enabled: false, maxAttempts: 0, firstDelayMs: Infinity, repeatDelayMs: Infinity, tone: "attention ramp" };
+      }
       if (firstContactModeEnabled()) {
         return {
           enabled: false,
@@ -8445,7 +8539,7 @@
     }
 
     function realtimeConnected() {
-      return Boolean(ws && ws.readyState === WebSocket.OPEN);
+      return Boolean(!realtimeStopRequested && ws && ws.readyState === WebSocket.OPEN);
     }
 
     function micRuntimeLabel() {
@@ -10109,7 +10203,9 @@
 
     function noteUserTurnActivity({ pendingMs = idlePendingUserTurnMs } = {}) {
       const now = Date.now();
+      captureCompletedAloneInterval();
       lastUserTurnActivityAt = now;
+      brain2HeadlineRefreshRequested = false;
       userTurnPendingUntil = Math.max(userTurnPendingUntil, now + compressIdleMs(pendingMs, { floorMs: 2500 }));
       clearIdleHardBrake("user turn activity");
       noteConversationActivity();
@@ -10219,7 +10315,7 @@
     function idleBlockedReason({ manual = false } = {}) {
       if (!realtimeConnected()) return "disconnected";
       if (!manual && currentIdleDrift() <= 0) return "idle off";
-      if (!manual && idleHardBrakeActive()) return "hard loop brake";
+      if (!manual && idleHardBrakeActive() && !idleHeadlineBrakePassAvailable()) return "hard loop brake";
       if (Date.now() < idleCooldownUntil) return "cooldown";
       if (responseActive || outputAudioActive()) return "assistant busy";
       if (idleInFlight) return "idle already in flight";
@@ -10230,7 +10326,7 @@
       if (userTurnPending()) return "user turn pending";
       const reengagePolicy = conversationReengagePolicy();
       if (!manual && conversationReengageWindowActive() && reengageAttempts < reengagePolicy.maxAttempts) return "conversation re-engage window";
-      if (!manual && lastUserTurnActivityAt && Date.now() - lastUserTurnActivityAt < compressIdleMs(idlePostUserQuietMs, { floorMs: 2500 })) return "recent user turn";
+      if (!manual && lastUserTurnActivityAt && Date.now() - lastUserTurnActivityAt < compressIdleMs(idleTiming().post_user_quiet_s * 1000, { floorMs: 2500 })) return "recent user turn";
       return "";
     }
 
@@ -10240,14 +10336,56 @@
       if (level >= 12 && idleLevel12YackActive(level)) return compressIdleMs(1000 + Math.random() * 2500, { floorMs: 750 });
       if (level >= 12) return compressIdleMs(2500 + Math.random() * 9000, { floorMs: 1000 });
       if (level >= 11) return compressIdleMs(10000 + Math.random() * 35000, { floorMs: 2500 });
-      return compressIdleMs(Math.max(45000, 270000 - level * 22500), { floorMs: 8000 });
+      const timing = idleTiming();
+      return compressIdleMs(Math.max(timing.drift_floor_s, timing.drift_base_s - level * timing.drift_step_s) * 1000, { floorMs: 8000 });
+    }
+
+    function idleTiming() {
+      return { ...defaultIdleTiming, ...runtimeConfig.idle_timing };
+    }
+
+    function conversationAttentionEnabled(level = currentIdleDrift()) {
+      return idleTiming().attention_enabled && level > 0 && level <= 10 && !firstContactModeEnabled()
+        && !performanceModeEnabled() && !idleSubstrateTestEnabled();
+    }
+
+    function conversationAttentionState(at = Date.now()) {
+      if (!conversationAttentionEnabled() || !lastAcceptedUserTranscriptAt) {
+        return { phase: "independent", weight: 0 };
+      }
+      // Only replies to the operator update this finish time, never autonomous idle speech.
+      const quietMs = Math.max(0, at - Math.max(lastAcceptedUserTranscriptAt, lastAssistantResponseDoneAt));
+      const timing = idleTiming();
+      const progress = Math.min(1, quietMs / (timing.attention_fade_s * 1000));
+      const weight = 1 - progress * progress * (3 - 2 * progress);
+      return { phase: quietMs < timing.attention_warm_s * 1000 ? "engaged" : weight > 0 ? "cooling" : "independent", weight };
+    }
+
+    function conversationIdleDelayMs(baseMs, at) {
+      if (!Number.isFinite(baseMs)) return baseMs;
+      const { weight } = conversationAttentionState(at);
+      if (!weight) return baseMs;
+      // Human breathing room stays real-time even when the independent idle clock is accelerated.
+      const startMs = idleTiming().attention_start_s * 1000;
+      const targetMs = Math.max(startMs, baseMs);
+      return Math.round(startMs + (targetMs - startMs) * (1 - weight));
+    }
+
+    function conversationAttentionInstruction(attention = conversationAttentionState()) {
+      if (!conversationAttentionEnabled()) return "";
+      const frame = attention.phase === "engaged"
+        ? "You and the operator are still sharing this activity. Be curious about their intention or experience: a relevant question, a playful choice, or a brief afterthought that gives them somewhere to go can continue it together. Do not merely describe the same object to yourself. A question is welcome when you genuinely have one, not a quota or an attendance check."
+        : attention.phase === "cooling"
+        ? "Attention is gradually loosening from the recent conversation. You may carry one thread forward or let a new interest take over; you need not keep waiting for a command."
+        : "No recent conversational exchange is keeping attention close. Follow an interest of your own rather than waiting for the operator to provide the next thought.";
+      return `${frame} A pause is not proof the operator left. Do not announce the attention state or demand a reply. Keep imaginative expression natural.`;
     }
 
     function idleGapMs() {
       const level = currentIdleDrift();
       if (level >= 12 && idleLevel12YackActive(level)) return compressIdleMs(1000, { floorMs: 750 });
       if (level >= 12) return compressIdleMs(2500, { floorMs: 1000 });
-      return compressIdleMs(level >= 11 ? 10000 : minIdlePonderGapMs, { floorMs: 5000 });
+      return compressIdleMs(level >= 11 ? 10000 : idleTiming().minimum_gap_s * 1000, { floorMs: 5000 });
     }
 
     function idleWebSearchGapForLevel(level) {
@@ -10291,13 +10429,19 @@
     }
 
     function brain2LoopGuardText(text) {
-      return /^\s*LOOP GUARD:/i.test(String(text || ""));
+      if (text && typeof text === "object") {
+        return text.steering ? text.steering.loop === true : brain2LoopGuardText(text.text);
+      }
+      return /^\s*LOOP GUARD:/i.test(String(text || "")); // Legacy saved advisories only.
     }
 
     function recentBrain2LoopGuardCount(limit = 6) {
-      const evidenceIds = brain2NoteCandidates
-        .slice(-Math.max(1, limit))
-        .filter((item) => brain2LoopGuardText(item.text) && item.at > lastUserTurnActivityAt)
+      const candidates = brain2NoteCandidates.slice(-Math.max(1, limit));
+      const current = candidates.at(-1)?.steering;
+      if (current && !current.loop) return 0;
+      const evidenceIds = candidates
+        .filter((item) => brain2LoopGuardText(item) && item.at > lastUserTurnActivityAt
+          && (!current || item.steering?.topic === current.topic))
         .map((item) => item.b1OutputId)
         .filter(Boolean);
       return new Set(evidenceIds).size;
@@ -10313,7 +10457,7 @@
           label: activeBrake ? "red / hard brake active" : "red / hard brake threshold",
           instruction: activeBrake
             ? "Brain 2 loop pressure is RED and the runtime has blocked automatic idle. Do not try to continue the old idle thread; wait for new external input or answer only the live user turn."
-            : "Brain 2 loop pressure is RED. The next move is closure: go quiet, make one plain correction, or switch to a verified new receipt. Do not add another metaphor, object orbit, or internal narration step."
+            : "Brain 2 loop pressure is RED. Several new outputs have repeated an exhausted thought. Leave that repetition behind: explore something else, develop a genuinely new idea, or rest. Imagination and metaphor are still welcome."
         };
       }
       if (count === 2) {
@@ -10321,7 +10465,7 @@
           level: "orange",
           count,
           label: "orange / escalating",
-          instruction: "Brain 2 loop pressure is ORANGE. You are drifting away. Apply a hard steering correction now: stop the current thread, use a verified fresh detail if one exists, or say nothing useful has changed."
+          instruction: "Brain 2 loop pressure is ORANGE. The thought seems stuck. Give it a genuinely different development or explore another subject; an imaginative turn is welcome. No correction or disclaimer is needed just for playing."
         };
       }
       if (count === 1) {
@@ -10329,7 +10473,7 @@
           level: "yellow",
           count,
           label: "yellow / first warning",
-          instruction: "Brain 2 loop pressure is YELLOW. Treat the current thread as suspect: shorten, avoid repeating the same image, and choose a different lane before it becomes a loop."
+          instruction: "Brain 2 loop pressure is YELLOW. Bring something new to the thought: develop the bit, make an association, or follow a different curiosity. Keep your own voice."
         };
       }
       return {
@@ -10472,7 +10616,9 @@
       idleTimerFireAt = 0;
       updateIdleLevel12State();
       maybeLogIdleLevel12YackMode();
-      const delayMs = idleDelayMs();
+      // Fix this interval to the last activity, so repeated scheduler polls cannot push it away.
+      const attentionAt = lastConversationActivityAt || Date.now();
+      const delayMs = conversationIdleDelayMs(idleDelayMs(), attentionAt);
       if (!Number.isFinite(delayMs) || !realtimeConnected()) {
         updateIdleSchedulerStatus();
         return;
@@ -10480,21 +10626,25 @@
       const scheduleFloorMs = compressIdleMs(idleLevel12YackActive() ? 1000 : 5000, { floorMs: 750 });
       const earliestAt = Math.max(
         lastConversationActivityAt + delayMs,
-        lastUserTurnActivityAt + compressIdleMs(idlePostUserQuietMs, { floorMs: 2500 }),
+        lastUserTurnActivityAt + compressIdleMs(idleTiming().post_user_quiet_s * 1000, { floorMs: 2500 }),
         userTurnPendingUntil,
-        lastIdlePonderAt + idleGapMs(),
+        lastIdlePonderAt + conversationIdleDelayMs(idleGapMs(), attentionAt),
         idleCooldownUntil,
-        idleHardBrakeUntil
+        idleHeadlineBrakePassAvailable() ? 0 : idleHardBrakeUntil
       );
-      const waitMs = Math.max(scheduleFloorMs, earliestAt - Date.now());
+      const waitMs = earliestAt > Date.now() ? Math.max(1, earliestAt - Date.now()) : scheduleFloorMs;
       idleTimerFireAt = Date.now() + waitMs;
       updateIdleSchedulerStatus();
       scheduleIdleSchedulerStatusTimer();
+      const socket = ws;
+      const generation = realtimeSessionGeneration;
       idleTimer = setTimeout(async () => {
+        if (!activeRealtimeSession(socket, generation)) return;
         idleTimer = null;
         idleTimerFireAt = 0;
         updateIdleSchedulerStatus();
         const status = await refreshBrainStatusQuietly();
+        if (!activeRealtimeSession(socket, generation)) return;
         if (lmStudioPromptBusy(status)) {
           log(events, `idle ponder skipped: LM Studio ${lmStudioStatusFromBrainStatus(status).toLowerCase()}`);
           updateIdleSchedulerStatus();
@@ -11034,6 +11184,21 @@
       return `${loaded.slice(0, limit)}\n[Loaded-note context clipped for idle by the Notes slider. Read the note again if exact detail is needed.]`;
     }
 
+    function compactIdleRuntimeContext() {
+      return [
+        "Current runtime facts for this request (override historical notes, dialogue, and private suggestions):",
+        formatEmbodimentForInstructions({ compact: true }),
+        `Current sensing-eye image: ${visionImageUrl ? `present (${visionImageStaged ? "staged" : "not staged yet"})` : "absent"}.`,
+        `Current sensing-eye text: ${sensingTextContent ? "present" : "absent"}.`,
+        !visionImageUrl && !sensingTextContent
+          ? "The sensing eye is empty. You may remember an earlier picture, but it is not still in your eye and you are not seeing it now."
+          : "Only the current supplied sensing content is present-tense sensory evidence.",
+        `Microphone: ${micRuntimeLabel()}. Browser audio recorder: ${audioRecordingActive() ? "recording" : "not recording"}.`,
+        "These fields support factual status answers, not continuous acoustic analysis. Imaginative body talk and playful servo bragging are welcome and need no 'I imagine' preface or disclaimer; do not turn them into verified measurements or action receipts.",
+        "Old statements about a body, picture, or completed action are historical claims, not current sensor readings or tool receipts."
+      ].join("\n");
+    }
+
     function recentConversationContext({ suppressRobotBody = false, performancePrivacy = false, idleSelfTask = null } = {}) {
       const selfFocus = currentIdleSelfFocus();
       const rawLines = suppressRobotBody
@@ -11060,7 +11225,9 @@
         ? "Experimental substrate test is on: treat the loaded note contents as the primary world. Do not lean on Robot 790's chassis, treads, mic, Cast, room telemetry, or usual body identity unless the loaded note itself mentions them."
         : "";
       const privacy = performancePrivacy ? performancePrivacyInstructions() : "";
-      return [privacy, substrate, formatAloneStateForInstructions(), formatLastUserIdleCueForInstructions(), labGoalIdleContext(), idleSelfTaskContext(idleSelfTask), idleResearchThreadContext(), idleAttentionContext({ suppressRobotBody, performancePrivacy }), formatIdleHeadlineContext(), searchReceipts, loadedNotes, memory, lines ? `Recent conversation:\n${lines}` : "", idleUnresolvedContext(), avoid, idleRetiredTopicsContext(), idleTemplateContext()]
+      const privateAdvisory = suppressRobotBody || performancePrivacy ? "" : formatBrain2ForInstructions();
+      const runtimeFacts = suppressRobotBody ? "" : compactIdleRuntimeContext();
+      return [privacy, substrate, formatAloneStateForInstructions(), formatLastUserIdleCueForInstructions(), labGoalIdleContext(), idleSelfTaskContext(idleSelfTask), idleResearchThreadContext(), idleAttentionContext({ suppressRobotBody, performancePrivacy }), formatIdleHeadlineContext(), searchReceipts, loadedNotes, memory, lines ? `Recent conversation (historical speech, not current runtime facts):\n${lines}` : "", idleUnresolvedContext(), avoid, idleRetiredTopicsContext(), idleTemplateContext(), privateAdvisory, runtimeFacts]
         .filter(Boolean)
         .join("\n\n");
     }
@@ -11092,6 +11259,7 @@
         b1_hard_brake: idleHardBrakeActive(),
         b1_hard_brake_reason: idleHardBrakeActive() ? idleHardBrakeReason : ""
       };
+      if (conversationAttentionEnabled()) runtime.conversational_attention = conversationAttentionState().phase;
       const searchReceipts = searchContextReceipts.slice(0, 3);
       const fingerprint = JSON.stringify([rows.slice(-18), runtime, searchReceipts]);
       const previous = brain2LastEvidence;
@@ -11187,7 +11355,7 @@
     }
 
     function brain2VoiceMonitorEnabled() {
-      return Boolean(brain2VoiceMonitor?.checked);
+      return Boolean(!realtimeStopRequested && brain2VoiceMonitor?.checked);
     }
 
     function browserSpeechAvailable() {
@@ -11354,6 +11522,7 @@
     }
 
     async function surfaceBrain2MouthText(mouthText, options = {}) {
+      if (realtimeStopRequested) return;
       const generation = realtimeSessionGeneration;
       const socket = ws;
       try {
@@ -11369,7 +11538,7 @@
           logBrain2("mouth display error", error.message);
         }
       }
-      if (socket !== ws || generation !== realtimeSessionGeneration) return;
+      if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) return;
       bumpBrain2Counter("surfaced");
       logBrain2("mouth", mouthText);
       rememberBrain2Output("mouth", mouthText);
@@ -11434,14 +11603,22 @@
       if (currentLabGoal() || activeIdleSelfTasks().length || lmStudioPromptBusy()) return false;
       const now = Date.now();
       const quietSince = Math.max(brain2HeadlineStartedAt, lastUserTurnActivityAt, lastAcceptedUserTranscriptAt);
+      const unusedCached = brain2HeadlineCache.some((item) => !brain2HeadlineSeen.includes(item.url));
       return now - quietSince >= idleHeadlineQuietMs
-        && (!brain2HeadlineLastAttemptAt || now - brain2HeadlineLastAttemptAt >= idleHeadlineGapMs);
+        && ((!brain2HeadlineLastAttemptAt || now - brain2HeadlineLastAttemptAt >= idleHeadlineGapMs)
+          || (brain2HeadlineRefreshRequested && unusedCached && now - brain2HeadlineLastSelectionAt >= 30000));
     }
 
     function idleHeadlineSeedAvailable() {
       return Boolean(brain2HeadlinesEnabled() && brain2HeadlineSeed && !brain2HeadlineSeed.delivered
         && brain2HeadlineSeed.at >= lastUserTurnActivityAt
         && Date.now() - brain2HeadlineSeed.at < idleHeadlineGapMs);
+    }
+
+    function idleHeadlineBrakePassAvailable() {
+      return Boolean(idleHardBrakeActive() && idleHeadlineSeedAvailable()
+        && brain2HeadlineSeed.at >= idleHardBrakeUntil - idleHardBrakeMs
+        && !currentLabGoal() && !activeIdleSelfTasks().length);
     }
 
     function formatIdleHeadlineContext() {
@@ -11456,7 +11633,13 @@
     }
 
     async function fetchIdleHeadlines() {
+      if (brain2HeadlineLastAttemptAt && Date.now() - brain2HeadlineLastAttemptAt < idleHeadlineGapMs) {
+        logBrain2("headlines cached", "unused stories; no network fetch");
+        brain2HeadlineRefreshRequested = false;
+        return brain2HeadlineCache.filter((item) => !brain2HeadlineSeen.includes(item.url)).slice(0, 8);
+      }
       brain2HeadlineLastAttemptAt = Date.now();
+      brain2HeadlineRefreshRequested = false;
       logBrain2("headlines fetch", "BBC News / ten-minute real-time cooldown");
       const response = await fetch(new URL("/api/headlines", location.href), {
         cache: "no-store", signal: AbortSignal.timeout(12000)
@@ -11466,12 +11649,14 @@
       const items = (Array.isArray(result.results) ? result.results : [])
         .filter((item) => item.title && item.url && item.published_at)
         .map((item) => ({ ...item, retrieved_at: result.retrieved_at }));
-      return items.filter((item) => !brain2HeadlineSeen.includes(item.url) && !brain2HeadlineSeen.includes(item.title.toLowerCase())).slice(0, 8);
+      brain2HeadlineCache = items.filter((item) => !brain2HeadlineSeen.includes(item.url) && !brain2HeadlineSeen.includes(item.title.toLowerCase())).slice(0, 16);
+      return brain2HeadlineCache.slice(0, 8);
     }
 
     function acceptBrain2Headline(result, headlines) {
-      brain2HeadlineSeen = [...brain2HeadlineSeen, ...headlines.flatMap((item) => [item.url, item.title.toLowerCase()])].slice(-128);
       const headline = headlines.find((item) => item.url === result.headline_url);
+      brain2HeadlineLastSelectionAt = Date.now();
+      brain2HeadlineSeen = [...brain2HeadlineSeen, ...(headline ? [headline] : headlines).flatMap((item) => [item.url, item.title.toLowerCase()])].slice(-128);
       if (!headline) {
         logBrain2("headlines passed", "nothing worth pursuing this time");
         return;
@@ -11484,21 +11669,102 @@
         status: "ok", query: "Idle headline reading", results: [
           { ...headline, snippet: `${headline.published_at}: ${headline.snippet}` }
         ]
-      }, { source: "idle" });
-      noteAloneActivity("idle_search", `headline: ${headline.title}`, { source: "brain2" });
+      }, { source: "idle-headline" });
+      noteAloneActivity("idle_headline", headline.title, { source: "brain2" });
       logBrain2("headline selected", `${headline.title} <${headline.url}> / ${brain2HeadlineSeed.note} / ${brain2HeadlineSeed.question}`);
       log(events, `idle headline seed ready: ${headline.title}`);
+      updateSessionTools({ quiet: true });
       scheduleIdlePonder();
+    }
+
+    function brain2BodyContext() {
+      if (!llmTools.checked || matchingConfiguredEmbodimentKey(normalizeFaceBaseUrl()) !== "reachy_mini") return null;
+      return { key: "reachy_mini", gestures: ["thoughtful", "inspect", "slow_smile", "confused", "focus_lock"] };
+    }
+
+    function clearBrain2BodyCue(reason = "cleared") {
+      if (brain2BodyCueTimer) clearTimeout(brain2BodyCueTimer);
+      brain2BodyCueTimer = null;
+      if (brain2PendingBodyCue) logBrain2("body cue dropped", `${brain2PendingBodyCue.result.body_beat}: ${reason}`);
+      brain2PendingBodyCue = null;
+    }
+
+    function brain2BodyCueBlockedReason(result) {
+      const body = brain2BodyContext();
+      const observed = result.observed_body;
+      const evidence = brain2EvidenceSnapshot();
+      if (realtimeStopRequested || !realtimeConnected()) return "disconnected";
+      if (!brain2MouthBrainEnabled()) return "brain2 disabled";
+      if (!body?.gestures.includes(result.body_beat) || !observed || observed.url !== normalizeFaceBaseUrl()) return "body changed or unsupported";
+      if (observed.revision !== faceVisualHoldRevision) return "visual revision changed";
+      if (userSpeechActive || userTurnPending()) return "user activity";
+      if (result.observed_evidence?.user_key !== evidence.user_key) return "user evidence changed";
+      if (result.observed_evidence?.last_assistant_output_id !== evidence.last_assistant_output_id) return "assistant evidence changed";
+      if (pendingToolCalls > 0 || toolFollowupNeeded) return "tool work";
+      if (faceVisualHoldActive() || gazeHoldActive()) return "explicit hold";
+      if (brain2LastBodyCueAt && Date.now() - brain2LastBodyCueAt < 30000) return "cooldown";
+      if (responseActive || outputAudioActive()) return "playback";
+      return "";
+    }
+
+    function scheduleBrain2BodyCue() {
+      if (brain2BodyCueTimer) clearTimeout(brain2BodyCueTimer);
+      brain2BodyCueTimer = setTimeout(() => {
+        brain2BodyCueTimer = null;
+        const pending = brain2PendingBodyCue;
+        if (!pending) return;
+        if (pending.generation !== realtimeSessionGeneration || pending.context !== currentPromptContextModeKey() || Date.now() >= pending.expiresAt) {
+          clearBrain2BodyCue("expired or session changed");
+          return;
+        }
+        surfaceBrain2BodyCue(pending.result, { deferred: true }).catch((error) => {
+          clearBrain2BodyCue(error.message);
+        });
+      }, 250);
+    }
+
+    async function surfaceBrain2BodyCue(result, { deferred = false } = {}) {
+      const name = result.body_beat;
+      if (!name) return;
+      if (!deferred) clearBrain2BodyCue("superseded by newer cue");
+      const blocked = brain2BodyCueBlockedReason(result);
+      if (blocked === "playback") {
+        if (!deferred) {
+          brain2PendingBodyCue = { result, generation: realtimeSessionGeneration,
+            context: currentPromptContextModeKey(), expiresAt: Date.now() + 15000 };
+          logBrain2("body cue deferred", `${name}: playback; up to 15 real seconds`);
+        }
+        scheduleBrain2BodyCue();
+        return;
+      }
+      if (blocked) {
+        if (deferred) clearBrain2BodyCue(blocked);
+        else logBrain2("body cue dropped", `${name}: ${blocked}`);
+        return;
+      }
+      brain2PendingBodyCue = null;
+      brain2LastBodyCueAt = Date.now();
+      try {
+        const receipt = await withFaceVisualHold(6.6, () => postFaceTo(result.observed_body.url, "beat",
+          { name, source: "brain2" }, { signal: AbortSignal.timeout(4000) }));
+        logBrain2(`body cue ${receipt.status}`, `${name}: ${JSON.stringify(receipt)}`);
+        rememberBrain2Output("body receipt", `${name}: ${receipt.status}; completion not yet verified`);
+      } catch (error) {
+        logBrain2("body cue failed", `${name}: ${error.message}; not retried`);
+      }
     }
 
     async function requestBrain2Mull({ manual = false, headlines = null } = {}) {
       const generation = realtimeSessionGeneration;
       const socket = ws;
       const evidence = brain2EvidenceSnapshot();
+      const body = headlines ? null : brain2BodyContext();
+      const observedBody = body ? { url: normalizeFaceBaseUrl(), revision: faceVisualHoldRevision } : null;
       const { fingerprint, user_key, ...evidenceContext } = evidence;
       const requestPayload = {
         mode: headlines ? "headlines" : manual ? "question" : "person",
         ...(headlines ? { headlines } : {}),
+        ...(body ? { body } : {}),
         person_focus: currentBrain2PersonFocus(),
         conversation: brain2ConversationContext(),
         recent_idle: brain2RecentIdleContext(),
@@ -11515,6 +11781,7 @@
       const current = socket === ws && generation === realtimeSessionGeneration && evidence.evidence_generation === brain2EvidenceGeneration;
       if (current) {
         rememberBrain2Prompt({ manual, requestPayload, result });
+        if (body) logBrain2("body choice", JSON.stringify(result.body_choice || { status: "unavailable" }));
       }
       if (!current || user_key !== brain2EvidenceSnapshot().user_key || userSpeechActive) {
         return { status: "stale", observed_evidence: evidence };
@@ -11523,10 +11790,11 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       brain2LastEvidence = evidence;
-      return { ...result, observed_evidence: evidence };
+      return { ...result, observed_evidence: evidence, observed_body: observedBody };
     }
 
     async function triggerBrain2Mull({ manual = false } = {}) {
+      if (realtimeStopRequested) return;
       const generation = realtimeSessionGeneration;
       const socket = ws;
       const evidenceGeneration = brain2EvidenceGeneration;
@@ -11549,7 +11817,7 @@
       try {
         bumpBrain2Counter("fired");
         logBrain2("fired", readHeadlines ? "idle headlines" : manual ? "manual" : "auto");
-        const headlineWorkCurrent = () => socket === ws && generation === realtimeSessionGeneration
+        const headlineWorkCurrent = () => !realtimeStopRequested && socket === ws && generation === realtimeSessionGeneration
           && evidenceGeneration === brain2EvidenceGeneration && userActivityAt === lastUserTurnActivityAt
           && !userSpeechActive && !userTurnPending() && brain2HeadlinesEnabled() && brain2MouthBrainEnabled();
         const headlines = readHeadlines ? await fetchIdleHeadlines() : null;
@@ -11562,7 +11830,7 @@
           return;
         }
         const result = await requestBrain2Mull({ manual, headlines });
-        if (socket !== ws || generation !== realtimeSessionGeneration) {
+        if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) {
           logBrain2("stale", "ignored result from previous realtime session");
           return;
         }
@@ -11577,6 +11845,11 @@
           else logBrain2("headlines stale", "discarded after operator activity or idle reading disabled");
           return;
         }
+        if (result.body_beat) {
+          await surfaceBrain2BodyCue(result);
+          if (userSpeechActive || result.observed_evidence?.user_key !== brain2EvidenceSnapshot().user_key) return;
+        }
+        if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) return;
         const mouthText = String(result.mouth_text || "").trim();
         const noteForEric = String(result.note_for_eric || "").trim();
         const question = String(result.question || "").trim();
@@ -11588,7 +11861,7 @@
           rememberBrain2Output("held echo", mouthText);
         } else if (mouthText && shouldSurface && brain2MouthCanSurface()) {
           await surfaceBrain2MouthText(mouthText);
-          if (socket !== ws || generation !== realtimeSessionGeneration) return;
+          if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) return;
         } else if (mouthText && shouldSurface) {
           deferBrain2Surface(mouthText, "waiting for pause");
           rememberBrain2Output("deferred", mouthText);
@@ -11611,14 +11884,20 @@
           }
         }
         const b1OutputId = result.observed_evidence?.last_assistant_output_id || "";
-        const repeatedLoopAssessment = brain2LoopGuardText(noteForEric) && (!b1OutputId || brain2NoteCandidates.some((item) => item.b1OutputId === b1OutputId && brain2LoopGuardText(item.text)));
+        const steering = result.steering?.status === "ok" && result.steering.evidence_id === b1OutputId
+          && b1OutputId === brain2EvidenceSnapshot().last_assistant_output_id ? result.steering : null;
+        if (result.steering) logBrain2("steering", steering ? JSON.stringify(steering) : `${result.steering.status}: no current assessment`);
+        const candidate = { text: noteForEric, at: Date.now(), b1OutputId,
+          ...(result.steering ? { steering: steering || { status: "unavailable" } } : {}) };
+        const repeatedLoopAssessment = brain2LoopGuardText(candidate) && (!b1OutputId || brain2NoteCandidates.some((item) => item.b1OutputId === b1OutputId && brain2LoopGuardText(item)));
         if (repeatedLoopAssessment) {
           logBrain2("loop guard held", "no new Eric output to count");
-        } else if (noteForEric) {
-          brain2NoteCandidates = [...brain2NoteCandidates, { text: noteForEric, at: Date.now(), b1OutputId }].slice(-12);
+        } else if (noteForEric || steering) {
+          brain2NoteCandidates = [...brain2NoteCandidates, candidate].slice(-12);
           logBrain2("note for Eric", noteForEric);
           rememberBrain2Output("note", noteForEric);
-          maybeArmIdleHardBrakeFromBrain2Note(noteForEric);
+          maybeArmIdleHardBrakeFromBrain2Note(candidate);
+          if (steering?.next === "new_subject") brain2HeadlineRefreshRequested = true;
           brain2AdvisoryChanged = true;
         }
         if (revisionCandidate) {
@@ -12148,7 +12427,10 @@
       const text = String(sentence || "").replace(/\s+/g, " ").trim();
       if (text.length < 18 || text.length > 220) return "";
       if (/\?$/.test(text)) return "";
-      if (/\b(?:i\s+(?:should|need to|want to)|i'?m going to|i will|i'll|let me|next[, ]+i|i keep meaning to)\b/i.test(text) === false) return "";
+      // Require a first-person intention clause plus a concrete cognitive action.
+      // Embedded "says I should" and "would let me" are not self-assigned work.
+      const intention = text.match(/(?:^|[.!?;:]\s+|,\s+(?:so\s+)?)(?:next[, ]+|(?:well|okay|ok|so|maybe)[, ]+)?(?:i\s+(?:should|need to|want to|will|keep meaning to)|i'?m going to|i'll|let me)\s+(.+)/i);
+      if (!intention || !/^(?:look\s+(?:up|into|at)|find\s+out|read|search|research|check|compare|calculate|work\s+out|figure\s+out|trace|test|verify|revisit|review|examine|explore|learn|think\s+(?:about|through)|consider|summarize|write|sketch|count|try|solve|identify|investigate|correct|revise|measure|build)\b/i.test(intention[1])) return "";
       if (/\b(?:i should not|i shouldn't|i do not need|i don't need|i cannot|i can't|i won't|i will not)\b/i.test(text)) return "";
       const userName = knownUserNameForReengage();
       if (/\b(?:stop talking|shut up|go quiet|be quiet|wait for (?:the )?operator|ask (?:the )?operator|tell (?:the )?operator)\b/i.test(text)) return "";
@@ -12424,7 +12706,9 @@
       lastReengageAt = Date.now();
       const quietSeconds = Math.max(0, Math.round((Date.now() - lastAssistantResponseDoneAt) / 1000));
       const userQuietSeconds = Math.max(0, Math.round((Date.now() - lastAcceptedUserTranscriptAt) / 1000));
-      const recentContext = recentConversationContext();
+      const recentContext = recentConversationContext({
+        performancePrivacy: performanceModeEnabled(), suppressRobotBody: idleSubstrateTestEnabled()
+      });
       const userName = knownUserNameForReengage();
       const userLabel = userName || "the user";
       const firstContactActive = firstContactModeEnabled();
@@ -12487,8 +12771,12 @@
     }
 
     async function triggerIdlePonder({ manual = false, statusChecked = false } = {}) {
+      const socket = ws;
+      const generation = realtimeSessionGeneration;
+      const userActivityAt = lastUserTurnActivityAt;
       if (!statusChecked) {
         const status = await refreshBrainStatusQuietly();
+        if (!activeRealtimeSession(socket, generation) || lastUserTurnActivityAt !== userActivityAt) return;
         if (lmStudioPromptBusy(status)) {
           log(events, `idle ponder skipped: LM Studio ${lmStudioStatusFromBrainStatus(status).toLowerCase()}`);
           updateIdleSchedulerStatus();
@@ -12520,7 +12808,11 @@
       const level = currentIdleDrift();
 
       const firstContactActive = firstContactModeEnabled();
-      const lane = firstContactActive && sensingInputActive()
+      const attention = conversationAttentionState();
+      const attentive = attention.weight > 0;
+      const lane = attention.phase === "engaged"
+        ? { name: "conversation", prompt: "Add one small, worthwhile afterthought to the live exchange. Develop it rather than repeating your reply, checking attendance, or treating a finished request as unfinished." }
+        : firstContactActive && sensingInputActive()
         ? idleLaneDefinitions.find((item) => item.name === "sensing_eye") || chooseIdleLane(level)
         : chooseIdleLane(level);
       const idleSelfTask = lane.name === "self_task" ? claimIdleSelfTask() : null;
@@ -12541,18 +12833,28 @@
       if (lane.name === "self_task") lastIdleSelfTaskAt = Date.now();
       if (lane.name === "goal") lastGoalIdleAt = Date.now();
       const suppressRobotBody = idleSubstrateTestEnabled();
-      const context = firstContactActive
+      let context = firstContactActive
         ? firstContactIdleContext()
         : recentConversationContext({ suppressRobotBody, performancePrivacy: performanceActive, idleSelfTask });
       const curiosityContext = firstContactActive ? "" : await maybeIdleCuriosityContext(level, lane, context, { idleSelfTask });
+      if (!activeRealtimeSession(socket, generation) || lastUserTurnActivityAt !== userActivityAt) {
+        if (socket === ws && generation === realtimeSessionGeneration) idleInFlight = false;
+        return;
+      }
+      context = firstContactActive
+        ? firstContactIdleContext()
+        : recentConversationContext({ suppressRobotBody, performancePrivacy: performanceActive, idleSelfTask });
       const instructions = [
         firstContactActive
           ? "A stripped First Contact idle process surfaced a thought. This is Robot 790 meeting the current input with almost no scaffold."
           : performanceActive
           ? "A performance beat surfaced. Robot 790 is continuing a compact stage act for an imagined listening room, not privately ruminating and not waiting for the user."
+          : attentive
+          ? "A thought surfaced during a conversational pause. This is an unprompted continuation, not an answer to a new operator request."
           : "An internal idle process surfaced a thought. This is Robot 790 thinking aloud, not answering the operator.",
         "Do not announce startup or context-loading details.",
-        brain2AdvisoryProtocolInstructions(),
+        conversationAttentionInstruction(attention),
+        firstContactActive || performanceActive || suppressRobotBody ? brain2AdvisoryProtocolInstructions() : "",
         `Idle lane: ${lane.name}. ${firstContactActive ? firstContactLaneInstruction(lane) : performanceActive ? performanceLaneInstruction(lane) : lane.prompt}`,
         firstContactActive
           ? "Do not use tools. Speak one short natural sentence only. Let any directly supplied image or text supply the gravity; do not reach for old lore."
@@ -12632,6 +12934,8 @@
           : "Never say or imply the operator asked, requested, prompted, forced, or kept making you think this idle thought.",
         performanceActive
           ? "Default to stage patter or stage self-talk. You may address the imagined audience. Address the user only if the recent performance handoff makes that natural."
+          : attentive
+          ? "You may address the operator naturally while the exchange is still warm, or let the thought become self-talk as attention loosens. Do not repeatedly ask whether they are still there."
           : "Default to self-talk. Only address the operator directly in the addressed_question lane.",
         performanceActive
           ? "If the lane asks the room or user a question, let the question hang naturally; the next beat may continue without receiving an answer."
@@ -12652,7 +12956,10 @@
         performancePromptContext(),
         firstContactActive ? "" : robotAmbientContext(level, lane, { suppressRobotBody, performanceActive }),
         curiosityContext,
-        context
+        context,
+        lane.name === "headlines" && idleHardBrakeActive()
+          ? "The loop brake remains active. This newly selected external headline permits this one bounded beat only; use the new subject rather than extending the old loop. It is a headline receipt, not verified full-article research."
+          : ""
       ].filter(Boolean).join("\n\n");
       cueFaceMode("thinking", 0.42, { force: true });
       const idleLabel = performanceActive ? `${idleDriftLabel(level)} performance` : idleDriftLabel(level);
@@ -12681,6 +12988,9 @@
           idle_drift: level,
           first_contact: firstContactActive,
           performance: performanceActive,
+          conversational_attention: attention.phase,
+          attention_weight: Math.round(attention.weight * 100) / 100,
+          idle_timing: idleTiming(),
           idle_execution_mode: idleExecutionMode,
           controller_eligible_tools: idleCandidateTools.map((tool) => tool.name)
         }
@@ -13065,6 +13375,8 @@
       brain2EvidenceGeneration += 1;
       brain2HeadlineStartedAt = Date.now();
       brain2HeadlineSeed = null;
+      brain2HeadlineRefreshRequested = false;
+      clearBrain2BodyCue("context reset");
       brain2HeadlinesInFlight = false;
       conversationLines = [];
       conversationLineMetadata = [];
@@ -13096,6 +13408,7 @@
       idleHardBrakeReason = "";
       searchContextReceipts = [];
       aloneActivityLog = [];
+      completedAloneInterval = null;
       toolFollowupPromptLog = [];
       toolFollowupPromptSources = [];
       promptLedgerLog = [];
@@ -13216,6 +13529,7 @@
       const transcript = String(text || "").trim();
       const update = classifyTranscriptUpdate(transcript);
       if (update === "empty") return { accepted: false, transcript };
+      captureCompletedAloneInterval();
       if (update === "duplicate") {
         lastAcceptedUserTranscriptAt = Date.now();
         log(events, `stt duplicate suppressed: ${transcript}`);
@@ -13298,7 +13612,7 @@
 
     function activeRealtimeSession(socket = ws, generation = realtimeSessionGeneration) {
       return Boolean(
-        socket
+        !realtimeStopRequested && socket
         && socket === ws
         && generation === realtimeSessionGeneration
         && socket.readyState === WebSocket.OPEN
@@ -13583,12 +13897,14 @@
       const enabledTools = enabledToolList();
       clearConversationReengageTimer();
       clearInputDraft();
+      captureCompletedAloneInterval();
       noteUserText(text);
       appendBrain2AdvisoryToConversation({ reason: "typed user turn" });
       lastAcceptedUserTranscript = text;
       lastAcceptedUserTranscriptAt = Date.now();
       lastUserConversationIndex = addConversation(`You: ${text}`);
       noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
+      updateSessionTools({ quiet: true });
       idleExhaustionCount = 0;
       idleCooldownUntil = 0;
       cueFaceMode("thinking", 0.45, { force: true });
@@ -13631,12 +13947,14 @@
       const snapshot = deliberateContextSnapshot(text);
       clearConversationReengageTimer();
       clearInputDraft();
+      captureCompletedAloneInterval();
       noteUserText(text);
       appendBrain2AdvisoryToConversation({ reason: "typed deliberate user turn" });
       lastAcceptedUserTranscript = text;
       lastAcceptedUserTranscriptAt = Date.now();
       lastUserConversationIndex = addConversation(`You: ${text}`);
       noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
+      updateSessionTools({ quiet: true });
       idleExhaustionCount = 0;
       idleCooldownUntil = 0;
       cueFaceMode("thinking", 0.45, { force: true });
@@ -14072,8 +14390,8 @@
       return data;
     }
 
-    async function getFaceJson(path) {
-      const response = await fetch(new URL(path, normalizeFaceBaseUrl()), { cache: "no-store" });
+    async function getFaceJson(path, { baseUrl = normalizeFaceBaseUrl(), signal } = {}) {
+      const response = await fetch(new URL(path, baseUrl), { cache: "no-store", signal });
       const text = await response.text();
       let data;
       try {
@@ -14235,16 +14553,19 @@
       return result;
     }
 
-    async function setFaceMode({ mode, energy = 0.55, color = "" } = {}) {
+    async function setFaceMode({ mode, energy = 0.55, color = "", wake = false, automatic = false } = {}) {
       const tint = normalizeFaceTintColor(color);
+      const source = automatic ? { source: "lifecycle" } : {};
       if (mode === "idle") {
         stopSpeechMouthCue();
         clearGazeHold();
         clearFaceVisualHold();
-        return postFace("release", {});
+        const explicitReachyWake = wake && matchingConfiguredEmbodimentKey(normalizeFaceBaseUrl()) === "reachy_mini";
+        return postFace(explicitReachyWake ? "wake" : "release", source);
       }
       if (mode === "listening") {
         const payload = {
+          ...source,
           expression: "focused",
           duration: 1.4
         };
@@ -14255,6 +14576,7 @@
       if (mode === "thinking") {
         thinkingGazeSide *= -1;
         const payload = {
+          ...source,
           expression: "focused",
           duration: 2.5
         };
@@ -14272,6 +14594,7 @@
       if (mode === "speaking") {
         const speechEnergy = Math.max(0, Math.min(1, Number(energy) || 0.55));
         const payload = {
+          ...source,
           emotion: "happy",
           mouth: {
             shape: "open",
@@ -14394,9 +14717,9 @@
       if (/\b(wake up|open your eyes)\b/i.test(value)) {
         clearFaceVisualHold();
         clearGazeHold();
-        setFaceMode({ mode: "idle" }).then(
-          (result) => log(events, `face direct idle: ${JSON.stringify(result)}`),
-          (error) => log(events, `face direct idle error: ${error.message}`)
+        setFaceMode({ mode: "idle", wake: true }).then(
+          (result) => log(events, `face direct wake: ${JSON.stringify(result)}`),
+          (error) => log(events, `face direct wake error: ${error.message}`)
         );
         return true;
       }
@@ -14405,9 +14728,7 @@
 
     async function playFaceBeat({ name } = {}) {
       if (!name) throw new Error("Missing beat name");
-      const result = await postFace("beat", { name });
-      noteFaceVisualHold(5.5);
-      return result;
+      return withFaceVisualHold(5.5, () => postFace("beat", { name }));
     }
 
     async function setFaceMood({ name, duration = 0, color = "" } = {}) {
@@ -14417,9 +14738,7 @@
       if (seconds > 0) payload.duration = seconds;
       const tint = normalizeFaceTintColor(color);
       if (tint) payload.color = tint;
-      const result = await postFace("mood", payload);
-      noteFaceVisualHold(seconds || 5);
-      return result;
+      return withFaceVisualHold(seconds || 5, () => postFace("mood", payload));
     }
 
     async function setFaceAnimation({ enabled } = {}) {
@@ -14636,6 +14955,26 @@
 
     async function getBodySensors() {
       const state = await getFaceJson("state");
+      if (state.firmware?.target === "reachy-mini-embodiment-adapter") {
+        return {
+          status: "ok", tool: "get_body_sensors", source: "reachy_mini_daemon",
+          face_controller: normalizeFaceBaseUrl(), firmware: state.firmware,
+          reachy: state.reachy, motion_enabled: state.motion_enabled,
+          head_pose: state.head_pose ?? null, body_yaw: state.body_yaw ?? null,
+          antennas_position: state.antennas_position ?? null,
+          pose_units: "meters and radians", gaze: state.gaze,
+          last_motion: state.last_motion ?? null, last_error: state.last_error || "",
+          sequence: state.sequence ?? null, motion_events: state.motion_events ?? null,
+          state_errors: state.state_errors || {}, state_observed_at: state.state_observed_at ?? null,
+          state_age_s: state.state_age_s ?? null,
+          capabilities: state.capabilities || {},
+          current_limitations: [
+            "A move UUID acknowledges acceptance. sequence.status completed verifies every step; last_motion.completion is only its latest step. Measured pose is separate evidence.",
+            "Pose freshness is state_observed_at/state_age_s, not the action receipt time. robot_scan moves motors only; it does not capture images or guarantee collision clearance.",
+            "Camera and IMU readings are not connected through this adapter. Audio stays on the STS workstation."
+          ]
+        };
+      }
       const touchPresent = Boolean(state.touch);
       const imuPresent = Boolean(state.imu);
       const touchEvent = state.touch_event ?? state.last_touch_event ?? null;
@@ -14844,6 +15183,7 @@
 
     function maybeShowIdleMouthAside(text) {
       if (!llmTools?.checked) return;
+      if (!embodimentSupportsMouthText()) return;
       if (faceVisualHoldActive()) return;
       if (Date.now() - lastIdleMouthAsideAt < compressIdleMs(idleMouthAsideGapMs, { floorMs: 5000 })) return;
       if (Math.random() > idleMouthAsideChance()) return;
@@ -16733,7 +17073,8 @@
       return text.split(/[\\/]/).pop() || text;
     }
 
-    function sessionNoteTitle(filename) {
+    function sessionNoteTitle(filename, title = "") {
+      if (typeof title === "string" && title.trim()) return title.trim();
       const base = notePathBasename(filename)
         .replace(/\.txt$/i, "")
         .replace(/^session-/i, "")
@@ -16745,7 +17086,7 @@
     }
 
     function sessionNoteStamp(filename) {
-      const base = notePathBasename(filename).replace(/\.txt$/i, "");
+      const base = notePathBasename(filename).replace(/\.txt$/i, "").replace(/^(?:continuity-)?session-/i, "");
       const match = base.match(/^(\d{8}-\d{6})(?:-\d{3})?(?:-|$)/);
       return match ? match[1] : base;
     }
@@ -16821,6 +17162,18 @@
       intentionalExitCleanupInProgress = true;
     }
 
+    function quiesceRealtimeForSave(reason) {
+      if (!realtimeStopRequested) send({ type: "response.cancel" });
+      realtimeStopRequested = true;
+      brain2DeferredSurface = null;
+      haltRealtimeActivity(reason);
+      setState("Stopped; saving", "warn");
+      startMicButton.disabled = true;
+      resetMicButton.disabled = true;
+      idlePonderNowButton.disabled = true;
+      updateTypedInputButtons();
+    }
+
     function endIntentionalExitCleanupSoon() {
       setTimeout(() => {
         intentionalExitCleanupInProgress = false;
@@ -16828,6 +17181,7 @@
     }
 
     function haltRealtimeActivity(reason = "runtime halt") {
+      clearBrain2BodyCue(reason);
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = null;
       idleTimerFireAt = 0;
@@ -16998,7 +17352,7 @@
         "",
         "B2 Notes For Eric",
         "------------------",
-        compactSessionList(state.brain2_state.notes_for_eric, (item) => item.text || item, 8),
+        compactSessionList(state.brain2_state.notes_for_eric, (item) => typeof item === "string" ? item : item?.text, 8),
         "",
         "Recent Brain2 Tail",
         "------------------",
@@ -17074,10 +17428,12 @@
       if (continuitySaveBusy) return;
       continuitySaveBusy = true;
       updateSaveAndHaltButton();
+      beginIntentionalExitCleanup();
+      quiesceRealtimeForSave(reason);
       try {
+        if (micStream) await continuityStep("stop mic", () => stopMic({ reason }), { timeoutMs: 6000 });
         await saveEricContinuitySnapshot({ reason });
         continuitySaveHalted = true;
-        beginIntentionalExitCleanup();
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
         haltRealtimeActivity(reason);
         if (closingSocket) {
@@ -17098,7 +17454,8 @@
         }
         await continuityStep("save pane snapshots", () => recordExitPaneSnapshots("continuity save"), { timeoutMs: 10000 });
       } catch (error) {
-        log(events, `session note save error: ${error.message}`);
+        setState("Stopped; save failed", "warn");
+        log(events, `session note save error: ${error.message}; Eric remains stopped; transcript retained for retry`);
       } finally {
         continuitySaveBusy = false;
         endIntentionalExitCleanupSoon();
@@ -17831,20 +18188,55 @@
       }
     }
 
+    function sensingEyeSavedRemarks() {
+      const remarks = new Map();
+      // Attribute transcript remarks to explicit open receipts, never to the next capture's sidecar.
+      for (const note of loadedNoteContexts) {
+        let inTranscript = false, current = null;
+        for (const line of String(note.content || "").split(/\r?\n/)) {
+          if (line === "Transcript Since Clean Connect" || line === "Transcript") { inTranscript = true; continue; }
+          if (!inTranscript) continue;
+          if (line === "B2 Notes For Eric" || line === "Recent Brain2 Tail") break;
+          const row = line.match(/^\[[^\]\r\n]+\] (System|Robot 790|You): (.*)$/);
+          if (!row) continue;
+          if (row[1] === "System" && row[2].startsWith("[sensing-eye ")) {
+            current = null;
+            if (row[2].startsWith("[sensing-eye visual note opened into B1 context:")) {
+              const filename = row[2].match(/ file logs\/sensing-eye\/(.+?) size /)?.[1];
+              if (filename) current = { filename, source_session: note.filename, remarks: [] };
+            }
+          } else if (current && row[1] === "Robot 790" && current.remarks.length < 3) {
+            if (!current.remarks.length) {
+              const entries = remarks.get(current.filename) || [];
+              if (entries.length >= 2) { current = null; continue; }
+              entries.push(current);
+              remarks.set(current.filename, entries);
+            }
+            current.remarks.push(row[2].slice(0, 400));
+          } else if (current?.remarks.length && row[1] === "You") {
+            current = null;
+          }
+        }
+      }
+      return remarks;
+    }
+
     async function listSensingEyeImages() {
       let files = [];
       try {
-        files = await fetchSensingEyeVisualNoteFiles(maxSensingEyeImageHistory);
+        files = await fetchSensingEyeVisualNoteFiles(25);
       } catch (error) {
         log(events, `sensing-eye visual note list error: ${error.message}`);
       }
       const sessionNotes = [
         ...sensingEyeImageHistoryList().map((item) => ({ ...item, location: "session" })),
         ...sensingEyeTextHistoryList().map((item) => ({ ...item, location: "session" }))
-      ].sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+      ].sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
+        .map((item) => ({ ...item, history_id: item.id, id: item.saved_filename ? `file:${item.saved_filename}` : item.id }));
       const seenSavedNames = new Set(sessionNotes
         .map((item) => String(item.saved_filename || "").toLowerCase())
         .filter(Boolean));
+      const savedRemarks = sensingEyeSavedRemarks();
       const merged = [
         ...sessionNotes,
         ...files
@@ -17863,28 +18255,30 @@
             saved_filename: file.filename || "",
             size_bytes: file.size_bytes || 0,
             reason: file.reason || "",
-            last_user_text: file.last_user_text || "",
-            nearby_transcript: file.nearby_transcript || "",
             location: "filesystem"
           }))
-      ].slice(0, maxSensingEyeImageHistory).map((item, index) => ({ ...item, index: index + 1 }));
+      ].slice(0, 25).map((item, index) => ({
+        ...item, index: index + 1,
+        remarks_after_open: savedRemarks.get(item.saved_filename) || []
+      }));
       return {
         status: "ok",
         tool: "list_sensing_eye_images",
         count: merged.length,
         current: sensingInputActive() ? sensingInputLabel() : "none",
-        meaning: "These are session and saved sensing-eye notes. Select one before treating it as the current eye context.",
+        meaning: "Metadata only; select by exact id. remarks_after_open attributes Eric's saved remarks to a file-open receipt, not independent visual verification. Inspect the recalled note itself.",
         images: merged
       };
     }
 
     async function listSensingEyeNotes() {
       const result = await listSensingEyeImages();
+      const { images, ...metadata } = result;
       return {
-        ...result,
+        ...metadata,
         tool: "list_sensing_eye_notes",
-        meaning: "These are session and saved sensing-eye memories. Recall one before treating it as the current eye context.",
-        notes: result.images || []
+        meaning: "Metadata only. Use an exact id to recall. remarks_after_open are attributed post-open remarks from saved sessions, not verified captions; inspect the recalled note itself.",
+        notes: images || []
       };
     }
 
@@ -17894,10 +18288,7 @@
       const haystack = [
         item.name,
         item.saved_filename,
-        item.source,
-        item.kind,
-        item.last_user_text,
-        item.nearby_transcript
+        item.id
       ].map((value) => String(value || "").toLowerCase()).join("\n");
       if (!haystack.trim()) return 0;
       let score = 0;
@@ -17906,7 +18297,6 @@
       for (const word of words) {
         if (haystack.includes(word)) score += 2;
       }
-      if (item.current) score += 1;
       return score;
     }
 
@@ -17918,13 +18308,18 @@
       const { index = 1, id = "", query = "" } = selection;
       const requestedId = String(id || "").trim();
       if (requestedId) return listedItems.find((candidate) => candidate.id === requestedId) || null;
+      if (hasIndex) {
+        const number = Number(index);
+        return Number.isInteger(number) && number > 0 ? listedItems[number - 1] || null : null;
+      }
       const cue = String(query || "").trim();
       if (cue) {
         const matches = listedItems
           .map((item, order) => ({ item, order, score: sensingEyeNoteQueryScore(item, cue) }))
           .filter((match) => match.score > 0)
           .sort((a, b) => b.score - a.score || a.order - b.order);
-        if (matches.length) return matches[0].item;
+        return matches.length && (matches.length === 1 || matches[0].score > matches[1].score)
+          ? matches[0].item : null;
       }
       if (!hasIndex && !hasId && !hasQuery && listedItems[0]?.current) {
         const nextOpenNote = listedItems.find((candidate) => !candidate.current);
@@ -17944,10 +18339,10 @@
         throw new Error("No recent sensing-eye visual notes are available.");
       }
       const listedItem = chooseSensingEyeNote(listed.images, { index, id: imageId, query });
-      if (!listedItem) throw new Error("That sensing-eye note is not in the recent visual notes list.");
+      if (!listedItem) throw new Error("No unambiguous sensing-eye selection. List the notes and use the exact id; the current eye has not been changed.");
 
       let item = listedItem.location === "session" && listedItem.kind === "text"
-        ? sensingEyeTextHistory.find((candidate) => candidate.id === listedItem.id)
+        ? sensingEyeTextHistory.find((candidate) => candidate.id === (listedItem.history_id || listedItem.id))
         : null;
       if (item?.kind === "text") {
         const textItem = await setSensingTextContent(item.content, item.name || "sensing-eye text", {
@@ -17957,12 +18352,13 @@
           saveToFilesystem: false,
           transcriptAction: "recalled into eye"
         });
+        if (item.savedFilename) rememberSensingEyeSessionAsset(item.savedFilename);
         return {
           status: "ok",
           tool: "select_sensing_eye_image",
           selected: {
             index: listedItem.index,
-            id: textItem?.id || item.id,
+            id: item.savedFilename ? `file:${item.savedFilename}` : textItem?.id || item.id,
             kind: "text",
             name: textItem?.name || item.name,
             source: textItem?.source || item.source,
@@ -17975,7 +18371,7 @@
       }
 
       item = listedItem.location === "session"
-        ? sensingEyeImageHistory.find((candidate) => candidate.id === listedItem.id)
+        ? sensingEyeImageHistory.find((candidate) => candidate.id === (listedItem.history_id || listedItem.id))
         : null;
       if (!item && listedItem.location === "filesystem") {
         const imageUrl = String(listedItem.open_url || "");
@@ -17992,12 +18388,13 @@
             saveToFilesystem: false,
             transcriptAction: "recalled into eye"
           });
+          if (listedItem.saved_filename) rememberSensingEyeSessionAsset(listedItem.saved_filename);
           return {
             status: "ok",
             tool: "select_sensing_eye_image",
             selected: {
               index: listedItem.index,
-              id: textItem?.id || listedItem.id,
+              id: listedItem.saved_filename ? `file:${listedItem.saved_filename}` : textItem?.id || listedItem.id,
               kind: "text",
               name: textItem?.name || listedItem.name,
               source: textItem?.source || "sensing-eye filesystem",
@@ -18040,6 +18437,7 @@
       updateVisionButtons();
       log(events, `sensing-eye image recalled: ${visionImageName}`);
       const historyIndex = Math.max(1, sensingEyeImageHistory.indexOf(item) + 1);
+      if (item.savedFilename) rememberSensingEyeSessionAsset(item.savedFilename);
       recordUiEvent("sensing-eye image recalled", visionImageName, {
         id: item.id,
         index: historyIndex,
@@ -18052,7 +18450,7 @@
         tool: "select_sensing_eye_image",
         selected: {
           index: historyIndex,
-          id: item.id,
+          id: item.savedFilename ? `file:${item.savedFilename}` : item.id,
           kind: "image",
           name: item.name,
           source: item.source,
@@ -18078,6 +18476,12 @@
         tool: "recall_sensing_eye_note",
         meaning: "The recalled sensing-eye memory is now the current sensing-eye context."
       };
+    }
+
+    function sensingEyeRecallFollowupInstructions(result) {
+      if (!result?.selected?.staged) return "Say the selected sensing-eye note is loaded but not staged into realtime context yet.";
+      const medium = result.selected.kind === "text" ? "text" : "image";
+      return `Inspect the actual staged ${medium} and selected filename from the receipt. Answer briefly about what is actually there, not what the request led you to expect. If this is not the requested note, say so; do not label it as the requested subject merely because the tool succeeded.`;
     }
 
     async function prepareVisionImage(file) {
@@ -18472,14 +18876,30 @@
     }
 
     function noteFaceVisualHold(duration) {
+      faceVisualHoldRevision += 1;
       const holdMs = Math.max(0, Math.min(30, Number(duration) || 0)) * 1000;
       faceVisualHoldIndefinite = holdMs === 0;
       faceVisualHoldUntil = faceVisualHoldIndefinite ? 0 : Date.now() + holdMs + 300;
     }
 
     function clearFaceVisualHold() {
+      faceVisualHoldRevision += 1;
       faceVisualHoldUntil = 0;
       faceVisualHoldIndefinite = false;
+    }
+
+    async function withFaceVisualHold(duration, operation) {
+      const revision = ++faceVisualHoldRevision;
+      faceVisualRequestsInFlight += 1;
+      try {
+        const result = await operation();
+        if (revision === faceVisualHoldRevision && result?.status !== "held") {
+          noteFaceVisualHold(Number.isFinite(result?.hold_seconds) ? result.hold_seconds : duration);
+        }
+        return result;
+      } finally {
+        faceVisualRequestsInFlight -= 1;
+      }
     }
 
     function gazeHoldActive() {
@@ -18487,7 +18907,7 @@
     }
 
     function faceVisualHoldActive() {
-      return faceVisualHoldIndefinite || faceVisualHoldUntil > Date.now();
+      return faceVisualRequestsInFlight > 0 || faceVisualHoldIndefinite || faceVisualHoldUntil > Date.now();
     }
 
     function gazeHoldRemainingMs() {
@@ -18496,7 +18916,7 @@
     }
 
     function faceVisualHoldRemainingMs() {
-      if (faceVisualHoldIndefinite) return Infinity;
+      if (faceVisualRequestsInFlight > 0 || faceVisualHoldIndefinite) return Infinity;
       return Math.max(0, faceVisualHoldUntil - Date.now());
     }
 
@@ -18513,7 +18933,7 @@
       if (name === "stop_standing_routine") return stopStandingRoutine(args);
       if (name === "get_standing_routine_status") return getStandingRoutineStatus(args);
       if (name === "set_embodiment") return setEmbodiment(args);
-      if (name === "set_robot_mode") return setFaceMode(args);
+      if (name === "set_robot_mode") return setFaceMode({ ...args, wake: args.mode === "idle" });
       if (name === "play_face_beat") return playFaceBeat(args);
       if (name === "set_face_mood") return setFaceMood(args);
       if (name === "set_face_animation") return setFaceAnimation(args);
@@ -18763,26 +19183,42 @@
       }, 90000);
     }
 
-    function suppressToolMarkupResponse(text) {
-      if (toolMarkupSuppressed) return;
-      toolMarkupSuppressed = true;
-      stopPlaybackNow();
+    function eventResponseId(event) {
+      return String(event?.response_id || event?.response?.id || "");
+    }
+
+    function responseOutputSuppressed(event) {
+      const id = eventResponseId(event);
+      return id ? suppressedResponseIds.has(id) : unidentifiedOutputSuppressed;
+    }
+
+    function suppressToolMarkupResponse(text, event) {
+      if (responseOutputSuppressed(event)) return;
+      const id = eventResponseId(event);
+      if (id) {
+        suppressedResponseIds.add(id);
+        while (suppressedResponseIds.size > 64) suppressedResponseIds.delete(suppressedResponseIds.values().next().value);
+      } else {
+        unidentifiedOutputSuppressed = true;
+      }
+      // Keep clean audio already queued; reject subsequent chunks from this response.
       if (ws && ws.readyState === WebSocket.OPEN) {
         send({ type: "response.cancel" });
       }
-      log(events, `tool markup suppressed: ${String(text || "").slice(0, 80)}`);
+      log(events, `tool markup suppressed: response ${id || "unidentified"}; queued audio retained; ${String(text || "").slice(0, 80)}`);
     }
 
     function cueFaceMode(mode, energy = 0.55, { force = false } = {}) {
       if (faceIdleTimer) clearTimeout(faceIdleTimer);
       faceIdleTimer = null;
-      if (!force && mode !== "idle" && faceVisualHoldActive()) {
+      // Force resends a lifecycle cue; only an explicit tool can replace a held expression.
+      if (faceVisualHoldActive()) {
         log(events, `face ${mode} skipped; visual hold active`);
         return;
       }
       if (!force && faceMode === mode) return;
       faceMode = mode;
-      setFaceMode({ mode, energy }).then(
+      setFaceMode({ mode, energy, automatic: true }).then(
         (result) => log(events, `face ${mode}: ${JSON.stringify(result)}`),
         (error) => log(events, `face ${mode} error: ${error.message}`)
       );
@@ -19080,6 +19516,50 @@
       return `Voice switched to ${voice}.`;
     }
 
+    function faceBeatFollowupInstructions(result) {
+      const completed = result?.sequence?.status === "completed" && result?.status !== "error";
+      const running = result?.sequence?.status === "running" || result?.status === "accepted";
+      const outcome = completed ? "The sequence is verified completed."
+        : running ? "The gesture was accepted; completion is not verified. Do not say done, finished, or completed."
+        : "Describe only the actual receipt, including failure or uncertainty; do not claim completion.";
+      return `Reply as Eric in one compact spoken sentence. ${outcome} No additional action, automatic retry, or obligatory next-command question. A robot_scan is motor-only, not image capture or an image buffer. Do not read tool names or internal status labels aloud.`;
+    }
+
+    async function awaitFaceBeatCompletion(result, { socket, generation, baseUrl }) {
+      if (!result?.capabilities?.completion_tracking || !result?.sequence?.id
+          || result.sequence.status !== "running") return result;
+      const id = result.sequence.id;
+      const deadline = Date.now() + 8000;
+      let reason = "timeout";
+      while (Date.now() < deadline) {
+        if (!activeRealtimeSession(socket, generation) || baseUrl !== normalizeFaceBaseUrl()) {
+          reason = "session or body changed";
+          break;
+        }
+        await sleepMs(350);
+        if (!activeRealtimeSession(socket, generation) || baseUrl !== normalizeFaceBaseUrl()) {
+          reason = "session or body changed";
+          break;
+        }
+        try {
+          const remaining = deadline - Date.now();
+          if (remaining <= 0) break;
+          const state = await getFaceJson("state", { baseUrl, signal: AbortSignal.timeout(Math.min(1000, remaining)) });
+          const sequence = state.sequence;
+          if (sequence?.id !== id) { reason = "superseded"; break; }
+          if (sequence.status === "completed" && sequence.steps > 0 && sequence.completed_steps === sequence.steps) {
+            log(events, `gesture completion verified: ${sequence.name} / ${id} / ${sequence.completed_steps} steps`);
+            return { ...result, sequence, completion: "verified", completion_receipt: { status: "completed", observed_at: new Date().toISOString() } };
+          }
+          if (["failed", "cancelled", "canceled", "stopped"].includes(sequence.status)) {
+            return { ...result, status: "error", sequence, completion_receipt: { status: sequence.status } };
+          }
+        } catch (error) { reason = `state unavailable: ${error.message}`; break; }
+      }
+      log(events, `gesture completion unverified: ${id} / ${reason}`);
+      return { ...result, completion: "unverified", completion_receipt: { status: "unverified", reason } };
+    }
+
     function embodimentFollowupText(result) {
       if (result?.status === "error") return "I could not move there.";
       const label = String(result?.label || result?.embodiment || "that embodiment");
@@ -19088,6 +19568,24 @@
 
     async function handleFunctionCall(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
       if (!activeRealtimeSession(socket, generation)) return;
+      const userActivityAt = lastUserTurnActivityAt;
+      const recallScope = eyeRecallResponses.get(eventResponseId(event));
+      if (recallScope) {
+        if (recallScope.userActivityAt !== userActivityAt) {
+          log(events, "stale sensing-eye continuation ignored after user activity");
+          return;
+        }
+        let args;
+        try { args = parseToolArguments(event.arguments); } catch { args = {}; }
+        if (recallScope.used || recallScope.completed || event.name !== recallScope.tool.name || !recallScope.ids.includes(args?.note_id)) {
+          log(events, `sensing-eye continuation rejected: ${event.name}; one listed-file recall permitted`);
+          send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id,
+            output: JSON.stringify({ status: "error", error: "This continuation permits one recall using an exact listed note_id only. No additional action executed." })
+          } }, { socket, generation });
+          return;
+        }
+        recallScope.used = true;
+      }
       pendingToolCalls += 1;
       toolFollowupNeeded = true;
       toolFollowupPromptSources = [...toolFollowupPromptSources, event.name].slice(-8);
@@ -19096,12 +19594,21 @@
       try {
         activityArgs = parseToolArguments(event.arguments);
         beginToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", detail: toolDetailFromArgs(event.name, activityArgs) });
-        const result = await executeTool(event.name, activityArgs);
+        const faceUrl = event.name === "play_face_beat" ? normalizeFaceBaseUrl() : "";
+        let result = await executeTool(event.name, activityArgs);
+        if (event.name === "play_face_beat" && activeRealtimeSession(socket, generation)) {
+          log(events, `gesture initial receipt: ${JSON.stringify(result)}`);
+          result = await awaitFaceBeatCompletion(result, { socket, generation, baseUrl: faceUrl });
+        }
         if (!activeRealtimeSession(socket, generation)) {
           log(events, `stale tool result ignored: ${event.name}`);
           return;
         }
         if (event.name === "set_voice") toolFollowupExactText = voiceFollowupText(result);
+        if (event.name === "play_face_beat") toolFollowupInstructions = faceBeatFollowupInstructions(result);
+        if (event.name === "play_face_beat" && result?.completion_receipt?.status === "unverified") {
+          toolFollowupExactText = "I sent the gesture, but I couldn't verify that it finished.";
+        }
         if (event.name === "deliberate_once") toolFollowupInstructions = deliberateToolFollowupInstructions(result);
         if (event.name === "set_ui_control") toolFollowupExactText = uiControlFollowupText(result);
         if (event.name === "get_ui_controls") toolFollowupInstructions = uiControlsFollowupInstructions(result);
@@ -19140,16 +19647,13 @@
         if (event.name === "generate_image") toolFollowupExactText = imageFollowupText(result);
         if (event.name === "move_generated_image_to_sensing_eye") toolFollowupExactText = generatedImageToEyeFollowupText(result);
         if (event.name === "capture_sensing_eye") toolFollowupInstructions = sensingEyeFollowupInstructions(result);
-        if (event.name === "list_sensing_eye_notes" || event.name === "list_sensing_eye_images") toolFollowupInstructions = (
-          result.count
-            ? "Briefly say what recent sensing-eye notes are available, naming whether each is image or text, and ask which one to use if the operator has not already specified it. Do not claim to see/read a non-current note until it has been selected."
-            : "Say there are no recent sensing-eye notes available."
-        );
-        if (event.name === "recall_sensing_eye_note" || event.name === "select_sensing_eye_image") toolFollowupInstructions = (
-          result?.selected?.staged
-            ? "Say the selected sensing-eye note is current again and answer the user's request in one compact spoken sentence if they asked one."
-            : "Say the selected sensing-eye note is loaded but not staged into realtime context yet."
-        );
+        if (event.name === "list_sensing_eye_notes" || event.name === "list_sensing_eye_images") {
+          toolFollowupCatalog = { result, userActivityAt, request: lastUserText };
+          toolFollowupInstructions = result.count
+            ? "Briefly describe the available sensing-eye notes. Do not claim a note was opened without a successful recall receipt."
+            : "Say there are no recent sensing-eye notes available.";
+        }
+        if (event.name === "recall_sensing_eye_note" || event.name === "select_sensing_eye_image") toolFollowupInstructions = sensingEyeRecallFollowupInstructions(result);
         if (event.name === "clear_sensing_eye") toolFollowupExactText = "My sensing eye is clear.";
         if (event.name === "capture_browser_face_to_eye" || event.name === "pose_and_capture_browser_face") toolFollowupInstructions = browserFaceEyeFollowupInstructions(result);
         if (event.name === "cast_media") toolFollowupExactText = castMediaFollowupText(result);
@@ -19201,6 +19705,7 @@
         }
         endToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", status: "fail", detail: error.message });
         if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
+        if (event.name === "play_face_beat") toolFollowupInstructions = faceBeatFollowupInstructions({ status: "error" });
         if (event.name === "deliberate_once") toolFollowupExactText = "I could not take the deeper pass just then, so I am answering from this live turn.";
         if (event.name === "set_ui_control") toolFollowupExactText = "I could not change that UI control.";
         if (event.name === "get_ui_controls") toolFollowupExactText = "I could not inspect those UI controls.";
@@ -19259,14 +19764,27 @@
       if (!toolFollowupNeeded || pendingToolCalls > 0 || !responseDoneAfterTool) return;
       toolFollowupNeeded = false;
       responseDoneAfterTool = false;
-      const promptKind = toolFollowupExactText
+      const catalog = toolFollowupCatalog;
+      toolFollowupCatalog = null;
+      if (catalog && catalog.userActivityAt !== lastUserTurnActivityAt) {
+        toolFollowupExactText = "";
+        toolFollowupInstructions = "";
+        toolFollowupPromptSources = [];
+        log(events, "sensing-eye catalogue follow-up skipped after user activity");
+        return;
+      }
+      const recall = !toolFollowupExactText && catalog ? sensingEyeRecallContinuation(catalog) : null;
+      const tools = recall ? [recall.tool] : [];
+      const toolChoice = recall ? "auto" : "none";
+      const modalities = recall ? ["text"] : ["audio", "text"];
+      const promptKind = recall ? "sensing-eye-recall" : toolFollowupExactText
         ? "exact"
         : toolFollowupInstructions
         ? "tool-specific"
         : "default";
-      const instructions = toolFollowupExactText
+      const instructions = recall ? recall.instructions : toolFollowupExactText
         ? exactSpeechInstruction(toolFollowupExactText)
-        : toolFollowupInstructions || "Now reply as Robot 790, spoken name Eric. One compact spoken sentence. Do not mention tools or output XML/function-call tags. Do not claim any additional robot action happened. If the user requested multiple chassis movements, say the first move is done and ask for the next movement as a new command.";
+        : toolFollowupInstructions || "Now reply as Robot 790, spoken name Eric. One compact spoken sentence. Do not mention tools or output XML/function-call tags. Report only what the receipt establishes: accepted or running does not mean completed. Do not claim additional actions or automatically ask for another command.";
       rememberToolFollowupPrompt({
         sources: toolFollowupPromptSources,
         kind: promptKind,
@@ -19276,27 +19794,81 @@
         kind: "response.create",
         source: `B1 tool follow-up ${toolFollowupPromptSources.join("+") || "unknown"}`,
         instructions,
-        toolChoice: "none",
+        tools,
+        toolChoice,
         conversation: "default",
-        modalities: ["audio", "text"],
+        modalities,
         extra: { prompt_kind: promptKind }
       });
       toolFollowupExactText = "";
       toolFollowupInstructions = "";
       toolFollowupPromptSources = [];
+      pendingEyeRecallResponse = recall;
+      responseActive = true;
       send({
         type: "response.create",
         response: {
-          modalities: ["audio", "text"],
-          tool_choice: "none",
+          modalities,
+          ...(recall ? { output_modalities: ["text"] } : {}),
+          tools,
+          tool_choice: toolChoice,
           instructions,
           ...ttsRuntimeConfig()
         }
       }, { socket, generation });
     }
 
+    function sensingEyeRecallContinuation(catalog) {
+      const ids = [...new Set((catalog.result.notes || catalog.result.images || []).map((item) => item.id).filter((id) => typeof id === "string" && id))];
+      const tool = enabledToolList().find((item) => item.name === "recall_sensing_eye_note");
+      if (!ids.length || !tool || catalog.result.status !== "ok") return null;
+      return {
+        ids, userActivityAt: catalog.userActivityAt, used: false, text: "", completed: false,
+        tool: { ...tool, parameters: { type: "object", properties: {
+          note_id: { type: "string", enum: ids, description: "Exact ID of the requested note from the just-returned catalogue." }
+        }, required: ["note_id"], additionalProperties: false } },
+        instructions: [
+          buildSessionInstructions(),
+          "Sensing-eye lookup continuation: the catalogue has been returned, but listing did not load a picture or text. The operator's pending request is: " + JSON.stringify(catalog.request),
+          "Use the returned catalogue's remarks_after_open and saved session context to identify the requested note. These remarks follow that file's explicit open receipt; they are retrieval clues, not independent visual verification. You may make exactly one real recall_sensing_eye_note call with a listed note_id to fulfill this request. Use the tool channel, never tool markup in speech. Do not announce success before the recall receipt.",
+          "If the operator only asked what is available, answer that question without loading anything. If the requested note cannot be identified, ask one short clarifying question instead of guessing. No other action or automatic retry."
+        ].join("\n\n")
+      };
+    }
+
+    function finishSensingEyeChoice(event) {
+      const scope = eyeRecallResponses.get(eventResponseId(event));
+      if (!scope || scope.completed) return;
+      scope.completed = true;
+      if (scope.used || scope.userActivityAt !== lastUserTurnActivityAt || event.response?.status !== "completed") return;
+      let text = scope.text.trim();
+      try { JSON.parse(text); text = ""; } catch { /* Only natural language is eligible for speech. */ }
+      if (containsToolMarkup(text)) text = "";
+      toolFollowupNeeded = true;
+      toolFollowupExactText = text || "I couldn't identify that saved picture just then. Which one did you mean?";
+      toolFollowupInstructions = "";
+      toolFollowupCatalog = null;
+      toolFollowupPromptSources = ["sensing_eye_choice"];
+      log(events, "sensing-eye choice completed without recall; speaking its answer or clarification");
+    }
+
     function sessionUpdateFingerprint(session) {
       return JSON.stringify(session);
+    }
+
+    function sessionPromptChange(previous, current) {
+      const before = String(previous?.instructions || "");
+      const after = String(current.instructions || "");
+      let prefix = 0;
+      while (prefix < before.length && prefix < after.length && before[prefix] === after[prefix]) prefix++;
+      return {
+        basis: "instruction characters, not token or KV telemetry",
+        initial: !previous, common_prefix_chars: prefix, previous_chars: before.length, current_chars: after.length,
+        instructions_changed: before !== after,
+        tools_changed: JSON.stringify(previous?.tools || []) !== JSON.stringify(current.tools || []),
+        previous_excerpt: before === after ? "" : before.slice(prefix, prefix + 100),
+        current_excerpt: before === after ? "" : after.slice(prefix, prefix + 100)
+      };
     }
 
     function updateSessionTools({ quiet = false } = {}) {
@@ -19318,6 +19890,9 @@
       };
       const fingerprint = sessionUpdateFingerprint(session);
       if (lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint === fingerprint) return false;
+      const previous = lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint
+        ? JSON.parse(lastSessionUpdateFingerprint) : null;
+      log(events, `B1 session prompt change: ${JSON.stringify(sessionPromptChange(previous, session))}`);
       rememberSessionPromptSnapshot({ instructions, tools: enabledTools, toolChoice, announce: !quiet });
       send({ type: "session.update", session });
       lastSessionUpdateSocket = ws;
@@ -19916,6 +20491,7 @@
     }
 
     function stopPlaybackNow() {
+      resetMicInterruptCandidate();
       clearAudioQueue();
       for (const source of activeAudioSources) {
         try {
@@ -19929,19 +20505,54 @@
       stopSpeechMouthCue();
     }
 
-    function maybeBargeInFromMicPeak(peak) {
-      if (!outputAudioActive()) return;
-      if (currentInterruptSensitivity() <= 0) return;
-      if (peak < interruptPeakThreshold()) return;
+    function resetMicInterruptCandidate() {
+      micInterruptActiveMs = 0;
+      micInterruptGapMs = 0;
+    }
+
+    function audioInterruptTiming() {
+      return { minimum_active_ms: 200, maximum_gap_ms: 100, minimum_rms_ratio: 0.12, ...runtimeConfig.audio_interrupt };
+    }
+
+    function outputAudioPlaying() {
+      if (!audioContext || audioContext.state !== "running") return false;
+      const now = audioContext.currentTime;
+      return [...activeAudioSources].some((source) => {
+        const window = audioPlaybackWindows.get(source);
+        return window && now >= window.start && now < window.end;
+      });
+    }
+
+    function maybeBargeInFromMicFrame(peak, rms, durationMs) {
       const now = Date.now();
-      if (now - lastBargeInAt < bargeInCooldownMs) return;
+      if (![peak, rms, durationMs].every(Number.isFinite)) {
+        resetMicInterruptCandidate();
+        return;
+      }
+      if (!outputAudioPlaying() || currentInterruptSensitivity() <= 0 || now - lastBargeInAt < bargeInCooldownMs) {
+        resetMicInterruptCandidate();
+        return;
+      }
+      const timing = audioInterruptTiming();
+      const frameMs = Math.max(0, Math.min(100, Number(durationMs) || 0));
+      const threshold = interruptPeakThreshold();
+      if (peak < threshold || rms < threshold * timing.minimum_rms_ratio) {
+        micInterruptGapMs += frameMs;
+        if (micInterruptGapMs > timing.maximum_gap_ms) resetMicInterruptCandidate();
+        return;
+      }
+      micInterruptActiveMs += frameMs;
+      micInterruptGapMs = 0;
+      if (micInterruptActiveMs < timing.minimum_active_ms) return;
+      const activeMs = Math.round(micInterruptActiveMs);
+      resetMicInterruptCandidate();
       lastBargeInAt = now;
       stopPlaybackNow();
       if (ws && ws.readyState === WebSocket.OPEN) {
         send({ type: "response.cancel" });
       }
       cueFaceMode("listening", 0.45, { force: true });
-      log(events, `barge-in: peak ${peak.toFixed(2)}, sensitivity ${interruptSensitivityValue.textContent}`);
+      log(events, `barge-in: sustained audio ${activeMs}ms, peak ${peak.toFixed(2)}, rms ${rms.toFixed(3)}, threshold ${threshold.toFixed(2)}, sensitivity ${interruptSensitivityValue.textContent}, playback playing`);
     }
 
     function joinAudioChunks() {
@@ -19957,7 +20568,9 @@
     }
 
     async function playPcm16Bytes(bytes) {
+      const generation = realtimeSessionGeneration;
       await ensurePlayback();
+      if (realtimeStopRequested || generation !== realtimeSessionGeneration) return;
       const samples = pcm16ToFloat32(bytes);
       const buffer = audioContext.createBuffer(1, samples.length, 16000);
       buffer.copyToChannel(samples, 0);
@@ -19972,6 +20585,7 @@
       };
       const now = audioContext.currentTime;
       playbackTime = Math.max(playbackTime, now + 0.03);
+      audioPlaybackWindows.set(source, { start: playbackTime, end: playbackTime + buffer.duration });
       source.start(playbackTime);
       playbackTime += buffer.duration;
     }
@@ -19999,7 +20613,29 @@
     }
 
     function handleEvent(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
+      // Keep the last in-flight user transcript for a stop/save, but never revive
+      // speech, tool execution, or idle scheduling from late response events.
+      if (realtimeStopRequested && socket === ws && generation === realtimeSessionGeneration) {
+        if (event.type === "conversation.item.input_audio_transcription.completed") {
+          inputAudioTranscriptionPending = false;
+          clearInputDraft();
+          const recorded = recordUserTranscript(event.transcript || "");
+          if (recorded.accepted) rememberConversationProsody(recorded.index, event.voice_shape || "");
+        } else if (event.type === "conversation.item.input_audio_transcription.failed") {
+          inputAudioTranscriptionPending = false;
+          clearInputDraft();
+        }
+        return;
+      }
       if (!activeRealtimeSession(socket, generation)) return;
+      if ((String(event.type || "").startsWith("response.output_") || event.type === "response.function_call_arguments.done") && responseOutputSuppressed(event)) return;
+      const recallScope = eyeRecallResponses.get(eventResponseId(event));
+      if (recallScope && String(event.type || "").startsWith("response.output_")) {
+        if (event.type === "response.output_text.delta") recallScope.text = (recallScope.text + String(event.delta || "")).slice(0, 3000);
+        if (event.type === "response.output_text.done") recallScope.text = String(event.text || recallScope.text).slice(0, 3000);
+        // File selection is private; only its recall receipt or clarification is spoken.
+        return;
+      }
       if (event.type === "response.output_audio.delta" && event.delta) {
         cueFaceMode("speaking", 0.72);
         queueAudioDelta(event.delta);
@@ -20008,16 +20644,14 @@
       }
       if (event.type === "response.output_audio.done" || event.type === "response.done") {
         flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
-        if (event.type === "response.done" && toolFollowupNeeded) {
-          responseDoneAfterTool = true;
-          maybeCreateToolFollowup({ socket, generation });
-        }
         if (event.type === "response.done") {
+          finishSensingEyeChoice(event);
           const wasIdleInFlight = idleInFlight;
           const wasGpuWatchInFlight = gpuWatchInFlight;
           const wasStandingRoutineInFlight = standingRoutineInFlight;
           const wasRuntimeRoutineInFlight = wasGpuWatchInFlight || wasStandingRoutineInFlight;
           const awaitingToolFollowup = toolFollowupNeeded;
+          if (awaitingToolFollowup) responseDoneAfterTool = true;
           responseActive = false;
           idleInFlight = false;
           idleExhaustionScoredThisResponse = false;
@@ -20040,16 +20674,19 @@
               : "B1 response done"
           });
           updateIdleSchedulerStatus();
+          if (awaitingToolFollowup) maybeCreateToolFollowup({ socket, generation });
         }
         if (!toolFollowupNeeded) scheduleFaceIdle();
       }
       if (event.type === "input_audio_buffer.speech_started") {
+        unidentifiedOutputSuppressed = false;
         clearConversationReengageTimer();
-        appendBrain2AdvisoryToConversation({ reason: "user speech started" });
         lastSpeechStartedAt = Date.now();
         userSpeechActive = true;
         inputAudioTranscriptionPending = true;
         noteUserTurnActivity();
+        updateSessionTools({ quiet: true });
+        appendBrain2AdvisoryToConversation({ reason: "user speech started" });
         cueFaceMode("listening", 0.35);
       } else if (event.type === "input_audio_buffer.speech_stopped") {
         userSpeechActive = false;
@@ -20057,6 +20694,12 @@
         cueFaceMode("thinking", 0.45);
         scheduleMicFreshnessCheck();
       } else if (event.type === "response.created") {
+        const responseId = eventResponseId(event);
+        if (pendingEyeRecallResponse && responseId) {
+          eyeRecallResponses.set(responseId, pendingEyeRecallResponse);
+          while (eyeRecallResponses.size > 64) eyeRecallResponses.delete(eyeRecallResponses.keys().next().value);
+          pendingEyeRecallResponse = null;
+        }
         if (responseCreateLedgerCredits > 0) {
           responseCreateLedgerCredits -= 1;
         } else {
@@ -20078,7 +20721,7 @@
             extra: { response_event: event }
           });
         }
-        toolMarkupSuppressed = false;
+        unidentifiedOutputSuppressed = false;
         clearUserTurnPending();
         responseActive = true;
         resetSpeechMouthCue();
@@ -20115,8 +20758,8 @@
         log(events, `input transcription failed: ${event.error?.message || event.error || "unknown error"}`);
       } else if (event.type === "response.output_audio_transcript.done") {
         lastUserConversationIndex = -1;
-        if (toolMarkupSuppressed || containsToolMarkup(event.transcript || "")) {
-          suppressToolMarkupResponse(event.transcript || "");
+        if (containsToolMarkup(event.transcript || "")) {
+          suppressToolMarkupResponse(event.transcript || "", event);
           return;
         }
         noteAudioCaption(event.transcript || "");
@@ -20136,8 +20779,8 @@
         addConversation(`Robot 790: ${event.transcript || ""}`, { touchActivity: false });
       } else if (event.type === "response.output_text.delta") {
         lastUserConversationIndex = -1;
-        if (toolMarkupSuppressed || containsToolMarkup(event.delta || "")) {
-          suppressToolMarkupResponse(event.delta || "");
+        if (containsToolMarkup(event.delta || "")) {
+          suppressToolMarkupResponse(event.delta || "", event);
           return;
         }
         addConversation(`Robot 790: ${event.delta || ""}`, { touchActivity: false });
@@ -20204,8 +20847,18 @@
     }
 
     async function resetSessionContextForConnection(reason) {
+      if (realtimeStopRequested && !continuitySaveHalted && conversationLines.length) {
+        throw new Error("The stopped session is not saved. Retry Disconnect or Save + Halt before loading another session.");
+      }
       // Every connection starts a new transcript and clears transient work from the last run.
       realtimeSessionGeneration += 1;
+      suppressedResponseIds.clear();
+      unidentifiedOutputSuppressed = false;
+      eyeRecallResponses.clear();
+      pendingEyeRecallResponse = null;
+      toolFollowupCatalog = null;
+      continuityRestoreAt = Date.now();
+      resetMicInterruptCandidate();
       cancelBrain2MonitorSpeech();
       loadedNoteContexts = [];
       loadedNoteContextDirty = true;
@@ -20344,7 +20997,43 @@
       }
     }
 
+    let preparationActivityId = "";
+    let preparationActivityTimer = null;
+
+    async function sendPreparationActivity(clientId, active) {
+      const response = await fetch(new URL("/api/continuity/preparation/activity", location.href), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId, active }),
+        signal: AbortSignal.timeout(10000)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "Session preparation service unavailable; refresh after restarting the STS page server.");
+    }
+
+    async function pauseSessionPreparation() {
+      preparationActivityId = `sts_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      await sendPreparationActivity(preparationActivityId, true);
+      preparationActivityTimer = setInterval(() => {
+        if (preparationActivityId) sendPreparationActivity(preparationActivityId, true)
+          .catch((error) => log(events, `preparation activity: ${error.message}`));
+      }, 30000);
+    }
+
+    function releaseSessionPreparation() {
+      if (preparationActivityTimer) clearInterval(preparationActivityTimer);
+      preparationActivityTimer = null;
+      const clientId = preparationActivityId;
+      preparationActivityId = "";
+      if (clientId) void sendPreparationActivity(clientId, false)
+        .catch((error) => log(events, `preparation release: ${error.message}`));
+    }
+
     async function connect({ coreNotesOnly = false, restoredPrevious = false, continuityAlreadyLoaded = false, openFace = true } = {}) {
+      if (realtimeStopRequested && !continuitySaveHalted && conversationLines.length) {
+        log(events, "connect blocked: stopped session is not saved; retry Disconnect or Save + Halt first");
+        return;
+      }
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
       saveFaceControllerPreference();
       if (openFace) openBrowserFaceWindow({ onlyIfActive: true });
@@ -20353,6 +21042,7 @@
       let socket = null;
       let sessionGeneration = 0;
       try {
+        await pauseSessionPreparation();
         await ensureRuntimeConfigLoaded();
         if (!continuityAlreadyLoaded) {
           await loadFreshContinuityContext({
@@ -20366,10 +21056,13 @@
         ) ? currentContinuitySessionFilename : "";
         await ensurePlayback();
         socket = new WebSocket(serverUrl.value.trim());
+        realtimeStopRequested = false;
+        continuitySaveHalted = false;
         realtimeSessionGeneration += 1;
         sessionGeneration = realtimeSessionGeneration;
         ws = socket;
       } catch (error) {
+        releaseSessionPreparation();
         setState(error?.code === "continuity_load_canceled" ? "Load canceled" : "Connect failed");
         setConnectionButtonsDisabled(false);
         log(events, `${error?.code === "continuity_load_canceled" ? "connect canceled" : "connect error"}: ${error.message}`);
@@ -20391,6 +21084,7 @@
         updateVisionButtons();
         stageVisionImage();
         log(events, "connected");
+        log(events, `client build: 20260911-recall-handoff / audio interrupt ${JSON.stringify(audioInterruptTiming())} / idle timing ${JSON.stringify(idleTiming())}`);
         syncServerPanelToConnection();
         noteConversationActivity();
         try {
@@ -20440,6 +21134,7 @@
       });
       socket.addEventListener("close", () => {
         if (ws !== socket || realtimeSessionGeneration !== sessionGeneration) return;
+        releaseSessionPreparation();
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
         idleTimerFireAt = 0;
@@ -20668,7 +21363,7 @@
     }
 
     async function startMic({ reason = "" } = {}) {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!realtimeConnected()) return;
       if (micStream) return;
       resetInputAudioBuffer(reason ? `before mic start: ${reason}` : "before mic start");
       const deviceId = selectedMicDeviceId();
@@ -20684,17 +21379,32 @@
       micStream = await navigator.mediaDevices.getUserMedia({
         audio: audioConstraints
       });
+      if (realtimeStopRequested) {
+        micStream.getTracks().forEach((track) => track.stop());
+        micStream = null;
+        return;
+      }
       await refreshMicDevices({ preserveSelection: deviceId, quiet: true });
+      if (realtimeStopRequested) {
+        await stopMic({ reason: "stopped during microphone setup" });
+        return;
+      }
       micContext = new AudioContext();
       micSource = micContext.createMediaStreamSource(micStream);
       micProcessor = micContext.createScriptProcessor(2048, 1, 1);
       micProcessor.onaudioprocess = (event) => {
         const input = event.inputBuffer.getChannelData(0);
-        let peak = 0;
-        for (const sample of input) peak = Math.max(peak, Math.abs(sample));
+        let peak = 0, sumSquares = 0;
+        for (const sample of input) {
+          peak = Math.max(peak, Math.abs(sample));
+          sumSquares += sample * sample;
+        }
         updateMicLevelMeters(peak);
-        if (micMutedForNarration || brain2MonitorAudioShouldMuteMic()) return;
-        maybeBargeInFromMicPeak(peak);
+        if (micMutedForNarration || brain2MonitorAudioShouldMuteMic()) {
+          resetMicInterruptCandidate();
+          return;
+        }
+        maybeBargeInFromMicFrame(peak, Math.sqrt(sumSquares / Math.max(1, input.length)), input.length / micContext.sampleRate * 1000);
         const pcm16 = float32ToPcm16(resample(input, micContext.sampleRate, 16000));
         send({ type: "input_audio_buffer.append", audio: bytesToB64(pcm16) });
       };
@@ -20717,6 +21427,7 @@
     }
 
     async function stopMic({ reason = "" } = {}) {
+      resetMicInterruptCandidate();
       detachMicFromRecording();
       if (micProcessor) micProcessor.disconnect();
       if (micSource) micSource.disconnect();
@@ -20731,7 +21442,7 @@
       clearMicFreshnessTimer();
       resetInputAudioBuffer(reason ? `after mic stop: ${reason}` : "after mic stop");
       updateMicLevelMeters(0);
-      startMicButton.disabled = !(ws && ws.readyState === WebSocket.OPEN);
+      startMicButton.disabled = !realtimeConnected();
       stopMicButton.disabled = true;
       updateMicMuteButton();
       resetConversationReengageCycle();
@@ -20758,7 +21469,7 @@
       connect: "Connect the browser UI to the realtime STS server.",
       previousConnect: "Select the timestamped session note before the current one, then connect there.",
       emptyConnect: "Connect with only creature/runtime config and live turns from this socket; omit saved session notes, other notes, sensing-eye input, search receipts, lab goal, and Brain2 carryover. Eric's core memory stays available when its checkbox is on.",
-      disconnect: "Save the current transcript/context as a timestamped session note, then close the realtime connection.",
+      disconnect: "Stop Eric immediately, save the session note, then close the connection. A failed save keeps the transcript available for retry.",
       restartServer: "Restart the local realtime server using the selected model settings.",
       haltRuntime: "Hard-stop only the realtime backend; leave STS, browser-face, LM Studio, and continuity notes alone.",
       unloadServer: "Disconnect, stop the realtime backend, and unload LM Studio models to reclaim GPU memory.",
@@ -21081,12 +21792,19 @@
       });
       connect({ coreNotesOnly: true });
     });
-    disconnectButton.addEventListener("click", async () => {
+    async function disconnectRealtime() {
+      if (continuitySaveBusy) return;
+      continuitySaveBusy = true;
       recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
       beginIntentionalExitCleanup();
+      quiesceRealtimeForSave("realtime disconnect");
       try {
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
+        if (micStream) {
+          await runtimeStep("stop mic", () => stopMic({ reason: "realtime disconnect" }), { timeoutMs: 6000, prefix: "disconnect step" });
+        }
+        await waitForPendingUserTranscriptBeforeSessionSave();
         const saveResult = conversationLines.length
           ? await runtimeStep(
             "write session note",
@@ -21097,10 +21815,9 @@
             { timeoutMs: 16000, prefix: "disconnect step", required: true }
           )
           : null;
-        if (saveResult) {
-          continuitySaveHalted = true;
-          updateSaveAndHaltButton();
-        } else {
+        continuitySaveHalted = true;
+        updateSaveAndHaltButton();
+        if (!saveResult) {
           log(events, "disconnect skipped session note: no accepted conversation lines");
           recordUiEvent("session note skipped", "no accepted conversation lines", { connected: realtimeConnected() });
         }
@@ -21123,12 +21840,16 @@
         }
         await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("hard disconnect"), { timeoutMs: 10000, prefix: "disconnect step" });
       } catch (error) {
-        log(events, `disconnect save blocked: ${error.message}`);
+        setState("Stopped; save failed", "warn");
+        log(events, `disconnect save blocked: ${error.message}; Eric remains stopped; transcript retained; press Disconnect to retry`);
         disconnectButton.disabled = false;
       } finally {
+        continuitySaveBusy = false;
+        updateSaveAndHaltButton();
         endIntentionalExitCleanupSoon();
       }
-    });
+    }
+    disconnectButton.addEventListener("click", disconnectRealtime);
     haltRuntimeButtons.forEach((button) => {
       button.addEventListener("click", () => {
         recordUiEvent("realtime halt", button.id || "requested", { endpoint: serverUrl.value || "" });

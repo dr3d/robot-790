@@ -310,6 +310,14 @@ The mental model:
 - selected session notes are reconstruction state
 - current runtime/tool receipts outrank old notes
 
+Request assembly and inference-cache reuse are separate concerns. STS can
+reconstruct the context for a moment without requiring every token to be
+recomputed, but reuse depends on the rendered prefix and server cache state.
+The September 10 [cache-aware context design notes](context-engineering-architecture.md#direction-cache-aware-context-assembly)
+capture shared B1/B2 prefixes, independently warm lanes, the limits of
+`parallel=2`, and measurements needed before changing prompt layout. These are
+investigation directions, not a new cache manager or fixed per-brain slots.
+
 ## First Factoring Rule
 
 Do not make a new creature by copying `web/sts/index.html`.

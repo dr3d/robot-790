@@ -104,14 +104,17 @@ split for speech delivery. They do not necessarily mean two model turns.
 | Connect | Starts a fresh realtime connection using the newest available timestamped session note. |
 | Connect Previous | Chooses the earlier timestamped session relative to the current one. The newer note remains on disk. This is not the Session Map's lineage-parent button. |
 | Connect Empty | Starts without a previous conversation note or its inherited pinned-note set. Current sensing-eye and transient run state are cleared. The optional core note is still eligible. |
-| Disconnect | Saves accepted conversation into a new session note, ends the connection, stops the mic, finalizes active audio, and saves pane snapshots. It leaves the servers and loaded model running. |
+| Disconnect | Stops Eric's speech and automatic work immediately, stops the mic, saves accepted conversation into a session note, closes the connection, finalizes active audio, and saves pane snapshots. It leaves the servers and loaded model running. |
 
 The normal Connect buttons clear the sensing eye. **Connect first, then drop
 the picture.** A historical note saying an image existed is not a live image.
 
 A connection with no accepted conversation lines does not create a useful new
-session note. If Disconnect reports a save failure, inspect Events rather than
-assuming the run was saved or the connection closed.
+session note. If Disconnect reports a save failure, Eric stays stopped and the
+transcript remains in the browser. Inspect the specific error in Events, fix the
+missing dependency or service problem, then press Disconnect again. Do not
+refresh an unsaved failed-stop session. The socket can remain open for the retry;
+that does not mean Eric is still running.
 
 ### Choose A Particular Session
 
@@ -142,7 +145,7 @@ These are different operations, despite living next to one another.
 | Control | When to use it | Important distinction |
 | --- | --- | --- |
 | Disconnect | End an ordinary sit-down and preserve it. | Saves continuity; leaves the backend and model available. |
-| Save + Halt | Explicitly save and stop Eric's current browser run. | Saves the session, closes the connection, and stops run activity. It does **not** kill the realtime server process. The button becomes **Start Eric**. |
+| Save + Halt | Explicitly save and stop Eric's current browser run. | Stops activity before saving, then closes the connection. A failed save stays stopped and is retryable. It does **not** kill the realtime server process. After a successful save the button becomes **Start Eric**. |
 | Start Eric | Resume after a saved halt. | Loads saved continuity and reconnects. Check/start the mic afterward; see the resume caveat below. |
 | Halt | Stop the realtime backend process. | Not a substitute for saving continuity first. |
 | Restart | Relaunch the realtime backend using the selected brain configuration. | Interrupts the run and can reload the model. Save/disconnect first. |
@@ -176,6 +179,15 @@ origin are three different requirements.
 | Start Mic / Stop Mic | Start or stop the selected browser microphone stream. Stopping it does not disconnect Eric or stop idle thinking. |
 | Microphone / Refresh Mics | Choose an input device; refresh the list after plugging in or changing devices. Changing devices while listening restarts the mic path. |
 | Interrupt | Adjust microphone interruption sensitivity. The display explicitly shows Off at zero. |
+
+Microphone interruption now requires sustained amplitude with a minimum RMS
+level while Eric's audio is actually playing. A single peak or queued audio alone
+cannot trip this browser path. This is not speech recognition and cannot guarantee
+that sustained room noise will never interrupt. `audio_interrupt` in
+`config/runtime.json` supplies `minimum_active_ms` (200), `maximum_gap_ms` (100),
+and `minimum_rms_ratio` (0.12 relative to the sensitivity threshold). Refresh while
+disconnected after changing these settings. Events records the effective values
+and logs sustained interruptions with duration, peak, RMS, and playback state.
 | Mute Me | Keep your microphone out of Eric's input while retaining it in an active recording. Useful for operator narration, **not** a privacy mute for the recording. |
 | Mute Eric | Silence local Eric playback. His generation and recording continue. |
 | Fresh Ears | Restart the microphone path with fresh input buffers after a capture/STT problem. Not a memory reset. |
@@ -197,6 +209,12 @@ This gives your question an explicit object: "What do you notice in this?"
 promise to erase saved captures or historical mentions. **Paint Face** uses
 the image for Browser Face's appearance, while **Clear Paint** removes that
 paint. Face decoration and what Eric is currently seeing are separate states.
+
+You can also ask Eric to reopen a saved picture by description. A catalogue
+lookup is not itself a recall: STS gives him one text-only selection step with
+the returned file IDs, then lets him speak from the actual recall result. If he
+cannot identify it, he can ask which picture you mean. Saved remarks help locate
+an image; they are not a substitute for opening and inspecting it.
 
 ![Focus and Eye Salience](assets/sts-ui/2026-09-10/14-focus.png)
 
@@ -335,9 +353,27 @@ Its ordinary automatic observer waits for fresh conversational evidence;
 repeatedly analyzing unchanged text is not the goal. Candidates and eligible
 private advisories can inform Eric. A surfaced monitor line is not necessarily
 a spoken Eric response, and a logged suggestion is not proof that he used it.
+Normal isolated idle requests now include the actual bounded advisory snapshot,
+not just instructions describing Brain 2. Performance and substrate experiments
+keep their private-context exclusions. Current body and sensing-eye facts remain
+separate from historical dialogue; remembering a picture does not reload it.
+The `steering` log records B2's structured loop/grounding assessment and proposed
+next step. These are private judgments, not sensor receipts. A new-subject
+proposal can select an unused cached headline without another feed request.
 
 The headline job is a separate use of Brain 2 during quiet. It can run with
 Person Lane at zero when the other headline conditions are satisfied.
+
+With Reachy Mini selected and face tools enabled, the same observer can suggest
+an occasional nonverbal gesture instead of a mouth caption. No extra model call
+is added. The controller rejects stale or conflicting suggestions, respects explicit
+gesture/gaze holds, and allows at most one attempt per 30 real-time seconds,
+even at high Lab Speed. A cue blocked only by Eric's own playback may wait up to
+15 real seconds and is rechecked before use. The Brain 2 log shows `body cue
+deferred`, `accepted`, `dropped` with a specific reason, or `failed`; acceptance
+is not completion. Requested gesture followups now wait briefly for verified
+completion when the body supports it. See the
+[Reachy cheat sheet](reachy-cheat-sheet.md) for its repertoire and direct test.
 
 ## Idle And Lab Work
 
@@ -368,6 +404,23 @@ path resets speed to 1x. Do not infer your current settings from an old picture.
 Some protections and external-work cooldowns intentionally use real time even
 at high lab speed. A Brain 2 hard brake can still pause idle speech.
 
+For ordinary conversation at Drift 1-10, pauses now start with a shorter idle
+interval: roughly 12 seconds after a short reply finishes playing, gradually
+stretching toward the normal Drift interval over three minutes without new
+operator input, measured after his direct reply finishes. Early thoughts invite
+continued shared activity; later ones can wander. Autonomous idle speech does
+not renew that attention. The old separate
+check-in timer is not used in this mode. A silent connection still uses normal
+idle timing, and Drift 0 remains off. Use **Lab Speed 1x** to feel the transition;
+there is no additional switch to enable it. Specialized lab modes and Drift
+11/12 keep their existing behavior.
+
+Timing experiments live in `config/runtime.json` under `idle_timing`, not extra
+UI dials. The [attention timing reference](context-engineering-architecture.md#conversational-attention-ramp)
+lists the defaults and how the guards interact. Refresh while disconnected
+after a config edit; the Events pane records the effective timings. No server
+restart is needed for subsequent timing-only edits.
+
 ### Try The Idle Headline Path
 
 1. Refresh to the current UI build before connecting, then Connect Empty or
@@ -389,6 +442,18 @@ one dated story as an optional private seed or pass on the batch. This is not a
 command to read headlines aloud, nor evidence that Eric read the whole article.
 The first quiet threshold is two **real** minutes and the retry cooldown is ten
 **real** minutes, including at 12x. Normal conversation takes precedence.
+
+A newly selected headline arriving after a hard loop brake can permit one
+bounded idle beat. The brake stays armed, and the seed is consumed once; old,
+expired, or already-delivered seeds do not release it. User activity, active
+goals/self-tasks, ordinary cooldowns, and busy model/tool work still take priority.
+This is an opportunity to change subject, not a guarantee that Eric will use it
+well. It does not speed up feed polling.
+
+On your return, the prompt preserves the most recent completed quiet interval
+through follow-up questions, with retained counts and the latest receipt. Feed
+headline selections are counted separately from controller web searches. Neither
+count establishes that Eric read a full article or mentioned it aloud.
 
 No separate provoke-headlines button is needed for this test. A successful
 fetch and a good spoken change of subject are separate things to evaluate in
@@ -446,11 +511,23 @@ descendants above them. Use the **+ / -** junction controls to expand or
 collapse branches. Drag the two dividers to give the pane you are reading more
 width; double-click to reset a divider.
 
+Each lineage has a bright color edge and a restrained tinted fill. The map uses
+a twelve-color spectrum before repeating a family color, and retains assigned
+colors during live refreshes. Roots are darker; descendants use lighter
+variations of the same hue. The left-hand session list uses the exact same
+tints, even for sessions inside a collapsed branch. The gold current-session
+border and green selection outline keep their meanings. On opening the map, older branches are
+collapsed and the path to the newest session is expanded. Refresh preserves
+manual folding; a newly arrived session reveals its path. Selecting an older
+session reveals its ancestors. Filtering temporarily reveals matching branches
+without changing the unfiltered map's folding choices.
+
 | Control | Meaning |
 | --- | --- |
 | Filter sessions | Narrow the visible session list. |
 | Refresh | Read the current session inventory again. |
 | Resume form | Choose the available Full .txt, Scrubbed, or Summary representation for preview/loading. It does not author missing variants. |
+| Prepare forms / Retry preparation | Queue a conservative Scrubbed form and a local 27B Summary. Existing valid forms and the original are preserved. |
 | Open Form | Open the selected representation through the note-reading endpoint. This may display a JSON response containing the text. |
 | Copy Source | Copy the source filename, not the entire note text. |
 | Previous | Select this node's lineage parent. Unlike Connect Previous, this follows a relationship, not merely date order. |
@@ -460,6 +537,23 @@ width; double-click to reset a divider.
 Open the map from STS when you intend to use Connect In STS. A standalone map
 without its originating window cannot directly control that window and falls
 back to copying the chosen load path.
+
+Continuity saves also queue preparation automatically, without delaying
+Disconnect. Session Map polls while work is queued, waiting for disconnect, or
+generating. A failed summary leaves any completed Scrubbed form available; retry
+after correcting the reported problem. Preview generated forms before relying
+on them: the Review field distinguishes them from reviewed derivatives.
+
+The same summary request generates a short session title. Titles are saved
+separately from the transcript; filenames and lineage links stay unchanged.
+The session picker and map refresh when preparation completes. Older captioned
+filenames remain a fallback. Reviewed PM titles can also be stored without
+renaming the original. Title sidecars are archived with their session.
+
+The v1 sweep removes save/restore bookkeeping and separate B2 sections, not
+Eric's repetitions or spoken recollections. The summary uses only this session's
+transcript, a short summarizing prompt, and thinking off. No live speech behavior
+changes, and older sessions are not automatically switched to summaries yet.
 
 Archiving is not a rewrite of later notes. Descendants may still reference an
 archived source; the loader's partial-load warning is where you decide whether
