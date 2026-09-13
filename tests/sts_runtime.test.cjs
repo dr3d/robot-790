@@ -194,7 +194,7 @@ for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFile
   test(`${name}: popup opens before any asynchronous connection work`, () => {
     let opened = 0;
     const context = loadFunctions([name], {
-      ws: null, continuitySaveBusy: false, currentContinuityScrubMode: () => 'full',
+      ws: null, continuitySaveBusy: false, connectionButtonsLocked: false, currentContinuityScrubMode: () => 'full',
       realtimeConnected: () => false, saveFaceControllerPreference: () => {},
       openBrowserFaceWindow: options => {
         assert.equal(options.onlyIfActive, true);
@@ -241,7 +241,7 @@ test('session prompts lead with identity and creature vocabulary before mode or 
 test('fresh and resumed sessions share privacy rules without a startup persona', () => {
   const context = loadFunctions([
     'brain2AdvisoryProtocolInstructions', 'formatBrain2ForInstructions',
-    'buildSessionInstructions',
+    'buildSessionInstructions', 'runtimeContextProtocolInstructions',
   ], {
     firstContactModeEnabled: () => false,
     performanceModeEnabled: () => false,
@@ -269,18 +269,20 @@ test('fresh and resumed sessions share privacy rules without a startup persona',
     assert.match(instructions, /Never reproduce its markers/);
     assert.match(instructions, /not your identity or a topic to announce/);
     assert.match(instructions, /RUNTIME RULES/);
-    assert.ok(instructions.endsWith('OPERATING RULES'));
+    assert.ok(instructions.endsWith('BODY'));
+    assert.ok(instructions.indexOf('OPERATING RULES') < instructions.indexOf('CORE MEMORY'));
+    assert.ok(instructions.indexOf('CORE MEMORY') < instructions.indexOf('BODY'));
     assert.doesNotMatch(instructions, /Empty Connect|config-only startup/);
   }
   assert.match(fresh, /CORE MEMORY/);
-  assert.match(fresh, /LIVE RUNTIME/);
+  assert.doesNotMatch(fresh, /LIVE RUNTIME|OLD SENSING|OLD SEARCH|OLD ALONE STATE/);
+  assert.match(fresh, /\[STS runtime\]/);
   assert.doesNotMatch(fresh, /OLD SESSION NOTES/);
   assert.equal(resumed, fresh.replace('CORE MEMORY', 'CORE MEMORY\nOLD SESSION NOTES'));
   assert.match(resumed, /OLD SESSION NOTES/);
   context.formatBrain2AdvisoryContent = () => 'FRESH PRIVATE ADVISORY';
-  assert.match(context.buildSessionInstructions(), /FRESH PRIVATE ADVISORY/);
-  assert.doesNotMatch(context.buildSessionInstructions({ includeBrain2Advisory: false }), /FRESH PRIVATE ADVISORY/);
-  assert.match(context.buildSessionInstructions({ includeBrain2Advisory: false }), /Never reproduce its markers/);
+  assert.doesNotMatch(context.buildSessionInstructions(), /FRESH PRIVATE ADVISORY/);
+  assert.match(context.buildSessionInstructions(), /Never reproduce its markers/);
   context.performanceModeEnabled = () => true;
   const performance = context.buildSessionInstructions();
   assert.match(performance, /Never reproduce its markers/);
@@ -383,6 +385,7 @@ test('PM prompt ledgers retain receipts without copying prompt or loaded-note bo
     'promptLedgerReceiptLine',
     'promptLedgerReceiptReportText',
   ], {
+    llmRunOverview: null,
     lastSessionPromptSnapshot: {
       at: '2026-09-08T22:00:00.000Z',
       kind: 'session.update',
@@ -518,7 +521,7 @@ test('Brain2 advisories are appended at a turn boundary instead of rewriting the
   assert.match(page, /appendBrain2AdvisoryToConversation\(\{ reason: "user speech started" \}\)/);
   const sessionStart = page.indexOf('function updateSessionTools(');
   const sessionEnd = page.indexOf('\n    function enabledToolList()', sessionStart);
-  assert.match(page.slice(sessionStart, sessionEnd), /buildSessionInstructions\(\{ includeBrain2Advisory: false \}\)/);
+  assert.match(page.slice(sessionStart, sessionEnd), /buildSessionInstructions\(\)/);
 });
 
 test('a Brain2 advisory is deduplicated per realtime socket and stays out of the visible user turn', () => {
@@ -869,8 +872,18 @@ test('session restore wrapper makes the Created header the authoritative save ti
   });
 
   assert.match(envelope, /Authoritative session save timestamp: 2026-09-08T09:20:22-04:00/);
-  assert.match(envelope, /answer from that Created timestamp/);
+  assert.match(envelope, /answer from that source save timestamp/);
   assert.match(envelope, /Do not infer it from transcript turns or say the note lacks a date/);
+});
+
+test('variant restore uses the original save date, never its preparation date', () => {
+  const context = loadFunctions(['loadedNoteLooksLikeSessionNote', 'continuityCreatedAt', 'loadedNoteRestoreEnvelope'], {
+    shortDuration: () => 'one hour',
+  });
+  const content = 'STS Session Variant\nCreated: 2026-09-11T12:00:00Z\nSource created: 2026-09-01T12:00:00Z';
+  assert.equal(context.continuityCreatedAt(content).toISOString(), '2026-09-01T12:00:00.000Z');
+  assert.match(context.loadedNoteRestoreEnvelope({ content }), /Authoritative session save timestamp: 2026-09-01/);
+  assert.equal(context.continuityCreatedAt('STS Session Variant\nCreated: 2026-09-11T12:00:00Z'), null);
 });
 
 test('blank sensing-eye recall skips the already-current newest note', () => {
@@ -940,10 +953,10 @@ test('note flavors only select source-linked variants that are actually availabl
     localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
   });
   context.loadContinuityScrubMode();
-  assert.equal(context.continuityScrubMode.value, 'raw');
-  assert.equal(stored.get('note-flavor'), 'raw');
-  assert.equal(context.continuityScrubModeLabel(), 'Full .txt');
-  assert.match(context.continuityScrubModeStatus.textContent, /as written/);
+  assert.equal(context.continuityScrubMode.value, 'auto');
+  assert.equal(stored.get('note-flavor'), 'auto');
+  assert.equal(context.continuityScrubModeLabel(), 'Auto history');
+  assert.match(context.continuityScrubModeStatus.textContent, /Automatic history/);
   assert.equal(context.continuityScrubMode.options[2].disabled, true);
 
   context.continuitySessions[0].variants[2].status = 'available';
@@ -1269,6 +1282,9 @@ function loadFunctions(names, globals, source = page) {
     globals.brain2PendingBodyCue ??= null;
     globals.brain2BodyCueTimer ??= null;
   }
+  globals.pendingSessionMapMove ??= null;
+  globals.sessionMapRequestEpoch ??= 0;
+  globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
   for (const name of names) {
     const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));

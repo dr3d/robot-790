@@ -863,44 +863,15 @@
       const y = 10;
       const w = faceLayout.width - x * 2;
       const h = 58;
-      const labelW = 104;
-      const vramW = 194;
-      const chartX = x + labelW + 14;
+      const chartX = x;
       const chartY = y + 16;
-      const chartW = w - labelW - vramW - 34;
+      const chartW = w;
       const chartH = 28;
       const samples = gpuUtilHistory.length ? gpuUtilHistory.map((sample) => gpuHistoryValue(sample)) : [0, 0];
-      const primary = gpuTelemetry.primary || {};
-      const util = formatGpuNumber(primary.utilization_percent, 0);
-      const usedGb = formatGpuNumber(primary.memory_used_gb, 1);
-      const totalGb = formatGpuNumber(primary.memory_total_gb, 1);
       const ok = gpuTelemetry.status === "ok" && performance.now() - gpuTelemetry.lastOkAt < 4000;
 
       ctx.save();
-      drawRoundRect(x, y, w, h, 10, "rgba(6, 6, 12, 0.82)", ok ? "rgba(214, 77, 255, 0.66)" : "rgba(148, 163, 184, 0.30)", 1.2);
-
-      ctx.fillStyle = ok ? "#dffcf2" : "rgba(223, 252, 242, 0.55)";
-      ctx.font = "800 16px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("NERVES", x + labelW / 2, y + h / 2 + 1);
-
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.22)";
-      ctx.lineWidth = 0.7;
-      for (let i = 0; i <= 5; i += 1) {
-        const gx = chartX + (i / 5) * chartW;
-        ctx.beginPath();
-        ctx.moveTo(gx, chartY);
-        ctx.lineTo(gx, chartY + chartH);
-        ctx.stroke();
-      }
-      for (let i = 0; i <= 2; i += 1) {
-        const gy = chartY + (i / 2) * chartH;
-        ctx.beginPath();
-        ctx.moveTo(chartX, gy);
-        ctx.lineTo(chartX + chartW, gy);
-        ctx.stroke();
-      }
 
       const padded = samples.length === 1 ? [samples[0], samples[0]] : samples;
       const lastIndex = Math.max(1, padded.length - 1);
@@ -908,16 +879,6 @@
         x: chartX + (index / lastIndex) * chartW,
         y: chartY + chartH - (boundedPercent(value) ?? 0) / 100 * chartH
       }));
-      const fill = ctx.createLinearGradient(0, chartY, 0, chartY + chartH);
-      fill.addColorStop(0, "rgba(229, 92, 255, 0.82)");
-      fill.addColorStop(1, "rgba(111, 14, 132, 0.50)");
-      ctx.beginPath();
-      ctx.moveTo(chartX, chartY + chartH);
-      for (const point of points) ctx.lineTo(point.x, point.y);
-      ctx.lineTo(chartX + chartW, chartY + chartH);
-      ctx.closePath();
-      ctx.fillStyle = fill;
-      ctx.fill();
       ctx.strokeStyle = ok ? "#e05cff" : "rgba(224, 92, 255, 0.45)";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -926,19 +887,6 @@
         else ctx.lineTo(point.x, point.y);
       });
       ctx.stroke();
-
-      ctx.fillStyle = ok ? "#f4edff" : "rgba(244, 237, 255, 0.55)";
-      ctx.font = "800 18px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.textAlign = "right";
-      ctx.fillText(util ? `${util}%` : "--%", chartX + chartW - 4, y + 13);
-
-      ctx.fillStyle = "rgba(214, 190, 236, 0.88)";
-      ctx.font = "800 12px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("VRAM", x + w - vramW / 2, y + 17);
-      ctx.fillStyle = ok ? "#dffcf2" : "rgba(223, 252, 242, 0.55)";
-      ctx.font = "800 24px ui-monospace, SFMono-Regular, Consolas, monospace";
-      ctx.fillText(usedGb && totalGb ? `${usedGb}/${totalGb} GB` : "--", x + w - vramW / 2, y + 39);
 
       const statusLine = String(state?.status_line || gpuTelemetry.error || "tools: idle").replace(/\s+/g, " ").trim();
       const statusState = String(state?.status_line_state || "off");

@@ -49,11 +49,61 @@ test('Connect waits for preparation before creating the realtime socket and rele
   const end = page.indexOf('    async function restartRealtimeServer()', start);
   const connect = page.slice(start, end);
   assert.ok(connect.indexOf('await pauseSessionPreparation()') < connect.indexOf('new WebSocket('));
+  assert.ok(connect.indexOf('await loadFreshContinuityContext(') < connect.indexOf('await pauseSessionPreparation()'));
   assert.match(connect, /catch \(error\) \{\s*releaseSessionPreparation\(\)/);
   assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(ws !== socket[^\n]+\n\s*releaseSessionPreparation/);
 });
 
-test('session picker refreshes pending titles and stops polling after preparation', async () => {
+test('automatic history polls preparation without changing the selected branch', async () => {
+  const requests = [];
+  const c = load(['fetchAutomaticContinuitySession'], {
+    URL, AbortSignal, location: { href: 'http://localhost:8790/' },
+    fetch: async (url, args) => {
+      requests.push(JSON.parse(args.body));
+      return { ok: true, json: async () => requests.length === 1
+        ? { status: 'preparing', session_filename: 'sessions/chosen.txt', preparation_required: ['sessions/chosen.txt'] }
+        : { status: 'ok', history_notes: [] } };
+    },
+    setTimeout: fn => fn(), setState: () => {}, events: {}, log: () => {},
+  });
+  assert.equal((await c.fetchAutomaticContinuitySession()).status, 'ok');
+  assert.deepEqual(requests, [
+    { session_filename: '', prepare: true }, { session_filename: 'sessions/chosen.txt', prepare: false },
+  ]);
+});
+
+test('automatic history installs source-named derivatives without re-reading full pins', async () => {
+  let installed, event;
+  const messages = [];
+  const c = load(['loadCurrentContinuitySession'], {
+    currentContinuityScrubMode: () => 'auto', confirmContinuitySessionLoad: async () => {},
+    loadEricMemoriesEnabled: () => false, baseStartupNoteFilenames: ['core/erics_memories.txt'],
+    noteFilenameInSet: (name, names) => names.includes(name),
+    setLoadedNoteContextsForContinuity: notes => { installed = notes; },
+    readTextFile: () => assert.fail('must not reload full receipts'),
+    currentContinuitySessionFilename: '', continuityParentForCurrentRun: '',
+    log: (_, text) => messages.push(text), events: {}, recordUiEvent: (...args) => { event = args; },
+  });
+  const selected = {
+    status: 'ok', session_filename: 'sessions/new.txt', resume_form: 'auto',
+    history_policy: { recent_swept_sessions: 2 }, history_inventory: [
+      { session_filename: 'sessions/new.txt', resume_form: 'scrubbed', characters: 40, raw_characters: 100 },
+    ], history_notes: [
+      { status: 'ok', filename: 'sessions/new.txt', content: 'swept' },
+      { status: 'ok', filename: 'core/erics_memories.txt', content: 'disabled' },
+      { status: 'ok', filename: 'notes/facts.txt', content: 'facts' },
+    ], pinned_notes: [{ filename: 'sessions/old.txt', status: 'ok' }],
+  };
+  await c.loadCurrentContinuitySession({ sessionMetadata: selected });
+  assert.deepEqual(Array.from(installed, note => note.filename), ['sessions/new.txt', 'notes/facts.txt']);
+  assert.equal(c.continuityParentForCurrentRun, 'sessions/new.txt');
+  assert.equal(event[2].raw_characters, 100);
+  assert.equal(event[2].loaded_characters, 40);
+  assert.match(messages[0], /100 raw -> 40 loaded chars/);
+});
+
+for (const finalState of ['ready', 'failed']) {
+test(`session picker refreshes title when preparation ends ${finalState}`, async () => {
   const timers = [];
   const cleared = [];
   let sessions = [{ filename: 'sessions/session-20260910-105458-357.txt', preparation: { state: 'running' } }];
@@ -68,10 +118,11 @@ test('session picker refreshes pending titles and stops polling after preparatio
   });
   await c.fetchContinuitySessions();
   assert.equal(timers[0].ms, 3000);
-  sessions = [{ ...sessions[0], title: 'Gesture comparison', preparation: { state: 'ready' } }];
+  sessions = [{ ...sessions[0], title: 'Gesture comparison', preparation: { state: finalState } }];
   await c.fetchContinuitySessions();
   assert.equal(c.continuitySessions[0].title, 'Gesture comparison');
   assert.equal(c.continuitySessionRefreshTimer, null);
   assert.equal(timers.length, 1);
   assert.deepEqual(cleared, [null, 1]);
 });
+}

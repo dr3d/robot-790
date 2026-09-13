@@ -530,8 +530,15 @@
       min-width: 132px;
       align-content: start;
       justify-content: center;
-      grid-template-rows: 1fr;
+      grid-template-rows: 1fr auto;
       padding-top: 0;
+    }
+    .gpu-context {
+      font-size: 12px;
+      line-height: 1;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      color: #d9fff0;
     }
     .gpu-line {
       display: flex;
@@ -1679,6 +1686,25 @@
       max-width: 100%;
       flex: 0 1 10.5rem;
     }
+    .log-grid > .log-pane .log-header .transcript-details-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin: 0;
+      font-size: 12px;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .transcript-details-toggle input {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      padding: 0;
+      accent-color: #60d394;
+    }
     .font-size-control {
       flex: 0 0 auto;
       display: inline-grid;
@@ -2177,6 +2203,7 @@
           </span>
           <span class="gpu-meter gpu-meter-vram">
             <span class="gpu-line"><span class="gpu-key">VRAM</span><span id="gpuVram" class="gpu-value">--</span></span>
+            <span id="contextUsage" class="gpu-context" title="Context usage appears after a conversation response.">CTX --</span>
           </span>
         </div>
         <div class="status">
@@ -2264,12 +2291,13 @@
                   <label>
                     Note flavor
                     <select id="continuityScrubMode">
+                      <option value="auto">Auto history</option>
                       <option value="raw">Full .txt</option>
                       <option value="scrubbed">Scrubbed</option>
                       <option value="summary">Summary</option>
                     </select>
                   </label>
-                  <span id="continuityScrubModeStatus" class="subtle">Full session note as written.</span>
+                  <span id="continuityScrubModeStatus" class="subtle">Automatic history policy.</span>
                 </section>
               </div>
             </details>
@@ -2849,6 +2877,9 @@
               <option value="compact">v: compact</option>
               <option value="full">Prosody full</option>
             </select>
+            <label class="transcript-details-toggle" title="Show image and text-note recall receipts. Saved sessions always retain them.">
+              <input id="transcriptControlDetails" type="checkbox"> Details
+            </label>
             <span class="font-size-control" role="group" aria-label="Conversation font size">
               <button id="conversationFontSmaller" type="button" aria-label="Make conversation text smaller">A-</button>
               <span id="conversationFontSizeLabel" class="font-size-readout">15px</span>
@@ -2903,6 +2934,7 @@
     </section>
   </main>
 
+  <script src="llm-overview.js"></script>
   <script>
     const serverUrl = document.querySelector("#serverUrl");
     const faceUrl = document.querySelector("#faceUrl");
@@ -3063,6 +3095,7 @@
     const conversationFontLargerButton = document.querySelector("#conversationFontLarger");
     const conversationFontSizeLabel = document.querySelector("#conversationFontSizeLabel");
     const transcriptProsodyMode = document.querySelector("#transcriptProsodyMode");
+    const transcriptControlDetails = document.querySelector("#transcriptControlDetails");
     const prosodyKeyButton = document.querySelector("#prosodyKey");
     const prosodyKeyPanel = document.querySelector("#prosodyKeyPanel");
     const eventLogFilter = document.querySelector("#eventLogFilter");
@@ -3098,6 +3131,7 @@
     const gpuStatus = document.querySelector("#gpuStatus");
     const gpuUtil = document.querySelector("#gpuUtil");
     const gpuVram = document.querySelector("#gpuVram");
+    const contextUsage = document.querySelector("#contextUsage");
     const gpuUtilBars = document.querySelector("#gpuUtilBars");
     const topMicMeter = document.querySelector("#topMicMeter");
     const topMicMeterSegments = document.querySelector("#topMicMeterSegments");
@@ -3209,6 +3243,8 @@
     let lastSessionUpdateFingerprint = "";
     let lastBrain2AdvisorySocket = null;
     let lastBrain2AdvisoryText = "";
+    let lastRuntimeContextSocket = null;
+    let lastRuntimeContextSections = {};
     let toolFollowupNeeded = false;
     let responseDoneAfterTool = false;
     let toolFollowupExactText = "";
@@ -3308,6 +3344,7 @@
     let idleInFlight = false;
     let lastConversationActivityAt = Date.now();
     let lastIdlePonderAt = 0;
+    let conversationPauseUserAt = 0;
     let idleLaneCursor = -1;
     let idleExhaustionCount = 0;
     let idleExhaustionScoredThisResponse = false;
@@ -3355,6 +3392,8 @@
     let performancePrompt = "";
     let lastInputVoiceShape = "";
     let latestBrainStatus = null;
+    let llmRunOverview = null;
+    let lastConversationInputTokens = null;
     let gpuStatusPollTimer = null;
     const gpuHistoryLimit = 90;
     const gpuStatusPollMs = 500;
@@ -3567,7 +3606,7 @@
     const idleNotesFocusStorageKey = "robot790.idleNotesFocus.v1";
     const sensingEyeSalienceStorageKey = "robot790.sensingEyeSalience.v1";
     const sensingEyeSessionAssetStorageKey = "robot790.sensingEyeSessionAssets.v1";
-    const continuityScrubModeStorageKey = "robot790.continuityScrubMode.v1";
+    const continuityScrubModeStorageKey = "robot790.continuityScrubMode.v2";
     const brain2MouthBrainStorageKey = "robot790.brain2MouthBrain.v1";
     const brain2VoiceMonitorStorageKey = "robot790.brain2VoiceMonitor.v1";
     const brain2VoiceNameStorageKey = "robot790.brain2VoiceName.v2";
@@ -3575,6 +3614,7 @@
     const brain2VoicePaceStorageKey = "robot790.brain2VoicePace.v1";
     const brain2PersonFocusStorageKey = "robot790.brain2PersonFocus.v1";
     const transcriptProsodyModeStorageKey = "robot790.transcriptProsodyMode.v1";
+    const transcriptControlDetailsStorageKey = "robot790.transcriptControlDetails.v1";
     const conversationFontSizeStorageKey = "robot790.conversationFontSize.v1";
     const conversationPaneHeightStorageKey = "robot790.conversationPaneHeight.v1";
     const lowerLogPaneSplitStorageKey = "robot790.lowerLogPaneSplit.v1";
@@ -4625,13 +4665,40 @@
     const noteFileTools = [
       {
         type: "function",
+        name: "list_session_map",
+        description: "Inspect the saved session map when the operator asks about past threads or where to resume. Returns titles, exact session IDs, dates, and parent links, not transcripts. Use a short title fragment to filter, or page through the map. Listing never changes context. If the destination is unclear, ask which title/date the operator means.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "Optional title or filename substring, not a semantic transcript search." },
+            offset: { type: "integer", minimum: 0, description: "Pagination offset; use next_offset from the previous receipt." }
+          },
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "enter_session",
+        description: "Maintenance verb: enter a different saved conversation only when the operator explicitly asks to change threads. Pass an exact session ID from list_session_map or an exact unique title supplied by the operator. Never guess between matches or switch on your own during idle. STS waits for speech, saves this conversation, then connects from the destination using the operator's current history setting; the sensing eye clears. This is a real session transition, not reading a note. A queued receipt is not arrival. Do not announce that the move has completed; STS performs it after this response.",
+        parameters: {
+          type: "object",
+          properties: {
+            destination: { type: "string", description: "Exact listed session_id (filename), or exact unique session title. No fuzzy selection." }
+          },
+          required: ["destination"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
         name: "write_text_file",
         description: (
           "Write or append a sandboxed local text, source, or data file only when the user explicitly asks to save, write, " +
           "append, or put content into a named file. Files stay inside Robot 790's notes folder. Supported types are " +
           ".txt, .md, .py, .json, .csv, .html, .css, .js, .yaml, and .yml; use .txt by default. Writing a source file does not execute it. " +
-          "For short authored notes, provide content. For long notes based on captured session material, omit content and choose source. " +
-          "For a summary of a named note or transcript, omit content and use source note_summary with source_filename. " +
+          "By default, compose a concise note in your own words about the requested ideas, decisions, and open questions, and provide content. " +
+          "For a summary of a named note, read it if needed and compose the summary as content. " +
+          "Only when the user explicitly requests a verbatim transcript or raw log export, omit content and choose source. " +
           "Notes are durable memory aids: record what happened, what the user supplied, and Eric's thoughts as thoughts. " +
           "Do not turn Eric's poetic rumination or unverified outside facts into remembered truth."
         ),
@@ -4644,16 +4711,12 @@
             },
             content: {
               type: "string",
-              description: "UTF-8 text content to write. Use this for short files. Omit it for long notes captured from source."
+              description: "The text you compose and save: a concise, focused note by default, or the requested source/data file. Required for authored notes and summaries."
             },
             source: {
               type: "string",
-              enum: ["conversation", "events", "idle_ruminations", "conversation_and_idle", "full_session", "note_summary"],
-              description: "Captured session material to write when content is omitted. Use note_summary to summarize a named note or transcript instead of copying it."
-            },
-            source_filename: {
-              type: "string",
-              description: "Existing note filename to summarize when source is note_summary, such as last_time or core/robot_build."
+              enum: ["conversation", "events", "idle_ruminations", "conversation_and_idle", "full_session"],
+              description: "Verbatim capture only, not summarization. Set only for an explicit user request for a transcript or raw logs; omit for ordinary notes and summaries."
             },
             mode: {
               type: "string",
@@ -5315,14 +5378,11 @@
       "When the user explicitly asks for a program or source file, use its named supported extension, such as .py. Do not say you cannot write a file while write_text_file is available.",
       "Writing a source file does not execute it, render it, or change the machine. Never claim code ran without a separate verified execution receipt.",
       "If the operator says write/save this as a note, write the note directly. If the wording is elliptical but clearly refers to the current report or summary, ask for one compact filename clarification instead of describing permission rules.",
-      "When using write_text_file for a short note you authored, pass filename and content.",
-      "When the operator asks to save the current conversation or thread as a named note, call write_text_file with filename and source conversation unless they explicitly ask for idle/events/full session too.",
+      "By default, save a concise note in your own words about the requested ideas, decisions, and open questions. Pass filename and content to write_text_file; stay focused on what the operator wants kept, not the whole conversation.",
+      "Save these ideas, make a note, save our discussion, and summarize this mean an authored note, not a transcript dump. Use verbatim transcript capture only when the operator explicitly asks for it.",
       "When the operator asks to resume, restore, continue, or load a saved transcript/thread, call read_text_file for that note and treat the transcript as conversation continuity, not generic background lore.",
-      "When the user asks to summarize a named note or transcript into another note, call write_text_file with the target filename, source note_summary, and source_filename set to the note being summarized.",
-      "Do not use source conversation when the user asks for a summary of a previously read or named note; source conversation copies the visible transcript.",
-      "When using write_text_file for a long note based on captured session material, omit content and pass source instead; do not generate a huge content argument.",
-      "If the user asks for a detailed summary note of this conversation or our situation, call write_text_file with the chosen filename and source conversation_and_idle.",
-      "Use source idle_ruminations for recent idle thoughts, conversation for the visible conversation pane, events for the event pane, conversation_and_idle for a combined conversation plus ruminations note, and full_session only when the user asks for everything.",
+      "When asked to summarize a named note or transcript, read it if needed, then compose the requested summary yourself and save it as content. Do not substitute a transcript, keyword-selected excerpts, or a source selector for your summary.",
+      "For an explicitly requested verbatim export only, omit content and use source conversation, events, idle_ruminations, conversation_and_idle, or full_session to select the requested raw material. A detailed summary still requires authored content.",
       "When writing notes, write for future memory, not for live performance: keep the voice warm, but make the record clear and useful.",
       "In notes, distinguish user-supplied facts, observed session events, tool-verified facts, and Eric's own ruminations.",
       "In notes, preserve Eric's strange thoughts as thoughts; do not restate them as factual claims about the world.",
@@ -5571,14 +5631,14 @@
       if (contextPanel?.open) renderContextMap();
     }
 
-    function formatRecentSearchContextForInstructions({ limit = maxSearchContextReceipts } = {}) {
+    function formatRecentSearchContextForInstructions({ limit = maxSearchContextReceipts, relativeAge = true } = {}) {
       const receipts = searchContextReceipts.slice(0, limit);
       if (!receipts.length) return "";
       const now = Date.now();
       const blocks = receipts.map((receipt) => {
         const ageMinutes = Math.max(0, Math.round((now - Number(receipt.at || now)) / 60000));
         const lines = [
-          `[${ageMinutes}m ago / ${receipt.source}] ${receipt.query}`,
+          `[${relativeAge ? `${ageMinutes}m ago` : receipt.at ? new Date(receipt.at).toISOString() : "time unavailable"} / ${receipt.source}] ${receipt.query}`,
           ...receipt.results.slice(0, maxSearchContextResults).map((item) => {
             const urlText = item.url ? ` <${item.url}>` : "";
             const snippetText = item.snippet ? ` - ${item.snippet}` : "";
@@ -5643,7 +5703,7 @@
       ].join("\n");
     }
 
-    function formatAloneStateForInstructions() {
+    function formatAloneStateForInstructions({ includeAge = true } = {}) {
       const now = Date.now();
       const since = Math.max(lastAcceptedUserTranscriptAt, lastUserTurnActivityAt);
       const activities = aloneActivitiesSinceLastUser();
@@ -5655,7 +5715,7 @@
       const activeSelfTasks = activeIdleSelfTasks();
       const lines = [
         "Alone state:",
-        `- Last operator turn activity: ${since ? `${shortDuration(now - since)} ago` : "not yet this session"}.`,
+        includeAge ? `- Last operator turn activity: ${since ? `${shortDuration(now - since)} ago` : "not yet this session"}.` : "",
         `- Retained idle beats since then: ${idleBeats}.`,
         `- Retained controller web searches since then: ${idleSearches}.`,
         `- Retained selected feed headlines since then: ${headlines.length} (not full articles).`,
@@ -5671,7 +5731,7 @@
       } else {
         lines.push("- If asked whether you searched while idle, distinguish controller searches from selected feed headlines; neither proves you read a full article.");
       }
-      return [lines.join("\n"), formatCompletedAloneInterval()].filter(Boolean).join("\n\n");
+      return [lines.filter(Boolean).join("\n"), formatCompletedAloneInterval()].filter(Boolean).join("\n\n");
     }
 
     function formatLastUserIdleCueForInstructions() {
@@ -5901,14 +5961,14 @@
     }
 
     function normalizeContinuityScrubMode(value) {
-      const mode = String(value || "raw").trim().toLowerCase().replace(/-/g, "_");
+      const mode = String(value || "auto").trim().toLowerCase().replace(/-/g, "_");
       if (mode === "cleaned_raw") return "scrubbed";
       if (mode === "dense_summary") return "summary";
-      return ["raw", "scrubbed", "summary"].includes(mode) ? mode : "raw";
+      return ["auto", "raw", "scrubbed", "summary"].includes(mode) ? mode : "auto";
     }
 
     function continuityScrubModeLabel(mode = currentContinuityScrubMode()) {
-      return ({ raw: "Full .txt", scrubbed: "Scrubbed", summary: "Summary" })[
+      return ({ auto: "Auto history", raw: "Full .txt", scrubbed: "Scrubbed", summary: "Summary" })[
         normalizeContinuityScrubMode(mode)
       ];
     }
@@ -5928,11 +5988,12 @@
 
     function continuityScrubModeAvailable(mode = currentContinuityScrubMode(), filename = selectedContinuitySessionFilename()) {
       const key = normalizeContinuityScrubMode(mode);
-      return key === "raw" || continuityVariantRecord(key, filename)?.status === "available";
+      return key === "auto" || key === "raw" || continuityVariantRecord(key, filename)?.status === "available";
     }
 
     function continuityScrubModeStatusText(mode = currentContinuityScrubMode()) {
       const key = normalizeContinuityScrubMode(mode);
+      if (key === "auto") return "Automatic history policy.";
       if (key === "raw") return "Full session note as written.";
       const variant = continuityVariantRecord(key);
       if (variant?.status === "available") {
@@ -5942,9 +6003,9 @@
     }
 
     function updateContinuityScrubModeUi() {
-      if (!continuityScrubMode) return "raw";
+      if (!continuityScrubMode) return "auto";
       let mode = normalizeContinuityScrubMode(continuityScrubMode.value || localStorage.getItem(continuityScrubModeStorageKey));
-      if (!continuityScrubModeAvailable(mode)) mode = "raw";
+      if (!continuityScrubModeAvailable(mode)) mode = "auto";
       for (const option of continuityScrubMode.options) {
         const key = normalizeContinuityScrubMode(option.value);
         const variant = continuityVariantRecord(key);
@@ -5993,6 +6054,7 @@
     }
 
     async function fetchCurrentContinuitySession(resumeForm = currentContinuityScrubMode()) {
+      if (normalizeContinuityScrubMode(resumeForm) === "auto") return fetchAutomaticContinuitySession();
       const url = new URL("/api/continuity/current", location.href);
       url.searchParams.set("resume_form", normalizeContinuityScrubMode(resumeForm));
       const response = await fetch(url, { cache: "no-store" });
@@ -6019,6 +6081,107 @@
         }, 3000);
       }
       return result;
+    }
+
+    let pendingSessionMapMove = null;
+    let sessionMapMoveBusy = false;
+    let sessionMapRequestEpoch = 0;
+
+    function sessionMapEntries(sessions) {
+      return sessions.map(item => ({
+        session_id: item.filename,
+        title: sessionNoteTitle(item.filename, item.title),
+        created: item.created,
+        parent_session_id: item.parent_session_filename || null,
+        loaded_parent: item.filename === continuityParentForCurrentRun
+      }));
+    }
+
+    async function listSessionMap({ query = "", offset = 0 } = {}) {
+      const result = await fetchContinuitySessions();
+      const needle = String(query).trim().toLowerCase();
+      const entries = sessionMapEntries(result.sessions || []).filter(item =>
+        !needle || item.title.toLowerCase().includes(needle) || item.session_id.toLowerCase().includes(needle));
+      const start = Number.isInteger(offset) && offset >= 0 ? offset : 0;
+      return {
+        status: "ok", query: String(query), total: entries.length,
+        sessions: entries.slice(start, start + 12),
+        next_offset: start + 12 < entries.length ? start + 12 : null,
+        loaded_parent_session_id: continuityParentForCurrentRun || null
+      };
+    }
+
+    async function requestEnterSession({ destination } = {}) {
+      const socket = ws, generation = realtimeSessionGeneration, userActivityAt = lastUserTurnActivityAt;
+      const requestEpoch = sessionMapRequestEpoch;
+      if (!activeRealtimeSession(socket, generation) || !lastAcceptedUserTranscriptAt
+          || idleInFlight || reengageInFlight || gpuWatchInFlight || standingRoutineInFlight) {
+        throw new Error("Session navigation requires an operator conversation turn, not autonomous activity.");
+      }
+      if (pendingSessionMapMove || sessionMapMoveBusy || continuitySaveBusy) throw new Error("A session transition is already pending.");
+      const target = String(destination || "").trim().toLowerCase();
+      if (!target) throw new Error("Name a session to enter.");
+      const result = await fetchContinuitySessions();
+      const entries = sessionMapEntries(result.sessions || []);
+      const ids = entries.filter(item => item.session_id.toLowerCase() === target);
+      const matches = ids.length ? ids : entries.filter(item => item.title.toLowerCase() === target);
+      if (matches.length !== 1) return {
+        status: matches.length ? "ambiguous" : "not_found",
+        sessions: matches.slice(0, 12),
+        error: "Nothing changed. Ask for the exact title/date or list_session_map; do not guess a destination."
+      };
+      const selected = matches[0];
+      // Read-only preflight: fail before stopping the current conversation.
+      await fetchContinuitySessionMetadata(selected.session_id, "raw");
+      if (!activeRealtimeSession(socket, generation) || userActivityAt !== lastUserTurnActivityAt
+          || requestEpoch !== sessionMapRequestEpoch) {
+        throw new Error("Session move canceled after new activity; ask again if still wanted.");
+      }
+      if (pendingSessionMapMove || sessionMapMoveBusy || continuitySaveBusy) throw new Error("A session transition is already pending.");
+      pendingSessionMapMove = {
+        ...selected, socket, generation, userActivityAt,
+        resumeForm: currentContinuityScrubMode(),
+        resumeMic: Boolean(micStream), muted: micMutedForNarration
+      };
+      return { status: "queued", destination: selected, message: "STS will save and switch after this response. Not yet connected to the destination." };
+    }
+
+    async function performSessionMapMove(move) {
+      sessionMapMoveBusy = true;
+      const stillRequested = () => pendingSessionMapMove === move
+        && activeRealtimeSession(move.socket, move.generation)
+        && lastUserTurnActivityAt === move.userActivityAt;
+      try {
+        // Let already-produced speech drain; new speech or Disconnect cancels the move.
+        const deadline = Date.now() + 30000;
+        await flushAudioQueue();
+        while (stillRequested() && outputAudioActive() && Date.now() < deadline) await sleepMs(100);
+        if (!stillRequested()) return;
+        if (outputAudioActive()) throw new Error("Speech did not finish; session unchanged. Ask to enter it again.");
+        recordUiEvent("session map move requested", move.session_id, { title: move.title });
+        const stopped = await disconnectRealtime({ reloadSavedNote: false });
+        if (stopped?.status !== "ok") return;
+        if (ws !== move.socket || realtimeSessionGeneration !== move.generation || !realtimeStopRequested) return;
+        await connectSelectedContinuityFilename(move.session_id, "Enter Session", move.resumeForm);
+        const socket = ws, generation = realtimeSessionGeneration;
+        if (socket === move.socket) throw new Error("Destination did not connect. The conversation you left is saved.");
+        const connectDeadline = Date.now() + 15000;
+        while (socket === ws && generation === realtimeSessionGeneration && !realtimeStopRequested
+            && socket.readyState === WebSocket.CONNECTING && Date.now() < connectDeadline) await sleepMs(100);
+        if (!activeRealtimeSession(socket, generation)) throw new Error("Destination connection unavailable. The conversation you left is saved.");
+        setSelectedContinuitySessionFilename(move.session_id);
+        log(events, `session map arrived: ${move.title} / ${move.session_id}`);
+        recordUiEvent("session map arrived", move.session_id, { title: move.title });
+        if (move.resumeMic) {
+          micMutedForNarration = move.muted;
+          await startMic({ reason: "session map arrival" });
+        }
+      } catch (error) {
+        log(events, `session map move failed: ${error.message}`);
+      } finally {
+        if (pendingSessionMapMove === move) pendingSessionMapMove = null;
+        sessionMapMoveBusy = false;
+      }
     }
 
     function renderContinuitySessionSelect(currentFilename = "") {
@@ -6118,6 +6281,7 @@
     async function fetchContinuitySessionMetadata(filename, resumeForm = "raw") {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Choose a session note first.");
+      if (normalizeContinuityScrubMode(resumeForm) === "auto") return fetchAutomaticContinuitySession(name);
       const response = await fetch(new URL("/api/continuity/select", location.href), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -6138,6 +6302,28 @@
       return name
         ? fetchContinuitySessionMetadata(name, resumeForm)
         : fetchCurrentContinuitySession(resumeForm);
+    }
+
+    async function fetchAutomaticContinuitySession(filename = "") {
+      const deadline = Date.now() + 180000;
+      let prepare = true;
+      let selected = filename;
+      while (Date.now() < deadline) {
+        const response = await fetch(new URL("/api/continuity/history", location.href), {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_filename: selected, prepare }),
+          signal: AbortSignal.timeout(10000)
+        });
+        const result = await response.json();
+        if (!response.ok || result.status === "error") throw new Error(result.error || "History preparation failed.");
+        if (result.status !== "preparing") return result;
+        selected = result.session_filename;
+        if (prepare) log(events, `Preparing saved history: ${result.preparation_required.join(", ")}`);
+        setState("Preparing history", "warn");
+        prepare = false;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      throw new Error("Saved history is still preparing. Remain disconnected, then retry Connect; originals are unchanged.");
     }
 
     function continuityLoadReferenceIssues(current) {
@@ -6269,6 +6455,26 @@
       const filename = String(current.session_filename || "").trim();
       if (!filename) throw new Error("No session note was selected.");
       if (!preflightComplete) await confirmContinuitySessionLoad(current, { source });
+      if (Array.isArray(current.history_notes)) {
+        const notes = current.history_notes.filter(item => (
+          loadEricMemoriesEnabled() || !noteFilenameInSet(item.filename, baseStartupNoteFilenames)
+        ));
+        currentContinuitySessionFilename = filename;
+        setLoadedNoteContextsForContinuity(notes);
+        continuityParentForCurrentRun = filename;
+        const inventory = current.history_inventory || [];
+        const rawCharacters = inventory.reduce((sum, item) => sum + item.raw_characters, 0);
+        const loadedCharacters = inventory.reduce((sum, item) => sum + item.characters, 0);
+        const forms = [...new Set(inventory.map(item => item.resume_form))].join(", ");
+        log(events, `History loaded: ${inventory.length} sessions / ${rawCharacters.toLocaleString()} raw -> ${loadedCharacters.toLocaleString()} loaded chars / ${forms || "none"}`);
+        recordUiEvent("session history loaded", filename, {
+          source, history_policy: current.history_policy, history_inventory: inventory,
+          skipped_notes: current.skipped_notes || [],
+          raw_characters: rawCharacters,
+          loaded_characters: loadedCharacters
+        });
+        return current;
+      }
       currentContinuitySessionFilename = filename;
       const loadFilename = String(current.load_filename || filename).trim();
       let sessionResult = null;
@@ -6620,11 +6826,13 @@
     }
 
     function loadedNoteLooksLikeSessionNote(content) {
-      return /^(?:STS Session Note|Robot 790 Session Note|Robot 790 Continuity Session)$/mi.test(String(content || ""));
+      return /^(?:STS Session Note|STS Session Variant|Robot 790 Session Note|Robot 790 Continuity Session)$/mi.test(String(content || ""));
     }
 
     function continuityCreatedAt(content) {
-      const match = String(content || "").match(/^Created:\s*(.+)$/mi);
+      const text = String(content || "");
+      const match = text.match(/^STS Session Variant$/mi)
+        ? text.match(/^Source created:\s*(.+)$/mi) : text.match(/^Created:\s*(.+)$/mi);
       if (!match) return null;
       const date = new Date(match[1].trim());
       return Number.isFinite(date.getTime()) ? date : null;
@@ -6633,7 +6841,7 @@
     function loadedNoteRestoreEnvelope(item) {
       if (!loadedNoteLooksLikeSessionNote(item?.content || "")) return "";
       const content = String(item?.content || "");
-      const createdLabel = (content.match(/^Created:\s*(.+)$/mi) || [])[1]?.trim() || "";
+      const createdLabel = (content.match(/^Source created:\s*(.+)$/mi) || content.match(/^Created:\s*(.+)$/mi) || [])[1]?.trim() || "";
       const created = continuityCreatedAt(content);
       const now = new Date(continuityRestoreAt);
       const lines = [
@@ -6643,7 +6851,7 @@
       ];
       if (created) {
         lines.push(`- Authoritative session save timestamp: ${createdLabel || created.toISOString()}.`);
-        lines.push("- If asked when this session was saved, answer from that Created timestamp. Do not infer it from transcript turns or say the note lacks a date.");
+        lines.push("- If asked when this session was saved, answer from that source save timestamp, not a derivative's generation time. Do not infer it from transcript turns or say the note lacks a date.");
         lines.push(`- Session note was created: ${created.toLocaleString()}.`);
         lines.push(`- Approximate off-gap at connection: ${shortDuration(Math.max(0, now.getTime() - created.getTime()))}.`);
       } else {
@@ -7310,7 +7518,48 @@
       return lines.join("\n");
     }
 
-    function buildSessionInstructions({ includeBrain2Advisory = true } = {}) {
+    function runtimeContextProtocolInstructions() {
+      return "[STS runtime] blocks in the conversation are private controller context, not words you or the operator spoke. Use their state silently. Each named section replaces the earlier version of that section; omitted sections are unchanged. Later tool receipts supersede older snapshots. Never reproduce the block or its markers. Historical runtime snapshots are not current sensor readings. [STS tool continuation] messages are private one-response directions following tool receipts, not operator speech. Fulfill them without reading their instructions aloud; they expire after that response.";
+    }
+
+    function buildRuntimeContextSections() {
+      return {
+        runtime: formatRuntimeStateForInstructions(),
+        sensing_text: formatSensingTextForInstructions() || "Current sensing-eye text: absent.",
+        search_receipts: formatRecentSearchContextForInstructions({ relativeAge: false }) || "No retained web-search receipts.",
+        alone_ledger: formatAloneStateForInstructions({ includeAge: false })
+      };
+    }
+
+    function appendRuntimeContextToConversation({ reason = "runtime update", toolBoundary = false } = {}) {
+      if (!realtimeConnected() || realtimeStopRequested || firstContactModeEnabled()) return false;
+      // Never insert context between an unfinished tool call and its receipt.
+      if (pendingToolCalls > 0 || (!toolBoundary && (responseActive || toolFollowupNeeded))) return false;
+      const sections = buildRuntimeContextSections();
+      const previous = lastRuntimeContextSocket === ws ? lastRuntimeContextSections : {};
+      const changed = Object.keys(sections).filter(key => previous[key] !== sections[key]);
+      if (!changed.length) return false;
+      const text = [
+        "[STS runtime]",
+        "Private controller update, not spoken dialogue. Changed sections supersede earlier versions; other sections remain unchanged.",
+        ...changed.map(key => `${key}:\n${sections[key]}`),
+        "[End STS runtime]"
+      ].join("\n\n");
+      send({
+        type: "conversation.item.create",
+        item: { type: "message", role: "assistant", content: [{ type: "output_text", text }] }
+      });
+      lastRuntimeContextSocket = ws;
+      lastRuntimeContextSections = sections;
+      rememberPromptLedger({
+        kind: "conversation.item.create", source: "STS runtime update",
+        instructions: "[stable B1 instructions; changed runtime sections appended to current conversation]",
+        input: text, conversation: "default", extra: { reason, sections: changed }, announce: false
+      });
+      return true;
+    }
+
+    function buildSessionInstructions() {
       if (firstContactModeEnabled()) {
         return firstContactSessionInstructions();
       }
@@ -7320,20 +7569,15 @@
         baseInstructions.identity,
         formatCreatureForInstructions(),
         "Connection and context-loading details are runtime bookkeeping, not your identity or a topic to announce. Respond to the operator normally. Discuss those details only when asked; do not invent prior events when no saved history is supplied.",
-        performancePrivacy ? "" : formatMemoryForInstructions(),
-        performancePrivacy ? "" : formatLoadedNotesForInstructions(),
-        formatSensingTextForInstructions(),
-        formatRecentSearchContextForInstructions(),
-        formatAloneStateForInstructions(),
-        formatEmbodimentForInstructions(),
-        formatRuntimeStateForInstructions(),
+        baseInstructions.operating,
         formatRuntimeBehaviorRulesForInstructions(),
         wonderSearchPolicyText(),
-        !performancePrivacy && includeBrain2Advisory
-          ? formatBrain2ForInstructions()
-          : brain2AdvisoryProtocolInstructions(),
+        brain2AdvisoryProtocolInstructions(),
+        runtimeContextProtocolInstructions(),
         performancePrivacy ? performancePrivacyInstructions() : "",
-        baseInstructions.operating
+        performancePrivacy ? "" : formatMemoryForInstructions(),
+        performancePrivacy ? "" : formatLoadedNotesForInstructions(),
+        formatEmbodimentForInstructions()
       ]
         .filter(Boolean)
         .join("\n\n");
@@ -7732,6 +7976,7 @@
     }
 
     function brain2BlockedReason({ manual = false } = {}) {
+      if (pendingSessionMapMove || sessionMapMoveBusy) return "session transition";
       if (brain2InFlight) return "already in flight";
       if (!manual && !realtimeConnected()) return "disconnected";
       if (!manual && !brain2MouthBrainEnabled()) return "brain 2 off";
@@ -8226,6 +8471,7 @@
       const level = currentInterruptSensitivity();
       interruptSensitivityValue.textContent = level <= 0 ? "Off" : `${level}/10`;
       saveInterruptSensitivity();
+      syncRealtimeInterruptPolicy();
     }
 
     function currentSensingEyePreviewHeight() {
@@ -9344,6 +9590,9 @@
     }
 
     function loadLogDisplayControls() {
+      if (transcriptControlDetails) {
+        transcriptControlDetails.checked = localStorage.getItem(transcriptControlDetailsStorageKey) === "true";
+      }
       if (transcriptProsodyMode) {
         const savedProsody = localStorage.getItem(transcriptProsodyModeStorageKey);
         transcriptProsodyMode.value = ["off", "compact", "full"].includes(savedProsody) ? savedProsody : "compact";
@@ -9369,6 +9618,9 @@
     }
 
     function saveLogDisplayControls() {
+      if (transcriptControlDetails) {
+        localStorage.setItem(transcriptControlDetailsStorageKey, String(transcriptControlDetails.checked));
+      }
       if (transcriptProsodyMode) {
         localStorage.setItem(transcriptProsodyModeStorageKey, currentTranscriptProsodyMode());
       }
@@ -9723,6 +9975,10 @@
       const recentB1 = b1Entries.slice(-12);
       const recentB2 = b2Entries.slice(-8);
       const sections = [
+        "LLM Overview",
+        "------------",
+        llmRunOverview ? llmRunOverview.text() : "[no current connection overview]",
+        "",
         "Prompt Ledger Receipt",
         "---------------------",
         "Prompt instructions, model inputs, tool schemas, Brain2 bodies, and loaded-note contents are intentionally omitted from PM artifacts.",
@@ -9889,7 +10145,7 @@
         "",
         "Conversation",
         "------------",
-        conversation.textContent.trimEnd() || "[empty]",
+        conversationDisplayText().trimEnd() || "[empty]",
         "",
         "Idle Outputs",
         "------------",
@@ -10062,7 +10318,7 @@
 
     async function recordLogPane(button, target, source) {
       const originalText = button.textContent;
-      const rawText = source === "brain2_mulling"
+      const rawText = source === "conversation" ? conversationDisplayText().trimEnd() : source === "brain2_mulling"
         ? recordingSnapshotPaneText("brain2_mulling")
         : target.textContent.trimEnd();
       const text = rawText || (source === "brain2_mulling" ? "[empty]" : "");
@@ -10083,7 +10339,7 @@
     }
 
     async function autosaveLogPane(target, source) {
-      const text = source === "brain2_mulling"
+      const text = source === "conversation" ? conversationDisplayText().trimEnd() : source === "brain2_mulling"
         ? recordingSnapshotPaneText("brain2_mulling")
         : target.textContent.trimEnd();
       if (!text || lastAutosavedLogText.get(source) === text) return;
@@ -10122,6 +10378,7 @@
       if (lastExitSnapshotReason === reason && now - lastExitSnapshotAt < 2500) return [];
       lastExitSnapshotAt = now;
       lastExitSnapshotReason = reason;
+      recordLlmOverview("session overview");
       return recordThreePaneSnapshots(reason);
     }
 
@@ -10141,7 +10398,7 @@
     }
 
     function beaconLogSnapshot(target, source) {
-      const text = source === "brain2_mulling"
+      const text = source === "conversation" ? conversationDisplayText().trimEnd() : source === "brain2_mulling"
         ? recordingSnapshotPaneText("brain2_mulling")
         : target.textContent.trimEnd();
       if (!text || lastAutosavedLogText.get(source) === text) return;
@@ -10313,8 +10570,10 @@
     }
 
     function idleBlockedReason({ manual = false } = {}) {
+      if (pendingSessionMapMove || sessionMapMoveBusy) return "session transition";
       if (!realtimeConnected()) return "disconnected";
       if (!manual && currentIdleDrift() <= 0) return "idle off";
+      if (!manual && conversationPauseHoldUntil() > Date.now()) return "leaving room for the operator";
       if (!manual && idleHardBrakeActive() && !idleHeadlineBrakePassAvailable()) return "hard loop brake";
       if (Date.now() < idleCooldownUntil) return "cooldown";
       if (responseActive || outputAudioActive()) return "assistant busy";
@@ -10379,6 +10638,51 @@
         ? "Attention is gradually loosening from the recent conversation. You may carry one thread forward or let a new interest take over; you need not keep waiting for a command."
         : "No recent conversational exchange is keeping attention close. Follow an interest of your own rather than waiting for the operator to provide the next thought.";
       return `${frame} A pause is not proof the operator left. Do not announce the attention state or demand a reply. Keep imaginative expression natural.`;
+    }
+
+    function conversationPauseHoldUntil() {
+      if (!conversationAttentionEnabled() || !lastAcceptedUserTranscriptAt ||
+          conversationPauseUserAt !== lastAcceptedUserTranscriptAt) return 0;
+      return Math.max(lastAcceptedUserTranscriptAt, lastAssistantResponseDoneAt) + idleTiming().attention_fade_s * 1000;
+    }
+
+    function conversationPauseContext() {
+      const exchange = conversationPauseLines();
+      const eye = currentSensingEyeHistoryItem();
+      return [
+        "Recent shared activity (historical speech, not current sensors):",
+        exchange.join("\n"),
+        "The latest exchange continues this shared activity. A short reaction such as thanks or praise refers back to what you were doing together; keep that referent in view rather than making the reaction itself a new subject.",
+        "Speak to the operator as 'you'; they are the other participant in this exchange, not an absent person to discuss. Offer a fresh angle on the shared activity without repeating a completed action or requiring another request.",
+        "Wordplay and imaginative associations are welcome as part of talking together, not a reason to turn away from the operator.",
+        "Earlier private rumination is not an assignment to continue.",
+        "If you just asked a question, leave it open. You can offer a light conversational opening without answering for the operator or extending the old private topic.",
+        eye ? `Current eye item identity only (not a fresh visual inspection): ${JSON.stringify(String(eye.name || "unnamed image").slice(0, 180))}.` : "",
+        compactIdleRuntimeContext()
+      ].filter(Boolean).join("\n\n");
+    }
+
+    function conversationPauseLines() {
+      // Keep the activity behind a short reaction, without reviving an old idle stretch.
+      const cutoff = lastAcceptedUserTranscriptAt - idleTiming().attention_fade_s * 1000;
+      const selected = [];
+      let users = 0, characters = 0;
+      for (let index = conversationLines.length - 1; index >= 0; index -= 1) {
+        const meta = conversationLineMetadata[index];
+        const at = Date.parse(meta?.iso || "");
+        if (Number.isFinite(at) && at < cutoff) break;
+        if (meta?.channel === "control") continue;
+        const line = conversationLines[index];
+        const isUser = /^\[[^\]]+\] You:/.test(line);
+        if (isUser && users === 4) break;
+        const clipped = line.slice(0, 800);
+        if (characters + clipped.length + 1 > 6000 || selected.length >= 24) break;
+        selected.unshift(clipped);
+        characters += clipped.length + 1;
+        if (isUser) users += 1;
+      }
+      const firstUser = selected.findIndex(line => /^\[[^\]]+\] You:/.test(line));
+      return firstUser < 0 ? [] : selected.slice(firstUser);
     }
 
     function idleGapMs() {
@@ -10625,6 +10929,7 @@
       }
       const scheduleFloorMs = compressIdleMs(idleLevel12YackActive() ? 1000 : 5000, { floorMs: 750 });
       const earliestAt = Math.max(
+        conversationPauseHoldUntil(),
         lastConversationActivityAt + delayMs,
         lastUserTurnActivityAt + compressIdleMs(idleTiming().post_user_quiet_s * 1000, { floorMs: 2500 }),
         userTurnPendingUntil,
@@ -12810,7 +13115,7 @@
       const firstContactActive = firstContactModeEnabled();
       const attention = conversationAttentionState();
       const attentive = attention.weight > 0;
-      const lane = attention.phase === "engaged"
+      const lane = attentive
         ? { name: "conversation", prompt: "Add one small, worthwhile afterthought to the live exchange. Develop it rather than repeating your reply, checking attendance, or treating a finished request as unfinished." }
         : firstContactActive && sensingInputActive()
         ? idleLaneDefinitions.find((item) => item.name === "sensing_eye") || chooseIdleLane(level)
@@ -12835,16 +13140,26 @@
       const suppressRobotBody = idleSubstrateTestEnabled();
       let context = firstContactActive
         ? firstContactIdleContext()
+        : attentive ? conversationPauseContext()
         : recentConversationContext({ suppressRobotBody, performancePrivacy: performanceActive, idleSelfTask });
-      const curiosityContext = firstContactActive ? "" : await maybeIdleCuriosityContext(level, lane, context, { idleSelfTask });
+      const curiosityContext = firstContactActive || attentive ? "" : await maybeIdleCuriosityContext(level, lane, context, { idleSelfTask });
       if (!activeRealtimeSession(socket, generation) || lastUserTurnActivityAt !== userActivityAt) {
         if (socket === ws && generation === realtimeSessionGeneration) idleInFlight = false;
         return;
       }
       context = firstContactActive
         ? firstContactIdleContext()
+        : attentive ? conversationPauseContext()
         : recentConversationContext({ suppressRobotBody, performancePrivacy: performanceActive, idleSelfTask });
-      const instructions = [
+      const instructions = attentive ? [
+        "A thought surfaced during a conversational pause. Stay in the exchange with the operator, not a private monologue.",
+        "Idle lane: conversation. Offer one brief afterthought, playful opening, or genuine question. Do not check attendance or demand an answer.",
+        conversationAttentionInstruction(attention),
+        ericLeanStyleInstruction,
+        "You may address the operator naturally. Imaginative expression is welcome. Do not resume an old idle research thread merely because no new topic was supplied.",
+        "Do not use tools or claim new actions. This is one short conversational beat; the scheduler will then leave room for an answer.",
+        context
+      ].join("\n\n") : [
         firstContactActive
           ? "A stripped First Contact idle process surfaced a thought. This is Robot 790 meeting the current input with almost no scaffold."
           : performanceActive
@@ -13007,25 +13322,32 @@
           ...ttsRuntimeConfig()
         }
       });
+      if (attentive) conversationPauseUserAt = lastAcceptedUserTranscriptAt;
       if (lane.name === "headlines" && brain2HeadlineSeed) brain2HeadlineSeed.delivered = true;
     }
 
-    function conversationDisplayTextRange(startIndex = 0, endIndex = conversationLines.length) {
+    function conversationDisplayTextRange(startIndex = 0, endIndex = conversationLines.length, { includeControlDetails = true } = {}) {
       const rawStart = Number(startIndex);
       const rawEnd = Number(endIndex);
       const start = Math.max(0, Math.min(conversationLines.length, Math.floor(Number.isFinite(rawStart) ? rawStart : 0)));
       const end = Math.max(start, Math.min(conversationLines.length, Math.floor(Number.isFinite(rawEnd) ? rawEnd : conversationLines.length)));
-      const lines = conversationLines.slice(start, end).map((line, offset) => {
+      const lines = conversationLines.slice(start, end).flatMap((line, offset) => {
         const index = start + offset;
+        if (!includeControlDetails && conversationLineMetadata[index]?.channel === "control") return [];
         const prosody = formatProsodyForTranscript(conversationProsodyByIndex[index]);
-        return prosody ? `${line}\n  ${prosody}` : line;
+        return [prosody ? `${line}\n  ${prosody}` : line];
       });
       return lines.join("\n") + (lines.length ? "\n" : "");
     }
 
-    function conversationDisplayText() {
-      const text = conversationDisplayTextRange(0, conversationLines.length);
+    // Archive and context callers retain every row; filtering is an explicit view option.
+    function conversationDisplayText({ includeControlDetails = true } = {}) {
+      const text = conversationDisplayTextRange(0, conversationLines.length, { includeControlDetails });
       return inputDraft ? `${text}${inputDraft}\n` : text;
+    }
+
+    function conversationVisibleText() {
+      return conversationDisplayText({ includeControlDetails: Boolean(transcriptControlDetails?.checked) });
     }
 
     function escapeHtml(text) {
@@ -13061,7 +13383,7 @@
         source: "conversation",
         title: "Robot 790 Conversation",
         button: popoutConversationButton,
-        text: () => conversationDisplayText(),
+        text: () => conversationVisibleText(),
         status: () => `${conversationLines.length} lines / prosody ${currentTranscriptProsodyMode()} / ${new Date().toLocaleTimeString()} / ${currentModelStamp()}`
       };
     }
@@ -13331,7 +13653,7 @@
     }
 
     function renderConversation() {
-      conversation.textContent = conversationDisplayText();
+      conversation.textContent = conversationVisibleText();
       conversation.scrollTop = conversation.scrollHeight;
       renderLogPopout("conversation");
       updateBrain2Controls();
@@ -13351,10 +13673,10 @@
       return `[${stamp}] ${text}`;
     }
 
-    function addConversation(text, { touchActivity = true } = {}) {
+    function addConversation(text, { touchActivity = true, channel = "dialogue" } = {}) {
       const at = new Date();
       conversationLines.push(conversationLine(text, at));
-      conversationLineMetadata.push(conversationLineMetadataFromDate(at));
+      conversationLineMetadata.push({ ...conversationLineMetadataFromDate(at), channel });
       renderConversation();
       if (touchActivity) noteConversationActivity();
       return conversationLines.length - 1;
@@ -13364,7 +13686,7 @@
       if (index < 0 || index >= conversationLines.length) return addConversation(text, { touchActivity });
       const at = new Date();
       conversationLines[index] = conversationLine(text, at);
-      conversationLineMetadata[index] = conversationLineMetadataFromDate(at);
+      conversationLineMetadata[index] = { ...conversationLineMetadata[index], ...conversationLineMetadataFromDate(at) };
       renderConversation();
       if (touchActivity) noteConversationActivity();
       return index;
@@ -13394,6 +13716,8 @@
       brain2DeferredSurface = null;
       lastBrain2AdvisorySocket = null;
       lastBrain2AdvisoryText = "";
+      lastRuntimeContextSocket = null;
+      lastRuntimeContextSections = {};
       recentIdleOutputs = [];
       recentAssistantOutputs = [];
       substrateIdleOutputs = [];
@@ -13455,19 +13779,23 @@
       );
     }
 
+    function realtimeInterruptEnabled() {
+      return currentInterruptSensitivity() > 0 && !imageToolProtectionEnabled;
+    }
+
+    function syncRealtimeInterruptPolicy() {
+      if (!realtimeConnected()) return;
+      send({
+        type: "session.update",
+        session: { type: "realtime", turn_detection: { interrupt_response: realtimeInterruptEnabled() } }
+      });
+    }
+
     function updateRealtimeInterruptProtection(enabled, reason = "") {
       if (imageToolProtectionEnabled === enabled) return;
       imageToolProtectionEnabled = enabled;
       if (!realtimeConnected()) return;
-      send({
-        type: "session.update",
-        session: {
-          type: "realtime",
-          turn_detection: {
-            interrupt_response: !enabled
-          }
-        }
-      });
+      syncRealtimeInterruptPolicy();
       log(events, enabled ? `image tool protected from interruption${reason ? `: ${reason}` : ""}` : "image tool interruption restored");
     }
 
@@ -15582,7 +15910,33 @@
       renderGpuBars(gpuUtilBars, gpuUtilHistory);
     }
 
+    function renderContextUsage() {
+      if (!contextUsage) return;
+      const limit = latestBrainStatus?.context?.context_window_tokens;
+      const tokens = lastConversationInputTokens;
+      const measured = Number.isFinite(tokens) && tokens > 0;
+      const knownLimit = Number.isFinite(limit) && limit > 0;
+      contextUsage.textContent = measured && knownLimit
+        ? `CTX ${Math.round(tokens / limit * 100)}%` : "CTX --";
+      contextUsage.title = measured
+        ? `Latest B1 conversation request: ${tokens.toLocaleString("en-US")} input tokens` +
+          (knownLimit ? ` / ${limit.toLocaleString("en-US")} context limit.` : "; context limit unavailable.") +
+          " Request size, not VRAM or cache reuse. Excludes isolated tool/idle responses."
+        : "Context usage appears after a conversation response.";
+    }
+
+    function observeContextUsage(event) {
+      const response = event.response;
+      if (event.type !== "response.done" || response?.status !== "completed" ||
+          !response.conversation_id) return;
+      const tokens = response.usage?.input_tokens;
+      if (!Number.isFinite(tokens) || tokens <= 0) return;
+      lastConversationInputTokens = tokens;
+      renderContextUsage();
+    }
+
     function updateGpuStatus(payload) {
+      renderContextUsage();
       if (!gpuStatus || !gpuUtil || !gpuVram) return;
       const gpu = payload?.gpu || payload || {};
       const primary = gpu?.primary || (Array.isArray(gpu?.gpus) ? gpu.gpus[0] : null);
@@ -16473,7 +16827,7 @@
         },
         {
           name: "Embodiment",
-          role: "Runtime-configured current hardware and build trajectory",
+          role: "Active body manual after restored notes; replaced when the body changes",
           text: embodimentText,
           details: [
             "Source: /api/runtime-config",
@@ -16566,7 +16920,7 @@
         },
         {
           name: "Alone State",
-          role: "Short runtime ledger injected into conversation and idle context",
+          role: "Private conversation updates; elapsed time is supplied only to idle requests",
           text: aloneStateText,
           details: [
             `Tracked alone activities: ${aloneActivityLog.length}`,
@@ -17010,7 +17364,7 @@
       }
     }
 
-    async function writeTextFile({ filename, content, source, source_filename, mode = "overwrite" } = {}) {
+    async function writeTextFile({ filename, content, source, mode = "overwrite" } = {}) {
       const name = String(filename || "").trim();
       if (!name) throw new Error("Missing filename");
       if (!noteFileWriteAllowed()) {
@@ -17018,7 +17372,7 @@
       }
       const normalizedContent = typeof content === "string" && content.trim()
         ? content
-        : await formatSessionNote({ source, sourceFilename: source_filename });
+        : await formatSessionNote({ source });
       const payload = {
         filename: name,
         content: normalizedContent,
@@ -17181,6 +17535,7 @@
     }
 
     function haltRealtimeActivity(reason = "runtime halt") {
+      pendingSessionMapMove = null;
       clearBrain2BodyCue(reason);
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = null;
@@ -17522,10 +17877,10 @@
       return `${text.slice(0, maxSessionNoteChars)}\n\n[Session note clipped after ${maxSessionNoteChars} characters. Copy panes manually or save a narrower source for the rest.]`;
     }
 
-    async function formatSessionNote({ source = "conversation_and_idle", sourceFilename = "" } = {}) {
-      const normalizedSource = String(source || "conversation_and_idle");
-      if (normalizedSource === "note_summary") {
-        return formatLoadedNoteSummary(await noteForSummary(sourceFilename));
+    async function formatSessionNote({ source } = {}) {
+      const normalizedSource = String(source || "");
+      if (!["conversation", "events", "idle_ruminations", "conversation_and_idle", "full_session"].includes(normalizedSource)) {
+        throw new Error("Nothing was written. Compose the requested note or summary and pass content. A source selector is only for an explicitly requested verbatim transcript or raw log export.");
       }
       const lines = [
         "STS Session Note",
@@ -17537,7 +17892,7 @@
         "This note was captured from the STS browser session. Treat idle thoughts as ruminations, not verified facts.",
         ""
       ];
-      const conversationText = conversation.textContent.trimEnd();
+      const conversationText = conversationDisplayText().trimEnd();
       const eventsText = events.textContent.trimEnd();
       if (normalizedSource === "conversation") {
         lines.push(sessionNoteSection("Conversation", conversationText));
@@ -17690,149 +18045,6 @@
       }
     }
 
-    async function noteForSummary(sourceFilename = "") {
-      const requested = String(sourceFilename || "").trim();
-      if (requested) {
-        const loaded = findLoadedNoteContext(requested);
-        if (loaded) return loaded;
-        const read = await readTextFile({ filename: requested });
-        return { filename: read.filename || requested, content: String(read.content || "") };
-      }
-      if (loadedNoteContexts.length) return loadedNoteContexts[0];
-      throw new Error("No loaded note is available to summarize.");
-    }
-
-    function findLoadedNoteContext(filename) {
-      const wanted = noteFilenameKey(filename);
-      return loadedNoteContexts.find((item) => {
-        const full = noteFilenameKey(item.filename);
-        const stem = noteFilenameKey(String(item.filename || "").replace(/\.[^.]+$/, ""));
-        return full === wanted || stem === wanted;
-      }) || null;
-    }
-
-    function noteFilenameKey(filename) {
-      return String(filename || "")
-        .replace(/\\/g, "/")
-        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-        .replace(/\.[a-z0-9]+$/i, "")
-        .toLowerCase()
-        .replace(/[^a-z0-9/]+/g, "_")
-        .replace(/(^|\/)_+|_+(?=\/|$)/g, "$1")
-        .replace(/\/+/g, "/")
-        .replace(/^\/+|\/+$/g, "");
-    }
-
-    function formatLoadedNoteSummary(note) {
-      const filename = String(note?.filename || "loaded note").trim();
-      const content = String(note?.content || "").replace(/\r\n/g, "\n").trim();
-      if (!content) throw new Error("The note to summarize is empty.");
-      const entries = transcriptEntries(content);
-      const lines = [
-        "Robot 790 Note Summary",
-        "======================",
-        `Created: ${new Date().toLocaleString()}`,
-        `Source note: ${filename}`,
-        "",
-        "Purpose",
-        "-------",
-        "This is a compact memory aid generated from a note or transcript. It is a summary, not a verbatim transcript.",
-        ""
-      ];
-      if (entries.length) {
-        const first = entries[0];
-        const last = entries[entries.length - 1];
-        lines.push("Transcript Shape");
-        lines.push("----------------");
-        lines.push(`Time span: ${first.time || "unknown"} to ${last.time || "unknown"}.`);
-        lines.push(`Lines: ${entries.length}; user turns: ${entries.filter((entry) => entry.speaker === "You").length}; Robot 790 turns: ${entries.filter((entry) => entry.speaker === "Robot 790").length}.`);
-        lines.push("");
-        appendTopicSections(lines, entries);
-        appendTranscriptHighlights(lines, entries);
-        appendOpenItems(lines, entries);
-      } else {
-        lines.push("Summary");
-        lines.push("-------");
-        noteSentences(content).slice(0, 30).forEach((sentence) => lines.push(`- ${sentence}`));
-      }
-      return clipSessionNote(lines.join("\n"));
-    }
-
-    function transcriptEntries(content) {
-      const pattern = /^\[([^\]]+)\]\s+(You|Robot 790):\s+(.+)$/;
-      return String(content || "")
-        .split(/\n+/)
-        .map((line) => {
-          const match = line.match(pattern);
-          if (!match) return null;
-          return {
-            time: match[1],
-            speaker: match[2],
-            text: match[3].replace(/\s+/g, " ").trim()
-          };
-        })
-        .filter(Boolean);
-    }
-
-    function appendTopicSections(lines, entries) {
-      const topics = [
-        { label: "Identity and introspection", re: /\b(soul|real|fake|witness|introspection|remember|memory|first meeting|fresh canvas|echo|choice)\b/i },
-        { label: "Face, body, and display work", re: /\b(face|eyes?|mouth|display|ESP32|chassis|treads?|body|mask|glitchy|caption|weather|time|clock)\b/i },
-        { label: "Wonder, idle, and learning", re: /\b(wonder|idle|ruminat|curiosity|search|web|look up|tool|question|learn)\b/i },
-        { label: "Games, bits, and banter", re: /\b(game|genius|wizard|brain|pompous|ask me anything|funny|joke|gargoyle|fortune|Chappie)\b/i },
-        { label: "Audio and session friction", re: /\b(mic|microphone|fan|garbled|repeat|hear|STT|Alexa|confused)\b/i }
-      ];
-      lines.push("Main Threads");
-      lines.push("------------");
-      for (const topic of topics) {
-        const samples = uniqueSnippets(entries
-          .filter((entry) => topic.re.test(entry.text))
-          .map((entry) => `${entry.speaker}: ${entry.text}`), 4);
-        if (!samples.length) continue;
-        lines.push(`${topic.label}:`);
-        samples.forEach((sample) => lines.push(`- ${sample}`));
-      }
-      lines.push("");
-    }
-
-    function appendTranscriptHighlights(lines, entries) {
-      const highlights = uniqueSnippets(entries
-        .filter((entry) => entry.text.length >= 35)
-        .filter((entry) => !/^(Let me|Got it|Sure|Right|Fair|Yeah|Okay|I'm listening)\b/i.test(entry.text))
-        .map((entry) => `[${entry.time}] ${entry.speaker}: ${entry.text}`), 18);
-      if (!highlights.length) return;
-      lines.push("Timeline Highlights");
-      lines.push("-------------------");
-      highlights.forEach((item) => lines.push(`- ${item}`));
-      lines.push("");
-    }
-
-    function appendOpenItems(lines, entries) {
-      const items = uniqueSnippets(entries
-        .filter((entry) => entry.speaker === "You")
-        .filter((entry) => /\b(can you|could you|we need|need to|want to|should|feature|fix|add|give you|going to)\b/i.test(entry.text))
-        .map((entry) => entry.text), 12);
-      if (!items.length) return;
-      lines.push("Open Or Useful Follow-Ups");
-      lines.push("-------------------------");
-      items.forEach((item) => lines.push(`- ${item}`));
-      lines.push("");
-    }
-
-    function uniqueSnippets(values, limit) {
-      const seen = new Set();
-      const result = [];
-      for (const value of values) {
-        const text = String(value || "").trim();
-        if (!text) continue;
-        const key = normalizeIdleTopicKey(text).slice(0, 80);
-        if (seen.has(key)) continue;
-        seen.add(key);
-        result.push(text.length > 260 ? `${text.slice(0, 257)}...` : text);
-        if (result.length >= limit) break;
-      }
-      return result;
-    }
 
     async function readTextFile({ filename, path, name: noteName, pin = true } = {}) {
       const name = String(filename || path || noteName || "").trim();
@@ -18061,7 +18273,7 @@
       if (item.source) parts.push(`source ${transcriptToken(item.source)}`);
       if (item.lastUserText) parts.push(`near user "${transcriptToken(item.lastUserText)}"`);
       parts.push(`created ${transcriptToken(item.createdAt)}`);
-      addConversation(`${parts.join(" ")}]`, { touchActivity });
+      addConversation(`${parts.join(" ")}]`, { touchActivity, channel: "control" });
     }
 
     function sensingEyeImageHistoryList() {
@@ -18966,6 +19178,8 @@
       if (name === "write_text_file") return writeTextFile(args);
       if (name === "read_text_file") return readTextFile(args);
       if (name === "list_text_files") return listTextFiles(args);
+      if (name === "list_session_map") return listSessionMap(args);
+      if (name === "enter_session") return requestEnterSession(args);
       if (name === "list_pinned_notes") return listPinnedNotes(args);
       if (name === "unpin_note") return unpinNote(args);
       throw new Error(`Unknown tool: ${name}`);
@@ -19638,6 +19852,9 @@
         if (event.name === "read_text_file" || event.name === "list_text_files" || event.name === "list_pinned_notes") {
           toolFollowupInstructions = noteFileFollowupInstructions(event.name, result);
         }
+        if (event.name === "list_session_map" || event.name === "enter_session") {
+          toolFollowupInstructions = "Use the session-map receipt to answer the operator. Listing is not moving. For an ambiguous or missing destination, ask one short clarification using available titles and dates. Do not invent a match or claim a session transition occurred.";
+        }
         if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
         if (event.name === "get_weather") toolFollowupInstructions = weatherFollowupInstructions(result);
         if (event.name === "get_current_time") toolFollowupInstructions = timeFollowupInstructions(result);
@@ -19726,6 +19943,7 @@
           toolFollowupExactText = "I could not touch that file.";
         }
         if (event.name === "search_web") toolFollowupExactText = "I could not search.";
+        if (event.name === "list_session_map" || event.name === "enter_session") toolFollowupInstructions = "Explain the session-map error briefly. Do not claim that the destination was entered.";
         if (event.name === "get_weather") toolFollowupExactText = "I could not check the weather.";
         if (event.name === "get_current_time") toolFollowupExactText = "I could not check the time.";
         if (event.name === "get_brain_status") toolFollowupExactText = "I could not check my status.";
@@ -19764,6 +19982,15 @@
       if (!toolFollowupNeeded || pendingToolCalls > 0 || !responseDoneAfterTool) return;
       toolFollowupNeeded = false;
       responseDoneAfterTool = false;
+      if (pendingSessionMapMove) {
+        const move = pendingSessionMapMove;
+        toolFollowupExactText = "";
+        toolFollowupInstructions = "";
+        toolFollowupPromptSources = [];
+        toolFollowupCatalog = null;
+        void performSessionMapMove(move);
+        return;
+      }
       const catalog = toolFollowupCatalog;
       toolFollowupCatalog = null;
       if (catalog && catalog.userActivityAt !== lastUserTurnActivityAt) {
@@ -19774,7 +20001,7 @@
         return;
       }
       const recall = !toolFollowupExactText && catalog ? sensingEyeRecallContinuation(catalog) : null;
-      const tools = recall ? [recall.tool] : [];
+      const tools = enabledToolList();
       const toolChoice = recall ? "auto" : "none";
       const modalities = recall ? ["text"] : ["audio", "text"];
       const promptKind = recall ? "sensing-eye-recall" : toolFollowupExactText
@@ -19804,6 +20031,7 @@
       toolFollowupInstructions = "";
       toolFollowupPromptSources = [];
       pendingEyeRecallResponse = recall;
+      appendRuntimeContextToConversation({ reason: "tool receipts complete", toolBoundary: true });
       responseActive = true;
       send({
         type: "response.create",
@@ -19812,7 +20040,7 @@
           ...(recall ? { output_modalities: ["text"] } : {}),
           tools,
           tool_choice: toolChoice,
-          instructions,
+          robot790_tool_followup: instructions,
           ...ttsRuntimeConfig()
         }
       }, { socket, generation });
@@ -19824,11 +20052,8 @@
       if (!ids.length || !tool || catalog.result.status !== "ok") return null;
       return {
         ids, userActivityAt: catalog.userActivityAt, used: false, text: "", completed: false,
-        tool: { ...tool, parameters: { type: "object", properties: {
-          note_id: { type: "string", enum: ids, description: "Exact ID of the requested note from the just-returned catalogue." }
-        }, required: ["note_id"], additionalProperties: false } },
+        tool,
         instructions: [
-          buildSessionInstructions(),
           "Sensing-eye lookup continuation: the catalogue has been returned, but listing did not load a picture or text. The operator's pending request is: " + JSON.stringify(catalog.request),
           "Use the returned catalogue's remarks_after_open and saved session context to identify the requested note. These remarks follow that file's explicit open receipt; they are retrieval clues, not independent visual verification. You may make exactly one real recall_sensing_eye_note call with a listed note_id to fulfill this request. Use the tool channel, never tool markup in speech. Do not announce success before the recall receipt.",
           "If the operator only asked what is available, answer that question without loading anything. If the requested note cannot be identified, ask one short clarifying question instead of guessing. No other action or automatic retry."
@@ -19856,6 +20081,10 @@
       return JSON.stringify(session);
     }
 
+    function contextDiagnosticsEnabled() {
+      return new URLSearchParams(location.search).get("contextDiagnostics") === "1";
+    }
+
     function sessionPromptChange(previous, current) {
       const before = String(previous?.instructions || "");
       const after = String(current.instructions || "");
@@ -19876,7 +20105,7 @@
       if (contextPanel?.open) renderContextMap();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       const enabledTools = enabledToolList();
-      const instructions = buildSessionInstructions({ includeBrain2Advisory: false });
+      const instructions = buildSessionInstructions();
       const toolChoice = enabledTools.length ? "auto" : "none";
       const session = {
         type: "realtime",
@@ -19885,18 +20114,24 @@
         tools: enabledTools,
         tool_choice: toolChoice,
         turn_detection: {
-          interrupt_response: !imageToolProtectionEnabled
+          interrupt_response: realtimeInterruptEnabled()
         }
       };
       const fingerprint = sessionUpdateFingerprint(session);
-      if (lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint === fingerprint) return false;
-      const previous = lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint
-        ? JSON.parse(lastSessionUpdateFingerprint) : null;
-      log(events, `B1 session prompt change: ${JSON.stringify(sessionPromptChange(previous, session))}`);
+      if (lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint === fingerprint) {
+        appendRuntimeContextToConversation();
+        return false;
+      }
+      if (contextDiagnosticsEnabled()) {
+        const previous = lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint
+          ? JSON.parse(lastSessionUpdateFingerprint) : null;
+        log(events, `B1 session prompt change: ${JSON.stringify(sessionPromptChange(previous, session))}`);
+      }
       rememberSessionPromptSnapshot({ instructions, tools: enabledTools, toolChoice, announce: !quiet });
       send({ type: "session.update", session });
       lastSessionUpdateSocket = ws;
       lastSessionUpdateFingerprint = fingerprint;
+      appendRuntimeContextToConversation();
       if (!quiet) {
         log(
           events,
@@ -20628,6 +20863,8 @@
         return;
       }
       if (!activeRealtimeSession(socket, generation)) return;
+      observeContextUsage(event);
+      if (llmRunOverview?.observe(event, performance.now())) recordLlmOverview("first measured response");
       if ((String(event.type || "").startsWith("response.output_") || event.type === "response.function_call_arguments.done") && responseOutputSuppressed(event)) return;
       const recallScope = eyeRecallResponses.get(eventResponseId(event));
       if (recallScope && String(event.type || "").startsWith("response.output_")) {
@@ -20645,6 +20882,13 @@
       if (event.type === "response.output_audio.done" || event.type === "response.done") {
         flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
         if (event.type === "response.done") {
+          if (event.response?.status && event.response.status !== "completed") {
+            sessionMapRequestEpoch += 1;
+            if (pendingSessionMapMove) {
+              pendingSessionMapMove = null;
+              toolFollowupInstructions = "The session move was canceled with this response. The destination was not entered.";
+            }
+          }
           finishSensingEyeChoice(event);
           const wasIdleInFlight = idleInFlight;
           const wasGpuWatchInFlight = gpuWatchInFlight;
@@ -20945,14 +21189,17 @@
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         throw new Error("Disconnect before connecting a selected session.");
       }
+      if (connectionButtonsLocked) throw new Error("A connection is already being prepared.");
       openBrowserFaceWindow({ onlyIfActive: true });
-      const selected = await fetchContinuitySessionMetadata(filename, resumeForm);
-      const selectedForm = normalizeContinuityScrubMode(selected.resume_form || resumeForm);
-      if (continuityScrubMode) {
-        continuityScrubMode.value = selectedForm;
-        updateContinuityScrubModeUi();
-      }
+      setConnectionButtonsDisabled(true);
+      let selected, selectedForm;
       try {
+        selected = await fetchContinuitySessionMetadata(filename, resumeForm);
+        selectedForm = normalizeContinuityScrubMode(selected.resume_form || resumeForm);
+        if (continuityScrubMode) {
+          continuityScrubMode.value = selectedForm;
+          updateContinuityScrubModeUi();
+        }
         await loadFreshContinuityContext({
           source,
           sessionFilename: selected.session_filename || "",
@@ -20960,7 +21207,8 @@
           reason: source.toLowerCase()
         });
       } catch (error) {
-        if (error?.code === "continuity_load_canceled") setState("Load canceled");
+        setConnectionButtonsDisabled(false);
+        setState(error?.code === "continuity_load_canceled" ? "Load canceled" : "Connect failed");
         throw error;
       }
       recordUiEvent("realtime connect selected", selected.session_filename || "", {
@@ -21042,7 +21290,6 @@
       let socket = null;
       let sessionGeneration = 0;
       try {
-        await pauseSessionPreparation();
         await ensureRuntimeConfigLoaded();
         if (!continuityAlreadyLoaded) {
           await loadFreshContinuityContext({
@@ -21050,6 +21297,7 @@
             reason: coreNotesOnly ? "Connect with core note" : "Connect latest session"
           });
         }
+        await pauseSessionPreparation();
         continuityParentForCurrentRun = (
           currentContinuitySessionFilename
           && Boolean(continuitySessionContext())
@@ -21084,7 +21332,7 @@
         updateVisionButtons();
         stageVisionImage();
         log(events, "connected");
-        log(events, `client build: 20260911-recall-handoff / audio interrupt ${JSON.stringify(audioInterruptTiming())} / idle timing ${JSON.stringify(idleTiming())}`);
+        log(events, `client build: 20260912-session-map-navigation / interrupt sensitivity ${currentInterruptSensitivity()} / backend interrupt ${realtimeInterruptEnabled()} / audio interrupt ${JSON.stringify(audioInterruptTiming())} / idle timing ${JSON.stringify(idleTiming())}`);
         syncServerPanelToConnection();
         noteConversationActivity();
         try {
@@ -21095,9 +21343,10 @@
           const fallbackInstructions = [
             baseSessionInstructionsText(),
             brain2AdvisoryProtocolInstructions(),
+            runtimeContextProtocolInstructions(),
             formatCreatureForInstructions(),
-            formatEmbodimentForInstructions(),
-            formatLoadedNotesForInstructions()
+            formatLoadedNotesForInstructions(),
+            formatEmbodimentForInstructions()
           ].filter(Boolean).join("\n\n");
           send({
             type: "session.update",
@@ -21122,6 +21371,7 @@
           });
           recordRunSetupSnapshot(restoredPrevious ? "previous realtime open fallback" : "realtime open fallback");
         }
+        beginLlmOverview();
         updateLanePressure({ reason: "realtime connected" });
         updateIdleSchedulerStatus();
       });
@@ -21581,7 +21831,8 @@
       llmImageTools: "Expose image generation to the LLM.",
       llmSmartHomeTools: "Expose smart-home tools to the LLM when configured.",
       transcriptProsodyMode: "Choose whether conversation snapshots include compact or full prosody tags.",
-      recordConversation: "Snapshot the conversation pane.",
+      transcriptControlDetails: "Show image and text-note recall receipts. Saved sessions always retain them.",
+      recordConversation: "Save the full conversation, including hidden recall receipts.",
       prosodyKey: "Show or hide the compact prosody notation key.",
       stopCast: "Stop Cast playback and restore Eric's mic if Cast paused it.",
       popoutConversation: "Open the conversation pane in a separate window.",
@@ -21766,6 +22017,39 @@
       return setup;
     }
 
+    function beginLlmOverview() {
+      lastConversationInputTokens = null;
+      renderContextUsage();
+      llmRunOverview = null;
+      if (!contextDiagnosticsEnabled()) return;
+      if (typeof Robot790LlmOverview !== "function") return;
+      const prompt = lastSessionPromptSnapshot
+        || [...promptLedgerLog].reverse().find(item => item.kind === "session.update") || {};
+      const tools = Array.isArray(prompt.tools) ? prompt.tools : [];
+      const statusAge = Date.now() - Date.parse(latestBrainStatus?.generated_at || "");
+      const windowTokens = statusAge >= 0 && statusAge < 60000
+        ? latestBrainStatus?.context?.context_window_tokens : null;
+      llmRunOverview = new Robot790LlmOverview({
+        captured_at: new Date().toISOString(),
+        model: currentModelStamp(),
+        context_window_tokens: windowTokens ?? null,
+        context_status_at: windowTokens ? latestBrainStatus.generated_at : null,
+        approximate_prompt_tokens: approximateTextTokens(String(prompt.instructions || "") + JSON.stringify(tools)),
+        note_count: loadedNoteContextsForCurrentPrompt().length,
+        tool_count: tools.length,
+        resume_form: currentContinuityScrubMode()
+      });
+      recordLlmOverview("before inference");
+    }
+
+    function recordLlmOverview(phase) {
+      if (!llmRunOverview) return;
+      const full = llmRunOverview.text();
+      const summary = phase === "before inference" ? full.split("\n").slice(0, 2).join("\n") : full;
+      recordUiEvent("LLM overview", phase, llmRunOverview.snapshot());
+      log(events, `LLM overview (${phase})\n${summary}`);
+    }
+
     function recordToolSwitchChange(label) {
       recordUiEvent("tool switch", label, toolSwitchDetails());
       updateSessionTools();
@@ -21792,7 +22076,7 @@
       });
       connect({ coreNotesOnly: true });
     });
-    async function disconnectRealtime() {
+    async function disconnectRealtime({ reloadSavedNote = true } = {}) {
       if (continuitySaveBusy) return;
       continuitySaveBusy = true;
       recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
@@ -21810,7 +22094,8 @@
             "write session note",
             () => saveEricContinuitySnapshot({
               reason: "realtime disconnect",
-              eventLabel: "session note saved"
+              eventLabel: "session note saved",
+              reloadSavedNote
             }),
             { timeoutMs: 16000, prefix: "disconnect step", required: true }
           )
@@ -21839,10 +22124,12 @@
           if (stopResult) log(events, `audio recording finalized for disconnect: ${stopResult.recording_name || stopResult.status || "done"}`);
         }
         await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("hard disconnect"), { timeoutMs: 10000, prefix: "disconnect step" });
+        return { status: "ok", session_filename: saveResult?.continuity_session_filename || null };
       } catch (error) {
         setState("Stopped; save failed", "warn");
         log(events, `disconnect save blocked: ${error.message}; Eric remains stopped; transcript retained; press Disconnect to retry`);
         disconnectButton.disabled = false;
+        return { status: "error", error: error.message };
       } finally {
         continuitySaveBusy = false;
         updateSaveAndHaltButton();
@@ -22501,6 +22788,10 @@
       renderConversation();
       recordUiEvent("transcript prosody", currentTranscriptProsodyMode(), { conversation_lines: conversationLines.length });
       log(events, `transcript prosody ${currentTranscriptProsodyMode()}`);
+    });
+    transcriptControlDetails.addEventListener("change", () => {
+      saveLogDisplayControls();
+      renderConversation();
     });
     conversationFontSmallerButton?.addEventListener("click", () => {
       nudgeConversationFontSize(-1);

@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 logger = logging.getLogger(__name__)
 
 DEFAULT_CAST_DEVICE_NAME = "Living Room TV"
+CAST_SENDER_NAME = "Eric Robot-790"
 DEFAULT_CAST_TIMEOUT_S = 10.0
 CAST_DEVICE_NAME_ENV = "ROBOT_790_CAST_DEVICE_NAME"
 CAST_TIMEOUT_S_ENV = "ROBOT_790_CAST_TIMEOUT_S"
@@ -319,6 +320,9 @@ class CastMediaClient:
         return None, devices, browser
 
     def _play_youtube_video(self, cast: Any, youtube: Any, video_id: str) -> None:
+        # Casttube has no sender-name parameter; its pairing payload uses this shared default.
+        session_module = importlib.import_module("casttube.YouTubeSession")
+        session_module.BIND_DATA["name"] = CAST_SENDER_NAME
         controller = youtube.YouTubeController(timeout=self.settings.timeout_s)
         cast.register_handler(controller)
         controller.play_video(video_id)

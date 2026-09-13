@@ -298,14 +298,18 @@ def test_archive_continuity_session_moves_its_sensing_eye_assets(tmp_path: Path)
 
 
 @pytest.mark.parametrize("manifest_reference", [True, False])
-def test_archiving_preserves_assets_referenced_by_another_active_session(tmp_path: Path, manifest_reference: bool) -> None:
+def test_archiving_preserves_assets_referenced_by_another_active_session(
+    tmp_path: Path, manifest_reference: bool,
+) -> None:
     eye = tmp_path / "logs" / "sensing-eye"
     eye.mkdir(parents=True)
     image = eye / "shared.jpg"
     image.write_bytes(b"shared image")
     sidecar = eye / "shared.jpg.json"
     sidecar.write_text('{}', encoding="utf-8")
-    original = save_continuity_session("original", [], tmp_path, filename_timestamp="20260911-010000", sensing_eye_filenames=[image.name])
+    original = save_continuity_session(
+        "original", [], tmp_path, filename_timestamp="20260911-010000", sensing_eye_filenames=[image.name]
+    )
     save_continuity_session(
         "recalled file logs/sensing-eye/shared.jpg size 100x100", [], tmp_path,
         filename_timestamp="20260911-020000", sensing_eye_filenames=[image.name] if manifest_reference else [],

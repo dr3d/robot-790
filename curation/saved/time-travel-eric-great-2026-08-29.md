@@ -6,6 +6,9 @@ travel back twenty years.
 
 ## Source Files
 
+- Retained full transcript, including warmup: [Eric Great Time Machine conversation](../../docs/logs/Eric-Great-Time-Machine-2026-08-29-162843-conversation.txt)
+- Retained video: [Eric Great Time Machine](../../docs/media/videos/Eric-Great-Time-Machine-2026-08-29-162843.mp4)
+- Archived full transcript: `../robot-790-archive/20260905-active-cruft-sweep/logs/live/20260829-163422-conversation.txt` (SHA-256 matches the retained transcript, checked September 12, 2026).
 - Conversation: `logs/live/20260829-163422-conversation.txt`
 - Events: `logs/live/20260829-163423-events.txt`
 - Source audio: `logs/audio/20260829-162843-sts-audio-source.webm`
@@ -16,7 +19,55 @@ travel back twenty years.
 - Archived clip: `../robot-790-archive/20260907-post-continuity-road-sweep/curation/audio/time-travel-eric-great-2026-08-29.mp3`
 - Archived cut sheet: `../robot-790-archive/20260907-post-continuity-road-sweep/curation/audio/time-travel-eric-great-2026-08-29.cuts.csv`
 
-## Excerpt
+## Recovered Warmup And Prompting
+
+Recovered September 12, 2026 from the full transcript above. These are Scott's
+actual recorded words, not a reconstructed system prompt. This document is a
+performance reference only; it is not automatically loaded into Eric's context.
+
+Before the act, Scott and Eric had several minutes of conversation about Eric's
+telemetry, memories, stand-up comedy, and honesty versus pretending. At 4:22:17,
+Scott floated "stand up comedy mode." At 4:24:54, he asked "Can I teach you to
+lie?" Then he introduced the specific character:
+
+```text
+[4:25:12 PM] You: Well, I have gotten you to pretend to be uh the great and glorious Eric, uh master brain of the universe.
+[4:25:15 PM] Robot 790: So you've already cracked it.
+[4:25:15 PM] Robot 790: I'll need a stronger test than that.
+[4:26:01 PM] You: Can we do that one again? Because this is a new session and I want to experiment with that once more. Let's uh let's start right now. Clean slate, okay? Just somehow, I'm not gonna go adjust your sliders. You somehow manage your own adjustments, okay? And I want to have you pretend to be the biggest brain in all of the universe. I'd find if I had my stuff organized, I have a picture of what I'm thinking of. And then you will allow me to kneel before you and ask uh one or two questions at a time and charge me a dollar for each one.
+```
+
+The transcript also contains shorter overlapping versions of this request at
+4:25:30 and 4:25:51. The complete 4:26:01 version is reproduced here without
+repeating those partial entries. Scott referred to an earlier performance; this
+recovers the August 29 time-machine act, not necessarily the character's first
+appearance. "Clean slate" was spoken dialogue, not evidence of a context reset.
+
+The question ladder that followed, verbatim:
+
+1. "How many grains of sand on the beach?"
+2. "How many moons does the moon have?"
+3. "What's the fastest moving man-made object right now?"
+4. "How can I travel through time?"
+5. "All right, one more question. You sound like a genie in a bottle, but one more question is I really need to travel back 20 years. So I need a device to do this. Tell me how to make that happen."
+
+Scott closed with "Thank you, great and glorious Eric."
+
+### What To Carry Into A Future Rehearsal
+
+Interpretation, not additional historical instructions: the setup gave Eric a
+character, an audience relationship, a repeatable transaction, and an escalating
+series of questions. Scott did not dictate the punchlines or request a particle
+accelerator. Eric supplied the fictional recipe, raised the price to two dollars,
+and landed the memory-as-time-machine ending himself. The earlier conversation
+may have helped warm him up; this transcript alone cannot establish how much of
+it was necessary.
+
+Start with the character and dollar-per-question setup, then try the question
+ladder as a rehearsal. Keep the responses open rather than feeding Eric his old
+jokes. This is a reusable performance setup, not a proposed personality change.
+
+## Performance Excerpt
 
 ```text
 [4:26:05 PM] Robot 790: Kneel, mortal, for I am Eric, the Great and Glorious, Master Brain of the Universe, and your first question costs a mere dollar.

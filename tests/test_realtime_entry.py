@@ -17,9 +17,9 @@ from robot_790d.realtime_entry import (
 )
 
 
+@pytest.mark.parametrize("marker", ["[B2 advisory]", "[STS runtime]"])
 @pytest.mark.parametrize("split", range(len("[B2 advisory]") + 1))
-def test_private_advisory_filter_handles_every_marker_split(split) -> None:
-    marker = "[B2 advisory]"
+def test_private_advisory_filter_handles_every_marker_split(split, marker) -> None:
     guard = _PrivateAdvisoryTextFilter()
     output = "".join(guard.feed(part) for part in [
         "Yes, I hear you. ", marker[:split], marker[split:],
@@ -77,7 +77,7 @@ def test_private_advisory_events_filter_speech_and_history_but_preserve_tools_an
     assert "".join(part.text for part in history[0].content) == "Yes. "
     assert filtered[-2] is tool
     assert filtered[-1] is usage
-    assert "Suppressed private B2 advisory output" in caplog.text
+    assert "Suppressed private controller output" in caplog.text
     assert "private snapshot" not in caplog.text
 
 

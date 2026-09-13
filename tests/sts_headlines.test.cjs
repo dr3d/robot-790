@@ -15,6 +15,7 @@ function setup(overrides = {}, extraFunctions = []) {
   const logs = [];
   let now = 120001;
   const context = vm.createContext({
+    pendingSessionMapMove: null, sessionMapMoveBusy: false,
     realtimeStopRequested: false, updateSessionTools: () => {},
     Date: { now: () => now }, URL, AbortSignal, location: { href: 'http://127.0.0.1:8790/' },
     brain2HeadlineStartedAt: 1, brain2HeadlineLastAttemptAt: 0, brain2HeadlineSeen: [], brain2HeadlineSeed: null,
@@ -206,6 +207,7 @@ test('fresh headline permits one brake-time beat without clearing the brake or b
     updateIdleLevel12State: () => {}, maybeLogIdleLevel12YackMode: () => {},
     idleDelayMs: () => 1000, idleGapMs: () => 1000, idleLevel12YackActive: () => false,
     conversationIdleDelayMs: value => value,
+    conversationPauseHoldUntil: () => 0,
     idleTiming: () => ({ post_user_quiet_s: 12 }),
     updateIdleSchedulerStatus: () => {}, scheduleIdleSchedulerStatusTimer: () => {},
     clearTimeout: () => {}, setTimeout: (fn, ms) => { timers.push(ms); return timers.length; },

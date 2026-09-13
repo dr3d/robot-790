@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class _PrivateAdvisoryTextFilter:
     """Hold only a possible marker prefix; stop a private dump at its marker."""
 
-    marker = "[b2 advisory]"
+    markers = ("[b2 advisory]", "[sts runtime]")
 
     def __init__(self) -> None:
         self.pending = ""
@@ -31,7 +31,8 @@ class _PrivateAdvisoryTextFilter:
             return ""
         self.pending += text
         lowered = self.pending.lower()
-        start = lowered.find(self.marker)
+        matches = [lowered.find(marker) for marker in self.markers if marker in lowered]
+        start = min(matches, default=-1)
         if start >= 0:
             visible = self.pending[:start]
             self.pending = ""
@@ -39,8 +40,8 @@ class _PrivateAdvisoryTextFilter:
             return visible
         # A marker can straddle any provider token boundary.
         held = 0
-        for length in range(min(len(lowered), len(self.marker) - 1), 0, -1):
-            if lowered.endswith(self.marker[:length]):
+        for length in range(min(len(lowered), max(map(len, self.markers)) - 1), 0, -1):
+            if any(length < len(marker) and lowered.endswith(marker[:length]) for marker in self.markers):
                 held = length
                 break
         end = len(self.pending) - held
@@ -87,7 +88,7 @@ def _filter_private_advisory_events(events: Iterator[Any]) -> Iterator[Any]:
             yield TextDelta(text=tail)
     finally:
         if guard.blocked or history_blocked:
-            logger.warning("Suppressed private B2 advisory output from its marker to end of response")
+            logger.warning("Suppressed private controller output from its marker to end of response")
         close = getattr(events, "close", None)
         if callable(close):
             close()
@@ -110,6 +111,42 @@ def apply_private_advisory_output_patch() -> None:
     ChatCompletionsApiModelHandler._iter_stream_events = stream_events
     ChatCompletionsApiModelHandler._iter_response_events = response_events
     ChatCompletionsApiModelHandler._robot_790_private_advisory_patch = True
+
+
+def apply_interruptible_chat_generation_patch() -> None:
+    from speech_to_speech.LLM.chat import make_user_message
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler
+
+    from robot_790d.llm_cancellation import CancellableProviderEvents
+
+    if getattr(ChatCompletionsApiModelHandler, "_robot_790_interruptible_generation_patch", False):
+        return
+    original = ChatCompletionsApiModelHandler._generate
+
+    def generate(self: Any, active_chat: Any, original_chat: Any, turn: Any,
+                 optional_kwargs: dict[str, Any], **kwargs: Any) -> Iterator[Any]:
+        followup = _extra_value(turn.response, "robot790_tool_followup")
+        if isinstance(followup, str) and followup.strip():
+            # Text-only private selection still shares B1's voice-system prefix.
+            self._apply_config(active_chat, turn.runtime_config.session.instructions, True)
+            # Request-local tail: do not count controller directions as user turns
+            # or leave obsolete instructions in the continuing conversation.
+            active_chat.add_item(make_user_message(f"[STS tool continuation]\n{followup}"))
+        request = kwargs.pop("request_fn", None) or self._request
+        iterate = kwargs.pop("event_iterator_fn", None) or self._iter_events
+
+        def cancelled() -> bool:
+            return (self._generation_is_stale(turn.gen)
+                    or not self._turn_is_latest(turn.turn_id, turn.turn_revision))
+
+        def start(api_input: Any, options: dict[str, Any]) -> CancellableProviderEvents:
+            return CancellableProviderEvents(lambda: request(api_input, options), iterate, cancelled)
+
+        yield from original(self, active_chat, original_chat, turn, optional_kwargs,
+                            request_fn=start, event_iterator_fn=iter, **kwargs)
+
+    ChatCompletionsApiModelHandler._generate = generate
+    ChatCompletionsApiModelHandler._robot_790_interruptible_generation_patch = True
 
 
 def _extra_value(model: Any, name: str) -> Any:
@@ -528,6 +565,7 @@ def main() -> None:
     apply_chat_text_token_cap_patch()
     apply_chat_completions_wire_capture_patch()
     apply_private_advisory_output_patch()
+    apply_interruptible_chat_generation_patch()
     apply_parakeet_voice_shape_patch()
     apply_visible_transcript_voice_shape_filter_patch()
     from speech_to_speech.s2s_pipeline import main as speech_to_speech_main

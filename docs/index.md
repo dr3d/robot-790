@@ -29,6 +29,12 @@ to be readable without digging through live private logs.
 
 ## Articles
 
+September 12 checkpoint: warm conversation is responsive with retained history
+after a prompt-ordering repair. Session history uses conservative sweeps by
+default; summaries remain experimental. The session map now includes branch
+archiving and fixture-tested spoken navigation. See [Engineering Status](engineering-status.md)
+for current capabilities, remaining speech/tool issues, and untested work.
+
 Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 
 <!-- generated-articles:start -->

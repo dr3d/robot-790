@@ -65,6 +65,7 @@ def test_search_youtube_uses_flat_limited_results(monkeypatch) -> None:
 
 def test_play_youtube_sends_video_to_matching_cast(monkeypatch) -> None:
     played: dict[str, object] = {}
+    bind_data = {"name": "Python", "device": "REMOTE_CONTROL", "id": "original-id"}
     fake_cast = SimpleNamespace(
         cast_info=SimpleNamespace(
             friendly_name="Living Room TV",
@@ -82,6 +83,7 @@ def test_play_youtube_sends_video_to_matching_cast(monkeypatch) -> None:
             played["timeout"] = timeout
 
         def play_video(self, video_id: str) -> None:
+            assert bind_data["name"] == "Eric Robot-790"
             played["video_id"] = video_id
 
     fake_pychromecast = SimpleNamespace(
@@ -94,6 +96,8 @@ def test_play_youtube_sends_video_to_matching_cast(monkeypatch) -> None:
             return fake_pychromecast
         if name == "pychromecast.controllers.youtube":
             return SimpleNamespace(YouTubeController=FakeYoutubeController)
+        if name == "casttube.YouTubeSession":
+            return SimpleNamespace(BIND_DATA=bind_data)
         raise ModuleNotFoundError(name)
 
     monkeypatch.setattr(media_cast.importlib, "import_module", fake_import_module)
@@ -103,6 +107,7 @@ def test_play_youtube_sends_video_to_matching_cast(monkeypatch) -> None:
     assert result["status"] == "ok"
     assert result["action"] == "play_youtube"
     assert played == {"timeout": 4.0, "video_id": "video123"}
+    assert bind_data == {"name": "Eric Robot-790", "device": "REMOTE_CONTROL", "id": "original-id"}
     fake_cast.wait.assert_called_once_with(timeout=4.0)
     fake_cast.register_handler.assert_called_once()
     fake_pychromecast.discovery.stop_discovery.assert_called_once()

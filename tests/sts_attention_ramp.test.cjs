@@ -10,6 +10,7 @@ function fixture() {
   const timers = new Map();
   class Clock extends Date { static now() { return now; } }
   const c = vm.createContext({
+    pendingSessionMapMove: null, sessionMapMoveBusy: false,
     Date: Clock, currentIdleDrift: () => 7, firstContactModeEnabled: () => false,
     performanceModeEnabled: () => false, idleSubstrateTestEnabled: () => false,
     defaultIdleTiming: { attention_enabled: true, attention_start_s: 12, attention_fade_s: 180,
@@ -18,6 +19,7 @@ function fixture() {
     runtimeConfig: {},
     lastAcceptedUserTranscriptAt: now, lastUserTurnActivityAt: now, lastConversationActivityAt: now,
     lastAssistantResponseDoneAt: now, lastIdlePonderAt: now - 5000,
+    conversationPauseUserAt: 0,
     compressIdleMs: value => value, idleLevel12YackActive: () => false,
     realtimeConnected: () => true, idleTimer: null, idleTimerFireAt: 0,
     updateIdleLevel12State: noop, maybeLogIdleLevel12YackMode: noop, updateIdleSchedulerStatus: noop,
@@ -38,7 +40,7 @@ function fixture() {
   });
   for (const name of [
     'idleTiming', 'conversationAttentionEnabled', 'conversationAttentionState', 'conversationIdleDelayMs',
-    'conversationAttentionInstruction', 'conversationReengagePolicy', 'conversationReengageWindowActive',
+    'conversationAttentionInstruction', 'conversationPauseHoldUntil', 'conversationReengagePolicy', 'conversationReengageWindowActive',
     'clearConversationReengageTimer', 'scheduleConversationReengage', 'idleDelayMs', 'idleGapMs',
     'idleBlockedReason', 'scheduleIdlePonder', 'noteConversationActivity', 'clearAssistantFinishTimer',
     'armAssistantUtteranceFinished', 'checkAssistantUtteranceFinished',
@@ -151,6 +153,26 @@ test('normal conversation has one scheduler, with no separate forced reengagemen
   c.scheduleConversationReengage();
   assert.equal(timers.size, 0);
   assert.equal(c.conversationReengageWindowActive(), false);
+});
+
+test('one warm beat leaves room for an answer, then independent idle resumes; a new user turn releases the hold', () => {
+  const { c, time } = fixture();
+  c.conversationPauseUserAt = c.lastAcceptedUserTranscriptAt;
+  time(1030000);
+  assert.equal(c.idleBlockedReason(), 'leaving room for the operator');
+  c.scheduleIdlePonder();
+  assert.equal(c.idleTimerFireAt, 1180000);
+  time(1040000);
+  c.armAssistantUtteranceFinished({ wasIdle: true });
+  c.checkAssistantUtteranceFinished();
+  assert.equal(c.conversationPauseHoldUntil(), 1180000);
+  time(1180000);
+  assert.equal(c.idleBlockedReason(), '');
+  c.lastAcceptedUserTranscriptAt = c.Date.now();
+  assert.equal(c.conversationPauseHoldUntil(), 0);
+  c.conversationPauseUserAt = c.lastAcceptedUserTranscriptAt;
+  c.currentIdleDrift = () => 12;
+  assert.equal(c.conversationPauseHoldUntil(), 0);
 });
 
 test('no spoken turn, Drift off, and special lab modes preserve their original timing', () => {

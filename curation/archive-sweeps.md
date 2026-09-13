@@ -4,6 +4,23 @@ This file records intentional moves from the active repo tree into the adjacent
 `robot-790-archive` folder. These are not deletions; they are index/search
 relief sweeps for bulky or high-count runtime artifacts.
 
+## 2026-09-12 Retired Labtable
+
+- Scott shelved the old multi-participant Labtable research workflow.
+- Moved all 27 files (79,820 bytes) from `notes/labtable/` into
+  `D:\_PROJECTS\robot-790-archive\20260912-retired-labtable\notes\labtable`.
+- Preserved both day folders, participant packets, feedback, and procedures.
+  The archive has a recovery README and `manifest.json`; every file was
+  SHA-256 verified before and after the move.
+- No runtime/configuration/core-note reference to Labtable was found. The
+  remaining server test uses its name as an arbitrary operator-message string,
+  not as a file dependency. Historical transcripts and published media remain.
+- No prompt, core memory, session lineage, server, or published catalog changed.
+  Moving files removes them from future shelf listings; it does not erase text
+  already loaded into an open conversation or historical note receipts.
+- Other candidates are recorded in [Retirement Review](retirement-review.md).
+  They have not been moved. No commit or push was performed.
+
 ## 2026-09-09 Older Logs Sweep
 
 - Archive: `D:\_PROJECTS\robot-790-archive\20260909-older-logs-sweep`

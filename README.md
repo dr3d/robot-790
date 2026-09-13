@@ -100,6 +100,15 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 12 checkpoint: stable prompt ordering now preserves responsive warm
+conversation with retained history. Auto history uses source-checked swept
+sessions; generated summaries remain available for inspection but are disabled
+in the default reload policy. The session map has local-time dates, lineage
+colors, branch archiving, and new operator-requested navigation verbs. Spoken
+navigation is implemented and fixture-tested, with its live trial still pending.
+See [Engineering Status](docs/engineering-status.md) for remaining tool-handoff,
+speech, summary-quality, and performance-variety limitations.
+
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.
 - `src/robot_790d`: Python helpers, local page APIs, realtime entrypoint
@@ -412,9 +421,12 @@ The browser page is the main live control surface. It includes:
 
 - Realtime server connection and model restart controls.
 - Connect latest, previous, empty, or a selected session, with a standalone
-  session map for inspecting branches. Advanced Connection can choose Full
-  `.txt`, Scrubbed, or Summary; a derivative is selectable only when its
-  source-linked, SHA-256-checked sidecar has been authored for that raw session.
+  session map for inspecting branches. Auto history currently loads all retained
+  saved sessions as conservative swept transcripts. Summaries remain drafts;
+  automatic summary loading is disabled pending quality improvements. The mixed
+  recent-swept/older-summary policy is opt-in; Full `.txt`, Scrubbed,
+  and Summary remain explicit alternatives. Derivatives are source-hash checked,
+  originals are retained, and Connect Empty starts a new thread without history.
 - A compact `Nerves` meter for GPU load and VRAM pressure while Eric is running.
 - Sensing Eye drop target for images or text files.
 - Mic start/stop, audio meter, and interruption sensitivity.
@@ -537,6 +549,9 @@ The realtime page can expose these tools to the LLM:
   source, and data file tools inside `notes/`. Supported extensions are `.txt`,
   `.md`, `.py`, `.json`, `.csv`, `.html`, `.css`, `.js`, `.yaml`, and `.yml`;
   writing source never executes it.
+- `list_session_map` / `enter_session`: inspect saved thread titles and parent
+  links, then request a save-and-switch to an exact destination. These STS
+  maintenance tools are not offered to autonomous idle turns.
 - `get_brain_status`: local diagnostics such as model, context, token pressure,
   latency, TTS timing, and approximate browser context contribution.
 
@@ -600,9 +615,12 @@ There are two memory-like layers:
 - Daemon memory facts use `memory.v1.json`; set `ROBOT_790_MEMORY_PATH` or
   `ROBOT_790_INSTANCE_PATH` to move that file.
 
-Notes are different from named facts. They live under `notes/` by default,
-missing extensions become `.txt`, and only `.txt` or explicitly named `.md`
-files are allowed. Set `ROBOT_790_NOTES_PATH` to move the folder.
+Notes are different from named facts. They live under `notes/` by default;
+missing extensions become `.txt`. Supported text/source/data extensions are
+listed under Tools above. Set `ROBOT_790_NOTES_PATH` to move the folder.
+Ordinary requests to save ideas or summarize a discussion now ask Eric to
+compose a focused note; verbatim transcripts require an explicit capture request.
+Automatic session saving is separate and retains the transcript.
 
 The note tools are intended as explicit storage: Eric should only write, append,
 read, or list files when asked. Note writing should keep user-supplied facts,

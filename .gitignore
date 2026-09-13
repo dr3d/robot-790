@@ -16,6 +16,8 @@ session-map-*.png
 /brain2-full-system-prompt.txt
 /brain2-full-prompt-with-context.txt
 /brain2-context-example.txt
+/eric-big-brain-full-dialogue.txt
+/eric-big-brain-scott-dialogue.txt
 *.egg-info/
 dist/
 build/
@@ -24,12 +26,8 @@ tmp/
 .env
 qwen3_tts.env
 *.log
-logs/runs/
-logs/live/
-logs/audio/
-logs/generated-images/
-logs/sensing-eye/
-logs/browser-face/
+# All runtime evidence, local diagnostics, and PM bundles stay private by default.
+/logs/
 samples/
 notes/
 backups/

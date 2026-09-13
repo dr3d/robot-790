@@ -603,7 +603,9 @@ TOOLS: list[dict[str, object]] = [
             "Write or append a sandboxed local text, source, or data file only when the user explicitly asks to "
             "save, write, append, or put content into a named file. Files stay inside Robot 790's notes folder. "
             "Supported types are .txt, .md, .py, .json, .csv, .html, .css, .js, .yaml, and .yml; use .txt by "
-            "default. Writing a source file does not execute it. Notes are durable memory aids: record what "
+            "default. Compose a concise note in your own words about the requested ideas, decisions, and "
+            "open questions by default; provide it as content. Only copy a verbatim transcript when explicitly "
+            "requested. Writing a source file does not execute it. Notes are durable memory aids: record what "
             "happened, what the user supplied, and Eric's thoughts as thoughts. Do not turn Eric's poetic "
             "rumination or unverified outside facts into remembered truth."
         ),

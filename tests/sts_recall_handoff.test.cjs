@@ -10,6 +10,10 @@ function fixture() {
     { id: 'file:panda.jpg', kind: 'image' }, { id: 'file:plexi.jpg', kind: 'image' },
   ] };
   const c = vm.createContext({
+    pendingSessionMapMove: null, sessionMapMoveBusy: false,
+    sessionMapRequestEpoch: 0,
+    llmRunOverview: null,
+    observeContextUsage: () => {},
     ws: { readyState: 1 }, WebSocket: { OPEN: 1 }, realtimeSessionGeneration: 1,
     realtimeStopRequested: false, activeRealtimeSession: () => true,
     suppressedResponseIds: new Set(), unidentifiedOutputSuppressed: false,
@@ -18,7 +22,10 @@ function fixture() {
     toolFollowupPromptSources: [], toolFollowupInstructions: '', toolFollowupExactText: '',
     lastUserTurnActivityAt: 100, lastUserText: 'Show me the panda.',
     buildSessionInstructions: () => 'Saved session: panda.jpg is the panda; plexi.jpg is the copper rig.',
-    enabledToolList: () => [{ type: 'function', name: 'recall_sensing_eye_note', description: 'Recall a note.' }],
+    enabledToolList: () => [
+      { type: 'function', name: 'recall_sensing_eye_note', description: 'Recall a note.' },
+      { type: 'function', name: 'set_chassis', description: 'Move.' },
+    ],
     parseToolArguments: JSON.parse, loadedNoteContextDirty: false,
     beginToolActivity() {}, endToolActivity() {}, toolDetailFromArgs: () => '',
     executeTool: async (name, args) => {
@@ -39,7 +46,7 @@ function fixture() {
     queueAudioDelta: value => audio.push(value), cueSpeechMouth() {},
     stopPlaybackNow: () => { throw new Error('Must not erase queued clean audio'); },
     clearConversationReengageTimer() {}, noteUserTurnActivity: () => { c.lastUserTurnActivityAt++; },
-    updateSessionTools() {}, appendBrain2AdvisoryToConversation() {},
+    updateSessionTools() {}, appendBrain2AdvisoryToConversation() {}, appendRuntimeContextToConversation() {},
   });
   for (const name of ['containsToolMarkup', 'eventResponseId', 'responseOutputSuppressed',
     'suppressToolMarkupResponse', 'sensingEyeRecallContinuation', 'sensingEyeRecallFollowupInstructions',
@@ -55,7 +62,8 @@ function fixture() {
     c.handleEvent({ type: 'response.function_call_arguments.done', name, arguments: JSON.stringify(args), response_id: id, call_id: callId });
     await new Promise(setImmediate);
   }
-  return { c, sent, logs, calls, transcript, audio, finishes, catalog, done, created, tool };
+  const directions = () => sent.filter(e => e.type === 'response.create').at(-1).response.robot790_tool_followup;
+  return { c, sent, logs, calls, transcript, audio, finishes, catalog, done, created, tool, directions };
 }
 
 test('list -> real recall -> grounded speech keeps session context and never finishes the handoff early', async () => {
@@ -67,11 +75,14 @@ test('list -> real recall -> grounded speech keeps session context and never fin
   assert.equal(request.tool_choice, 'auto');
   assert.deepEqual(Array.from(request.output_modalities), ['text']);
   assert.deepEqual(Array.from(request.modalities), ['text']);
-  assert.equal(request.tools.length, 1);
+  assert.equal(request.tools.length, 2);
   assert.equal(request.tools[0].name, 'recall_sensing_eye_note');
-  assert.deepEqual(Array.from(request.tools[0].parameters.properties.note_id.enum), ['file:panda.jpg', 'file:plexi.jpg']);
-  assert.match(request.instructions, /Saved session: panda.jpg/);
-  assert.match(request.instructions, /Show me the panda/);
+  assert.deepEqual(JSON.parse(JSON.stringify(request.tools)), f.c.enabledToolList());
+  assert.equal(request.instructions, undefined);
+  assert.equal(typeof request.robot790_tool_followup, 'string');
+  assert.match(f.directions(), /Show me the panda/);
+  assert.doesNotMatch(f.directions(), /Saved session:/);
+  assert.equal(f.sent.filter(e => e.item?.role === 'user').length, 0, 'no synthetic operator turns persisted');
   assert.equal(f.finishes.length, 0);
   assert.equal(f.c.responseActive, true);
   f.created('choice');
@@ -86,7 +97,9 @@ test('list -> real recall -> grounded speech keeps session context and never fin
   assert.equal(f.sent.at(-1).response.tool_choice, 'none');
   assert.deepEqual(Array.from(f.sent.at(-1).response.modalities), ['audio', 'text']);
   assert.equal(f.sent.at(-1).response.output_modalities, undefined);
-  assert.match(f.sent.at(-1).response.instructions, /actual staged image/);
+  assert.equal(f.sent.at(-1).response.instructions, undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.sent.at(-1).response.tools)), f.c.enabledToolList());
+  assert.match(f.directions(), /actual staged image/);
   f.created('explanation');
   f.c.handleEvent({ type: 'response.output_audio_transcript.done', response_id: 'explanation', transcript: 'There is the panda.' });
   f.done('explanation');
@@ -107,7 +120,7 @@ test('a text-only choice without a tool speaks its answer or clarification once'
     f.done('choice');
     assert.equal(f.calls.length, 1);
     assert.equal(f.sent.at(-1).response.tool_choice, 'none');
-    assert.match(f.sent.at(-1).response.instructions, text.startsWith('Which') ? /Which panda picture/ : /couldn't identify/);
+    assert.match(f.directions(), text.startsWith('Which') ? /Which panda picture/ : /couldn't identify/);
     const count = f.sent.length;
     f.done('choice');
     assert.equal(f.sent.length, count);
@@ -137,7 +150,7 @@ test('listing-only requests retain the choice not to load; empty, failed, or dis
   f.c.lastUserText = 'Which pictures are available?';
   await f.tool('list_sensing_eye_images');
   f.done('initial');
-  assert.match(f.sent.at(-1).response.instructions, /only asked what is available.*without loading anything/);
+  assert.match(f.directions(), /only asked what is available.*without loading anything/);
   assert.equal(f.calls.length, 1);
   for (const condition of ['empty', 'failed', 'disabled']) {
     const g = fixture();
@@ -174,7 +187,7 @@ test('an actual recall failure reports failure once without retrying or suppress
   await f.tool('recall_sensing_eye_note', { note_id: 'file:panda.jpg' }, 'choice');
   f.done('choice');
   assert.equal(f.sent.at(-1).response.tool_choice, 'none');
-  assert.match(f.sent.at(-1).response.instructions, /could not recall/);
+  assert.match(f.directions(), /could not recall/);
   assert.equal(f.sent.filter(e => e.type === 'response.create').length, 2);
   f.c.handleEvent({ type: 'response.output_audio_transcript.done', response_id: 'next-auto', transcript: 'Still here.' });
   assert.deepEqual(f.transcript, ['Robot 790: Still here.']);

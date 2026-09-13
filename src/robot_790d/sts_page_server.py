@@ -23,9 +23,11 @@ from urllib.parse import parse_qs, unquote, urlsplit
 import httpx
 
 from robot_790d.brain_status import get_brain_status, get_gpu_status
+from robot_790d.context_history import context_history_plan, history_config
 from robot_790d.continuity import (
     current_continuity_session,
     list_continuity_sessions,
+    preview_continuity_branch_archive,
     rewind_continuity_session,
     save_continuity_session,
     select_continuity_session,
@@ -159,6 +161,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/continuity/prepare":
             self._handle_continuity_prepare()
             return
+        if parsed.path == "/api/continuity/history":
+            self._handle_context_history()
+            return
         if parsed.path == "/api/continuity/preparation/activity":
             self._handle_preparation_activity()
             return
@@ -170,6 +175,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/continuity/archive":
             self._handle_continuity_archive()
+            return
+        if parsed.path == "/api/continuity/archive-branch":
+            self._handle_continuity_archive_branch()
             return
         if parsed.path == "/api/logs/record":
             self._handle_log_record()
@@ -399,6 +407,33 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(202, {"status": "ok", "preparation": result})
 
+    def _handle_context_history(self) -> None:
+        try:
+            payload = self._read_json_body()
+            filename = str(payload.get("session_filename") or "")
+            selected = select_continuity_session(filename) if filename else current_continuity_session()
+            config = runtime_config()["context_history"]
+            result = context_history_plan(selected, **config)
+            jobs = []
+            for name in result.get("preparation_required", []):
+                job = session_preparer.status(name)
+                if payload.get("prepare") is True:
+                    job = session_preparer.enqueue(name)
+                elif not payload.get("preview") and job.get("state") in {
+                    "failed", "interrupted", "not_prepared", "ready"
+                }:
+                    reason = job.get("error") or (
+                        "Required form is missing, stale, or from an older preparation version"
+                    )
+                    raise ValueError(f"History preparation unavailable for {name}: "
+                                     f"{reason}. Retry Connect or Prepare forms.")
+                jobs.append({"session_filename": name, **job})
+            result["preparation"] = jobs
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(202 if result.get("status") == "preparing" else 200, result)
+
     def _handle_preparation_activity(self) -> None:
         try:
             payload = self._read_json_body()
@@ -439,6 +474,19 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             result = session_preparer.archive(str(payload.get("session_filename") or payload.get("filename") or ""))
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
+
+    def _handle_continuity_archive_branch(self) -> None:
+        try:
+            payload = self._read_json_body()
+            filename = str(payload.get("session_filename") or "")
+            if payload.get("preview") is True:
+                result = preview_continuity_branch_archive(filename)
+            else:
+                result = session_preparer.archive_branch(filename, str(payload.get("fingerprint") or ""))
+        except (OSError, ValueError) as exc:
+            self._send_json(409, {"status": "error", "error": str(exc)})
             return
         self._send_json(200, result)
 
@@ -938,7 +986,8 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "idle_level12_cooldown_s": idle_level12_cooldown_s,
         "idle_timing": _runtime_idle_timing(payload.get("idle_timing")),
         "audio_interrupt": _runtime_audio_interrupt(payload.get("audio_interrupt")),
-        "runtime_revision": "20260911-pm-repairs",
+        "context_history": history_config(payload.get("context_history")),
+        "runtime_revision": "20260911-history-policy",
         "creature": creature,
         "creature_source": creature_source,
         "base_session_prompt": _load_base_session_prompt(root),
@@ -1600,7 +1649,9 @@ def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: 
     }
     properties["should_surface"] = {"type": "boolean"}
     if headlines is not None:
-        properties["headline_url"] = {"type": "string", "enum": ["", *dict.fromkeys(item["url"] for item in headlines)]}
+        properties["headline_url"] = {
+            "type": "string", "enum": ["", *dict.fromkeys(item["url"] for item in headlines)]
+        }
     else:
         steering = {
             "evidence_id": {"type": "string"}, "loop": {"type": "boolean"},
@@ -1615,7 +1666,9 @@ def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: 
     return {"type": "json_schema", "json_schema": {
         "name": "brain2_headline" if headlines is not None else "brain2_assessment",
         "strict": True,
-        "schema": {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False},
+        "schema": {
+            "type": "object", "properties": properties, "required": list(properties), "additionalProperties": False
+        },
     }}
 
 
@@ -1695,14 +1748,17 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "never sensor receipts or proof that anything happened. Neither are Eric's unverified descriptions. "
         "Do not use playful body descriptions as independent evidence for factual decisions. "
         "Conversational attention is a controller timing state, not proof the operator is present or absent. "
-        "When engaged, favor curiosity that continues the shared activity with the operator, not only self-talk; as it cools, allow an independent "
+        "When engaged, favor curiosity that continues the shared activity with the operator, not only self-talk; "
+        "as it cools, allow an independent "
         "interest instead of repeatedly advising Eric to wait for a command. Do not demand a check-in. "
         "Only the supplied runtime fields are current runtime facts; search receipts support only their own "
         "claims. You have no general event log, environmental acoustic analysis, cursor tracker, or direct tools. "
         "An active microphone can coexist with text-only speech/prosody input here; do not claim the mic is off "
         "or no audio is being recorded merely because you cannot inspect continuous audio. "
-        "Raw audio recording and the written conversation transcript are separate: recorder-off does not mean no transcript exists. "
-        "Private steering should help Eric take a next step, not ask him to narrate that a thread is closed or announce compliance. "
+        "Raw audio recording and the written conversation transcript are separate: "
+        "recorder-off does not mean no transcript exists. "
+        "Private steering should help Eric take a next step, not ask him to narrate "
+        "that a thread is closed or announce compliance. "
         "Do not repeat your own recent Brain 2 observations; either advance the "
         "thought, revise it, or return empty strings. "
         "Interpret Eric's register in context: banter, theatrical bragging, storytelling, or a factual answer. "

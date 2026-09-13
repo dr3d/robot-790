@@ -1,6 +1,6 @@
 # STS UI Operator Guide
 
-Updated: 2026-09-10. Screenshots: the local STS build on that date.
+Updated: 2026-09-12. Screenshots: the local STS build on 2026-09-10.
 
 This is the operating guide for the STS browser page: where to click, what
 changes, what gets saved, and which controls deserve care. For addresses and
@@ -84,11 +84,17 @@ Map has its own dividers.
 | LANES / TOOLS | Backend work and tool activity. Useful while waiting for an answer. |
 | RECORD | Actual recording status, distinct from the Auto record preference. |
 | THINK | A requested deliberate pass and its outcome. Requested policy and actual model setting can differ. |
-| NERVES | GPU load and VRAM telemetry. High load alone does not tell you which job is progressing. |
+| NERVES | GPU load, VRAM, and CTX percentage. CTX is the latest completed B1 conversation request's input tokens divided by the configured context limit, not cache reuse or VRAM occupancy. It shows `--` until measured; isolated tool/idle calls do not replace it. Hover for token counts. High GPU load alone does not tell you which job is progressing. |
 
 **Copy** copies a pane. **Pop Out** opens a separate text view. **A- / A+**
 changes conversation text size. The Events filter changes the view, not the
 underlying event record.
+
+Conversation **Details** is off by default. Enable it to see image and text-note
+recall receipts (IDs, filenames, and context handoffs). The preference also
+applies to Pop Out and Copy. It does not hide Eric's spoken words or change his
+context. Saved sessions, Record, autosaves, and PM evidence retain every receipt
+regardless of this switch; no additional transcript file is needed.
 
 The prosody selector changes the displayed input annotations, not Eric's voice.
 **Key** explains them; in the compact notation, `q` is quiet, `m` medium, `l`
@@ -123,14 +129,22 @@ that does not mean Eric is still running.
 1. Open **Connect Select** and press **Refresh** if necessary.
 2. Check the session you want. The checkboxes are an exclusive selection, not
    a request to load several sessions together.
-3. In **Advanced Connection > Note Flavor**, choose **Full .txt**,
-   **Scrubbed**, or **Summary** when that representation exists.
+3. Leave **Advanced Connection > Note Flavor** on **Auto history** for the
+   current all-swept history policy. Choose **Full .txt**, **Scrubbed**,
+   or **Summary** explicitly for a single-session form experiment.
 4. Press **Connect Selected**. Do not press ordinary Connect when you mean to
    load your highlighted choice.
 
 The asterisk marks the current session entry reported by the server; your
 highlight is a choice you can inspect before connecting. A missing variant
 cannot be selected, and selecting Summary does not run an LLM to create one.
+Auto history does prepare missing or outdated generated forms before connecting.
+It never silently substitutes the full transcript. A new thread starts with
+Connect Empty; after Disconnect saves it, ordinary Connect resumes using Auto.
+All retained saved sessions currently use swept text, including older ones.
+`config/runtime.json` has `context_history.use_summaries: false`; summary drafts
+are still generated but not loaded by Auto. The experimental recent-swept/older-summary
+window applies only when that switch is enabled, using `recent_swept_sessions`.
 
 If loading finds missing referenced notes, read the preflight warning. Cancel
 to fix the dependencies, or proceed with the available context knowing what
@@ -178,7 +192,14 @@ origin are three different requirements.
 | --- | --- |
 | Start Mic / Stop Mic | Start or stop the selected browser microphone stream. Stopping it does not disconnect Eric or stop idle thinking. |
 | Microphone / Refresh Mics | Choose an input device; refresh the list after plugging in or changing devices. Changing devices while listening restarts the mic path. |
-| Interrupt | Adjust microphone interruption sensitivity. The display explicitly shows Off at zero. |
+| Interrupt | Adjust microphone interruption sensitivity. Off (zero) disables browser audio barge-in and backend speech-triggered response cancellation. |
+| Mute Me | Keep your microphone out of Eric's input while retaining it in an active recording. Useful for operator narration, **not** a privacy mute for the recording. |
+| Mute Eric | Silence local Eric playback. His generation and recording continue. |
+| Fresh Ears | Restart the microphone path with fresh input buffers after a capture/STT problem. Not a memory reset. |
+
+Changes take effect while connected. Ending image-tool protection does not
+override Off. The mic still accepts input, and explicit Disconnect/Stop still
+cancels work; Off is not microphone mute.
 
 Microphone interruption now requires sustained amplitude with a minimum RMS
 level while Eric's audio is actually playing. A single peak or queued audio alone
@@ -188,9 +209,6 @@ that sustained room noise will never interrupt. `audio_interrupt` in
 and `minimum_rms_ratio` (0.12 relative to the sensitivity threshold). Refresh while
 disconnected after changing these settings. Events records the effective values
 and logs sustained interruptions with duration, peak, RMS, and playback state.
-| Mute Me | Keep your microphone out of Eric's input while retaining it in an active recording. Useful for operator narration, **not** a privacy mute for the recording. |
-| Mute Eric | Silence local Eric playback. His generation and recording continue. |
-| Fresh Ears | Restart the microphone path with fresh input buffers after a capture/STT problem. Not a memory reset. |
 
 For a mic problem: confirm Connected, select the intended device, check browser
 permission, Start Mic, and watch the meter. If the meter moves but words do not
@@ -274,7 +292,7 @@ There are three distinct kinds of saving:
 | Action | What it preserves |
 | --- | --- |
 | Header Record Conv | Text snapshots of Conversation, Events, and Brain 2. It is not the audio recorder. |
-| A pane's Record | A text snapshot of that pane. |
+| A pane's Record | A text snapshot. Conversation includes recall receipts even when Details is off. |
 | Record Audio / Stop Recording | The conversation audio and associated run evidence, finalized through the recording pipeline. |
 | Disconnect / Save + Halt | A continuity session note, plus exit snapshots and finalization of active recording. |
 
@@ -408,8 +426,11 @@ For ordinary conversation at Drift 1-10, pauses now start with a shorter idle
 interval: roughly 12 seconds after a short reply finishes playing, gradually
 stretching toward the normal Drift interval over three minutes without new
 operator input, measured after his direct reply finishes. Early thoughts invite
-continued shared activity; later ones can wander. Autonomous idle speech does
-not renew that attention. The old separate
+continued shared activity. One automatic conversational beat is allowed per
+operator turn; afterward Eric leaves room for an answer until the attention
+window fades. A new utterance immediately opens that opportunity again. These
+beats use the latest exchange, not the independent-idle research scaffold.
+Autonomous idle speech does not renew that attention. The old separate
 check-in timer is not used in this mode. A silent connection still uses normal
 idle timing, and Drift 0 remains off. Use **Lab Speed 1x** to feel the transition;
 there is no additional switch to enable it. Specialized lab modes and Drift
@@ -485,6 +506,18 @@ a claim that the whole session list is pinned into Eric.
 | Reset To Pinned | Clear hot conversation/idle/B2 state and reconnect if connected. See the implementation caveat below. |
 | Load Eric memories on refresh | Allow the configured core memory note to load. The file must actually exist; a checkbox cannot restore a missing file. |
 
+**Spoken note requests:** "Save these ideas as puppet.txt" or "Summarize our
+Gulu Gulu plans" asks Eric to compose a focused note in his own words. It does
+not ask for the whole transcript. Say "Save the verbatim transcript as
+puppet-transcript.txt" when that is what you want. Missing authored text no
+longer silently falls back to a conversation dump. Save Latest and automatic
+Disconnect session saves still preserve transcripts; they are separate paths.
+
+This default is not a complete file-workflow repair: approval of an offered save
+can still be rejected by the current write gate, and read-to-write tool
+continuations still need the reliability work documented in the task-continuation
+experiment. A successful write receipt remains the evidence that a file exists.
+
 If Connect reports a missing startup note, the configured core file is
 `notes/core/erics_memories.txt`. Restore that file from your retained copy, or
 uncheck **Load Eric memories on refresh** here to intentionally connect without
@@ -526,21 +559,73 @@ without changing the unfiltered map's folding choices.
 | --- | --- |
 | Filter sessions | Narrow the visible session list. |
 | Refresh | Read the current session inventory again. |
-| Resume form | Choose the available Full .txt, Scrubbed, or Summary representation for preview/loading. It does not author missing variants. |
-| Prepare forms / Retry preparation | Queue a conservative Scrubbed form and a local 27B Summary. Existing valid forms and the original are preserved. |
-| Open Form | Open the selected representation through the note-reading endpoint. This may display a JSON response containing the text. |
+| Resume form | Auto history previews the prepared load plan; Connect prepares missing forms. Full .txt, Scrubbed, and Summary remain explicit single-session alternatives. |
+| Prepare forms / Retry preparation | Queue a conservative semantic sweep and a fact/gem/feedback summary using local Qwen. Originals and reviewed forms are preserved; obsolete generated forms can be upgraded. |
+| Open Form | Open an explicit representation through the note-reading endpoint. Disabled for Auto, whose multi-note preview is in the selected pane. |
 | Copy Source | Copy the source filename, not the entire note text. |
 | Previous | Select this node's lineage parent. Unlike Connect Previous, this follows a relationship, not merely date order. |
 | Connect In STS | Ask the originating STS window to connect with the selected note and representation. Disconnect an existing conversation first. |
 | Archive | Move the selected session and its associated session-scoped eye captures out of the active collection, after confirmation. |
+| Archive Branch | Preview the selected session and all active descendants, then confirm the listed batch. Other branches and shared assets they use remain available. Disconnect first. |
 
 Open the map from STS when you intend to use Connect In STS. A standalone map
 without its originating window cannot directly control that window and falls
 back to copying the chosen load path.
 
+### Ask Eric To Enter A Session
+
+With note/file tools enabled, these maintenance requests are also available:
+
+- "Show me the session map." Eric receives up to 12 titles, dates, exact IDs,
+  and parent links per page, not entire transcripts.
+- "Find sessions with rehearsal in the title." The catalogue supports title
+  and filename substring filtering, not semantic search inside old transcripts.
+- "Enter session Genius of the Universe Rehearsal." An exact unique title or
+  exact session ID selects the destination. Duplicate titles need an ID/date
+  clarification. Partial names do not automatically select a near match.
+
+Listing does not change context. Entering queues a real transition: finish the
+current response and queued speech, save and disconnect this conversation, then
+use the existing Connect Selected path with the current Note Flavor setting.
+The departed run is saved on its original branch. New conversation continues
+from the selected destination; it does not carry the departed run along as a
+new parent. The sensing eye clears normally. If the mic was running, STS starts
+it again after connecting and preserves the UI narration-mute state. A typed-only
+session keeps the mic off. Recording finalizes on departure; ordinary Auto record
+behavior applies when the mic restarts.
+
+The first version switches directly for an exact destination requested through
+the tool, without an extra confirmation dialog. Existing missing-reference
+warnings may still ask for confirmation. New user activity or Disconnect before
+departure cancels a pending move. Failed saves prevent loading the destination;
+keep the page open and retry Disconnect as usual. A failed destination load or
+connection leaves the departed session saved. Check Events for `session map
+arrived` or a specific failure. A queued tool receipt is not proof of arrival.
+
+Eric is instructed to use this only for an operator-requested thread change.
+Navigation tools are excluded from idle's tool list, and runtime checks reject
+autonomous-lane moves. STS does not use an English keyword test to interpret the
+request; the model selects the verb, and code validates identity and lifecycle.
+If Eric first needs to look up a vague destination, expect a clarification and
+then another instruction to enter the named session. This is not yet a general
+multi-step autonomous navigation agent or an archive-restoration tool.
+
+Reload STS while disconnected to get build `20260912-session-map-navigation`.
+This introduces tool descriptions and receipt-follow-up instructions, not a
+personality rewrite. Existing root full-prompt snapshots predate these verbs.
+
+Archive remains session-only; Archive Branch follows parent links, not pinned
+note references. The server rechecks the preview before moving anything. If the
+branch changed, preview it again. At least one active session must remain; save
+a new independent thread first if you are retiring the entire old collection.
+On a filesystem error, a batch stops and reports completed sessions rather than
+pretending the whole operation succeeded. Each session keeps its own archive
+package; descendants are not merged into one transcript.
+
 Continuity saves also queue preparation automatically, without delaying
 Disconnect. Session Map polls while work is queued, waiting for disconnect, or
-generating. A failed summary leaves any completed Scrubbed form available; retry
+generating. A failed model request leaves the bookkeeping-only Scrubbed form
+available for inspection, but Auto requires the semantic form; retry
 after correcting the reported problem. Preview generated forms before relying
 on them: the Review field distinguishes them from reviewed derivatives.
 
@@ -561,6 +646,43 @@ to proceed without it or cancel. This is also not a command to archive every
 unrelated generated image or PM automatically.
 
 ## Tools And Context Inspection
+
+### Lightweight LLM Overview
+
+Context diagnostics are **off by default**. Open STS with `?contextDiagnostics=1`
+only for a deliberate measurement run. With that option, Events records an
+**LLM overview** before inference, after the first measured
+response, and with exit snapshots. The same overview accompanies PM prompt-ledger
+receipts. Refresh STS while disconnected to pick up this browser-side addition.
+
+It shows the approximate prepared prompt size including tool schemas, loaded-note
+and tool counts, reported first/latest/peak request input tokens, and the configured
+context window when a recent status snapshot supplies it. Conversation requests
+and isolated idle requests are kept separate. Summed input includes repeated
+prefixes; it is not a count of newly computed tokens or resident KV-cache occupancy.
+The existing **History loaded** entry also compares raw session characters with
+the characters actually loaded from the selected forms.
+
+Timing is measured from existing Realtime events: average time to first received
+output and response-paced output tokens/second. That includes orchestration and
+TTS, so it is **not** model decode speed or pure prefill time. Exact engine prefill,
+cache reuse and decode throughput remain "not reported" on this path. There are
+no extra model calls, polling timers, per-call files or new controls. This first
+overview covers B1 only, not Brain 2 or offline summary preparation.
+
+LM Studio documents richer statistics on its
+[native API](https://lmstudio.ai/docs/developer/rest/endpoints), but this overview
+does not change STS's provider API or start a separate monitoring service.
+
+Ordinary conversation now keeps core instructions and restored notes ahead of the
+active embodiment manual. Changing browser state is appended privately as
+`STS runtime update` entries in the prompt ledger rather than rewriting that
+prefix. Only changed sections are sent; old snapshots are historical, and the
+latest section wins. Idle still receives fresh timing information. A body change
+replaces its manual and may cause a one-time context rebuild. Refresh while
+disconnected after this update; there is no new control to configure.
+
+### Tool Switches And Context Map
 
 ![Advanced tool switches](assets/sts-ui/2026-09-10/19-advanced.png)
 

@@ -88,6 +88,7 @@ def format_continuity_session_variant(
     variant: str,
     created_label: str = "",
     reviewed: bool = True,
+    source_created_label: str = "",
 ) -> str:
     key = continuity_session_variant_key(variant)
     if key == "raw":
@@ -109,6 +110,7 @@ def format_continuity_session_variant(
             f"Variant: {key}",
             f"Source session: {source}",
             f"Source sha256: {digest}",
+            f"Source created: {source_created_label or 'unknown'}",
             f"Created: {created}",
             f"Review: {'reviewed' if reviewed else 'generated; not human-reviewed'}",
             "",
@@ -154,6 +156,7 @@ def save_continuity_session_variant(
         variant=key,
         created_label=created_label,
         reviewed=reviewed,
+        source_created_label=str(continuity_session_metadata(source.content)["created"]),
     )
     note = write_note_file(instance_path, filename, content)
     return {
@@ -301,6 +304,78 @@ def _continuity_session_selection(
         "sensing_eye_assets": [_sensing_eye_asset_receipt_payload(receipt) for receipt in sensing_eye_assets],
         "sensing_eye_asset_count": len(sensing_eye_assets),
         "created": metadata["created"],
+    }
+
+
+def preview_continuity_branch_archive(
+    session_filename: str, instance_path: str | Path | None = None,
+) -> dict[str, Any]:
+    filename = _normalize_session_filename(instance_path, session_filename)
+    sessions = list_continuity_sessions(instance_path)["sessions"]
+    by_name = {str(item["filename"]).lower(): item for item in sessions}
+    if not filename or filename.lower() not in by_name:
+        raise ValueError("Choose an active session to archive its branch.")
+    children: dict[str, list[str]] = {}
+    for item in sessions:
+        parent = str(item["parent_session_filename"]).replace("\\", "/").lower()
+        children.setdefault(parent, []).append(str(item["filename"]).lower())
+    pending = [filename.lower()]
+    seen: set[str] = set()
+    members = []
+    for key in pending:
+        if key in seen:
+            continue
+        seen.add(key)
+        item = by_name[key]
+        note = read_note_file(instance_path, str(item["filename"]))
+        members.append({
+            "filename": note.filename, "title": item["title"], "created": item["created"],
+            "source_sha256": hashlib.sha256(note.content.encode("utf-8")).hexdigest(),
+        })
+        pending.extend(sorted(children.get(key, [])))
+    fingerprint = hashlib.sha256(json.dumps(members, sort_keys=True).encode("utf-8")).hexdigest()
+    allowed = len(members) < len(sessions)
+    return {
+        "status": "ok", "session_filename": by_name[filename.lower()]["filename"],
+        "sessions": members, "session_count": len(members), "fingerprint": fingerprint,
+        "allowed": allowed,
+        "reason": "" if allowed else (
+            "Keep at least one active session. Save a new thread before archiving this branch."
+        ),
+    }
+
+
+def archive_continuity_branch(
+    session_filename: str, expected_fingerprint: str, instance_path: str | Path | None = None,
+) -> dict[str, Any]:
+    plan = preview_continuity_branch_archive(session_filename, instance_path)
+    if not expected_fingerprint or expected_fingerprint != plan["fingerprint"]:
+        raise ValueError("The branch changed since preview. Preview and confirm it again; nothing was archived.")
+    if not plan["allowed"]:
+        raise ValueError(plan["reason"])
+    archived = []
+    error = ""
+    # Children first. Existing per-session handling retains assets referenced
+    # by any remaining active session, including sessions outside this branch.
+    ordered = list(reversed(plan["sessions"]))
+    for member in ordered:
+        try:
+            archived.append(archive_continuity_session(member["filename"], instance_path))
+        except (OSError, ValueError) as exc:
+            error = f"Stopped at {member['filename']}: {exc}"
+            break
+    return {
+        "status": "partial" if error else "ok", "error": error,
+        "session_filename": plan["session_filename"], "archived_sessions": archived,
+        "archived_session_count": len(archived),
+        "remaining_session_filenames": [m["filename"] for m in ordered[len(archived):]],
+        "archived_sensing_eye_asset_count": sum(int(r["archived_sensing_eye_asset_count"]) for r in archived),
+        "missing_sensing_eye_asset_count": sum(int(r["missing_sensing_eye_asset_count"]) for r in archived),
+        "asset_archive_issues": [
+            {"session_filename": r["session_filename"], **asset}
+            for r in archived for asset in r["archived_sensing_eye_assets"]
+            if asset.get("archive_status") != "archived"
+        ],
     }
 
 

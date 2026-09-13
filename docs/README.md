@@ -49,6 +49,13 @@ filename whose current artifact needs an explicit time.
 - `media/`: compressed public images, audio, and video.
 - `context-engineering-architecture.md`: session-note, pinned-note, latest, and
   runtime-truth architecture, including the standalone session-map chooser.
+- `summary-research-plan.md`: research-backed exo-brain summary experiments,
+  model comparisons, and proposed queued model swapping; not deployed behavior.
+- [task-continuation-experiment.md](task-continuation-experiment.md): proposed
+  shared-activity and pending-task orchestration, grounded in the September 12
+  image/engagement failures; implementation steps, limits, and acceptance tests.
+- `chunked-summary-experiment.md`: offline, resumable chunk-extraction and
+  consolidation lab, with source-linked drafts and explicit long-session limits.
 - `prosody-and-mouth.md`: input prosody, transcript tags, speech-mouth motion,
   and why those cues help the live loop.
 - `mouth-animation-research.md`: source audit, viseme/coarticulation research,
@@ -62,6 +69,8 @@ filename whose current artifact needs an explicit time.
   evolving preset definitions.
 - `reachy_embodiment.md`: plan for making Reachy Mini another Eric embodiment.
 - `future_directions.md`: public-safe roadmap and experiment notes.
+- `eric-dedicated-machine-plan.md`: side-project plan for trying Eric on a
+  ZimaBoard 2 1664 and RTX 2000 Ada 16GB; hardware and performance unvalidated.
 - `embodied_sensor_head.md`: notes for the ESP32-S3 sensor/head direction.
 - `references.md`: research and project lineage shelf.
 

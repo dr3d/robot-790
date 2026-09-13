@@ -8,6 +8,8 @@ const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf
 
 function load(names, globals = {}) {
   globals.realtimeStopRequested ??= false;
+  globals.pendingSessionMapMove ??= null;
+  globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));

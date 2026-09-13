@@ -1,6 +1,6 @@
 # Engineering Status
 
-Reviewed September 10, 2026. This is the maintained engineering view; session
+Reviewed September 12, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
@@ -35,6 +35,79 @@ and replaced the public site's incomplete Markdown formatter. Raw/Scrubbed/
 Summary selection is now real: a PM-authored derivative is enabled only when its
 source filename and SHA-256 still match the selected raw session note.
 
+## September 12 Checkpoint
+
+Stable prompt ordering now puts shared instructions and saved context before
+the replaceable embodiment manual; live runtime changes append at turn
+boundaries. Tool follow-ups preserve the conversation scaffold instead of
+replacing the system prompt. Recent short performance runs sustained roughly
+1.4-1.6 second median first-speech latency after startup at about 30-31% context.
+Those are local observations, not a general benchmark; first replies still took
+about twelve seconds, and no cache-hit rate was measured in those runs.
+
+Auto history currently loads source-checked swept sessions, not older summaries.
+The configurable recent-swept/older-summary policy exists, but
+`context_history.use_summaries` is false while summary quality is evaluated.
+Source manifests determine membership; derivatives do not introduce new pins.
+Generated forms and titles are prepared after sessions and remain inspectable.
+Long transcripts have a separate chunked-summary lab; queued model swapping is
+still a proposal, not an active scheduler feature.
+
+Other accumulated changes include local-time session dates, matching lineage
+colors in the list and tree, previewed branch archiving with shared-asset
+protection, a lightweight CTX meter and opt-in LLM overview, conversation-detail
+filtering, and a graph-only Browser Face nerve display. Cast's sender label is
+Eric Robot-790. Ordinary note-writing requests now prefer authored notes.
+
+Recorded performances can be lively without special UI Performance mode, but
+resumed history can also encourage verbatim openings and endings. Rehearsal
+feedback and curated performance notes are the next experiment, not a trained
+weight update or a newly imposed anti-repetition rule. Routine captures remain
+private; the published recordings are still explicitly curated selections.
+
+## September 12 Session Navigation
+
+STS now exposes `list_session_map` and `enter_session` with the note/file tools.
+The catalogue is paginated metadata from the same active session inventory as
+the UI. Navigation resolves an exact unique title or filename, preflights the
+source, and queues the existing save/disconnect/Connect Selected lifecycle at
+the response boundary after playback drains. Failed saves never advance to the
+destination. New user activity, cancellation, or a changed connection invalidates
+pending work. The mic's prior running/muted state is restored on arrival.
+
+This adds intentional tool descriptions and receipt instructions, not personality
+rules or a continuously injected map. It does not add fuzzy semantic routing,
+archive recovery, a new context-loading policy, or automatic movement during
+idle. Root prompt snapshots remain unchanged and now also predate these tools.
+See the [operator instructions](sts-ui-guide.md#ask-eric-to-enter-a-session).
+
+Twelve focused navigation tests and the complete Node suite pass (331 tests).
+Validation covers catalogue bounds, ambiguous names, preflight/save/connect
+failure, stale/canceled requests, speech drain, mic restoration, and dispatch at
+the tool-response boundary. Live spoken navigation has not yet been exercised;
+no user session was changed for testing. Reload the STS page while disconnected;
+no backend restart is required.
+
+## September 12 Authored Notes Default
+
+Spoken requests to save ideas or summarize a discussion now instruct Eric to
+compose focused note content. Raw transcript/log capture remains an explicit
+source option; missing content and a missing/unknown source fail without writing,
+rather than silently dumping the conversation. The old keyword-excerpt
+`note_summary` path was removed. Automatic continuity, Save Latest, and
+post-session preparation are unchanged.
+
+This is an intentional tool-description and note-instruction change, not a
+personality change. Existing root prompt exports have not been refreshed and
+their file-writing instructions now predate this change. Reload the STS page
+before the next connection to use the new browser tool instructions.
+
+The Gulu Gulu run's consent-gate rejection, speech-only read-to-write follow-up,
+clipped TTS, and final greeting loop are not fixed by this default change.
+The local PM is `logs/runs/20260912-110122-gulu-performance-file-breakdown/`.
+The focused note tests plus the complete Node suite pass (319 tests); live
+Eric-authored note generation has not yet been retested.
+
 ## September 9-10 Changes
 
 - **One ordinary conversation path.** Connect Empty is a starting pin choice,
@@ -60,49 +133,44 @@ source filename and SHA-256 still match the selected raw session note.
   popup restrictions still apply; Eric's embodiment tool does not open windows.
   Optional `-CaptureLlmWire` records actual model requests locally for inspection.
 
-## Priorities Before More Context Machinery
+## Remaining Priorities
 
-1. **Preserve the conversation scaffold on tool follow-ups.** The latest PM and
-   source inspection identify short follow-up instructions replacing the main
-   system instruction slot for that response. Hot conversation remains, but
-   creature, runtime, and note context can be absent from that slot until the
-   next ordinary turn. Confirm with an opt-in wire capture and repair the merge
-   contract before adding more context machinery. The restrictive one-sentence
-   response defaults also deserve a separate review against requests for detail.
-   Neither issue is claimed fixed by the prompt cleanup above.
-2. **Preserve dependency references through captioning and archiving.** Session
-   parents and pins are literal filenames. The archive API moves a file without
-   updating references, and caption changes can do the same. A descendant can
-   consequently lose an expected dependency; saving a live child can fail if its
-   named parent moved. Add an explicit reference-preserving operation and test
-   it with existing descendants and a browser still holding the old name.
-3. **Report actual context inclusion and preserve pin intent.** The page retains
-   at most eight notes on manual reads, while session restore can load more.
-   Prompt caps can clip or omit pinned content: 4,500 characters per ordinary
-   note, 64,000 for transcript views, 64,000 across the loaded-note block, and a
-   smaller idle budget. Produce per-file inclusion receipts from the actual
-   assembly code. Keep form selection independent of budgeting; source-linked
-   variants now work, while a policy for choosing among them does not yet exist.
-4. **Test the long-session handoff.** Disk notes are limited to 200,000
-   characters. Graceful save failure is visible, but long-run saving, recorder
-   rollover, pending speech at disconnect, and repeated reconnects need live
-   trials. Capture a fixed exit boundary and account for work still in flight.
-   Preserve Halt's deliberate immediate-stop behavior.
-5. **Diagnose long-idle STT fatigue.** An earlier overnight PM reports poor
-   transcription late in the run; it does not establish a root cause. Compare
-   microphone frames, VAD, accepted STT events, playback/interrupt state, and a
-   deliberate Fresh Ears recovery under the same conditions.
-6. **Keep operational evidence distinct from interpretation.** Brain2 now receives
-   attributed conversation, selected runtime fields, and recent search receipts,
-   not a complete structured action-receipt stream.
-   Runtime-authored confirmations and supplied PM interpretations need attribution.
-   Repeated behavioral comparisons, rather than self-report alone, should decide
-   whether a candidate lesson is promoted. Preserve dependency versions for A/Bs.
+1. **Complete requested work across tool boundaries.** The context-scaffold fix
+   does not solve every search-to-drawing or read-to-writing sequence. Most tool
+   follow-ups still disallow another tool call; image recall has a bounded
+   continuation. The experiment in [Shared Activity And Task Continuation](task-continuation-experiment.md)
+   is documented, not implemented. Explicit offer-and-assent file-write consent
+   and speech cutoffs around failed tool attempts remain open.
+2. **Evaluate engagement and cancellation over long runs.** The attention ramp,
+   stale-result guards, and interruptible provider I/O are implemented. They do
+   not establish that every pause stays socially engaged or every long-idle
+   return is fast. Compare VAD, accepted speech, pending work, and playback;
+   preserve intentional immediate-stop behavior.
+3. **Improve summaries without losing useful material.** Source hashes and
+   speaker citations validate structure and provenance, not semantic accuracy.
+   Summaries can omit good endings or mishandle attribution. Sweeps remain the
+   default; chunking, more thinking, and model comparisons are experiments.
+4. **Preserve dependency intent and explain inclusion.** Display titles no longer
+   require source renames. Branch archiving previews descendants and protects
+   shared assets, but literal references are not globally rewritten. A session
+   whose ancestor was archived may load with a missing-reference warning, and
+   a live child can still hold an obsolete save-parent path. Source/form receipts
+   exist; exact per-file token inclusion after prompt clipping remains incomplete.
+5. **Exercise new transitions live.** Spoken session navigation is implemented
+   and fixture-tested, not yet validated in a live conversation. Test successful
+   arrival, microphone restoration, cancellation, and failure recovery. Long
+   saves, recording rollover, multiple controllers, and physical embodiments
+   still need their own operational trials.
+6. **Separate evidence from interpretation.** B2 receives attributed dialogue,
+   selected runtime fields, and search receipts, not a complete event stream.
+   Preserve imagination as imagination and observations as observations. Use
+   explicit rehearsal feedback to investigate performance variety rather than
+   imposing a blanket repetition ban.
 
-The file-based dependency graph is a useful control surface already. Source-file
-identity checks for manually authored variants are implemented. Automatic
-semantic summary validation, recursive loading, timed salience decay, learned
-authority weights, and direct model control over KV state are not implemented.
+Source-linked variants, automatic preparation, configurable history selection,
+and bounded navigation are implemented. General recursive dependency recovery,
+learned memory weighting, automatic live summarization, model swapping for
+background jobs, and direct model control over server KV state are not.
 
 ## Maintenance Boundaries
 
@@ -145,10 +213,12 @@ without launching a model; shutdown tests use fake processes.
 These checks do not operate hardware or prove microphone/camera operation on a
 second device. Builds and media publication still need their appropriate review.
 
-September 10 commit review: 254 Python tests and 157 Node tests passed; Ruff,
-face-contract generation checks, and the launcher/shutdown fixtures passed.
-Both new dual-eye default firmware targets built successfully without flashing.
-The Python suite reported one upstream Starlette/httpx deprecation warning.
+September 12 commit review: 499 Python tests and 331 Node tests passed; Ruff,
+face-contract generation checks, docs/catalog checks, and launcher/shutdown
+fixtures passed. The public catalogue was regenerated. The Python suite reported
+one upstream Starlette/httpx deprecation warning. No hardware was moved or flashed,
+and no user session was switched during this review. The last dual-eye firmware
+build check remains the successful September 10 build, not a new hardware test.
 
 ## Retired Material
 

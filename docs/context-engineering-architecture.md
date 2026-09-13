@@ -1,6 +1,6 @@
 # Context Engineering Architecture
 
-Status: current implementation and design direction, reviewed September 8, 2026.
+Status: current implementation and design direction, reviewed September 12, 2026.
 
 This system does not treat memory as one magic blob. It treats context as a
 directed graph of ordinary, inspectable sources with different lifetimes,
@@ -97,10 +97,13 @@ The representation model gives a session three possible flavors:
 
 - `raw`: the saved record, including timestamps, garble, and repetitions. It is
   evidence of what was recorded, not proof that every spoken claim is true.
-- `scrubbed`: transcript-shaped, with omissions marked. The automatic v1 sweep
-  removes save/restore bookkeeping and separate B2 sections, but preserves all
-  transcript words, repetitions, timestamps, and prosody markers. More selective
-  cleanup is future work; cleaning cannot recover speech that STT never captured.
+- `scrubbed`: transcript-shaped, with an omission count and retained turns copied
+  verbatim. The v2 sweep asks Qwen for low-value turn IDs to omit: repetition,
+  redundant recaps, filler, and routine temporary waiting exchanges. It preserves
+  useful facts, feedback, corrections, failure reports, and distinctive idle
+  contributions. System receipts, image-recall anchors, and the adjacent
+  request/reply context of retained reactions are protected in code.
+  Retained timestamps and prosody stay unchanged; missing STT cannot be recovered.
 - `summary`: lossy carry-forward meaning for daily-driver resume or forks.
 
 Raw governs disagreements about the recorded session; current runtime evidence
@@ -114,16 +117,17 @@ as `notes/sessions/variants/<raw-stem>.scrubbed.txt` and
 `notes/sessions/variants/<raw-stem>.summary.txt`. Each sidecar records its form,
 raw source filename, and the source SHA-256.
 
-Advanced Connection and Session Map let the operator choose one of those forms.
+Advanced Connection and Session Map default to **Auto history**, or let the
+operator explicitly choose one of those three forms for the selected session.
 The loader enables a derivative only when its header names the selected raw
 session and its SHA-256 still matches. Missing, stale, or malformed derivatives
 stay unavailable and are refused by the API. A selected label therefore never
 pretends that a raw note was transformed on the fly.
 
 STS now queues preparation after a successful continuity save. Saving and
-Disconnect do not wait for the model. The first stage is the deterministic sweep
-above; the second is a separate local 27B request containing only a short summary
-instruction and this session's transcript. No Eric persona, tool schemas, pinned
+Disconnect do not wait for the model. A deterministic bookkeeping-only v1 form
+is available first, then one local 27B request selects sweep omissions and mines
+the summary from the entire original transcript. No Eric persona, tool schemas, pinned
 notes, or older sessions are sent. Thinking is off, temperature is 0.2, and the
 length target scales from 80 to 400 words with transcript size. Speaker labels
 are defined explicitly; previous-session recaps are claims, not fresh events.
@@ -131,20 +135,25 @@ Generated forms are explicitly not human-reviewed.
 A matching source hash proves provenance, not that a summary is good.
 
 Session Map exposes Prepare forms / Retry preparation and job status. Valid
-existing derivatives are preserved. The queue has one worker; STS Connect first
-cancels any in-flight summary request, then keeps preparation paused through a
+reviewed derivatives are preserved; obsolete generated forms can be upgraded.
+The queue has one worker. Auto Connect first waits for required history forms,
+then cancels other in-flight preparation and keeps preparation paused through a
 renewable browser activity lease. It resumes after Disconnect. Lost tabs expire
 after three minutes; this is browser coordination, not a system-wide GPU lock.
 Refresh STS tabs after deploying the new page server so they send that heartbeat.
 Closing an HTTP request requests cancellation; the LLM server controls when its
 underlying GPU work actually stops.
 
-The summary call returns structured JSON with a short topic `title` and a
-`summary` array of speaker-attributed items. Each item identifies `operator` or
-`eric` and contains its compact text. STS renders explicit account labels and
+The preparation call returns structured JSON with a short topic `title`,
+`drop_turn_ids`, and a `summary` array of speaker-attributed items. Each item identifies `operator` or
+`eric`, compact text, and original `source_turn_ids`. STS rejects out-of-range
+references or citations to a different speaker, renders account labels and citations, and
 marks the recap as transcript-derived, not sensor/action verification. This
 also covers sound, silence, and body-sensing claims, not only executed tools.
-Existing derivatives are not rewritten. Only rendered text enters the Summary form. The title is saved as
+Only rendered text enters the Summary form, followed by verbatim historical
+image-open receipts and their first descriptions so image identity remains
+usable after compaction. These are recall anchors, not a staged/current eye.
+The title is saved as
 `<raw-stem>.title.json`, bound to the raw source hash, and exposed as display
 metadata to both session views. It does not rename the source or change lineage,
 receipts, or context loading. Existing valid titles survive regeneration; PM may
@@ -156,18 +165,62 @@ hash, prompt, model, usage when supplied, and completion/error state. Archiving
 moves these with the session. Interrupted jobs require an explicit retry after a
 server restart; startup does not bulk-process old sessions. Empty/malformed
 transcripts, truncated responses, and input beyond 96,000 characters fail
-explicitly rather than silently shortening the evidence. Scrubbed remains usable
-if only summary generation fails. Originals and current selection never change.
+explicitly rather than silently shortening the evidence. The bookkeeping-only
+Scrubbed form remains available for explicit inspection if model preparation
+fails, but Auto does not mistake it for a semantic sweep. Originals never change.
 
-Semantic fidelity review and budget-driven form selection remain future work.
-In particular, the proposed two recent detailed sessions plus older summaries
-policy is not enabled: choosing a form still changes only that session's text,
-not the forms of its pinned dependencies.
+### Automatic History Policy
+
+Auto prefers **all retained sessions as swept text**. Generated semantic sweeps
+are checked against their original before loading: operator turns, the first
+three assistant chunks following each operator turn, the final 16 turns,
+system receipts, and image anchors must survive verbatim, including repeated
+occurrences. Unsafe existing semantic sweeps use a labeled full-source fallback
+without a model call. Reviewed variants remain an explicit override. Version 3
+also protects those turns when applying the model's proposed drop list; this
+is structural preservation, not an English failure-keyword classifier.
+
+The explicit
+`context_history.use_summaries` switch in `config/runtime.json` defaults to
+`false`, following the summary-quality findings. Summary generation continues
+for inspection, but Auto never selects those drafts, regardless of history age.
+
+The experimental mixed policy remains available only when `use_summaries` is
+explicitly enabled. Then `context_history.recent_swept_sessions` (default `2`,
+range `0..20`) selects the recent swept window and older retained sessions use
+summaries. The selected session counts as one; zero means all summaries only
+in that enabled mode. Disabling summaries does not discard older history or
+replace ordinary pinned notes. Sweeps can require more context than summaries.
+
+Membership comes from the selected raw manifest's flattened pinned inventory,
+not a recursive walk that would resurrect unpinned notes. Parent links order
+available history first, then remaining session pins by creation time. Archived
+and unavailable references are skipped/reported. Ordinary pinned notes retain
+their original text; the current core-memory checkbox still controls core memory.
+Source identities remain pinned even though their loaded text is a derivative,
+so later saves preserve lineage without reloading full ancestors through pins.
+
+Auto prepares missing, stale, or obsolete generated derivatives before opening
+the realtime connection. It waits up to three minutes, then asks for a retry;
+preparation can continue while disconnected. Failures name the source file.
+There is no silent raw fallback or partial-history substitution. The explicit
+Full/Scrubbed/Summary choices retain the older single-session behavior for
+comparisons. Connect Empty bypasses all saved history and starts a new thread.
+
+The Events log and recording contain the actual per-session form inventory and
+raw/loaded character totals. Variant headers retain the source save time apart
+from preparation time. This is inter-session preparation, not live rewriting
+of Eric's conversation or automatic writes to durable core memory.
 
 ### Direction: Summaries, Gems, And Feedback
 
-September 11, 2026 design discussion; not implemented by the current preparation
-prompt or loader. The desired balance is useful detail, continuity, attention,
+See [Exo-Brain Summary Research And Model Scheduling](summary-research-plan.md)
+for the next experiments: evidence-backed extraction, separate coverage and
+factuality checks, alternative local models, and queued maintenance-time swapping.
+These proposals do not change the current all-swept Auto loading policy.
+
+September 11, 2026 design direction; the first prompt and loader pass is now
+implemented above. The desired balance is useful detail, continuity, attention,
 latency, and Eric's conversational character, not minimum context size alone.
 
 After a session, retain the original and prepare a genuinely selective swept
@@ -212,9 +265,9 @@ B2 may flag useful moments and candidate preferences through its existing
 observation role. Post-session processing consolidates them; durable continuity
 does not depend on B2 retaining a private conversation between sessions. B1's
 future context should carry concise relevant guidance along with factual and
-associative material. This is a planned improvement beyond today's short
-speaker-attributed summary, not a claim that preference extraction or semantic
-sweeping already runs.
+associative material. The current summary prompt harvests these from the recorded
+transcript. B2-assisted tagging, durable preference promotion, richer evidence
+indexes, and systematic semantic-fidelity evaluation remain future work.
 
 ## Load-Time Stack Projection
 
@@ -272,9 +325,28 @@ title in its `.title.json` sidecar. Do not rename the source for captioning:
 descendants, source hashes, and a running browser may already depend on it.
 The UI prefers the saved title, falling back to older captioned filenames.
 
+A valid title from a complete structured preparation response is saved even if
+the summary citations or sweep fail validation. The source hash and existing
+title protection still apply; incomplete responses and invalid titles are not
+salvaged. Failed continuity content remains unavailable. The preparation record
+retains that validation failure's request, response, settings, usage, and elapsed
+time under `failure_receipt` (historical diagnostics, never loaded as memory).
+Retry can complete the derivatives without replacing an existing valid title.
+
 There is no separate current-session pointer in the canonical path. Plain
 `Connect` chooses the newest timestamped session note. `Connect Select` is an
 explicit operator choice for that connection, not a hidden bookmark.
+
+The maintenance tools `list_session_map` and `enter_session` now expose the same
+active session inventory and selected-session transition. The map is retrieved
+on request as paginated metadata, not continuously appended to the prompt.
+Exact unique titles or listed IDs identify destinations. STS drains speech,
+saves the departing run, and reconnects using the chosen destination and current
+history policy; failure to save blocks the move. New speech or cancellation
+before departure invalidates the pending move. Navigation is excluded from
+idle tools and does not merge the departed branch into the destination.
+This first pass is fixture-tested; live spoken navigation remains to be tested.
+See [operator instructions](sts-ui-guide.md#ask-eric-to-enter-a-session).
 
 Loading a session is a fresh reconstruction step. STS reads the selected
 session note and the pinned-note receipt from disk, then replaces the browser's
@@ -439,9 +511,40 @@ Postmortem work closes the loop:
 6. The PM folder stores a copy of the raw session note, scrubbed/summary
    derivatives when made, and related artifacts.
 7. The newest timestamped active session note becomes the natural next boot
-   target. When matching derivative sidecars exist, their form can be selected
-   explicitly; otherwise Full `.txt` remains the only enabled form. Older notes
-   remain available through Connect Select and Connect Previous.
+   target. Auto prepares retained sessions and applies the configured history
+   policy: currently all swept, with older summaries explicitly disabled;
+   explicit forms remain available for experiments. Older notes remain available
+   through Connect Select and Connect Previous.
+
+### Preparation Audit In Every PM
+
+Include a short **Context preparation** section when reviewing a run. Read its
+`notes/sessions/variants/<raw-stem>.preparation.json`, the original, and the two
+derivatives. If preparation is still pending or failed, report that rather than
+implying the next resume will use a finished summary.
+
+Report:
+
+- The actual model, thinking setting, temperature, output limit, and job elapsed
+  time; prompt/completion token usage if the inference server supplied it.
+- What the LLM received: only this run's numbered transcript turns plus the
+  focused preparation prompt, not Eric's persona or older loaded notes. The
+  exact instruction is in the receipt; source and transcript hashes bind it.
+- Raw note, transcript, swept and summary sizes. Distinguish removal of the
+  deterministic save/B2 envelope from semantic turn omissions and lossy summary.
+- Proposed versus accepted omitted turn IDs, protected receipt/image/exchange anchors,
+  and retained/original turn counts. IDs are zero-based in the raw transcript's
+  parsed turn order; inspect the original to quote examples.
+- A few actual facts/gems and operator reactions that survived, along with any
+  mistaken omission, invented connection, attribution problem, or lost detail.
+- Which forms the next resume will load. Use the `session history loaded` event
+  inventory for what actually loaded in a run, not an assumption from file names.
+
+Successful JSON validation and a matching hash are not semantic-quality proof.
+PM should explain how the preparation behaved, not just say "summary generated."
+This audit stays in PM/operator artifacts; it is not extra narrative for Eric's
+live context. The sweep is deliberately hybrid: deterministic structure and
+invariants, LLM semantic selection, deterministic validation and verbatim assembly.
 
 This means future lists are readable. Instead of choosing from anonymous
 generic filenames, the operator sees labels such as:
@@ -667,14 +770,87 @@ the same context size. That motivates measuring reuse; it does not prove cache
 eviction, B2 interference, or a need for more parallel slots. Do not change an
 ongoing observation run just to test this hypothesis.
 
-The STS event log now records `B1 session prompt change` when a session update
+When STS is opened with `?contextDiagnostics=1`, the event log records
+`B1 session prompt change` when a session update
 changes its instructions or configuration. It includes instruction lengths,
 the common prefix in characters, a short excerpt at the first difference, and
 whether tools changed. This is a client-side diagnostic, not token-level or KV
-telemetry. It does not reorder the prompt or change inference settings.
+telemetry. It does not itself change inference settings.
+
+Context diagnostics are off by default, including the temporary LLM run overview.
+The query option enables both for a deliberate measurement run; normal STS URLs
+do not collect them. Full backend request dumps separately require the explicit
+`-CaptureLlmWire` launcher switch, also off by default. External LM Studio log
+listeners are bounded test helpers, not part of normal server startup. Ordinary
+session recordings and prompt-ledger inspection remain available.
+
+### Cache-Stable Conversation Order (September 11)
+
+The short live cache check found 25,501 input tokens fully reprocessed after a
+single system-prompt character changed from `1s ago` to `0s ago`. When that prefix
+stayed identical, only 212 tokens were processed, with model first-token latency
+falling from about 6.7 seconds to 0.43 seconds. These were engine measurements,
+not estimates based on the percentage of the context window occupied.
+
+Ordinary B1 context is now assembled in this order:
+
+1. Identity, operating rules, and private-context protocols.
+2. Selected memories and restored past-session notes.
+3. The current embodiment manual (replaced on a body change, not accumulated).
+4. The current conversation, including tool receipts and private runtime updates.
+
+Changing runtime state is no longer embedded in the main system prompt.
+`[STS runtime]` blocks append changed sections to the conversation, following the
+existing private B2-advisory pattern. They use assistant-message transport because
+this backend stores system messages in a separate prefix rather than at their
+insertion position. The blocks are explicitly controller context, not dialogue.
+Latest versions supersede earlier versions of each named section. Unchanged
+sections are not repeated. Clearing the eye emits an explicit absent-state update.
+
+Runtime snapshots defer during generation and pending tool work; completed tool
+handoffs can append them before requesting the follow-up. They do not appear in
+the spoken transcript, and a marker guard prevents a verbatim private-block dump
+from reaching TTS. They are visible in prompt-ledger receipts. Historical updates
+remain in live history to preserve its prefix, so they are not a zero-token-cost
+or bounded-history substitute for later sweeping/compaction.
+
+The ordinary runtime ledger omits a ticking elapsed-time field. Idle requests
+still receive current elapsed time and the attention scheduler is unchanged.
+Search receipts in conversational updates use fixed timestamps instead of aging
+labels. A meaningful body change, pin edit, mode change, or tool-schema change can
+still invalidate cached context; one-time rebuilds at these boundaries are
+acceptable. Actual partial-prefix recovery remains model/runtime-dependent.
 
 The goal is agile context selection with less repeated computation, while B1
 keeps its conversational role and other brains keep their focused jobs.
+
+### Tool Continuations And Cancellation
+
+Tool follow-ups retain the session instructions and complete tool schema list.
+Their short `robot790_tool_followup` direction is appended as a private user
+message only to the request's copied chat, not the saved/live conversation.
+This gives the model a fresh request to answer without rewriting its identity,
+history or body manual, or counting controller directions as operator turns.
+Private text-only image selection uses the same voice-system prefix as B1.
+Its exact-ID, one-recall capability is enforced by the browser; the unchanged
+schema list is not permission to perform additional actions. Spoken receipt
+requests still use tool choice `none`. Server-specific template behavior and
+image stripping can still reduce cache reuse; this is not a guarantee of zero
+prefill on every tool transition.
+
+The project-owned realtime patch pumps provider events through a bounded queue.
+Cancellation and stale-turn checks run while the network is waiting, not only
+when another token arrives. A cancelled HTTP/1 stream has its own socket shut
+down to release a blocked read; HTTP/2 connections are not shut down wholesale.
+Late events cannot commit history or produce an apology for a superseded turn.
+Before response headers arrive, the pipeline can release the obsolete request
+while its timeout/cleanup finishes. Outstanding workers are bounded. Normal
+provider errors and timeouts retain the backend's existing handling.
+
+Interrupt sensitivity zero now disables both browser barge-in and backend
+speech-triggered response cancellation. Image-tool protection cannot re-enable
+it on expiry. Explicit stop/disconnect and superseded-turn protection remain.
+This improves cancellation, not guaranteed warm KV residency after long idle.
 
 ## Reference Integrity And Replay
 
@@ -721,6 +897,15 @@ core-only connections alike, without creating a special Empty Connect persona.
 Added 2026-09-11. In normal Drift 1-10, one idle scheduler now bridges a pause
 inside a conversation and independent idle. The separate conversational-nudge
 timer is disabled in this mode; there is no competing "still there?" stage.
+
+September 12 repair: while attention remains nonzero, an automatic pause beat
+uses only the latest operator exchange and current runtime facts. It does not
+inherit the independent idle research thread, alone ledger, old B2 suggestions,
+or instructions to extend a mechanical metaphor. Only one automatic pause beat
+is dispatched per accepted user turn. After that opportunity, the scheduler
+waits until the attention fade expires or another user turn arrives. This is
+a turn-taking limit, not text-based question detection or a topic restriction.
+Manual Ponder and specialized lab modes retain their explicit behavior.
 
 The initial interval is approximately 12 real seconds after a short reply has
 finished playing. It eases toward the existing Drift interval over three real
@@ -770,8 +955,8 @@ device-muted microphone is not inferred from the UI's microphone flag.
 For the first 45 seconds, the idle request uses a shared-activity conversation
 lane instead of a random independent lane. It invites a relevant question,
 playful choice, or advancing afterthought without requiring questions or attendance
-checks. After that, the usual lane selection
-resumes with context allowing the shared topic to loosen into a new interest.
+checks. During cooling, the conversation lane remains selected, with context
+allowing the shared topic to loosen into a new interest.
 After three minutes it is ordinary independent idle. These coarse context
 labels describe a continuous timing curve, not three separate timers. B2 also
 receives `runtime.conversational_attention` (`engaged`, `cooling`, or
@@ -784,6 +969,23 @@ changing field into B1's main conversation prefix. The prompt ledger records
 the idle attention phase and weight for PM inspection. The existing short-spoken
 idle response mechanism remains in use; this change does not add a separate
 model-based silent-pass decision.
+
+The September 12 shared-activity adjustment changes **pause context selection
+and temporary prompt wording**, not Eric's main personality prompt or timers.
+Instead of the latest utterance/reply alone, the pause includes up to four
+operator exchanges within the configured attention-fade interval preceding the
+latest accepted utterance. It is bounded to 24 rows / 6,000 characters, with
+800 characters per row. Tagged control receipts are omitted from this small
+window, not from saved transcripts or B1 history. The current eye item's name
+is included separately as identity only, not a new visual inspection.
+
+The temporary directions now explicitly link short reactions to their shared
+activity and say: "Speak to the operator as 'you'; they are the other participant
+in this exchange, not an absent person to discuss." Wordplay remains welcome.
+This addresses the observed "pretty darn good" -> third-person rumination
+handoff without adding forced questions, more autonomous beats, new inference
+calls, or changes to independent idle. Existing `eric-full*` snapshots have not
+been refreshed; this is a documented request-local change.
 
 No accepted user turn means normal idle timing, including a silent Connect
 Empty. Drift 0 remains off. Performance, Substrate, First Contact, and stress
@@ -899,7 +1101,46 @@ It works because each layer has a job:
 Nothing special has to be hidden. The running character emerges from ordinary
 context assembly, tool contracts, live feedback, and disciplined recordkeeping.
 
+## Summary Quality Evaluation (September 11, 2026)
+
+A local exo-brain trial on the 13:38 session exposed a distinction between
+structurally valid summaries and faithful memory. The current Qwen configuration
+could return valid JSON while misattributing statements, omitting a repeated image
+request, or turning a request to clear the face into completed action. A separate
+yes/no model reviewer accepted an erroneous draft. Quote extraction caught some
+errors but did not establish semantic correctness. Enabling low reasoning exhausted
+a 5,000-token output budget without producing a summary in this trial.
+
+The session's replacement summary is explicitly a Qwen draft with Codex source
+review and editorial corrections, not an unattended success or human-reviewed
+memory. The raw transcript, sweep, title, and images were preserved. Production
+preparation was not changed based on these experiments. Detailed local evidence
+is in `logs/runs/20260911-133836-empty-profile-images/summary-experiment.md`.
+
+A follow-up summary-only trial exhausted 16K output tokens without finishing
+while repeatedly checking a hard word-count target. With flexible length,
+requested high reasoning and a 32K ceiling, two trials completed in 52 and 81
+seconds, using about 5.3K and 8.3K reasoning tokens. They recovered the repeated
+image request and avoided inventing a clearing confirmation; one still reversed
+the face-painting praise, while the repeat handled that order correctly. Image
+description attribution remained imperfect. These are promising drafts, not a
+deployed fix. Effort and length instructions changed together, so thinking alone
+has not been isolated as the cause. The local `summary-thinking-evaluation.md`
+beside the earlier report records settings, unedited outputs and the comparison.
+
+Future work should test focused summarization separately from sweep selection,
+with evidence-producing review and bounded revision. Structural validators cannot
+certify meaning; evaluation needs held-out sessions covering corrections, feedback
+referents, imaginative ideas, and the distinction between requested and completed
+actions. These checks belong to memory preparation, not restrictions on Eric's voice.
+
 ## Invariants
+
+For the proposed next step beyond pause-context tweaks, see
+[Shared Activity And Task Continuation](task-continuation-experiment.md).
+It separates shared conversation from unfinished actions and specifies bounded
+tool continuations, receipt-based B2 context, and an optional later exo-brain
+judge. This experiment is documented, not implemented.
 
 - New saved sessions are ordinary files.
 - Plain Connect uses the newest timestamped session note; no hidden pointer is

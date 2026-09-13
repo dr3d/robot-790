@@ -25,12 +25,14 @@ function idleContext(overrides = {}) {
     'activeRealtimeSession', 'brain2AdvisoryProtocolInstructions', 'formatBrain2AdvisoryContent',
     'formatBrain2ForInstructions', 'formatEmbodimentForInstructions', 'compactIdleRuntimeContext',
     'recentConversationContext', 'conversationAttentionEnabled', 'conversationAttentionState',
-    'conversationAttentionInstruction', 'triggerIdlePonder',
+    'conversationAttentionInstruction', 'conversationPauseLines', 'conversationPauseContext', 'triggerIdlePonder',
   ], {
     Date, ws: { readyState: 1 }, WebSocket: { OPEN: 1 }, realtimeSessionGeneration: 1,
     realtimeStopRequested: false, realtimeConnected: () => true, lastUserTurnActivityAt: 1,
     lastAcceptedUserTranscriptAt: 0,
     lastAssistantResponseDoneAt: 0,
+    conversationPauseUserAt: 0,
+    conversationLines: [], conversationLineMetadata: [], currentSensingEyeHistoryItem: () => null,
     idleTiming: () => ({ attention_enabled: true, attention_fade_s: 180, attention_warm_s: 45 }),
     idleBlockedReason: empty, idleInFlight: false, responseActive: false,
     idleExhaustionScoredThisResponse: false, lastIdlePonderAt: 0,
@@ -105,6 +107,97 @@ test('a warm pause uses the conversation lane and later releases into independen
   await c.triggerIdlePonder({ statusChecked: true });
   assert.match(packets[1].response.instructions, /Idle lane: object/);
   assert.match(packets[1].response.instructions, /Follow an interest of your own/);
+});
+
+test('an hours-later return carries the live exchange, not the old idle job or private monologue scaffold', async () => {
+  const { c, packets } = idleContext({
+    lastAcceptedUserTranscriptAt: Date.now(),
+    conversationLines: [
+      '[3:00 AM] Robot 790: OLD_MAP_METAPHOR', '[5:41 AM] You: Eric.',
+      '[5:41 AM] Robot 790: Here, Scott. What is on your mind?'
+    ],
+    idleResearchThreadContext: () => 'OLD_RESEARCH_DIRECTIVE',
+    formatAloneStateForInstructions: () => 'OLD_ALONE_LEDGER',
+    maybeIdleCuriosityContext: () => { throw new Error('Warm pause must not start an independent lookup'); }
+  });
+  await c.triggerIdlePonder({ statusChecked: true });
+  const request = packets[0].response;
+  assert.match(request.instructions, /You: Eric\./);
+  assert.match(request.instructions, /What is on your mind/);
+  assert.match(request.instructions, /leave it open/);
+  assert.doesNotMatch(request.instructions, /OLD_|PRIVATE_|Pretend you have been|one true concrete fact/);
+  assert.match(request.instructions, /Imaginative expression is welcome/);
+  assert.equal(c.conversationPauseUserAt, c.lastAcceptedUserTranscriptAt);
+  c.lastAcceptedUserTranscriptAt -= 60000;
+  await c.triggerIdlePonder({ statusChecked: true });
+  assert.doesNotMatch(packets[1].response.instructions, /OLD_RESEARCH_DIRECTIVE/);
+});
+
+test('warm praise retains the artwork and step-two preference in the actual isolated request', async () => {
+  const lines = [
+    '[8:21 AM] You: Please draw the Federal Street court buildings at night.',
+    '[8:21 AM] Robot 790: I made the night image.',
+    '[8:22 AM] You: And what do you usually do after you draw?',
+    '[8:22 AM] Robot 790: Put it in my eye. Want me to do that?',
+    '[8:22 AM] You: Why do you always have to ask me?',
+    '[8:22 AM] Robot 790: Putting it in my eye now.',
+    '[8:22 AM] System: [sensing-eye control receipt INTERNAL_PATH]',
+    '[8:22 AM] Robot 790: I moved it into my sensing eye.',
+    '[8:22 AM] You: Pretty darn good.',
+    '[8:22 AM] Robot 790: Thanks, Scott.'
+  ];
+  const { c, packets } = idleContext({
+    lastAcceptedUserTranscriptAt: Date.now(), conversationLines: lines,
+    conversationLineMetadata: lines.map((_, index) => ({ channel: index === 6 ? 'control' : 'dialogue' })),
+    currentSensingEyeHistoryItem: () => ({ name: 'night-courts.png', nearbyTranscript: 'DO_NOT_COPY_OLD_CONTEXT', dataUrl: 'PIXELS' }),
+    visionImageUrl: 'PIXELS', visionImageStaged: true,
+  });
+  await c.triggerIdlePonder({ statusChecked: true });
+  const request = packets[0].response;
+  for (const text of ['Federal Street court buildings at night', 'Why do you always have to ask me?',
+    'Pretty darn good', 'night-courts.png', "Speak to the operator as 'you'", 'Wordplay and imaginative associations']) {
+    assert.ok(request.instructions.includes(text), text);
+  }
+  assert.doesNotMatch(request.instructions, /INTERNAL_PATH|DO_NOT_COPY_OLD_CONTEXT|PIXELS/);
+  assert.match(request.instructions, /not a fresh visual inspection/);
+  assert.equal(request.conversation, 'none');
+  assert.equal(request.tool_choice, 'none');
+  assert.equal(lines.length, 10);
+});
+
+test('pause window keeps four exchanges, excludes stale history and clips oversized material', () => {
+  const now = Date.now();
+  const lines = Array.from({ length: 8 }, (_, i) => [
+    `[8:00 AM] You: topic-${i}`, `[8:00 AM] Robot 790: answer-${i}`
+  ]).flat();
+  const { c } = idleContext({ lastAcceptedUserTranscriptAt: now, conversationLines: lines,
+    conversationLineMetadata: lines.map(() => ({ iso: new Date(now - 30000).toISOString() })) });
+  let result = c.conversationPauseLines().join('\n');
+  assert.doesNotMatch(result, /topic-[0-3]|answer-[0-3]/);
+  assert.match(result, /topic-4/);
+  assert.match(result, /answer-7/);
+  c.conversationLineMetadata[13].iso = new Date(now - 200000).toISOString();
+  result = c.conversationPauseLines().join('\n');
+  assert.doesNotMatch(result, /topic-6|answer-6/);
+  assert.match(result, /topic-7/);
+  c.conversationLineMetadata = [];
+  c.conversationLines = lines.map(line => line + 'x'.repeat(8000));
+  result = c.conversationPauseLines().join('\n');
+  assert.ok(result.length <= 6000);
+  assert.ok(result.split('\n').every(line => line.length <= 800));
+});
+
+test('cleared eye identity cannot leak from older artwork into the pause request', () => {
+  let currentEye = { name: 'old-artwork.png' };
+  const { c } = idleContext({
+    currentSensingEyeHistoryItem: () => currentEye,
+    conversationLines: ['[8:00 AM] You: What shall we do?', '[8:00 AM] Robot 790: Something new?']
+  });
+  assert.match(c.conversationPauseContext(), /old-artwork.png/);
+  currentEye = null;
+  assert.doesNotMatch(c.conversationPauseContext(), /old-artwork.png/);
+  c.conversationLines = [];
+  assert.equal(c.conversationPauseLines().length, 0);
 });
 
 test('private advice does not leak into performance or substrate contexts', () => {
@@ -241,6 +334,8 @@ test('speech-start refreshes session instructions after capturing the quiet inte
   const { c } = aloneContext();
   const snapshots = [];
   Object.assign(c, {
+    llmRunOverview: null,
+    observeContextUsage: () => {},
     realtimeStopRequested: false, ws: {}, realtimeSessionGeneration: 1,
     eyeRecallResponses: new Map(), eventResponseId: event => event.response_id || '',
     activeRealtimeSession: () => true, clearConversationReengageTimer: noop,
