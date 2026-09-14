@@ -40,6 +40,7 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 <!-- generated-articles:start -->
 Articles are listed newest first by their published artifact time.
 
+- [Robot 790: Learning to Stay With You](articles/2026-09-14-robot-790-learning-to-stay-with-you.md) - 2026-09-14 00:00
 - [Robot 790: A Local Robot Built for Conversation and Continuity](articles/2026-09-10-022329-robot-790-project-overview.md) - 2026-09-10 02:23
 - [One Body, Many Faces](articles/2026-09-09-one-body-many-faces.md) - 2026-09-09 12:32
 - [The Brain That Runs Conversation And Dreams](articles/2026-09-09-041529-the-brain-that-runs-conversation-and-dreams.md) - 2026-09-09 04:15

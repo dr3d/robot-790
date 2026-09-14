@@ -1,6 +1,16 @@
 {
-    "generated":  "2026-09-12 22:31:05",
+    "generated":  "2026-09-14 09:43:00",
     "articles":  [
+                     {
+                         "title":  "Robot 790: Learning to Stay With You",
+                         "excerpt":  "Robot 790 is becoming more than a talking face: a locally voiced AI character that can sustain a shared invention, remember its details, and turn the conversation into something you can see. The latest progress is as much about timing and continuity as intelligence.",
+                         "source":  "articles/2026-09-14-robot-790-learning-to-stay-with-you.md",
+                         "bytes":  5446,
+                         "published":  "2026-09-14 00:00",
+                         "published_sort":  "20260914000000",
+                         "published_source":  "filename",
+                         "modified":  "2026-09-14 09:42"
+                     },
                      {
                          "title":  "Robot 790: A Local Robot Built for Conversation and Continuity",
                          "excerpt":  "Robot 790 is an experiment in making a machine worth sharing a room with.",
@@ -536,6 +546,22 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "Eric\u0027s Impossible Science Classroom",
+                      "kind":  "image",
+                      "role":  "generated-image",
+                      "source":  "media/generated-images/eric-impossible-science-classroom-2026-09-14.png",
+                      "preview":  "media/generated-images/eric-impossible-science-classroom-2026-09-14.png",
+                      "banner_rank":  60,
+                      "bytes":  1706976,
+                      "date":  "2026-09-14 00:00",
+                      "published":  "2026-09-14 00:00",
+                      "published_sort":  "20260914000000",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-13 23:50",
+                      "description":  "Eric requested this classroom illustration through OpenAI image generation during the September 13-14 Impossible Science conversation. A fictional robot teacher, not a photograph of deployed hardware or an actual classroom event. Source image preserved without retouching.",
+                      "article":  "articles/2026-09-14-robot-790-learning-to-stay-with-you.md"
+                  },
                   {
                       "title":  "Robot 790: Conversation, Continuity, and a Body",
                       "kind":  "image",
