@@ -832,24 +832,10 @@ uint16_t statusColorForMood(Mood mood)
   }
 }
 
+#include "../../../config/face/generated/mouth_contract.hpp"
 MouthPose mouthPoseFor(MouthShape shape)
 {
-  switch (shape) {
-    case MouthShape::Smile: return {0.18f, 0.88f, 0.98f, 0.0f, 0.08f, 0.06f, 0.0f, 0.0f};
-    case MouthShape::BigSmile: return {0.44f, 0.96f, 1.05f, 0.0f, 0.30f, 0.05f, 0.0f, 0.0f};
-    case MouthShape::SmirkLeft: return {0.13f, 0.72f, 0.88f, -0.46f, 0.02f, 0.48f, -0.36f, -0.42f};
-    case MouthShape::SmirkRight: return {0.13f, 0.72f, 0.88f, 0.46f, 0.02f, 0.48f, 0.36f, 0.42f};
-    case MouthShape::Open: return {0.66f, 0.50f, -0.04f, -0.04f, 0.0f, 0.14f, -0.05f, 0.0f};
-    case MouthShape::O: return {0.82f, 0.20f, -0.08f, 0.0f, 0.0f, 0.02f, 0.0f, 0.0f};
-    case MouthShape::Wide: return {0.94f, 0.70f, 0.10f, 0.04f, 0.18f, 0.20f, 0.06f, 0.0f};
-    case MouthShape::Tongue: return {0.78f, 0.94f, 0.84f, 0.05f, 0.04f, 0.04f, 0.02f, 0.0f};
-    case MouthShape::Frown: return {0.08f, 0.62f, -1.45f, -0.04f, 0.0f, 0.44f, -0.08f, 0.0f};
-    case MouthShape::Grimace: return {0.18f, 0.88f, 0.98f, 0.0f, 0.42f, 0.06f, 0.0f, 0.0f};
-    case MouthShape::Sneer: return {0.20f, 0.72f, -0.20f, 0.42f, 0.32f, 0.62f, 0.34f, 0.52f};
-    case MouthShape::Sleep: return {0.03f, 0.42f, -0.12f, 0.0f, 0.0f, 0.08f, 0.0f, 0.0f};
-    case MouthShape::Neutral:
-    default: return {0.07f, 0.54f, 0.02f, -0.03f, 0.0f, 0.16f, 0.02f, 0.0f};
-  }
+  return robot790::mouthPose<MouthPose>(mouthShapeName(shape));
 }
 
 MouthPose mixMouthPose(const MouthPose &a, const MouthPose &b, float t)

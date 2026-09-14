@@ -85,3 +85,34 @@
 //   wonder -> MouthShape::O
 
 constexpr const char *ROBOT_790_MOUTH_SHAPES[] = {"neutral", "smile", "big_smile", "smirk_left", "smirk_right", "open", "o", "wide", "tongue", "frown", "grimace", "sneer", "sleep"};
+
+#include <string.h>
+namespace robot790 {
+template <typename Pose> Pose mouthPose(const char *name) {
+  if (name && strcmp(name, "neutral") == 0) return {0.07f, 0.54f, 0.02f, -0.03f, 0.00f, 0.16f, 0.02f, 0.00f};
+  if (name && strcmp(name, "smile") == 0) return {0.18f, 0.88f, 0.98f, 0.00f, 0.08f, 0.06f, 0.00f, 0.00f};
+  if (name && strcmp(name, "big_smile") == 0) return {0.44f, 0.96f, 1.05f, 0.00f, 0.30f, 0.05f, 0.00f, 0.00f};
+  if (name && strcmp(name, "smirk_left") == 0) return {0.13f, 0.72f, 0.88f, -0.46f, 0.02f, 0.48f, -0.36f, -0.42f};
+  if (name && strcmp(name, "smirk_right") == 0) return {0.13f, 0.72f, 0.88f, 0.46f, 0.02f, 0.48f, 0.36f, 0.42f};
+  if (name && strcmp(name, "open") == 0) return {0.66f, 0.50f, -0.04f, -0.04f, 0.00f, 0.14f, -0.05f, 0.00f};
+  if (name && strcmp(name, "o") == 0) return {0.82f, 0.20f, -0.08f, 0.00f, 0.00f, 0.02f, 0.00f, 0.00f};
+  if (name && strcmp(name, "wide") == 0) return {0.94f, 0.70f, 0.10f, 0.04f, 0.18f, 0.20f, 0.06f, 0.00f};
+  if (name && strcmp(name, "tongue") == 0) return {0.78f, 0.94f, 0.84f, 0.05f, 0.04f, 0.04f, 0.02f, 0.00f};
+  if (name && strcmp(name, "frown") == 0) return {0.08f, 0.62f, -1.45f, -0.04f, 0.00f, 0.44f, -0.08f, 0.00f};
+  if (name && strcmp(name, "grimace") == 0) return {0.18f, 0.88f, 0.98f, 0.00f, 0.42f, 0.06f, 0.00f, 0.00f};
+  if (name && strcmp(name, "sneer") == 0) return {0.20f, 0.72f, -0.20f, 0.42f, 0.32f, 0.62f, 0.34f, 0.52f};
+  if (name && strcmp(name, "sleep") == 0) return {0.03f, 0.42f, -0.12f, 0.00f, 0.00f, 0.08f, 0.00f, 0.00f};
+  return {0.07f, 0.54f, 0.02f, -0.03f, 0.00f, 0.16f, 0.02f, 0.00f};
+}
+template <typename Pose> Pose legacyMouthPose(const char *name) {
+  if (name && strcmp(name, "smile") == 0) return {0.16f, 0.82f, 0.86f, 0.05f, 0.00f, 0.10f, 0.07f, 0.00f};
+  if (name && strcmp(name, "smirk_left") == 0) return {0.14f, 0.66f, 0.82f, -0.98f, 0.05f, 0.52f, -0.70f, -0.28f};
+  if (name && strcmp(name, "smirk_right") == 0) return {0.14f, 0.66f, 0.82f, 0.98f, 0.05f, 0.52f, 0.70f, 0.28f};
+  if (name && strcmp(name, "open") == 0) return {0.62f, 0.48f, -0.04f, -0.04f, 0.00f, 0.14f, -0.05f, 0.00f};
+  if (name && strcmp(name, "wide") == 0) return {0.92f, 0.58f, 0.08f, 0.04f, 0.16f, 0.24f, 0.06f, 0.00f};
+  if (name && strcmp(name, "frown") == 0) return {0.10f, 0.56f, -0.88f, -0.04f, 0.00f, 0.36f, -0.08f, 0.00f};
+  if (name && strcmp(name, "grimace") == 0) return {0.16f, 0.82f, 0.86f, 0.05f, 0.42f, 0.10f, 0.07f, 0.00f};
+  if (name && strcmp(name, "sneer") == 0) return {0.18f, 0.62f, -0.30f, 0.66f, 0.72f, 0.78f, 0.72f, 0.92f};
+  return mouthPose<Pose>(name);
+}
+}

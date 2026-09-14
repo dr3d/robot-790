@@ -83,9 +83,13 @@ def test_generated_face_contract_is_current() -> None:
 def test_browser_face_mouth_contract_matches_spec() -> None:
     spec = load_spec()["mouth"]
     source = (ROOT / "web" / "face-sim" / "index.html").read_text(encoding="utf-8")
-    assert parse_browser_mouth_shapes(source) == spec["shapeOrder"]
-
-    browser_poses = parse_browser_mouth_poses(source)
+    assert 'const mouths = Robot790MouthContract.mouthShapes;' in source
+    assert 'return Robot790MouthContract.mouthPoseFor(shape);' in source
+    result = subprocess.run(
+        ['node', '-e', "require('./web/face-sim/mouth-contract.js'); console.log(JSON.stringify(Robot790MouthContract.mouthPoses));"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    )
+    browser_poses = json.loads(result.stdout)
     assert sorted(browser_poses) == sorted(spec["shapeOrder"])
     for shape in spec["shapeOrder"]:
         assert_pose_close(browser_poses[shape], spec["shapes"][shape]["pose"])
@@ -103,6 +107,23 @@ def test_live_firmware_mouth_contract_matches_spec() -> None:
         source = firmware_path.read_text(encoding="utf-8")
         for shape in spec["shapeOrder"]:
             assert f'"{shape}"' in source
-        poses = parse_firmware_poses(source)
-        for cpp_name, expected_values in expected_by_cpp_name.items():
-            assert poses.get(cpp_name) == expected_values, f"{firmware_path}: {cpp_name}"
+        assert 'return robot790::mouthPose<MouthPose>(mouthShapeName(shape));' in source
+    generated = (ROOT / 'config/face/generated/mouth_contract.hpp').read_text(encoding='utf-8')
+    for shape in spec['shapeOrder']:
+        match = re.search(r'strcmp\(name, "' + shape + r'"\) == 0\) return \{([^}]+)\}', generated)
+        assert match, shape
+        values = [float(value) for value in re.findall(r'-?\d+(?:\.\d+)?(?=f)', match.group(1))]
+        assert values == expected_by_cpp_name[spec['shapes'][shape]['cppName']]
+
+
+def test_legacy_multidisplay_keeps_explicit_tuning_in_shared_contract() -> None:
+    spec = load_spec()['mouth']
+    source = (ROOT / 'firmware/esp32-s3-face-brain/src/main.cpp').read_text(encoding='utf-8')
+    assert 'return robot790::legacyMouthPose<MouthPose>(mouthShapeName(shape));' in source
+    generated = (ROOT / 'config/face/generated/mouth_contract.hpp').read_text(encoding='utf-8')
+    legacy = generated.split('Pose legacyMouthPose', 1)[1]
+    for shape, expected in spec['legacyPoseOverrides'].items():
+        match = re.search(r'strcmp\(name, "' + shape + r'"\) == 0\) return \{([^}]+)\}', legacy)
+        assert match, shape
+        values = [float(value) for value in re.findall(r'-?\d+(?:\.\d+)?(?=f)', match.group(1))]
+        assert values == expected

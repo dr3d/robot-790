@@ -48,6 +48,9 @@ def validate_spec(spec: dict[str, Any]) -> None:
     for mood, shape in mouth["moodMap"].items():
         if shape not in shapes:
             raise ValueError(f"mood {mood!r} maps to unknown mouth shape {shape!r}")
+    for shape, values in mouth.get("legacyPoseOverrides", {}).items():
+        if shape not in shapes or len(values) != len(POSE_FIELDS):
+            raise ValueError(f"Invalid legacy mouth pose: {shape}")
 
 
 def float_js(value: float | int) -> str:
@@ -131,7 +134,19 @@ def render_cpp(spec: dict[str, Any]) -> str:
         lines.append(f"//   {mood} -> MouthShape::{shapes[shape]['cppName']}")
 
     shape_names = ", ".join(json.dumps(shape) for shape in ordered)
-    lines.extend(["", f"constexpr const char *ROBOT_790_MOUTH_SHAPES[] = {{{shape_names}}};", ""])
+    lines.extend(["", f"constexpr const char *ROBOT_790_MOUTH_SHAPES[] = {{{shape_names}}};", "",
+                  "#include <string.h>", "namespace robot790 {",
+                  "template <typename Pose> Pose mouthPose(const char *name) {"])
+    for shape in ordered:
+        values = ", ".join(float_cpp(shapes[shape]["pose"][field]) for field in POSE_FIELDS)
+        lines.append(f'  if (name && strcmp(name, "{shape}") == 0) return {{{values}}};')
+    neutral = ", ".join(float_cpp(shapes["neutral"]["pose"][field]) for field in POSE_FIELDS)
+    lines.extend([f"  return {{{neutral}}};", "}",
+                  "template <typename Pose> Pose legacyMouthPose(const char *name) {"])
+    for shape, values in mouth.get("legacyPoseOverrides", {}).items():
+        rendered = ", ".join(float_cpp(value) for value in values)
+        lines.append(f'  if (name && strcmp(name, "{shape}") == 0) return {{{rendered}}};')
+    lines.extend(["  return mouthPose<Pose>(name);", "}", "}", ""])
     return "\n".join(lines)
 
 
@@ -181,6 +196,8 @@ def main() -> int:
         OUT_DIR / "mouth_contract.js": render_js(spec),
         OUT_DIR / "mouth_contract.hpp": render_cpp(spec),
         OUT_DIR / "mouth_contract.md": render_markdown(spec),
+        ROOT / "web" / "face-sim" / "mouth-contract.js": render_js(spec).replace("export ", "")
+        + "\nglobalThis.Robot790MouthContract = { mouthShapes, mouthPoses, mouthMoodMap, mouthShapeForMood, mouthPoseFor };\n",
     }
 
     changed = []

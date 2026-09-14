@@ -1,6 +1,6 @@
 # Browser Face Mouth: Hardware Parity Study
 
-September 13, 2026. Investigation only; production renderer and hardware unchanged.
+September 13, 2026 investigation; port implemented September 14.
 Operator is using OBS screen capture rather than STS audio recording for now.
 The face is therefore part of the performance, not just a status display.
 
@@ -12,7 +12,7 @@ and their eight numeric pose parameters. There is no missing hardware pose pack
 to import. Differences are in geometry, scale, coloring, transition handling,
 and how speech animation overrides the base expression.
 
-[Current browser pose sheet](../logs/browser-mouth-study.png) was rendered from
+[Original browser pose sheet](../logs/browser-mouth-baseline.png) was rendered from
 the actual served browser drawing functions in a separate headless browser.
 It does not mutate the live face state. This is a settled-pose comparison at one
 animation time, not a hardware screenshot or speech-synchronization test.
@@ -56,3 +56,45 @@ new lip-sync engine or deploy the lab renderer.
 
 Keep emotional expression distinct from a timed performance. Do not add model
 prompt instructions, auto-record changes, or hardware flashing for this work.
+
+## Port And Checkpoint
+
+Pre-port checkpoint: `6f92283` on master. The browser and firmware source files
+were already clean in that tree; the checkpoint commit adds this investigation.
+Unrelated pending STS work was left uncommitted and untouched by the checkpoint.
+Restore only the mouth-related paths when comparing or backing out this change,
+not the whole worktree.
+
+The browser human-mouth painter now lives in `web/face-sim/mouth-renderer.js`
+as `Robot790HumanMouth`. It ports the S3 two-inch renderer's ellipse layering,
+smirk/sneer construction, tongue, teeth, sleeping line, colors, and talking pulse.
+The Canvas adapter uses floating-point geometry and fits the whole drawing into
+the mouth band with overscan room; it is not a bit-identical RGB565 raster copy.
+The hardware code still runs its native drawing primitives unchanged.
+The browser no longer resets all pose interpolation on round/sleep topology
+changes; the sleeping line waits for the transition interval.
+
+Pose definitions are now genuinely consumed from a single source:
+`config/face/robot-790-face.json`. The existing generator now produces executable
+C++ pose templates and a browser script, not merely C++ reference comments.
+The two-inch S3, ESP32 multi-display face, and older S3 face-brain wrappers all
+use that generated data. Older S3 tuning is an explicit legacy override profile,
+preserving its values instead of silently adopting the newer tuning.
+
+**Sharing boundary:** common pose data is centralized; native C++ and Canvas
+drawing algorithms still have separate implementations. The class isolates the
+browser renderer for reuse, but OOP does not by itself make JavaScript execute
+Arduino C++. This is not a claim that all rendering code is now shared. A future
+portable renderer plus WASM or generated drawing operations would be another
+substantial step, not a prerequisite for evaluating this visual port.
+
+Robot equalizer style, mouth captions, eye/nose layout, and STS speech-cue delivery
+are unchanged. No prompt edits or device flashing were performed.
+
+[Ported pose sheet](../logs/browser-mouth-study.png),
+[compact face](../logs/browser-mouth-compact.png), and
+[desktop face](../logs/browser-mouth-desktop.png).
+Browser verification checks all thirteen poses for distinct, nonblank, bounded
+pixels, smirk and talking motion, and no page errors in a separate headless
+browser without changing live face state. All three firmware builds passed.
+Physical appearance on those devices was not tested; their drawing was not changed.
