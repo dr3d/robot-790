@@ -33,6 +33,89 @@ seconds, but not uniformly reliable ones. A rigid word count caused another
 trial to spend its entire allowance without finishing. These local results do
 not isolate reasoning effort from the changed length instruction.
 
+## Temperature Audit And Next Experiment
+
+September 13, 2026: code audit and primary-source research, not a new inference
+benchmark. No B2 or preparation settings were changed by this review.
+
+| Workload | Explicit temperature | Current thinking configuration |
+| --- | ---: | --- |
+| B1 conversation, idle, tool continuations | 0.8 default | Existing worker setting, unchanged |
+| Inherited realtime warmup and fallback context compactor | 0.8 each | Existing worker setting, unchanged |
+| B2 mull, including headline selection | 0.55 | Off for local providers |
+| Production session preparation | 0.2 | Off |
+| Chunked lab extraction and consolidation | 0.2 each | Independently selected; default extraction off, merge high |
+| Separate private `deliberate_once` tool | 0.3 | Enabled effort resolved against model support |
+
+Sources: `realtime_entry.py`, `sts_page_server.py`, `session_preparation.py`,
+`summary_chunks.py` and `summary_chunk_lab.py` under `src/robot_790d/`.
+B1's override is `ROBOT_790_B1_TEMPERATURE`; the other listed values are currently
+literal request settings. They do not inherit B1's new default. Other sampling
+parameters remain provider-dependent where STS omits them; the table is not a
+complete effective-sampler audit. B2's prompt-debug receipt includes temperature,
+production preparation records it, and the chunk lab saves exact requests.
+
+**Research supports testing, not an automatic reduction.** Peters and Chin-Yee
+studied generalization in scientific summaries. Their temperature comparison
+favored 0 over 0.7 for preserving restricted conclusions (the fitted log-odds
+coefficient was -1.432, approximately 76% lower odds). This is a narrow fidelity
+measure, not a 76% reduction in every kind of hallucination, and it does not
+measure Qwen3.8 or our conversation-memory task. It also does not compare 0 with
+our existing 0.2.
+[Published study, author repository copy](https://api.repository.cam.ac.uk/server/api/core/bitstreams/fac9c926-312d-4fbd-ad1c-f0a1d8acfcdf/content).
+
+**Model-specific guidance supplies another comparison point.** Qwen3.8-27B's
+official card recommends temperature 0.7 in non-thinking mode and 1.0 in thinking
+mode, alongside different top-p and presence-penalty settings. These are general
+generation recommendations, not evidence of the best summary temperature for our
+quantized artifacts. A temperature-only comparison and a full recommended-sampler
+comparison answer different questions.
+[Official Qwen3.8-27B card](https://huggingface.co/Qwen/Qwen3.8-27B#best-practices).
+
+Our existing 0.2 trials already had attribution errors, invented relationships,
+lost late-session material and promises promoted to outcomes. Low randomness is
+therefore not sufficient. Preserving useful imaginative content means accurately
+retaining Eric's original ideas, not making the summarizer invent more of them.
+The existing 400-word/12-item summary ceiling is a separate coverage constraint.
+
+Proposed isolated comparison, after selecting and verifying the intended model:
+
+1. Freeze at least three source sessions and a held-out fourth, including the
+   known image-recall failures, a late-session omission, and a strong creative
+   performance. Build source-based checks before examining new drafts.
+2. Compare 0.0, 0.2 and 0.7 with thinking off. Hold artifact, template, prompt,
+   schema, output allowance and other effective samplers constant. Repeat each
+   condition three times with recorded seeds where supported; judge outputs
+   without temperature labels. Do not choose from one fortunate draft.
+3. Score correct speaker attribution, reported versus verified actions,
+   corrections, meaningful feedback with its referent, unfinished work, and
+   coverage of distinctive ideas across beginning/middle/end. Count unsupported
+   claims and consequential omissions separately; record size, latency, tokens,
+   truncation and structural failures. Source IDs alone do not establish truth.
+4. Keep the production preparation experiment separate from chunked extraction
+   and merge experiments. Production emits title, summary and sweep drop IDs in
+   one request: score title quality and deletion safety too, without installing
+   any generated variant. For merge tests, reuse identical extraction candidates
+   and source excerpts so upstream randomness is not a confound.
+5. Subsequently compare a complete official sampling configuration and a bounded
+   thinking condition, using only reasoning levels the selected server supports.
+   Do not attribute their changes to temperature alone. The lab's current `high`
+   label needs capability checking; the model card lists low, medium and xhigh.
+
+Keep production at 0.2 and Auto history on sweeps until a candidate preserves
+fidelity while retaining more useful material on held-out sessions. No fresh
+temperature comparison was run during this audit: the realtime worker's model
+target and LM Studio's loaded artifact differed, and model selection was pending.
+No model load, unload, replacement summary or runtime prompt change was performed.
+
+Operator decision after the temperature review: retain existing explicit values,
+pin previously implicit realtime temperatures to the assumed 0.8 baseline, and
+leave top-p/top-k and the other samplers alone. Warmup and fallback compaction
+now explicitly use 0.8 independently of the B1 environment override. This does
+not enable fallback compaction or change when it runs. The comparison above is
+parked research, not scheduled work; no slider or spoken temperature verb was
+added. Historical implicit temperatures remain unverified.
+
 ## Research We Can Use
 
 **Dialogue factuality is its own problem.** TofuEval found factual errors in
