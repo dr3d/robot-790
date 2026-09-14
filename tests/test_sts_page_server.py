@@ -5,6 +5,38 @@ import pytest
 from robot_790d import sts_page_server
 
 
+def test_image_continuation_config_is_opt_in_and_bounded(tmp_path) -> None:
+    assert sts_page_server._runtime_image_continuation(None) == {
+        "enabled": False, "max_steps": 3, "window_ms": 120000,
+    }
+    assert sts_page_server._runtime_image_continuation({
+        "enabled": "true", "max_steps": 100, "window_ms": -1,
+    }) == {"enabled": False, "max_steps": 4, "window_ms": 1000}
+    assert sts_page_server._runtime_image_continuation({
+        "max_steps": 10**1000, "window_ms": float("nan"),
+    }) == {"enabled": False, "max_steps": 3, "window_ms": 120000}
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "runtime.json").write_text(json.dumps({
+        "image_continuation": {"enabled": True, "max_steps": 2, "window_ms": 60000},
+    }), encoding="utf-8")
+    assert sts_page_server.runtime_config(tmp_path)["image_continuation"] == {
+        "enabled": True, "max_steps": 2, "window_ms": 60000,
+    }
+
+
+def test_brain2_receives_bounded_image_receipts_not_just_a_spoken_success() -> None:
+    evidence = {"runtime": {"image_task_receipts": {
+        "request": "Draw and show it", "artifact": "new.png",
+        "receipts": [{"tool": "generate_image", "status": "ok", "artifact": "new.png", "staged": False},
+                     {"tool": "move_generated_image_to_sensing_eye", "status": "error", "staged": "true"}],
+    }}}
+    context = json.loads(sts_page_server._brain2_evidence_context(evidence))
+    assert context["image_task_receipts"]["artifact"] == "new.png"
+    assert all(not row["staged"] for row in context["image_task_receipts"]["receipts"])
+    evidence["runtime"]["image_task_receipts"]["receipts"] = "bad shape"
+    assert json.loads(sts_page_server._brain2_evidence_context(evidence))["image_task_receipts"]["receipts"] == []
+
+
 def test_audio_interrupt_config_is_bounded_and_rejects_non_numeric_values() -> None:
     assert sts_page_server._runtime_audio_interrupt({
         "minimum_active_ms": 0, "maximum_gap_ms": float("nan"), "minimum_rms_ratio": True,

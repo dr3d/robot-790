@@ -51,7 +51,7 @@ test('Connect waits for preparation before creating the realtime socket and rele
   assert.ok(connect.indexOf('await pauseSessionPreparation()') < connect.indexOf('new WebSocket('));
   assert.ok(connect.indexOf('await loadFreshContinuityContext(') < connect.indexOf('await pauseSessionPreparation()'));
   assert.match(connect, /catch \(error\) \{\s*releaseSessionPreparation\(\)/);
-  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(ws !== socket[^\n]+\n\s*releaseSessionPreparation/);
+  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(ws !== socket[^\n]+\n\s*stopVisionCamera\(\{ quiet: true \}\);\s*releaseSessionPreparation/);
 });
 
 test('automatic history polls preparation without changing the selected branch', async () => {

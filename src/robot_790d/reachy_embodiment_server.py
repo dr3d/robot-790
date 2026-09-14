@@ -19,6 +19,17 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8792
 DEFAULT_REACHY_URL = "http://127.0.0.1:8000/"
 SUPPORTED_MOODS = ("curious", "happy", "focused", "confused", "sleepy", "sleep")
+RECORDED_DATASET = "pollen-robotics/reachy-mini-emotions-library"
+# Rounded-up clip durations, plus daemon initial positioning allowance in the waiter.
+# Dataset revision inspected: 85dd1b4e12b0dcb67119e495c44022e2b62c91cf.
+RECORDED_BEATS = {
+    "affection": ("loving1", 6.0),
+    "daydream": ("thoughtful1", 6.0),
+    "startle": ("surprised1", 3.0),
+    "wary": ("fear1", 4.0),
+    "goofy": ("dance2", 18.0),
+    "silly": ("dance3", 19.0),
+}
 SUPPORTED_BEATS = (
     "slow_smile",
     "inspect",
@@ -28,7 +39,7 @@ SUPPORTED_BEATS = (
     "double_take",
     "drowsy",
     "robot_scan",
-)
+) + tuple(RECORDED_BEATS)
 
 
 @dataclass(frozen=True)
@@ -163,6 +174,11 @@ class ReachyAdapterState:
             "capabilities": {
                 "moods": list(SUPPORTED_MOODS),
                 "beats": list(SUPPORTED_BEATS),
+                "recorded_performances": {
+                    name: {"dataset": RECORDED_DATASET, "move": move, "duration_s": duration,
+                           "audio": "dataset_sound_if_present"}
+                    for name, (move, duration) in RECORDED_BEATS.items()
+                },
                 "gaze": "head yaw/pitch",
                 "mouth": "metadata only; no display or speech animation",
                 "camera_stream": False,
@@ -280,8 +296,16 @@ class ReachyAdapterState:
                 return self._reply("gated", "Motion is disabled; restart the adapter with -AllowMotion.")
             if not self.move_events.ready.is_set():
                 return self._reply("gated", "Completion stream is unavailable; no sequence was started.")
-            frames = beat_frames(beat)
-            result = self._move(f"beat:{beat}", "api/move/goto", frames[0])
+            recorded = RECORDED_BEATS.get(beat)
+            if recorded:
+                move, duration = recorded
+                frames = [{"duration": duration}]
+                result = self._move(
+                    f"beat:{beat}", f"api/move/play/recorded-move-dataset/{RECORDED_DATASET}/{move}", {}
+                )
+            else:
+                frames = beat_frames(beat)
+                result = self._move(f"beat:{beat}", "api/move/goto", frames[0])
             if result["ok"]:
                 hold = max(6.6, sum(step["duration"] for step in frames) + 1.5)
                 self.expression_hold_until = time.monotonic() + hold
@@ -293,7 +317,12 @@ class ReachyAdapterState:
                     "steps": len(frames),
                     "completed_steps": 0,
                     "uuid": result["uuid"],
+                    "duration_s": sum(step["duration"] for step in frames),
+                    "source": "recorded_dataset" if recorded else "sts_sequence",
                 }
+                if recorded:
+                    self.sequence.update({"dataset": RECORDED_DATASET, "move": recorded[0],
+                                          "audio": "dataset_sound_if_present"})
                 self.sequence_thread = Thread(
                     target=self._run_sequence,
                     args=(self.sequence, frames, self.sequence_cancel),
@@ -311,7 +340,7 @@ class ReachyAdapterState:
                     "double_take": "surprised",
                     "drowsy": "sleepy",
                     "robot_scan": "focused",
-                }[beat]
+                }.get(beat, self.mood)
                 result.update({"mood": self.mood, "eye_mood": self.mood})
                 result["gaze"]["manual"] = False
                 result.update({"sequence": deepcopy(self.sequence), "hold_seconds": hold})
@@ -710,7 +739,7 @@ def _goto_payload_for_mood(mood: str) -> dict[str, Any]:
 
 
 def _goto_payload_for_beat(beat: str) -> dict[str, Any]:
-    if beat not in SUPPORTED_BEATS:
+    if beat not in SUPPORTED_BEATS or beat in RECORDED_BEATS:
         raise ValueError(f"Unsupported Reachy beat: {beat}")
     head = {"x": 0.0, "y": 0.0, "z": 0.0, "roll": 0.0, "pitch": 0.0, "yaw": 0.0}
     antennas = [0.0, 0.0]

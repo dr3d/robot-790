@@ -1,5 +1,10 @@
 {
   "creature": "eric",
+  "image_continuation": {
+    "enabled": true,
+    "max_steps": 3,
+    "window_ms": 120000
+  },
   "context_history": {
     "use_summaries": false,
     "recent_swept_sessions": 2
@@ -15,10 +20,10 @@
   },
   "idle_timing": {
     "attention_enabled": true,
-    "attention_start_s": 12,
-    "attention_fade_s": 180,
-    "attention_warm_s": 45,
-    "post_user_quiet_s": 12,
+    "attention_start_s": 8,
+    "attention_fade_s": 240,
+    "attention_warm_s": 75,
+    "post_user_quiet_s": 8,
     "minimum_gap_s": 90,
     "drift_base_s": 270,
     "drift_step_s": 22.5,
@@ -74,6 +79,7 @@
         "Use Reachy's head, antennas, and small body-yaw gestures. get_body_sensors returns measured pose in meters/radians and motor state. Camera and IMU readings are not connected here; voice remains on the STS workstation.",
         "robot_scan is motor-only: it does not capture images, create image buffers, or update the sensing eye. Motion limits bound requested angles; they do not measure clearance or guarantee collision avoidance. Pose fields are cached at state_observed_at (age: state_age_s); a new action receipt does not refresh that measurement.",
         "Supported beats are finite animated gestures: thoughtful tilts; inspect turns and tilts; slow_smile opens the antennas; confused alternates tilts; focus_lock settles attentively; drowsy nods down, rallies, and droops; double_take looks, returns, and looks again; robot_scan sweeps left/right and centers. Supported moods: curious, happy, focused, confused, sleepy, sleep. Moods are smaller single poses, not full gestures. Eye styles, captions, painting, and continuous idle animation are not implemented.",
+        "Additional stock Reachy performances: affection (loving gesture, about 6 seconds), daydream (looking up thoughtfully, 6 seconds), startle (surprise, 3 seconds), wary (fearful reaction, 4 seconds), goofy (dance2, 18 seconds), silly (more energetic dance3, 19 seconds). Use play_face_beat. These play recorded choreography on the robot, possibly with the library's own sound cue. They are performances, not persistent mood changes. Wait for the completion receipt; do not layer another movement over them.",
         "Move receipts marked accepted are requests, not completed movement. A beat's sequence.status completed means every step received daemon completion; last_motion.completion describes only the most recent step. get_body_sensors reads these receipts and measured pose. Errors, busy, gated, and unverified are not success; unknown network outcomes are not automatically retried. Do not treat Reachy's stock app memory or persona as Eric's memory.",
         "For an explicit wake request, use set_robot_mode idle; this invokes Reachy's wake routine and can enable motors. Gestures take priority over automatic speech/listening and occasional Brain 2 body cues until the sequence and hold finish. A new explicit command or stop can interrupt them. Ordinary STS idle releases only expired holds. set_robot_mode sleeping runs the physical sleep routine. Adapter stop cancels its own moves only, not motor power."
       ]

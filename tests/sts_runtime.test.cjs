@@ -605,7 +605,7 @@ test('session saves carry sensing-eye capture receipts into their archive packag
   assert.match(page, /await flushSensingEyeInboxForSessionSave\(\)/);
   assert.match(page, /session-scoped sensing-eye captures will move with it/);
   assert.match(sessionMapPage, /\["Eye captures", `\$\{Number\(item\.sensing_eye_asset_count \|\| 0\)\.toLocaleString\(\)\} session-scoped`\]/);
-  assert.match(sessionMapPage, /session-scoped eye captures/);
+  assert.match(sessionMapPage, /Saved forms and unshared eye captures move with it/);
 });
 
 test('session map page ships as a standalone chooser', () => {
@@ -1266,6 +1266,15 @@ test('a deliberate quiet Brain2 result succeeds without speech, advisories, or f
 
 // Exercise the shipped functions without starting a socket, microphone, or device.
 function loadFunctions(names, globals, source = page) {
+  globals.runtimeConfig ??= {};
+  globals.imageTaskReceipt ??= null;
+  globals.handledFunctionCallIds ??= new Set();
+  globals.toolFollowupDrainTimer ??= null;
+  globals.toolFollowupDrainStartedAt ??= 0;
+  globals.outputAudioActive ??= () => false;
+  globals.pendingToolCalls ??= 0;
+  globals.toolFollowupNeeded ??= false;
+  globals.pendingEyeRecallResponse ??= null;
   globals.realtimeStopRequested ??= false;
   globals.continuityRestoreAt ??= Date.now();
   globals.suppressedResponseIds ??= new Set();
@@ -1505,7 +1514,7 @@ function connectionContext() {
     'llmCastMediaTools', 'llmSmartHomeTools', 'llmNoteFileTools']) context[name] = { checked: true };
   for (const name of ['deliberationTools', 'voiceTools', 'uiControlTools', 'runtimeWatchTools',
     'bodySensorTools', 'faceTools', 'chassisTools', 'memoryTools', 'searchTools', 'webPageTools',
-    'imageTools', 'sensingEyeTools', 'sensingEyeHistoryTools', 'browserFaceSensingEyeTools',
+    'imageTools', 'liveCameraTools', 'sensingEyeTools', 'sensingEyeHistoryTools', 'browserFaceSensingEyeTools',
     'castMediaTools', 'smartHomeTools', 'noteFileTools']) context[name] = [{ name }];
   return loadFunctions([
     'clearHotConversationState', 'resetSessionContextForConnection', 'loadCoreNoteContext',

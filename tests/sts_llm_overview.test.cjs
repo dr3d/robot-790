@@ -15,12 +15,15 @@ test('disabled diagnostics clear the overview without collecting prompt or timin
   const start = page.indexOf('    function beginLlmOverview()');
   const end = page.indexOf('\n    }\n', start);
   assert.ok(start >= 0 && end > start);
+  const refreshes = [];
   const context = vm.createContext({ llmRunOverview: { stale: true }, contextDiagnosticsEnabled: () => false,
-    lastConversationInputTokens: 1234, renderContextUsage: () => {} });
+    lastConversationInputTokens: 1234, renderContextUsage: () => {},
+    refreshContextLimit: force => refreshes.push(force) });
   vm.runInContext(page.slice(start, end + 6), context);
   context.beginLlmOverview();
   assert.equal(context.llmRunOverview, null);
   assert.equal(context.lastConversationInputTokens, null);
+  assert.deepEqual(refreshes, [true]);
 });
 
 test('overview uses reported input, separating conversation from isolated idle contexts', () => {

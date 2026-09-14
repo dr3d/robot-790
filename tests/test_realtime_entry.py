@@ -8,6 +8,7 @@ from robot_790d.realtime_entry import (
     _append_voice_shape_to_transcript,
     _capture_llm_wire_request,
     _chat_text_max_tokens_from_env,
+    _b1_temperature_from_env,
     _filter_private_advisory_events,
     _PrivateAdvisoryTextFilter,
     _runtime_tts_instruct,
@@ -15,6 +16,97 @@ from robot_790d.realtime_entry import (
     _voice_shape_from_transcript,
     _voice_shape_summary,
 )
+
+
+def test_auxiliary_temperatures_are_pinned_without_changing_request_contract(monkeypatch):
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+    from speech_to_speech.LLM.base_openai_compatible_language_model import WARMUP_MAX_RETRIES
+    from robot_790d.realtime_entry import apply_chat_auxiliary_temperature_patch
+
+    monkeypatch.setattr(Handler, "warmup", Handler.warmup)
+    monkeypatch.setattr(Handler, "_build_compaction_generate_fn", Handler._build_compaction_generate_fn)
+    monkeypatch.setattr(Handler, "_robot_790_auxiliary_temperature_patch", False, raising=False)
+    monkeypatch.setenv("ROBOT_790_B1_TEMPERATURE", "1.3")
+    apply_chat_auxiliary_temperature_patch()
+    warmup = Handler.warmup
+    apply_chat_auxiliary_temperature_patch()
+    assert Handler.warmup is warmup
+    received, retries = [], []
+    response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="condensed"))])
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
+        create=lambda **kwargs: received.append(kwargs) or response)))
+    client.with_options = lambda **kwargs: retries.append(kwargs) or client
+    handler = object.__new__(Handler)
+    handler.client = client
+    handler.model_name = "same-model"
+    handler.request_timeout = 17
+    handler._extra_body = {"reasoning_effort": "none"}
+    handler.warmup()
+    generate = handler._build_compaction_generate_fn()
+    assert generate("existing compaction prompt", "existing transcript") == "condensed"
+    response.choices[0].message.content = None
+    assert generate("system", "user") == ""
+    assert retries == [{"max_retries": WARMUP_MAX_RETRIES}]
+    assert received[0]["messages"] == [
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "Hello"}]
+    assert received[1]["messages"] == [
+        {"role": "system", "content": "existing compaction prompt"},
+        {"role": "user", "content": "existing transcript"}]
+    for request in received:
+        assert request["temperature"] == 0.8
+        assert request["model"] == "same-model"
+        assert request["timeout"] == 17
+        assert request["extra_body"] == {"reasoning_effort": "none"}
+        assert "top_p" not in request
+        assert "top_k" not in request
+
+
+def test_b1_temperature_default_and_override(monkeypatch):
+    monkeypatch.delenv("ROBOT_790_B1_TEMPERATURE", raising=False)
+    assert _b1_temperature_from_env() == 0.8
+    for value in [0, 0.3, 1.3, 2]:
+        monkeypatch.setenv("ROBOT_790_B1_TEMPERATURE", str(value))
+        assert _b1_temperature_from_env() == value
+
+
+@pytest.mark.parametrize("value", ["", "hot", "nan", "inf", "-0.1", "2.1"])
+def test_b1_temperature_rejects_invalid_setting(monkeypatch, value):
+    monkeypatch.setenv("ROBOT_790_B1_TEMPERATURE", value)
+    with pytest.raises(ValueError, match="ROBOT_790_B1_TEMPERATURE"):
+        _b1_temperature_from_env()
+
+
+@pytest.mark.parametrize("explicit", [None, 0.0, 1.2])
+def test_b1_temperature_reaches_provider_request(monkeypatch, explicit):
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+    from robot_790d.realtime_entry import apply_interruptible_chat_generation_patch
+
+    def generate(self, active, original, turn, options, **kwargs):
+        yield from kwargs["request_fn"]([], options)
+
+    monkeypatch.setattr(Handler, "_generate", generate)
+    monkeypatch.setattr(Handler, "_robot_790_interruptible_generation_patch", False, raising=False)
+    monkeypatch.delenv("ROBOT_790_B1_TEMPERATURE", raising=False)
+    apply_interruptible_chat_generation_patch()
+    received = []
+    handler = object.__new__(Handler)
+    handler.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
+        create=lambda **kwargs: received.append(kwargs) or iter([]))))
+    handler.model_name = "test"
+    handler.stream = True
+    handler._extra_body = None
+    handler.request_timeout = 10
+    handler._iter_events = iter
+    handler._generation_is_stale = lambda _: False
+    handler._turn_is_latest = lambda *_: True
+    turn = SimpleNamespace(response=None, gen=0, turn_id=None, turn_revision=None)
+    options = {"tool_choice": "auto"}
+    if explicit is not None:
+        options["temperature"] = explicit
+    list(handler._generate(None, None, turn, options))
+    assert received[0]["temperature"] == (0.8 if explicit is None else explicit)
+    assert received[0]["tool_choice"] == "auto"
 
 
 @pytest.mark.parametrize("marker", ["[B2 advisory]", "[STS runtime]"])
@@ -103,9 +195,8 @@ def test_private_advisory_filter_patches_streaming_and_nonstreaming_once(monkeyp
     apply_private_advisory_output_patch()
     assert Handler._iter_stream_events is patched
     for method in [Handler._iter_stream_events, Handler._iter_response_events]:
-        filtered = list(method(None, None))
-        assert len(filtered) == 1
-        assert isinstance(filtered[0], Usage)
+        with pytest.raises(RuntimeError, match="robot790_private_output_suppressed"):
+            list(method(None, None))
 
 
 @pytest.mark.parametrize("raw, expected", [
@@ -123,12 +214,84 @@ def test_private_advisory_filter_handles_real_nonstream_event_order(raw, expecte
         usage=SimpleNamespace(prompt_tokens=10, completion_tokens=20),
         choices=[SimpleNamespace(message=SimpleNamespace(content=raw, tool_calls=[]))],
     )
+    if not expected:
+        with pytest.raises(RuntimeError, match="robot790_private_output_suppressed"):
+            list(_filter_private_advisory_events(_iter_chat_response_events(response)))
+        return
     filtered = list(_filter_private_advisory_events(_iter_chat_response_events(response)))
     assert isinstance(filtered[0], Usage)
     assert "".join(event.text for event in filtered if isinstance(event, TextDelta)) == expected
     assert "".join(
         part.text for event in filtered if isinstance(event, AssistantMessage) for part in event.content
     ) == expected
+
+
+@pytest.mark.parametrize("retry_error,cancelled", [(False, False), (True, False), (True, True)])
+def test_fully_filtered_recovery_is_bounded_local_and_cancellable(monkeypatch, retry_error, cancelled):
+    from speech_to_speech.LLM.chat import Chat, make_user_message
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+    from speech_to_speech.pipeline.messages import EndOfResponse
+
+    from robot_790d.realtime_entry import PRIVATE_OUTPUT_SUPPRESSED, apply_interruptible_chat_generation_patch
+
+    calls = []
+    def generate(self, active, original, turn, options, **kwargs):
+        calls.append(active)
+        error = PRIVATE_OUTPUT_SUPPRESSED if len(calls) == 1 or retry_error else None
+        yield EndOfResponse(error=error)
+
+    monkeypatch.setattr(Handler, "_generate", generate)
+    monkeypatch.setattr(Handler, "_robot_790_interruptible_generation_patch", False, raising=False)
+    apply_interruptible_chat_generation_patch()
+    handler = object.__new__(Handler)
+    handler._generation_is_stale = lambda _: cancelled
+    handler._turn_is_latest = lambda *_: True
+    turn = SimpleNamespace(response=None, gen=0, turn_id=None, turn_revision=None)
+    active = Chat(0)
+    active.add_item(make_user_message("Tell me about that idea."))
+    output = list(handler._generate(active, active, turn, {}))
+    assert len(calls) == (1 if cancelled else 2)
+    assert len(output) == 1
+    assert bool(output[0].error) == (retry_error or cancelled)
+    assert len(active.buffer) == 1
+    if not cancelled:
+        assert calls[1] is not active
+        assert len(calls[1].buffer) == 2
+        assert "STS response recovery" in calls[1].buffer[-1].content[0].text
+
+
+def test_private_only_text_with_real_tool_call_is_not_retried():
+    from openai.types.responses import ResponseFunctionToolCall
+    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta, ToolCall
+    tool = ToolCall(item=ResponseFunctionToolCall(
+        type="function_call", name="generate_image", arguments="{}", call_id="call_real"))
+    assert list(_filter_private_advisory_events(iter([TextDelta(text="[B2 advisory] secret"), tool]))) == [tool]
+
+
+def test_zero_chat_size_preserves_live_history_and_clones(monkeypatch):
+    from speech_to_speech.LLM.chat import Chat, make_user_message
+
+    from robot_790d.realtime_entry import apply_unbounded_live_chat_patch
+    monkeypatch.setattr(Chat, "trim_if_needed", Chat.trim_if_needed)
+    monkeypatch.setattr(Chat, "_robot_790_zero_size_patch", False, raising=False)
+    apply_unbounded_live_chat_patch()
+    patched = Chat.trim_if_needed
+    apply_unbounded_live_chat_patch()
+    assert Chat.trim_if_needed is patched
+    chat = Chat(0)
+    def forbidden_compactor(_):
+        pytest.fail("zero-size history must not trigger turn-count compaction")
+    for index in range(100):
+        chat.add_item(make_user_message(f"turn {index}"))
+        chat.trim_if_needed(forbidden_compactor)
+    clone = chat.copy()
+    clone.trim_if_needed(forbidden_compactor)
+    assert len(chat.buffer) == len(clone.buffer) == 100
+    bounded = Chat(2)
+    for index in range(3):
+        bounded.add_item(make_user_message(f"turn {index}"))
+    bounded.trim_if_needed()
+    assert len(bounded.buffer) == 2
 
 
 def test_runtime_tts_instruct_reads_session_extra_field() -> None:

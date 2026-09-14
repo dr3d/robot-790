@@ -3,6 +3,8 @@ param(
     [int] $Port = 8765,
     [int] $NumPipelines = 4,
     [int] $StreamBatchSentences = 1,
+    [ValidateRange(0, 100000)]
+    [int] $ChatSize = 0,
     [string[]] $ExtraArgs = @()
 )
 
@@ -29,4 +31,5 @@ if ($HostAddress -eq "127.0.0.1") {
     Write-Host "LAN:   ws://$LanAddress`:$Port/v1/realtime"
 }
 Write-Host "Streaming TTS in $StreamBatchSentences sentence batch(es)"
-& $Python -m robot_790d.realtime_entry --mode realtime --ws_host $HostAddress --ws_port $Port --num_pipelines $NumPipelines --stream_batch_sentences $StreamBatchSentences @ExtraArgs
+Write-Host "Live history turn limit: $ChatSize (0 preserves history; provider context limit still applies); automatic compaction off"
+& $Python -m robot_790d.realtime_entry --mode realtime --ws_host $HostAddress --ws_port $Port --num_pipelines $NumPipelines --stream_batch_sentences $StreamBatchSentences --chat_size $ChatSize --compact_history false @ExtraArgs

@@ -7,6 +7,12 @@ const { test } = require('node:test');
 const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 function load(names, globals = {}) {
+  globals.imageTaskReceipt ??= null;
+  globals.pendingToolCalls ??= 0;
+  globals.toolFollowupNeeded ??= false;
+  globals.pendingEyeRecallResponse ??= null;
+  globals.eyeRecallResponses ??= new Map();
+  globals.lastUserTurnActivityAt ??= 0;
   globals.realtimeStopRequested ??= false;
   globals.pendingSessionMapMove ??= null;
   globals.sessionMapMoveBusy ??= false;
@@ -54,6 +60,16 @@ test('Brain2 evidence identifies chunks and remains unchanged when only time or 
   context.idleHardBrakeActive = () => true;
   context.idleHardBrakeReason = 'loop guard';
   assert.notEqual(context.brain2EvidenceSnapshot().fingerprint, next.fingerprint);
+});
+
+test('image tool receipts change B2 evidence even when the dialogue did not change', () => {
+  const c = evidenceContext();
+  const before = c.brain2EvidenceSnapshot();
+  c.imageTaskReceipt = { artifact: 'night.png', receipts: [{ tool: 'generate_image', status: 'ok', staged: false }] };
+  const next = c.brain2EvidenceSnapshot();
+  assert.notEqual(next.fingerprint, before.fingerprint);
+  assert.equal(next.runtime.image_task_receipts.receipts[0].staged, false);
+  assert.equal(next.runtime.sensing_eye_image, null);
 });
 
 test('attention reaches B2 as a coarse state, not a ticking clock that retriggers every poll', () => {

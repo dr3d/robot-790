@@ -1,10 +1,108 @@
 # Shared Activity And Task Continuation Experiment
 
-Status: **proposed, not implemented**. Recorded September 12, 2026 at the
-operator's request so the next work does not depend on conversation recall.
-The operator tolerates the current roughness; this is not a claim it is fixed.
+Status: **bounded image continuation implemented September 13; failed first retest followed by successful live image chains from the earlier session**.
+The broader shared-activity design below remains a proposal. Recorded September 12
+at the operator's request so the next work does not depend on conversation recall.
+
+## September 13 First Pass
+
+At 09:34-09:38 the operator used Connect Previous, excluding the failed 08:02
+loop. Three images were generated and staged. The second request completed
+generation -> eye, and Hocus Pocus completed search -> generation -> eye, each
+without an extra nudge. This validates those handoffs in a live positive case;
+it does not establish recovery inside the failed loop. The diagnostic private
+first-action prompt was not deployed. A separate short-chunk recording rollover
+defect saved only the first 57 seconds; transcript and images are preserved.
+PM: `logs/runs/20260913-093822-gulu-gulu-image-chain/postmortem.md`.
+
+The 07:56-08:02 same-thread retest produced repeated promises and apologies but
+zero search, generation, or staging calls. The continuation path never activated.
+Its mocked handoff tests do not validate first-action initiation. Browser prompt
+receipts show 47 tools and `tool_choice: auto`; exact provider requests were not
+captured, so a transport/configuration fault versus model non-selection remains
+unresolved. B2 noticed the missing search receipt, but no action followed. Do not
+ask the operator to repeat this loop as validation. First capture/replay the
+provider boundary with tool execution disabled, then test a complete action chain.
+Local PM: `logs/runs/20260913-080205-hocus-pocus-no-tool-loop/postmortem.md`.
+
+Subsequent isolated probes reproduced promise-only replies with the failed
+dialogue even while LM Studio received tool schemas and `tool_choice: auto`.
+The archived-prompt baseline called generation in 1/4 trials; a private
+action-selection direction did so in 4/4, with no calls in eight cancellation/chat
+controls. This is a small, approximate-context experiment, not a deployed fix.
+The unresolved integration problem is entering a bounded action lane before
+the first call without a keyword authorization rule or a second inference on
+every ordinary conversation turn. Details and raw evidence are linked from
+`logs/runs/20260913-080205-hocus-pocus-no-tool-loop/diagnostic.md`.
+
+`config/runtime.json.image_continuation` enables the local trial. Missing or false
+`enabled` restores speech-only follow-ups; the shipped lab configuration enables
+it. `max_steps: 3` counts the initial call plus continuation calls; `window_ms:
+120000` limits starting further steps, not the duration of a dispatched paid call.
+
+After an ordinary user-turn search or image generation, a private text-only B1
+response may choose one next action or finish/clarify without acting. Search may
+lead to another search or one authorized generation; generation may lead to staging that exact artifact. Other
+verbs, repeated generation, duplicate call IDs, stale responses, and late choices
+are rejected. The complete tool schema list stays stable; a runtime scope guards
+what can execute. Operator intent is interpreted by B1 from the existing request
+and conversation, not an English promise-matching regex. This is not proof that
+every model interpretation will be correct.
+
+The September 13 follow-through fixes the ordinary-research trap: a second
+search is now eligible without making the request an image task. The private
+instruction explicitly says to answer ordinary research from results and that
+search does not authorize drawing. The shared budget remains three calls by
+default: two searches plus generation consume it, so staging after that would
+need another user request or the existing configurable four-call budget. This
+is a bounded continuation, not a general autonomous research agent.
+
+Queued speech drains before tool follow-ups, with a 30-second wait limit. Private
+selection output is not spoken; final receipt confirmation or clarification is.
+New activity invalidates the continuation. A late generation can remain on disk
+without replacing the current UI image. Staging checks the generated filename.
+Compact action receipts reach B1's runtime tail and B2's bounded evidence context;
+B2 is held during tool work/private selection. No additional model or periodic
+judge was added. The new prompt wording is in `web/sts/image-task.js`; the creature
+prompt and root inspection exports were not changed.
+
+Not solved by this pass: semantic planning outside this narrow workflow, visual
+left/right errors, automatic-summary quality, sustained engagement after a task,
+or a proven cause for the initial "Let me look up" audio cutoff. The later
+markup-triggered cancellation guard remains in place for ordinary responses.
+The new private continuation path avoids sending its planning text to TTS.
+
+The original retest procedure was: refresh STS while disconnected, resume the same saved session,
+then requesting lookup, drawing, and eye staging together. Try a second angle,
+ask a non-leading visual question, and pause afterward. Do not change history
+selection or start Empty for this comparison.
 
 ## Problem And Evidence
+
+September 13 session navigation exposed another handoff gap: list_session_map
+found a unique requested destination, but its speech-only follow-up could not
+call enter_session. The workaround read two transcripts into the original empty
+session, not the destination's history. Actual Auto entry for that target would
+load nine retained sessions plus core memory, ten notes. A bounded map
+continuation and explicit arrival inventory are now implemented; never equate
+a note read with a thread transition. The continuation allows one exact entry
+only for a unique lookup, with operator-activity, connection-epoch, deadline,
+and duplicate-call checks. Its private prompt distinguishes a requested move
+from listing or importing, rather than classifying English requests with regex.
+Arrival is reported only after the restored parent matches the destination,
+with separate counts for historical sessions, other notes, and total notes.
+The selected history loader and save-before-departure behavior are unchanged.
+Two operational base-prompt lines were added; personality and root exports were
+not rewritten. Importing a single session and recorder repair remain deferred.
+
+Validation: 351 Node tests and 25 Python history tests pass. Six read-only direct
+model probes used the current base prompt, exported tools plus current navigation
+tools, and the actual private continuation: two jump requests selected the exact
+entry; list, import, cancel, and ambiguous requests selected no tools. This tests
+selection, not a full runtime-context replica or live movement. Requests/results:
+`logs/mechanism-validation/session-map-results/`. Live transition retest pending.
+PM:
+`logs/runs/20260913-100227-note-read-not-session-jump/postmortem.md`.
 
 The individual search, generation, and eye tools work. Their handoffs do not
 reliably complete a multi-step request. A search follow-up is speech-only

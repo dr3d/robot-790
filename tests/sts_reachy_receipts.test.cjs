@@ -5,6 +5,8 @@ const { test } = require('node:test');
 const page = fs.readFileSync('web/sts/index.html', 'utf8').replace(/\r\n/g, '\n');
 
 function load(names, globals = {}) {
+  globals.runtimeConfig ??= {};
+  globals.handledFunctionCallIds ??= new Set();
   const c = vm.createContext(globals);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
@@ -86,6 +88,23 @@ test('followup receives completed evidence only for its exact fully completed se
   assert.equal(reads(), 2);
   assert.equal(result.sequence.completed_steps, 0);
 });
+
+test('recorded dance completion can arrive after the old eight second limit', async () => {
+  const states = Array.from({ length: 30 }, () => ({ sequence: { id: 'expected', status: 'running' } }));
+  states.push({ sequence: { id: 'expected', status: 'completed', steps: 1, completed_steps: 1 } });
+  const { c, result, options } = completionFixture(states);
+  result.sequence.duration_s = 19;
+  assert.equal((await c.awaitFaceBeatCompletion(result, options)).completion, 'verified');
+});
+
+for (const status of ['move_failed', 'move_cancelled', 'interrupted', 'unverified']) {
+  test(`daemon ${status} is terminal without waiting for the full dance timeout`, async () => {
+    const { c, result, options, reads } = completionFixture([{ sequence: { id: 'expected', status } }]);
+    result.sequence.duration_s = 19;
+    assert.equal((await c.awaitFaceBeatCompletion(result, options)).status, 'error');
+    assert.equal(reads(), 1);
+  });
+}
 
 for (const condition of ['timeout', 'superseded', 'failed', 'offline', 'disconnected', 'body changed']) {
   test(`completion handles ${condition} without replaying motion`, async () => {

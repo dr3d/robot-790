@@ -1,10 +1,162 @@
 # Engineering Status
 
-Reviewed September 12, 2026. This is the maintained engineering view; session
+Reviewed September 14, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
+
+September 14 checkpoint: the latest illustrated Impossible Science run sustained
+ten questions and ten on-topic autonomous followups, with twelve generated images.
+Some image requests still needed prompting, and the generated summary omitted
+much of the later conversation. Preserve full/swept history; summary-based history
+loading remains disabled. No audio overlap was reported, but this run was not
+recorded by STS for waveform verification. The previous startup greeting loop
+remains an open relevance issue, not a proven microphone or rendering fault.
+
+New followup pacing is implemented as a trial: the one-shot attention hold is
+replaced with cooling gaps, with runtime settings 8 seconds initial delay,
+75 seconds warm attention and 240 seconds fade. The successful run still logged
+the old timing, so it does not validate this change. Browser Face also has paler
+pink lips and held speech glances. See [pacing and gaze trial](conversation-followup-pacing.md).
+All 388 JavaScript tests pass at this checkpoint. The detailed earlier entries
+below record their own implementation dates and test counts.
+
+Browser Face human-mouth port: the two-inch S3 drawing is isolated in a Canvas
+renderer class, replacing the prior browser-specific human-mouth painter.
+Generated executable pose data is shared by Browser Face and all three firmware
+variants, with explicit legacy tuning for the older S3 face-brain. Native drawing
+code is still separate across C++/JavaScript; hardware has not been flashed.
+Checkpoint `6f92283`, before/after pictures, and scope:
+[mouth port study](browser-mouth-parity-study.md). Refresh Browser Face to load
+the new scripts; no STS prompt or recording-setting changes.
+
+September 13 playback overlap repair is implemented and served. The 45-second
+fallback no longer discards live audio ownership. Completion follows source
+lifetimes/the audio clock, including pending browser setup; Stop invalidates
+pending setup and stops tracked sources. Missed onended events are recovered
+only after their scheduled end, not after a wall-clock timeout. No prompt,
+response-length, attention timer, or model changes. All 384 JavaScript tests pass,
+including nine playback regression tests. A separate headless browser verified
+real Web Audio serialization, drain, and Disconnect with silent PCM buffers;
+The later operator run reported no overlap; full waveform verification remains
+outstanding. Refresh the existing STS tab.
+
+Diagnosis from the latest PM (22:08-22:14, continuing Impossible Science):
+the old fallback forgot live Web Audio sources after 45 seconds and allowed
+idle speech over them. All three long answers triggered it; duration estimates
+support overlap on the trousers and final sunshine replies. PM and repair checks:
+`logs/runs/20260913-221447-playback-overlap/postmortem.md`.
+
+Previous PM: September 13, 21:06-21:18, Connect Empty with Impossible Science.
+Strong operator-led imaginative Q&A and cross-question callbacks; explicitly
+not an interview/engagement trial, and no search handoff occurred. First speech
+output for the first six questions was 1.49-2.50 seconds; the seventh was 9.91
+seconds. B2 still favored closure (13 of 16 steering results). Recording exists;
+finalization crossed the UI timeout, and the summary omitted the final fog and
+Tuesday material. Preserve this run as a positive creative baseline without
+declaring the task-at-hand continuity issue resolved. No runtime/prompt repairs
+made in this PM: `logs/runs/20260913-211829-impossible-science/postmortem.md`.
+
+Previous PM: September 13, 19:57-20:03, Connect Empty with the Curious Interviewer
+card. Direct questioning and a real search worked; proactive continuity did
+not. The short-pause B1 context omits the loaded card, B2's last-12-chunk evidence
+omits the rehearsal agreement, and one attentive beat triggers a hold until the
+180-second attention window ends. B2 then endorsed closure rather than returning
+to the interview. The 168-second gap was between idle requests, each of which
+produced text about two seconds after dispatch. Preserve shared activity across
+research and expose it to both pause/B2 contexts before changing timer values
+alone. The final reply also narrated a private headline angle. No repairs were
+made in this PM. Evidence and proposed tests:
+`logs/runs/20260913-200319-curious-interviewer-handoff/postmortem.md`.
+
+September 13 reliability/Reachy follow-through is implemented:
+
+- Fully private, tool-free output now ends through the normal failure lifecycle
+  and gets at most one request-local recovery. A second suppression is visible
+  in STS. Partial speech and real tool calls are never replayed by this recovery;
+  cancellation wins. This adds one recovery instruction, not a persona rewrite.
+- Ordinary research can make another search within the existing bounded
+  continuation. A search does not authorize drawing. The original three-call
+  budget, paid-generation guard, and activity/deadline cancellation remain.
+- The launcher defaults to `--chat_size 0 --compact_history false`; a local
+  compatibility patch makes zero also disable soft turn-count trimming. This
+  removes the inherited 30-turn compression/60-turn eviction triggers. It is
+  NOT token-aware compaction or unlimited model context. The provider limit
+  still applies; sweeps-only historical loading is unchanged. `-ChatSize` on
+  the base launcher can opt back into a positive live-turn bound.
+- Six stock Reachy clips now use daemon-side recorded playback through existing
+  beat names: affection, daydream, startle, wary, goofy, and silly. The last two
+  are 18-19-second dances. Mood poses remain separate. Clips may play their
+  bundled sound cues; Eric's TTS routing is unchanged. Completion waits account
+  for clip duration, and failed/cancelled/unverified receipts end promptly.
+
+Verification: all 375 Node tests and 146 focused Python tests passed, including
+four real-generation lifecycle tests. An isolated synthetic-camera browser
+smoke test also passed with writes intercepted.
+The live robot's read-only catalog confirms all six clips exist. No physical
+choreography trial or new live Eric conversation is claimed by these tests.
+The realtime worker was restarted and verified listening on 8765 with the new
+history flags; the page and Browser Face servers remain up. Refresh STS before
+connecting. The motion-enabled Reachy adapter launch was blocked by the tool
+execution policy, so that adapter was not started and physical playback remains
+an outstanding verification step. No LM Studio model/configuration was changed.
+See the [Reachy cheat sheet](reachy-cheat-sheet.md#stock-performances).
+
+Performance mode is now disabled at its central gate. Its checkbox, preset,
+and automatic stage-phrase trigger are removed; legacy saved activation and
+pending performance prompts are cleared on load. Stage requests remain ordinary
+conversation: no performance-specific history removal, privacy transformation,
+tool restrictions, or attention-ramp bypass. This parks the special apparatus,
+not Eric's ability to perform. The private-output filter is separate; its
+silent-turn recovery is implemented above and still needs a live retest.
+
+Latest PM (September 13, 13:51, `logs/runs/20260913-135146-stage-silent-turn/`)
+traced a roughly 115-second apparent reply delay to a fully silent filtered
+response, followed by an ordinary idle performance beat. The model finished the
+direct response in about 4.5 seconds; the private-controller marker filter
+suppressed output and no immediate recovery occurred. "Comedy act" had armed
+automatic performance privacy, which also excludes the conversation attention
+ramp: drift 7 then waits 112.5 seconds. A terminal filtered-turn result and
+bounded fresh-turn recovery were identified as the priority. No live compaction occurred in
+this run. Note reading, laughter-cued delivery and audience capture worked;
+seven jokes were called six. No runtime repairs were applied in the PM.
+
+The CTX meter now requests the context limit on connection independently of
+optional diagnostics, with a throttled retry on measured responses if the limit
+is unavailable. It was verified in an isolated browser and needs a page refresh.
+
+Eric now has `set_live_camera` for user-requested camera on/off, with an optional
+single-frame capture for combined open-and-look requests. Browser permission
+still applies. Disconnect stops all camera tracks before saving, including when
+saving fails; late permission results cannot reopen a cancelled stream. Socket
+closure also stops the camera. Saved sensing-eye stills are retained. This adds
+camera tool-use instructions, not persona changes. Verified with 340 Node tests
+and an isolated synthetic-camera browser test; no physical camera or LLM used.
+
+The preceding PM (September 13, 13:09, `logs/runs/20260913-130901-jokes-camera/`)
+identified two apparatus issues needing follow-up: ordinary joke research was
+misrouted into the image continuation and a requested second search was rejected;
+the inherited realtime `chat_size=30`, `compact_history=True` policy compressed
+live dialogue mid-run despite roughly 41% context use. This live compactor is
+separate from the sweeps-only historical-session policy. Two camera captures
+succeeded, then later capture/clear requests produced no calls; the first failure
+preceded the compaction splice, so a single causal explanation is not established.
+Thread jump/ancestry and session saving worked. No repairs were made in that PM.
+
+B1 conversation generation now explicitly defaults to temperature **0.8**,
+including idle and tool-continuation turns. This establishes a known baseline;
+it does not establish the effective server default of historical runs.
+`ROBOT_790_B1_TEMPERATURE` can override it (0 to 2); the realtime worker prints
+the configured default at startup. B2, summary jobs, and the persona prompt
+are unchanged. No temperature slider or spoken control is implemented yet.
+Other explicit settings are B2 mull **0.55**, production session preparation
+**0.2**, chunked-summary lab **0.2**, and private deliberation **0.3**. See the
+[temperature audit and proposed summary comparison](summary-research-plan.md#temperature-audit-and-next-experiment)
+for research, limits, and the distinction between summary fidelity and coverage.
+Inherited realtime warmup and fallback context compaction are also explicitly
+pinned to the assumed **0.8** baseline. That legacy compactor is now disabled by default.
+Top-p/top-k and other samplers are untouched; temperature experiments are parked.
 
 The daily setup is the local realtime worker, STS page on port 8790, and Browser
 Face on 8791, using LM Studio for the configured local model. Browser Face is
@@ -81,12 +233,27 @@ archive recovery, a new context-loading policy, or automatic movement during
 idle. Root prompt snapshots remain unchanged and now also predate these tools.
 See the [operator instructions](sts-ui-guide.md#ask-eric-to-enter-a-session).
 
-Twelve focused navigation tests and the complete Node suite pass (331 tests).
-Validation covers catalogue bounds, ambiguous names, preflight/save/connect
-failure, stale/canceled requests, speech drain, mic restoration, and dispatch at
-the tool-response boundary. Live spoken navigation has not yet been exercised;
-no user session was changed for testing. Reload the STS page while disconnected;
-no backend restart is required.
+September 13 live testing exposed a missing lookup-to-entry handoff: Eric found
+the right thread, but the speech-only follow-up could not call `enter_session`.
+Reading two notes afterward left him in the original empty thread. The repair
+adds a private, single-call map continuation for a unique match. New operator
+activity, expired lookup, or a changed connection invalidates it; ambiguous
+matches require clarification. Listing or importing alone must not move threads.
+
+Arrival now requires the destination connection and matching restored parent.
+STS reports the actual loaded historical-session and other-note counts in the
+conversation, Events, and a private controller receipt. The ordinary selected
+history loader remains authoritative; no new ancestry or summary policy is added.
+Two base-prompt lines explicitly distinguish navigation from physical motion,
+note reads, and queued-but-not-completed moves. Root snapshots remain unchanged.
+
+Validation: 351 Node tests and 25 Python history tests passed. Read-only model
+probes selected entry for two jump requests and no tools for listing, importing,
+cancellation, or ambiguity. The live history preview for Genius of the Universe
+roleplay returns nine swept historical sessions plus core memory, ten notes.
+These checks do not substitute for a live spoken transition; that retest remains.
+Refresh STS while disconnected; no backend restart is required. Importing one
+past session into the current conversation and the recorder repair are deferred.
 
 ## September 12 Authored Notes Default
 
@@ -135,11 +302,56 @@ Eric-authored note generation has not yet been retested.
 
 ## Remaining Priorities
 
+September 13 post-archive filesystem audit: 36 active sessions and 25 locally
+archived session records checked; all 224 active pins resolve, active forms are source-valid,
+and no missing active image anchors or archive asset integrity failures were found.
+Thirteen legacy sources require current Auto-history preparation, not recovery.
+One separate loader defect remains: explicitly pinned `puppet.txt` has an STS
+Session Note header, so Auto misclassifies it as managed session ancestry and
+skips it outside `sessions/`. Preserve it as an ordinary note without importing
+ancestry. Audit: `logs/mechanism-validation/archive-integrity-audit.md`.
+
+September 13 image-recall PM: two real recalls succeeded, then Gulu Gulu/ferry/
+gallery requests produced promises with no calls. All requested images were in
+the returned global catalogue and served successfully in read-only checks. A
+plain recall confirmation fired after intervening user speech: unlike catalogue
+continuations, it lacks originating-turn freshness protection. This is a concrete
+scheduler repair, but its causality for later no-call replies is not proven.
+The recorder also appears to have retained the prior run's chunk after failed
+cleanup, yielding a four-chunk 16m55s aggregate for a five-minute conversation.
+Repair recorder session isolation as well as short-chunk finalization. PM:
+`logs/runs/20260913-110644-recall-promises/postmortem.md`. No new repair deployed
+as part of that PM; preserve cross-thread image access while fixing execution.
+
+September 13 repair: a narrow, configurable image continuation is now implemented
+for user-requested search -> generation -> sensing-eye staging. It uses private
+next-step selection, one generation per chain, artifact checks, duplicate/stale-call
+guards, and playback drain before follow-up. Action receipts now reach B1/B2.
+The first same-thread spoken retest failed: repeated execution claims, zero actual
+tool calls, and therefore no continuation to exercise. Browser receipts show tools
+enabled; exact provider request configuration remains unverified. First-action
+initiation must be diagnosed before another operator retest. This does not establish
+image perception accuracy or solve general engagement. See the implementation scope in
+[the continuation experiment](task-continuation-experiment.md#september-13-first-pass).
+Repair validation: 501 Python tests and 345 Node tests passed, plus Ruff and script
+parsing. The page/helper server was restarted and the enabled configuration and
+new module were verified over HTTP. These tests cover handoffs after a tool call,
+not reliable initiation by the live model. The failed run generated no image.
+
+Later September 13 live result: Connect Previous excluded the failure-loop
+session, and the same deployed continuation successfully generated/staged three
+images, including the complete Hocus Pocus search -> draw -> eye chain without
+another prompt. This is a positive handoff validation, not in-loop recovery.
+The diagnostic first-action prompt was not deployed. A separate recorder bug
+on a discarded short visual-rollover chunk prevented recording restart; only
+57 seconds of that run were saved. Repair the recorder before relying on full
+audio capture. Local PM: `logs/runs/20260913-093822-gulu-gulu-image-chain/postmortem.md`.
+
 1. **Complete requested work across tool boundaries.** The context-scaffold fix
    does not solve every search-to-drawing or read-to-writing sequence. Most tool
    follow-ups still disallow another tool call; image recall has a bounded
    continuation. The experiment in [Shared Activity And Task Continuation](task-continuation-experiment.md)
-   is documented, not implemented. Explicit offer-and-assent file-write consent
+   has a narrow image first pass; its general shared-activity state is still proposed. Explicit offer-and-assent file-write consent
    and speech cutoffs around failed tool attempts remain open.
 2. **Evaluate engagement and cancellation over long runs.** The attention ramp,
    stale-result guards, and interruptible provider I/O are implemented. They do

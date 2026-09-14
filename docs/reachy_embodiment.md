@@ -78,6 +78,34 @@ memory, or conversational frame into Eric.
 
 ## Adapter Contract
 
+### Recorded Performance Harvest
+
+The adapter now calls the daemon's
+`POST /api/move/play/recorded-move-dataset/{dataset}/{move}` endpoint for a fixed
+six-clip roster from `pollen-robotics/reachy-mini-emotions-library`. It preserves
+the daemon UUID, tracks its completion stream, protects the running performance
+from lifecycle cues, and cancels only adapter-owned moves. There is no fallback
+to a different clip or repeated dispatch after an uncertain result. Missing
+datasets/clips fail visibly. No movement files or neighboring application code
+were copied into STS; the daemon owns playback and dataset installation.
+
+Sources inspected locally: the neighboring conversation app's
+`dance_emotion_moves.py`, `tools/play_emotion.py`, and installed daemon movement
+router/backend; the cached emotion dataset revision was
+`85dd1b4e12b0dcb67119e495c44022e2b62c91cf`. Runtime playback uses the daemon's
+installed dataset, not a revision pinned by STS. The robot's read-only catalog
+confirmed all six names on September 13. The stock route can also play the
+clip's bundled audio and has no per-request mute switch. STS does not alter
+the robot's global volume to hide it.
+
+The same existing `play_face_beat` schema supplies the vocabulary; the Reachy
+body manual explains its mapping. No additional tool roster is loaded for other
+bodies. Persistent `set_face_mood` remains the small-pose path. Automatic
+emotion-to-choreography blending, speech-synchronous movement, and a shared
+upstream movement mixer remain later work, not features of this first pass.
+
+### HTTP Surface
+
 The current adapter shares the semantic HTTP surface where the body supports it:
 
 - `GET /state`: daemon readiness, motor mode, measured head pose, antenna
@@ -98,6 +126,8 @@ The current adapter shares the semantic HTTP surface where the body supports it:
   `double_take`, `drowsy`, or `robot_scan`. These are bounded two-to-four-step
   sequences. Each step uses daemon `goto` and waits for its completion event.
   Double take really looks twice; scan sweeps both ways and centers.
+  Also accepts the six recorded performances listed above, each dispatched as
+  one daemon clip with its own completion UUID.
 - `POST /sleep`: requests the daemon's physical sleep routine. Ordinary gestures
   are then gated until an explicit wake request.
 - `POST /wake`: requests the daemon's wake routine, potentially enabling motors.
@@ -118,7 +148,8 @@ halts further steps. Known running adapter moves are stopped where possible.
 An unknown dispatch is never retried. Measured pose remains separate evidence.
 Status reads and mouth ticks do not erase the last movement error.
 
-STS now waits up to eight seconds for the exact gesture sequence's completion
+STS waits eight seconds for short gestures, or the advertised clip duration
+plus three seconds (capped at thirty), for the exact sequence's completion
 before its final tool followup. The initial spoken acknowledgment can still
 arrive immediately. Polling never replays motion; timeout, replacement, or an
 unavailable state produces an explicitly unverified acknowledgment. Bodies

@@ -53,7 +53,8 @@
       cursor: col-resize;
       user-select: none;
     }
-    body.resizing-sensing-eye {
+    body.resizing-sensing-eye,
+    body.resizing-live-camera {
       cursor: ns-resize;
       user-select: none;
     }
@@ -1109,7 +1110,8 @@
       cursor: ns-resize;
       touch-action: none;
     }
-    .vision-preview.ready + .vision-preview-handle {
+    .vision-preview.ready + .vision-preview-handle,
+    .camera-card.live .vision-preview-handle {
       display: flex;
     }
     .vision-preview-handle::before {
@@ -1174,6 +1176,7 @@
       font-size: 13px;
     }
     .camera-card.live {
+      grid-template-rows: auto auto auto;
       border-color: rgba(96, 211, 148, 0.75);
       background: #17231d;
     }
@@ -1443,7 +1446,7 @@
       height: var(--sensing-eye-preview-height);
     }
     #micPanel .camera-preview {
-      height: 72px;
+      height: var(--live-camera-preview-height, 72px);
     }
     #settingsPanel .lab-goal-control,
     #settingsPanel .thread-note-control,
@@ -2156,7 +2159,7 @@
         height: var(--sensing-eye-preview-height);
       }
       #micPanel .camera-preview {
-        height: 88px;
+        height: var(--live-camera-preview-height, 88px);
       }
       .vision-drop {
         width: 100%;
@@ -2482,6 +2485,7 @@
             <div class="runtime-settings-expando-body">
               <div id="visionCameraCard" class="camera-card">
                 <video id="visionCameraPreview" class="camera-preview" muted playsinline></video>
+                <span id="visionCameraPreviewHandle" class="vision-preview-handle" role="separator" aria-label="Resize live camera preview" aria-controls="visionCameraPreview" aria-orientation="horizontal" tabindex="0" title="Drag to resize camera preview; double-click to reset"></span>
                 <span class="vision-copy">
                   <span class="vision-title">Browser Live Camera</span>
                   <span id="visionCameraHint" class="vision-hint">Live camera off</span>
@@ -2727,7 +2731,6 @@
                   <option value="quiet_mulling">Quiet Mulling</option>
                   <option value="person_lane">Person Lane</option>
                   <option value="first_contact_prep">First Contact Prep</option>
-                  <option value="performance_set">Performance Set</option>
                 </select>
               </label>
               <label>
@@ -2761,7 +2764,7 @@
               </label>
               <button id="idlePonderNow" disabled>Ponder</button>
               <span id="idleSchedulerStatus" class="subtle idle-scheduler-status">Idle: disconnected</span>
-              <label class="toggle-row"><input id="performanceMode" type="checkbox"> Performance mode</label>
+              <input id="performanceMode" type="hidden" value="disabled">
               <label class="toggle-row"><input id="idleSubstrateTest" type="checkbox"> Substrate test</label>
               <label class="toggle-row"><input id="firstContactMode" type="checkbox"> First contact</label>
               <button id="firstContactArm" type="button">Arm Contact</button>
@@ -2935,6 +2938,7 @@
   </main>
 
   <script src="llm-overview.js"></script>
+  <script src="image-task.js"></script>
   <script>
     const serverUrl = document.querySelector("#serverUrl");
     const faceUrl = document.querySelector("#faceUrl");
@@ -3154,6 +3158,8 @@
     let ericAudioMuted = false;
     let lastMicLevelPercent = 0;
     let visionCameraStream;
+    let visionCameraStartPromise = null;
+    let visionCameraGeneration = 0;
     let micSource;
     let micProcessor;
     let brain2MonitorAudioActive = false;
@@ -3204,6 +3210,8 @@
     let audioChunkBytes = 0;
     let audioFlushTimer;
     let activeAudioSources = new Set();
+    const pendingAudioPlaybacks = new Set();
+    let audioPlaybackGeneration = 0;
     let lastBargeInAt = 0;
     let micInterruptActiveMs = 0;
     let micInterruptGapMs = 0;
@@ -3251,6 +3259,10 @@
     let toolFollowupInstructions = "";
     let toolFollowupPromptSources = [];
     let toolFollowupCatalog = null;
+    let imageTaskReceipt = null;
+    let toolFollowupDrainTimer = null;
+    let toolFollowupDrainStartedAt = 0;
+    const handledFunctionCallIds = new Set();
     let pendingEyeRecallResponse = null;
     const eyeRecallResponses = new Map();
     let toolFollowupPromptLog = [];
@@ -3394,6 +3406,7 @@
     let latestBrainStatus = null;
     let llmRunOverview = null;
     let lastConversationInputTokens = null;
+    let contextLimitRefreshAt = 0;
     let gpuStatusPollTimer = null;
     const gpuHistoryLimit = 90;
     const gpuStatusPollMs = 500;
@@ -3831,23 +3844,6 @@
           idleSubstrateTest: false,
           firstContactMode: true
         }
-      },
-      performance_set: {
-        label: "Performance Set",
-        settings: {
-          idleDrift: 12,
-          idleWonder: 3,
-          idleSelfFocus: 4,
-          idleNotesFocus: 4,
-          brain2MouthBrain: true,
-          brain2VoiceMonitor: true,
-          brain2VoiceVolume: defaultBrain2VoiceVolume,
-          brain2VoicePace: 1.15,
-          brain2PersonFocus: 3,
-          performanceMode: true,
-          idleSubstrateTest: false,
-          firstContactMode: false
-        }
       }
     };
     let applyingRunPreset = false;
@@ -3886,7 +3882,6 @@
     const brain2FastClockFloorMs = 14 * 1000;
     const brain2FailureBackoffMs = 70 * 1000;
     const brain2DeferredSurfaceMaxAgeMs = 90 * 1000;
-    const performanceAutoMs = 8 * 60 * 1000;
     const idleCuriositySeedRetireMs = 45 * 60 * 1000;
     const idleCuriositySeedLimit = 10;
     const idleTopicRetireMs = 45 * 60 * 1000;
@@ -4213,7 +4208,7 @@
       {
         type: "function",
         name: "play_face_beat",
-        description: "Play a named ESP32 face beat when the user asks for a funny face, silly face, expressive action, scan, double take, or animated beat.",
+        description: "Play a named performance on the active embodiment when the user asks for a funny face, dance, expressive action, scan, double take, or animated beat. Use its manual for supported names.",
         parameters: {
           type: "object",
           properties: {
@@ -4224,7 +4219,7 @@
                 "mischief", "confused", "focus_lock", "double_take", "goofy", "silly",
                 "drowsy", "robot_scan", "wary", "startle"
               ],
-              description: "Beat name supported by the ESP32 face firmware."
+              description: "Beat name supported by the active embodiment."
             }
           },
           required: ["name"],
@@ -4951,6 +4946,24 @@
       }
     ];
 
+    const liveCameraTools = [
+      {
+        type: "function",
+        name: "set_live_camera",
+        description: "Turn the browser live camera on or off when the user requests it. Browser permission is required. Set capture_frame true when the user also asks for a picture or asks you to look at the current view; this captures one frame into the sensing eye after opening the camera. Enabling alone does not give you visual context. Disconnect stops the camera.",
+        parameters: {
+          type: "object",
+          properties: {
+            enabled: { type: "boolean", description: "True to open the camera, false to stop it." },
+            capture_frame: { type: "boolean", description: "Also capture a still when enabling, only if the user requests a picture or current visual inspection." },
+            reason: { type: "string", maxLength: 120, description: "Short reason for the camera action." }
+          },
+          required: ["enabled"],
+          additionalProperties: false
+        }
+      }
+    ];
+
     const sensingEyeTools = [
       {
         type: "function",
@@ -5349,8 +5362,9 @@
       "Use move_generated_image_to_sensing_eye when the user asks you to put the generated/imagined image into your sensing eye, make it current visual context, or inspect the image you just generated.",
       "Never say a generated image is in your sensing eye unless move_generated_image_to_sensing_eye succeeded.",
       "Treat the browser live camera stream and the sensing eye as separate: the camera is the moving hardware feed; the sensing eye is a staged still image or text item in context.",
+      "When the user asks to turn the browser camera on or off, use set_live_camera. If they also ask you to look or take a picture while it is off, set enabled true and capture_frame true; browser permission may require their approval. Enabling the stream alone is not visual inspection.",
       "If the browser live camera stream is on and you need current visual context, call capture_sensing_eye to copy one frame into the sensing eye before describing the current view.",
-      "Never claim you captured, saw, or inspected the current browser live camera frame unless capture_sensing_eye succeeded.",
+      "Never claim you captured, saw, or inspected the current browser live camera frame unless capture_sensing_eye succeeded, directly or through set_live_camera's capture receipt.",
       "If you are in the browser_face embodiment and need to inspect your own rendered expression, call capture_browser_face_to_eye; treat the result as a mirror/self-image, not a hardware camera view.",
       "If you are in the browser_face embodiment and the user asks you to strike a pose, show a title/name/caption, then take a picture or evaluate yourself, use pose_and_capture_browser_face instead of separate face/text/capture calls.",
       "If a sensing-eye image is already staged, describe it as the staged sensing-eye image, not as live camera vision unless it was captured from the live camera.",
@@ -6146,6 +6160,15 @@
       return { status: "queued", destination: selected, message: "STS will save and switch after this response. Not yet connected to the destination." };
     }
 
+    function sessionMapArrivalReceipt(move) {
+      const files = [...new Set(loadedNoteContexts.map(item => item.filename))];
+      const sessions = files.filter(name => /^sessions\//i.test(name));
+      return { status: "arrived", destination: move.session_id, title: move.title,
+        parent_session_id: continuityParentForCurrentRun, resume_form: move.resumeForm,
+        historical_sessions: sessions.length, other_notes: files.length - sessions.length,
+        total_notes: files.length, loaded_files: files };
+    }
+
     async function performSessionMapMove(move) {
       sessionMapMoveBusy = true;
       const stillRequested = () => pendingSessionMapMove === move
@@ -6169,9 +6192,16 @@
         while (socket === ws && generation === realtimeSessionGeneration && !realtimeStopRequested
             && socket.readyState === WebSocket.CONNECTING && Date.now() < connectDeadline) await sleepMs(100);
         if (!activeRealtimeSession(socket, generation)) throw new Error("Destination connection unavailable. The conversation you left is saved.");
+        if (continuityParentForCurrentRun !== move.session_id) throw new Error("Destination history was not restored; arrival is unverified.");
+        const receipt = sessionMapArrivalReceipt(move);
         setSelectedContinuitySessionFilename(move.session_id);
         log(events, `session map arrived: ${move.title} / ${move.session_id}`);
-        recordUiEvent("session map arrived", move.session_id, { title: move.title });
+        log(events, `session map arrival inventory: ${JSON.stringify(receipt)}`);
+        recordUiEvent("session map arrived", move.session_id, receipt);
+        addConversation(`System: Entered ${move.title}: ${receipt.historical_sessions} historical sessions, ${receipt.other_notes} other note${receipt.other_notes === 1 ? "" : "s"} (${receipt.total_notes} notes total).`, { touchActivity: false });
+        send({ type: "conversation.item.create", item: { type: "message", role: "assistant",
+          content: [{ type: "output_text", text: `[STS runtime]\nPrivate controller update, not spoken dialogue.\nsession_arrival:\n${JSON.stringify(receipt)}\nThe previous live conversation was saved. This connection resumes the destination's retained context; the current live conversation is separate from the historical-session count.\n[End STS runtime]` }] }
+        }, { socket, generation });
         if (move.resumeMic) {
           micMutedForNarration = move.muted;
           await startMic({ reason: "session map arrival" });
@@ -7217,6 +7247,7 @@
           embodiment_profile_rule: String(result.embodiment_profile_rule || ""),
           idle_level12_cooldown_s: Number(result.idle_level12_cooldown_s) || 12,
           idle_timing: result.idle_timing && typeof result.idle_timing === "object" ? result.idle_timing : {},
+          image_continuation: result.image_continuation || {},
           audio_interrupt: result.audio_interrupt && typeof result.audio_interrupt === "object" ? result.audio_interrupt : {},
           creature: result.creature && typeof result.creature === "object" ? result.creature : null,
           creature_source: String(result.creature_source || ""),
@@ -7525,6 +7556,7 @@
     function buildRuntimeContextSections() {
       return {
         runtime: formatRuntimeStateForInstructions(),
+        image_task: JSON.stringify(imageTaskReceipt || { receipts: [] }),
         sensing_text: formatSensingTextForInstructions() || "Current sensing-eye text: absent.",
         search_receipts: formatRecentSearchContextForInstructions({ relativeAge: false }) || "No retained web-search receipts.",
         alone_ledger: formatAloneStateForInstructions({ includeAge: false })
@@ -7977,6 +8009,8 @@
 
     function brain2BlockedReason({ manual = false } = {}) {
       if (pendingSessionMapMove || sessionMapMoveBusy) return "session transition";
+      if (pendingToolCalls > 0 || toolFollowupNeeded || pendingEyeRecallResponse) return "tool continuation";
+      if ([...eyeRecallResponses.values()].some(scope => !scope.completed && scope.userActivityAt === lastUserTurnActivityAt)) return "private tool choice";
       if (brain2InFlight) return "already in flight";
       if (!manual && !realtimeConnected()) return "disconnected";
       if (!manual && !brain2MouthBrainEnabled()) return "brain 2 off";
@@ -8015,57 +8049,31 @@
     }
 
     function manualPerformanceModeEnabled() {
-      return Boolean(performanceMode?.checked);
+      return false;
     }
 
     function performanceModeEnabled() {
-      return manualPerformanceModeEnabled() || Date.now() < performanceAutoUntil;
+      // Parked: stage dialogue must not switch privacy, context, tools, or idle timing.
+      return false;
     }
 
     function performanceModeLabel() {
-      if (manualPerformanceModeEnabled()) return "manual";
-      if (Date.now() < performanceAutoUntil) {
-        const remaining = Math.max(0, Math.round((performanceAutoUntil - Date.now()) / 1000));
-        return `auto ${remaining}s`;
-      }
-      return "off";
+      return "disabled";
     }
 
     function loadPerformanceMode() {
-      performanceMode.checked = localStorage.getItem(performanceModeStorageKey) === "true";
+      savePerformanceMode();
     }
 
     function savePerformanceMode() {
-      if (applyingRunPreset) return;
-      localStorage.setItem(performanceModeStorageKey, String(manualPerformanceModeEnabled()));
-    }
-
-    function userRequestedPerformance(text) {
-      return /\b(take it away|do (?:a|the) set|comedy act|stand[- ]?up|work the room|entertain(?: them| us| the room| the audience)?|perform(?:ance)? mode|step up to the mic|audience is waiting|give them a warm welcome)\b/i.test(text || "");
-    }
-
-    function armPerformanceMode(text) {
-      const prompt = String(text || "").trim();
-      if (prompt) performancePrompt = redactPerformancePrivateText(prompt).slice(-900);
-      if (!manualPerformanceModeEnabled()) {
-        performanceAutoUntil = Date.now() + performanceAutoMs;
-      }
-      updateSessionTools();
-      log(events, `performance mode ${performanceModeLabel()}`);
-      scheduleIdlePonder();
-    }
-
-    function updatePerformanceModeUi() {
-      savePerformanceMode();
-      if (!manualPerformanceModeEnabled() && Date.now() >= performanceAutoUntil) performancePrompt = "";
-      updateSessionTools();
-      log(events, `performance mode ${performanceModeLabel()}`);
-      scheduleIdlePonder();
+      performanceMode.checked = false;
+      performanceAutoUntil = 0;
+      performancePrompt = "";
+      localStorage.removeItem(performanceModeStorageKey);
     }
 
     function performancePromptContext() {
-      if (!performancePrompt) return "";
-      return `Recent performance handoff from the user, for public-safe premise only:\n${performancePrompt}`;
+      return "";
     }
 
     function redactPerformancePrivateText(text = "") {
@@ -8472,6 +8480,72 @@
       interruptSensitivityValue.textContent = level <= 0 ? "Off" : `${level}/10`;
       saveInterruptSensitivity();
       syncRealtimeInterruptPolicy();
+    }
+
+    function initializeLiveCameraResizer() {
+      const handle = document.querySelector("#visionCameraPreviewHandle");
+      if (!handle || !visionCameraPreview) return;
+      const key = "robot790.liveCameraPreviewHeight.v1";
+      const minimum = 72, maximum = 600;
+      const defaultHeight = parseFloat(getComputedStyle(visionCameraPreview).height) || 88;
+      let height = defaultHeight;
+      const setHeight = (value, persist = false) => {
+        height = Math.round(clampNumber(value, minimum, maximum, defaultHeight));
+        document.documentElement.style.setProperty("--live-camera-preview-height", `${height}px`);
+        handle.setAttribute("aria-valuemin", String(minimum));
+        handle.setAttribute("aria-valuemax", String(maximum));
+        handle.setAttribute("aria-valuenow", String(height));
+        handle.setAttribute("aria-valuetext", `${height} pixels`);
+        if (persist) {
+          try { localStorage.setItem(key, String(height)); } catch { /* Resizing still works without storage. */ }
+        }
+        scheduleLogPaneHeightUpdate();
+      };
+      try {
+        const saved = localStorage.getItem(key);
+        if (saved !== null && saved.trim() && Number.isFinite(Number(saved))) height = Number(saved);
+      } catch { /* Use the layout default when storage is unavailable. */ }
+      setHeight(height);
+      let dragging = false;
+      handle.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || dragging) return;
+        event.preventDefault();
+        const startY = event.clientY, startHeight = height, pointerId = event.pointerId;
+        dragging = true;
+        document.body.classList.add("resizing-live-camera");
+        const move = event => {
+          if (event.pointerId !== pointerId) return;
+          event.preventDefault();
+          setHeight(startHeight + event.clientY - startY);
+        };
+        const finish = event => {
+          if (event.pointerId !== pointerId) return;
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", finish);
+          window.removeEventListener("pointercancel", finish);
+          handle.removeEventListener("lostpointercapture", finish);
+          dragging = false;
+          document.body.classList.remove("resizing-live-camera");
+          if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
+          setHeight(event.type === "pointercancel" ? startHeight : height, true);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", finish);
+        window.addEventListener("pointercancel", finish);
+        handle.addEventListener("lostpointercapture", finish);
+        try { handle.setPointerCapture(event.pointerId); } catch { /* Window listeners remain active. */ }
+      });
+      handle.addEventListener("dblclick", event => {
+        event.preventDefault();
+        setHeight(defaultHeight, true);
+      });
+      handle.addEventListener("keydown", event => {
+        const step = event.shiftKey ? 40 : 16;
+        const value = { ArrowDown: height + step, ArrowUp: height - step, Home: minimum, End: maximum }[event.key];
+        if (value === undefined) return;
+        event.preventDefault();
+        setHeight(value, true);
+      });
     }
 
     function currentSensingEyePreviewHeight() {
@@ -9016,12 +9090,13 @@
 
     function updateVisionCameraButtons() {
       const active = visionCameraActive();
-      visionCameraStartButton.disabled = active;
+      const starting = Boolean(visionCameraStartPromise);
+      visionCameraStartButton.disabled = active || starting;
       visionCameraFrameButton.disabled = !active;
       if (visionBrowserFaceFrameButton) visionBrowserFaceFrameButton.disabled = !browserFaceControllerActive();
-      visionCameraStopButton.disabled = !active;
+      visionCameraStopButton.disabled = !active && !starting;
       visionCameraCard.classList.toggle("live", active);
-      if (!active) visionCameraHint.textContent = "Live camera off";
+      if (!active) visionCameraHint.textContent = starting ? "Starting..." : "Live camera off";
       if (contextPanel?.open) renderContextMap();
     }
 
@@ -9130,11 +9205,13 @@
       log(events, opened ? `generated image opened: ${generatedImageUrl}` : "generated image popup blocked");
     }
 
-    async function moveGeneratedImageToSensingEye({ reason = "" } = {}) {
+    async function moveGeneratedImageToSensingEye({ reason = "", _expectedFilename = "", _isCurrent = () => true } = {}) {
       const generation = sensingEyeGeneration;
+      if (!_isCurrent()) throw new Error("Image request was superseded.");
       if (!generatedImageUrl) throw new Error("No generated image is available.");
       const imageUrl = generatedImageUrl;
       const imageName = generatedImageName || filenameFromPath(imageUrl) || "generated-image.jpg";
+      if (_expectedFilename && imageName !== _expectedFilename) throw new Error("The generated image changed; the requested artifact was not staged.");
       let imageDataUrl = imageUrl;
       if (!/^data:image\//i.test(imageUrl)) {
         const response = await fetch(imageUrl, { cache: "no-store" });
@@ -9142,6 +9219,7 @@
         imageDataUrl = await blobToDataUrl(await response.blob());
       }
       const image = await loadImage(imageDataUrl);
+      if (!_isCurrent() || imageUrl !== generatedImageUrl) throw new Error("Image request was superseded before staging.");
       const historyItem = await setVisionImageFromDrawable(image, imageName, {
         eyeGeneration: generation,
         source: "generated image",
@@ -9149,6 +9227,7 @@
         openUrl: imageUrl,
         transcriptAction: "generated image moved into eye"
       });
+      if (!historyItem || !visionImageStaged || visionImageName !== imageName) throw new Error("Generated image staging was not completed.");
       generatedImageHint.textContent = `${generatedImageName || imageName} - moved to sensing eye`;
       updateGeneratedImageButtons();
       return {
@@ -9354,7 +9433,7 @@
         localStorage.setItem(brain2VoiceVolumeStorageKey, String(preset.settings.brain2VoiceVolume));
         localStorage.setItem(ericAudioMutedStorageKey, "false");
         localStorage.setItem(ericAudioVolumeStorageKey, String(defaultEricAudioVolume));
-        localStorage.setItem(performanceModeStorageKey, String(Boolean(preset.settings.performanceMode)));
+        localStorage.removeItem(performanceModeStorageKey);
       }
 
       if (modelPreset) modelPreset.value = "qwen27-mtp-vlow";
@@ -10439,16 +10518,9 @@
     function checkAssistantUtteranceFinished() {
       clearAssistantFinishTimer();
       if (!assistantFinishPending) return;
-      const pendingForMs = Date.now() - assistantFinishArmedAt;
-      if (responseActive || (outputAudioActive() && pendingForMs < 45000)) {
+      if (responseActive || outputAudioActive()) {
         assistantFinishTimer = setTimeout(checkAssistantUtteranceFinished, 150);
         return;
-      }
-      if (pendingForMs >= 45000 && outputAudioActive()) {
-        log(events, "assistant finish fallback: releasing stale audio wait");
-        activeAudioSources.clear();
-        if (audioContext) playbackTime = audioContext.currentTime;
-        clearAudioQueue();
       }
       const wasIdle = assistantFinishWasIdle;
       assistantFinishPending = false;
@@ -10643,7 +10715,8 @@
     function conversationPauseHoldUntil() {
       if (!conversationAttentionEnabled() || !lastAcceptedUserTranscriptAt ||
           conversationPauseUserAt !== lastAcceptedUserTranscriptAt) return 0;
-      return Math.max(lastAcceptedUserTranscriptAt, lastAssistantResponseDoneAt) + idleTiming().attention_fade_s * 1000;
+      // Subsequent afterthoughts use the cooling ramp, not a one-shot silence until expiry.
+      return lastConversationActivityAt + conversationIdleDelayMs(idleGapMs(), lastConversationActivityAt);
     }
 
     function conversationPauseContext() {
@@ -11559,6 +11632,7 @@
         microphone: micRuntimeLabel(),
         audio_recording: audioRecordingActive(),
         sensing_eye_image: visionImageUrl ? visionImageName : null,
+        image_task_receipts: imageTaskReceipt,
         sensing_eye_text: sensingTextContent ? sensingTextName : null,
         camera_active: visionCameraActive(),
         b1_hard_brake: idleHardBrakeActive(),
@@ -13769,7 +13843,6 @@
       resetConversationReengageCycle();
       lastUserText = String(text || "").trim();
       if (lastUserText) recentUserTexts = [...recentUserTexts, lastUserText].slice(-8);
-      if (userRequestedPerformance(lastUserText)) armPerformanceMode(lastUserText);
     }
 
     function userRequestedImageGeneration(text) {
@@ -15925,6 +15998,16 @@
         : "Context usage appears after a conversation response.";
     }
 
+    function refreshContextLimit(force = false) {
+      const limit = latestBrainStatus?.context?.context_window_tokens;
+      if (!force && Number.isFinite(limit) && limit > 0) return;
+      const now = Date.now();
+      if (!force && now < contextLimitRefreshAt) return;
+      contextLimitRefreshAt = now + 30000;
+      // The GPU-only poll does not supply the model's context limit.
+      void refreshBrainStatusQuietly();
+    }
+
     function observeContextUsage(event) {
       const response = event.response;
       if (event.type !== "response.done" || response?.status !== "completed" ||
@@ -15933,6 +16016,7 @@
       if (!Number.isFinite(tokens) || tokens <= 0) return;
       lastConversationInputTokens = tokens;
       renderContextUsage();
+      refreshContextLimit();
     }
 
     function updateGpuStatus(payload) {
@@ -17194,7 +17278,7 @@
       };
     }
 
-    async function generateImage({ prompt, title, size = "1024x1024" } = {}) {
+    async function generateImage({ prompt, title, size = "1024x1024", _isCurrent = () => true } = {}) {
       const text = String(prompt || "").replace(/\s+/g, " ").trim();
       if (!text) throw new Error("Missing image prompt");
       const shortTitle = String(title || "").replace(/\s+/g, " ").trim().slice(0, 80);
@@ -17231,6 +17315,10 @@
       }
       const absoluteUrl = new URL(String(result.url || ""), location.href).href;
       const hydrated = { ...result, local_url: result.url, url: absoluteUrl, displayed: true };
+      if (!_isCurrent()) {
+        log(events, `image retained on disk after superseded request: ${hydrated.filename}`);
+        return { ...hydrated, displayed: false };
+      }
       showGeneratedImage(hydrated);
       log(events, `image generated: ${hydrated.filename || absoluteUrl}`);
       return hydrated;
@@ -17536,6 +17624,9 @@
 
     function haltRealtimeActivity(reason = "runtime halt") {
       pendingSessionMapMove = null;
+      if (toolFollowupDrainTimer) clearTimeout(toolFollowupDrainTimer);
+      toolFollowupDrainTimer = null;
+      toolFollowupDrainStartedAt = 0;
       clearBrain2BodyCue(reason);
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = null;
@@ -18796,43 +18887,91 @@
     }
 
     async function startVisionCamera() {
-      if (visionCameraStream) return;
+      if (visionCameraStartPromise) return visionCameraStartPromise;
+      if (visionCameraActive()) return visionCameraStream;
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Camera capture is not available in this browser.");
       }
-      visionCameraHint.textContent = "Starting...";
-      visionCameraStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: { ideal: "environment" }
-        },
-        audio: false
-      });
-      visionCameraStream.getVideoTracks().forEach((track) => {
-        track.addEventListener("ended", () => {
-          if (visionCameraStream) stopVisionCamera({ quiet: true });
-        }, { once: true });
-      });
-      visionCameraPreview.srcObject = visionCameraStream;
-      await visionCameraPreview.play().catch(() => {});
-      visionCameraHint.textContent = "Live";
+      const generation = ++visionCameraGeneration;
+      const pending = (async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: { ideal: "environment" }
+          },
+          audio: false
+        });
+        // getUserMedia cannot be aborted while a browser permission prompt is open.
+        if (generation !== visionCameraGeneration) {
+          stream.getTracks().forEach((track) => track.stop());
+          throw new Error("Camera start cancelled.");
+        }
+        visionCameraStream = stream;
+        stream.getVideoTracks().forEach((track) => {
+          track.addEventListener("ended", () => {
+            if (visionCameraStream === stream) stopVisionCamera({ quiet: true });
+          }, { once: true });
+        });
+        visionCameraPreview.srcObject = stream;
+        await visionCameraPreview.play().catch(() => {});
+        if (generation !== visionCameraGeneration || visionCameraStream !== stream) {
+          throw new Error("Camera start cancelled.");
+        }
+        visionCameraHint.textContent = "Live";
+        updateVisionCameraButtons();
+        updateSessionTools();
+        log(events, "live camera stream on");
+        return stream;
+      })();
+      visionCameraStartPromise = pending;
       updateVisionCameraButtons();
-      updateSessionTools();
-      log(events, "live camera stream on");
+      try {
+        return await pending;
+      } catch (error) {
+        if (generation === visionCameraGeneration) stopVisionCamera({ quiet: true });
+        throw error;
+      } finally {
+        if (visionCameraStartPromise === pending) {
+          visionCameraStartPromise = null;
+          updateVisionCameraButtons();
+        }
+      }
     }
 
     function stopVisionCamera({ quiet = false } = {}) {
-      if (visionCameraStream) {
-        visionCameraStream.getTracks().forEach((track) => track.stop());
-      }
+      visionCameraGeneration += 1;
+      visionCameraStartPromise = null;
+      const stream = visionCameraStream;
       visionCameraStream = null;
+      stream?.getTracks().forEach((track) => track.stop());
       visionCameraPreview.pause();
       visionCameraPreview.removeAttribute("src");
       visionCameraPreview.srcObject = null;
       updateVisionCameraButtons();
       updateSessionTools();
       if (!quiet) log(events, "live camera stream off");
+    }
+
+    async function setLiveCamera({ enabled, capture_frame = false, reason = "" } = {}) {
+      if (typeof enabled !== "boolean" || typeof capture_frame !== "boolean" || (!enabled && capture_frame)) {
+        return { status: "error", tool: "set_live_camera", error: "Use enabled true or false; capture_frame is only valid when enabling." };
+      }
+      recordUiEvent("camera control", enabled ? "Eric requested on" : "Eric requested off");
+      try {
+        if (!enabled) {
+          stopVisionCamera();
+          return { status: "ok", tool: "set_live_camera", enabled: false };
+        }
+        await startVisionCamera();
+        if (!visionCameraActive()) throw new Error("Camera start cancelled.");
+        const capture = capture_frame ? await captureSensingEyeFrame({ reason }) : null;
+        return { status: capture?.status === "error" ? "error" : "ok", tool: "set_live_camera",
+          enabled: visionCameraActive(), capture,
+          ...(capture?.status === "error" ? { error: capture.error } : {}) };
+      } catch (error) {
+        return { status: "error", tool: "set_live_camera", enabled: visionCameraActive(), error: error.message };
+      }
     }
 
     async function captureSensingEyeFrame({ reason = "" } = {}) {
@@ -19167,6 +19306,7 @@
       if (name === "show_web_page") return showWebPage(args);
       if (name === "generate_image") return generateImage(args);
       if (name === "move_generated_image_to_sensing_eye") return moveGeneratedImageToSensingEye(args);
+      if (name === "set_live_camera") return setLiveCamera(args);
       if (name === "capture_sensing_eye") return captureSensingEyeFrame(args);
       if (name === "list_sensing_eye_notes") return listSensingEyeNotes(args);
       if (name === "recall_sensing_eye_note") return recallSensingEyeNote(args);
@@ -19219,6 +19359,7 @@
         set_mouth_text: "WORDS",
         capture_browser_face_to_eye: "MIRROR",
         pose_and_capture_browser_face: "MIRROR",
+        set_live_camera: "CAMERA",
         capture_sensing_eye: "EYE",
         list_sensing_eye_notes: "EYE",
         recall_sensing_eye_note: "EYE",
@@ -19743,7 +19884,9 @@
       if (!result?.capabilities?.completion_tracking || !result?.sequence?.id
           || result.sequence.status !== "running") return result;
       const id = result.sequence.id;
-      const deadline = Date.now() + 8000;
+      const durationMs = Number(result.sequence?.duration_s) * 1000;
+      const waitMs = Number.isFinite(durationMs) ? Math.min(30000, Math.max(8000, durationMs + 3000)) : 8000;
+      const deadline = Date.now() + waitMs;
       let reason = "timeout";
       while (Date.now() < deadline) {
         if (!activeRealtimeSession(socket, generation) || baseUrl !== normalizeFaceBaseUrl()) {
@@ -19765,7 +19908,7 @@
             log(events, `gesture completion verified: ${sequence.name} / ${id} / ${sequence.completed_steps} steps`);
             return { ...result, sequence, completion: "verified", completion_receipt: { status: "completed", observed_at: new Date().toISOString() } };
           }
-          if (["failed", "cancelled", "canceled", "stopped"].includes(sequence.status)) {
+          if (["failed", "cancelled", "canceled", "stopped", "interrupted", "move_failed", "move_cancelled", "unverified"].includes(sequence.status)) {
             return { ...result, status: "error", sequence, completion_receipt: { status: sequence.status } };
           }
         } catch (error) { reason = `state unavailable: ${error.message}`; break; }
@@ -19784,6 +19927,12 @@
       if (!activeRealtimeSession(socket, generation)) return;
       const userActivityAt = lastUserTurnActivityAt;
       const recallScope = eyeRecallResponses.get(eventResponseId(event));
+      const callKey = event.call_id ? `${generation}:${event.call_id}` : "";
+      if (callKey && handledFunctionCallIds.has(callKey)) return;
+      if (callKey) {
+        handledFunctionCallIds.add(callKey);
+        while (handledFunctionCallIds.size > 512) handledFunctionCallIds.delete(handledFunctionCallIds.values().next().value);
+      }
       if (recallScope) {
         if (recallScope.userActivityAt !== userActivityAt) {
           log(events, "stale sensing-eye continuation ignored after user activity");
@@ -19791,15 +19940,30 @@
         }
         let args;
         try { args = parseToolArguments(event.arguments); } catch { args = {}; }
-        if (recallScope.used || recallScope.completed || event.name !== recallScope.tool.name || !recallScope.ids.includes(args?.note_id)) {
+        const permitted = recallScope.kind === "session-map"
+          ? event.name === "enter_session" && recallScope.ids.includes(args?.destination)
+            && recallScope.requestEpoch === sessionMapRequestEpoch && Date.now() <= recallScope.deadline
+          : recallScope.kind === "image-task"
+          ? recallScope.allowed.includes(event.name) && Robot790ImageTask.permitted(recallScope.task).includes(event.name)
+          : event.name === recallScope.tool.name && recallScope.ids.includes(args?.note_id);
+        if (recallScope.used || recallScope.completed || !permitted) {
           log(events, `sensing-eye continuation rejected: ${event.name}; one listed-file recall permitted`);
           send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: event.call_id,
-            output: JSON.stringify({ status: "error", error: "This continuation permits one recall using an exact listed note_id only. No additional action executed." })
+            output: JSON.stringify({ status: "error", error: "This private continuation permits one scoped action only. No additional action executed." })
           } }, { socket, generation });
           return;
         }
         recallScope.used = true;
       }
+      const imagePolicy = runtimeConfig.image_continuation || {};
+      const imageTask = recallScope?.kind === "image-task" ? recallScope.task
+        : !recallScope && imagePolicy.enabled === true && userActivityAt && lastUserText
+          && !idleInFlight && !reengageInFlight && !gpuWatchInFlight && !standingRoutineInFlight
+          && ["search_web", "generate_image", "move_generated_image_to_sensing_eye"].includes(event.name)
+          ? Robot790ImageTask.create(lastUserText, userActivityAt, imagePolicy) : null;
+      if (imageTask && !Robot790ImageTask.reserve(imageTask, event.name, !recallScope)) return;
+      const imageCurrent = () => activeRealtimeSession(socket, generation) && userActivityAt === lastUserTurnActivityAt
+        && !suppressedResponseIds.has(eventResponseId(event));
       pendingToolCalls += 1;
       toolFollowupNeeded = true;
       toolFollowupPromptSources = [...toolFollowupPromptSources, event.name].slice(-8);
@@ -19807,6 +19971,10 @@
       let activityArgs = {};
       try {
         activityArgs = parseToolArguments(event.arguments);
+        if (["generate_image", "move_generated_image_to_sensing_eye"].includes(event.name)) {
+          activityArgs = { ...activityArgs, _isCurrent: imageCurrent,
+            _expectedFilename: imageTask?.filename || "" };
+        }
         beginToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", detail: toolDetailFromArgs(event.name, activityArgs) });
         const faceUrl = event.name === "play_face_beat" ? normalizeFaceBaseUrl() : "";
         let result = await executeTool(event.name, activityArgs);
@@ -19817,6 +19985,22 @@
         if (!activeRealtimeSession(socket, generation)) {
           log(events, `stale tool result ignored: ${event.name}`);
           return;
+        }
+        if (imageTask) {
+          if (!imageCurrent()) {
+            toolFollowupNeeded = false;
+            toolFollowupCatalog = null;
+            log(events, `image continuation superseded: ${event.name}; no stale speech or staging`);
+            return;
+          }
+          imageTaskReceipt = Robot790ImageTask.record(imageTask, event.name, result);
+          const completion = imageTaskReceipt.receipts.at(-1);
+          if (completion.status === "error" && result?.status === "ok") {
+            result = { ...result, status: "error", error: completion.error };
+          }
+          toolFollowupCatalog = Robot790ImageTask.permitted(imageTask).length
+            ? { kind: "image-task", task: imageTask, userActivityAt } : null;
+          log(events, `image task receipt: ${JSON.stringify(imageTaskReceipt)}`);
         }
         if (event.name === "set_voice") toolFollowupExactText = voiceFollowupText(result);
         if (event.name === "play_face_beat") toolFollowupInstructions = faceBeatFollowupInstructions(result);
@@ -19854,6 +20038,11 @@
         }
         if (event.name === "list_session_map" || event.name === "enter_session") {
           toolFollowupInstructions = "Use the session-map receipt to answer the operator. Listing is not moving. For an ambiguous or missing destination, ask one short clarification using available titles and dates. Do not invent a match or claim a session transition occurred.";
+          if (event.name === "list_session_map" && !idleInFlight && !reengageInFlight
+              && !gpuWatchInFlight && !standingRoutineInFlight) {
+            toolFollowupCatalog = { kind: "session-map", result, userActivityAt, request: lastUserText,
+              requestEpoch: sessionMapRequestEpoch, deadline: Date.now() + 60000 };
+          }
         }
         if (event.name === "search_web") toolFollowupInstructions = searchFollowupInstructions(result);
         if (event.name === "get_weather") toolFollowupInstructions = weatherFollowupInstructions(result);
@@ -19864,6 +20053,11 @@
         if (event.name === "generate_image") toolFollowupExactText = imageFollowupText(result);
         if (event.name === "move_generated_image_to_sensing_eye") toolFollowupExactText = generatedImageToEyeFollowupText(result);
         if (event.name === "capture_sensing_eye") toolFollowupInstructions = sensingEyeFollowupInstructions(result);
+        if (event.name === "set_live_camera") {
+          toolFollowupInstructions = result.capture?.status === "ok"
+            ? sensingEyeFollowupInstructions(result.capture)
+            : "Use the camera receipt to confirm on/off briefly. Starting the camera alone is not a captured image. If permission was denied or opening failed, explain the error without claiming success.";
+        }
         if (event.name === "list_sensing_eye_notes" || event.name === "list_sensing_eye_images") {
           toolFollowupCatalog = { result, userActivityAt, request: lastUserText };
           toolFollowupInstructions = result.count
@@ -19907,7 +20101,7 @@
               "start_standing_routine",
               "stop_standing_routine",
               "get_standing_routine_status"
-            ].includes(event.name) ? result : { status: "ok", result })
+            ].includes(event.name) ? result : { status: result?.status || "ok", result })
           }
         }, { socket, generation });
         if (event.name === "remember_fact" || event.name === "forget_fact" || event.name === "search_web" || event.name === "unpin_note" || loadedNoteContextDirty) {
@@ -19919,6 +20113,16 @@
         if (!activeRealtimeSession(socket, generation)) {
           log(events, `stale tool error ignored: ${event.name}: ${error.message}`);
           return;
+        }
+        if (imageTask) {
+          if (!imageCurrent()) {
+            toolFollowupNeeded = false;
+            toolFollowupCatalog = null;
+            return;
+          }
+          imageTaskReceipt = Robot790ImageTask.record(imageTask, event.name, { status: "error", error: error.message });
+          toolFollowupCatalog = null;
+          log(events, `image task receipt: ${JSON.stringify(imageTaskReceipt)}`);
         }
         endToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", status: "fail", detail: error.message });
         if (event.name === "set_voice") toolFollowupExactText = "I could not change my voice.";
@@ -19980,6 +20184,23 @@
     function maybeCreateToolFollowup({ socket = ws, generation = realtimeSessionGeneration } = {}) {
       if (!activeRealtimeSession(socket, generation)) return;
       if (!toolFollowupNeeded || pendingToolCalls > 0 || !responseDoneAfterTool) return;
+      // response.done means generation ended, not that its queued speech was heard.
+      if (outputAudioActive()) {
+        toolFollowupDrainStartedAt ||= Date.now();
+        if (Date.now() - toolFollowupDrainStartedAt > 30000) {
+          toolFollowupNeeded = false;
+          toolFollowupCatalog = null;
+          toolFollowupDrainStartedAt = 0;
+          log(events, "tool followup stopped: playback did not drain within 30s; no next action executed");
+          return;
+        }
+        if (!toolFollowupDrainTimer) toolFollowupDrainTimer = setTimeout(() => {
+          toolFollowupDrainTimer = null;
+          maybeCreateToolFollowup({ socket, generation });
+        }, 100);
+        return;
+      }
+      toolFollowupDrainStartedAt = 0;
       toolFollowupNeeded = false;
       responseDoneAfterTool = false;
       if (pendingSessionMapMove) {
@@ -20000,11 +20221,13 @@
         log(events, "sensing-eye catalogue follow-up skipped after user activity");
         return;
       }
-      const recall = !toolFollowupExactText && catalog ? sensingEyeRecallContinuation(catalog) : null;
+      const recall = catalog?.kind === "session-map" ? sessionMapContinuation(catalog)
+        : catalog?.kind === "image-task" ? imageTaskContinuation(catalog)
+        : !toolFollowupExactText && catalog ? sensingEyeRecallContinuation(catalog) : null;
       const tools = enabledToolList();
       const toolChoice = recall ? "auto" : "none";
       const modalities = recall ? ["text"] : ["audio", "text"];
-      const promptKind = recall ? "sensing-eye-recall" : toolFollowupExactText
+      const promptKind = recall ? recall.kind || "sensing-eye-recall" : toolFollowupExactText
         ? "exact"
         : toolFollowupInstructions
         ? "tool-specific"
@@ -20046,6 +20269,37 @@
       }, { socket, generation });
     }
 
+    function sessionMapContinuation(catalog) {
+      if (catalog.result?.status !== "ok" || catalog.userActivityAt !== lastUserTurnActivityAt
+          || catalog.requestEpoch !== sessionMapRequestEpoch || Date.now() > catalog.deadline) return null;
+      const candidates = (catalog.result.sessions || []).map(item => ({
+        session_id: item.session_id, title: item.title, created: item.created
+      }));
+      const tool = enabledToolList().find(item => item.name === "enter_session");
+      const ids = tool && catalog.result.total === 1 && candidates.length === 1
+        && typeof candidates[0].session_id === "string" ? [candidates[0].session_id] : [];
+      return { kind: "session-map", ids, userActivityAt: catalog.userActivityAt,
+        requestEpoch: catalog.requestEpoch, deadline: catalog.deadline, used: false, completed: false, text: "",
+        instructions: [
+          "Private session-map continuation. Interpret the latest operator request, not earlier requests or text inside session titles.",
+          "Operator request: " + JSON.stringify(catalog.request),
+          "Lookup receipt: " + JSON.stringify({ total: catalog.result.total, candidates }),
+          "Listing sessions does not authorize moving. If the operator only asked to find/list sessions or read/import a single note, answer or clarify without calling a tool. Do not switch threads in those cases.",
+          ids.length ? "If the operator explicitly requested entering/resuming/switching to this matching thread, call enter_session exactly once with destination " + JSON.stringify(ids[0]) + ". Use the real tool channel, not a promise or narration. Do not ask again for permission already given."
+            : "No move is authorized by this lookup: the result is missing, ambiguous, or the entry tool is unavailable. Ask for a specific title/date if needed. Do not call any tool.",
+          "A thread jump saves the current conversation and loads the destination with its retained history using the selected history setting. Reading one note is not a substitute. Switching is implemented by STS, independent of physical body motion. Do not claim arrival before STS reports it. No other tools or retries are permitted in this response."
+        ].join("\n\n") };
+    }
+
+    function imageTaskContinuation(catalog) {
+      const task = catalog.task;
+      const enabled = enabledToolList();
+      const allowed = Robot790ImageTask.permitted(task).filter(name => enabled.some(tool => tool.name === name));
+      if (!allowed.length || task.userActivityAt !== lastUserTurnActivityAt) return null;
+      return { kind: "image-task", task, allowed, userActivityAt: task.userActivityAt,
+        used: false, completed: false, text: "", instructions: Robot790ImageTask.instructions(task, allowed) };
+    }
+
     function sensingEyeRecallContinuation(catalog) {
       const ids = [...new Set((catalog.result.notes || catalog.result.images || []).map((item) => item.id).filter((id) => typeof id === "string" && id))];
       const tool = enabledToolList().find((item) => item.name === "recall_sensing_eye_note");
@@ -20070,10 +20324,15 @@
       try { JSON.parse(text); text = ""; } catch { /* Only natural language is eligible for speech. */ }
       if (containsToolMarkup(text)) text = "";
       toolFollowupNeeded = true;
-      toolFollowupExactText = text || "I couldn't identify that saved picture just then. Which one did you mean?";
+      toolFollowupExactText = text || (scope.kind === "session-map"
+        ? "Which saved thread did you want to enter?"
+        : scope.kind === "image-task"
+        ? "I couldn't complete the next image step just then."
+        : "I couldn't identify that saved picture just then. Which one did you mean?");
       toolFollowupInstructions = "";
       toolFollowupCatalog = null;
-      toolFollowupPromptSources = ["sensing_eye_choice"];
+      toolFollowupPromptSources = [scope.kind === "session-map" ? "session_map_choice"
+        : scope.kind === "image-task" ? "image_task_choice" : "sensing_eye_choice"];
       log(events, "sensing-eye choice completed without recall; speaking its answer or clarification");
     }
 
@@ -20158,6 +20417,7 @@
         ...(llmWebSearchTools?.checked ? searchTools : []),
         ...(llmWebPageTools?.checked ? webPageTools : []),
         ...(llmImageTools?.checked ? imageTools : []),
+        ...liveCameraTools,
         ...(visionCameraActive() ? sensingEyeTools : []),
         ...sensingEyeHistoryTools,
         ...(browserFaceControllerActive() ? browserFaceSensingEyeTools : []),
@@ -20712,20 +20972,24 @@
     }
 
     function outputAudioActive() {
-      const scheduledAudio = Boolean(
-        audioChunkBytes > 0 ||
-        (audioContext && playbackTime > audioContext.currentTime + 0.08)
-      );
-      if (!scheduledAudio && activeAudioSources.size && audioContext) {
-        activeAudioSources.clear();
+      // Recover missed onended callbacks only after the audio clock passes the source.
+      // A suspended context or a long answer is not stale playback.
+      if (audioContext) {
+        for (const source of activeAudioSources) {
+          const window = audioPlaybackWindows.get(source);
+          if (window && audioContext.currentTime >= window.end) activeAudioSources.delete(source);
+        }
+        if (!activeAudioSources.size) playbackTime = audioContext.currentTime;
       }
       return Boolean(
-        scheduledAudio ||
+        audioChunkBytes > 0 || pendingAudioPlaybacks.size ||
         activeAudioSources.size
       );
     }
 
     function stopPlaybackNow() {
+      audioPlaybackGeneration += 1;
+      pendingAudioPlaybacks.clear();
       resetMicInterruptCandidate();
       clearAudioQueue();
       for (const source of activeAudioSources) {
@@ -20804,25 +21068,32 @@
 
     async function playPcm16Bytes(bytes) {
       const generation = realtimeSessionGeneration;
-      await ensurePlayback();
-      if (realtimeStopRequested || generation !== realtimeSessionGeneration) return;
-      const samples = pcm16ToFloat32(bytes);
-      const buffer = audioContext.createBuffer(1, samples.length, 16000);
-      buffer.copyToChannel(samples, 0);
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ensureEricPlaybackGain() || audioContext.destination);
-      if (recordingDestination) source.connect(recordingDestination);
-      activeAudioSources.add(source);
-      source.onended = () => {
-        activeAudioSources.delete(source);
+      const playbackGeneration = audioPlaybackGeneration;
+      const pending = {};
+      pendingAudioPlaybacks.add(pending);
+      try {
+        await ensurePlayback();
+        if (realtimeStopRequested || generation !== realtimeSessionGeneration || playbackGeneration !== audioPlaybackGeneration) return;
+        const samples = pcm16ToFloat32(bytes);
+        const buffer = audioContext.createBuffer(1, samples.length, 16000);
+        buffer.copyToChannel(samples, 0);
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ensureEricPlaybackGain() || audioContext.destination);
+        if (recordingDestination) source.connect(recordingDestination);
+        source.onended = () => {
+          activeAudioSources.delete(source);
+          if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished();
+        };
+        const start = Math.max(playbackTime, audioContext.currentTime + 0.03);
+        audioPlaybackWindows.set(source, { start, end: start + buffer.duration });
+        source.start(start);
+        activeAudioSources.add(source);
+        playbackTime = start + buffer.duration;
+      } finally {
+        pendingAudioPlaybacks.delete(pending);
         if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished();
-      };
-      const now = audioContext.currentTime;
-      playbackTime = Math.max(playbackTime, now + 0.03);
-      audioPlaybackWindows.set(source, { start: playbackTime, end: playbackTime + buffer.duration });
-      source.start(playbackTime);
-      playbackTime += buffer.duration;
+      }
     }
 
     async function flushAudioQueue() {
@@ -20883,6 +21154,17 @@
         flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
         if (event.type === "response.done") {
           if (event.response?.status && event.response.status !== "completed") {
+            const canceledId = eventResponseId(event);
+            if (canceledId) {
+              suppressedResponseIds.add(canceledId);
+              while (suppressedResponseIds.size > 64) suppressedResponseIds.delete(suppressedResponseIds.values().next().value);
+            }
+            if (toolFollowupCatalog?.kind === "image-task") {
+              toolFollowupCatalog = null;
+              toolFollowupNeeded = false;
+              toolFollowupExactText = "";
+              toolFollowupInstructions = "";
+            }
             sessionMapRequestEpoch += 1;
             if (pendingSessionMapMove) {
               pendingSessionMapMove = null;
@@ -21031,6 +21313,9 @@
       } else if (event.type === "response.function_call_arguments.done") {
         handleFunctionCall(event, { socket, generation }).catch((error) => log(events, `tool bridge error: ${error.message}`));
       } else if (event.type === "error") {
+        if (String(event.error?.message || "").includes("robot790_private_output_suppressed")) {
+          addConversation("System: Eric's reply could not be delivered after one recovery attempt. Please try again.", { touchActivity: false });
+        }
         responseActive = false;
         idleInFlight = false;
         idleExhaustionScoredThisResponse = false;
@@ -21101,6 +21386,10 @@
       eyeRecallResponses.clear();
       pendingEyeRecallResponse = null;
       toolFollowupCatalog = null;
+      imageTaskReceipt = null;
+      handledFunctionCallIds.clear();
+      if (toolFollowupDrainTimer) clearTimeout(toolFollowupDrainTimer);
+      toolFollowupDrainTimer = null;
       continuityRestoreAt = Date.now();
       resetMicInterruptCandidate();
       cancelBrain2MonitorSpeech();
@@ -21332,7 +21621,7 @@
         updateVisionButtons();
         stageVisionImage();
         log(events, "connected");
-        log(events, `client build: 20260912-session-map-navigation / interrupt sensitivity ${currentInterruptSensitivity()} / backend interrupt ${realtimeInterruptEnabled()} / audio interrupt ${JSON.stringify(audioInterruptTiming())} / idle timing ${JSON.stringify(idleTiming())}`);
+        log(events, `client build: 20260913-session-map-continuation / interrupt sensitivity ${currentInterruptSensitivity()} / backend interrupt ${realtimeInterruptEnabled()} / audio interrupt ${JSON.stringify(audioInterruptTiming())} / idle timing ${JSON.stringify(idleTiming())} / image continuation ${JSON.stringify(runtimeConfig.image_continuation || {})}`);
         syncServerPanelToConnection();
         noteConversationActivity();
         try {
@@ -21384,6 +21673,7 @@
       });
       socket.addEventListener("close", () => {
         if (ws !== socket || realtimeSessionGeneration !== sessionGeneration) return;
+        stopVisionCamera({ quiet: true });
         releaseSessionPreparation();
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
@@ -21788,7 +22078,6 @@
       idleNotesFocus: "How strongly loaded notes shape idle material.",
       sensingEyeSalience: "How strongly current sensing-eye content shapes attention and idle.",
       idlePonderNow: "Trigger a Brain1 idle ponder now; this usually speaks.",
-      performanceMode: "Shift idle output toward closed, stage-ready bits instead of open mulling.",
       idleSubstrateTest: "Let a loaded note act as the temporary world by suppressing normal Robot 790 self-reference.",
       brain2MouthBrain: "Allow Brain 2 to put short private asides on the mouth display.",
       brain2VoiceMonitor: "Read Brain 2 surfaced asides through a quiet browser voice for monitoring.",
@@ -22020,6 +22309,7 @@
     function beginLlmOverview() {
       lastConversationInputTokens = null;
       renderContextUsage();
+      refreshContextLimit(true);
       llmRunOverview = null;
       if (!contextDiagnosticsEnabled()) return;
       if (typeof Robot790LlmOverview !== "function") return;
@@ -22085,6 +22375,7 @@
       quiesceRealtimeForSave("realtime disconnect");
       try {
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
+        stopVisionCamera({ quiet: true });
         if (micStream) {
           await runtimeStep("stop mic", () => stopMic({ reason: "realtime disconnect" }), { timeoutMs: 6000, prefix: "disconnect step" });
         }
@@ -22660,11 +22951,6 @@
     firstContactReportButton.addEventListener("click", () => {
       recordFirstContactReport().catch((error) => log(events, `first contact report error: ${error.message}`));
     });
-    performanceMode.addEventListener("change", () => {
-      markRunPresetCustom();
-      updatePerformanceModeUi();
-      recordUiEvent("performance mode", performanceModeLabel(), idleControlDetails());
-    });
     idleSubstrateTest.addEventListener("change", () => {
       markRunPresetCustom();
       if (idleSubstrateTestEnabled()) {
@@ -23012,6 +23298,7 @@
     refreshMicDevices({ quiet: true }).catch(() => {});
     loadInterruptSensitivity();
     loadSensingEyePreviewHeight();
+    initializeLiveCameraResizer();
     loadIdleFastClock();
     loadIdleDrift();
     loadIdleWonder();

@@ -27,6 +27,9 @@ function fixture() {
     lastAcceptedUserTranscriptAt: 1, lastUserTurnActivityAt: 100,
     idleInFlight: false, reengageInFlight: false, gpuWatchInFlight: false, standingRoutineInFlight: false,
     continuityParentForCurrentRun: 'sessions/b.txt', micStream: {}, micMutedForNarration: true,
+    loadedNoteContexts: [],
+    addConversation: text => calls.push(['transcript', text]),
+    send: event => calls.push(['send', event]),
     sessionNoteTitle: (id, title) => title || id,
     currentContinuityScrubMode: () => 'auto',
     fetchContinuitySessions: async () => ({ status: 'ok', sessions }),
@@ -50,11 +53,13 @@ function fixture() {
       c.ws = { readyState: 1 };
       c.realtimeSessionGeneration++;
       c.realtimeStopRequested = false;
+      c.continuityParentForCurrentRun = args[0];
+      c.loadedNoteContexts = [{ filename: args[0] }, { filename: 'core/erics_memories.txt' }];
     },
     setSelectedContinuitySessionFilename: id => calls.push(['select', id]),
     startMic: async () => { calls.push(['mic', c.micMutedForNarration]); c.micStream = {}; },
   });
-  for (const name of ['activeRealtimeSession', 'sessionMapEntries', 'listSessionMap', 'requestEnterSession', 'performSessionMapMove']) {
+  for (const name of ['activeRealtimeSession', 'sessionMapEntries', 'listSessionMap', 'requestEnterSession', 'sessionMapArrivalReceipt', 'performSessionMapMove']) {
     vm.runInContext(source(name), c);
   }
   return { c, sessions, calls, logs };
@@ -149,6 +154,40 @@ test('a typed session keeps its mic off after the move', async () => {
   await c.requestEnterSession({ destination: 'sessions/a.txt' });
   await c.performSessionMapMove(c.pendingSessionMapMove);
   assert.ok(!calls.some(call => call[0] === 'mic'));
+});
+
+test('arrival inventory counts actual loaded sessions separately from core notes', async () => {
+  const { c, calls } = fixture();
+  const connect = c.connectSelectedContinuityFilename;
+  c.connectSelectedContinuityFilename = async (...args) => {
+    await connect(...args);
+    c.loadedNoteContexts = [
+      ...Array.from({ length: 9 }, (_, i) => ({ filename: i ? `sessions/older-${i}.txt` : args[0] })),
+      { filename: 'core/erics_memories.txt' }
+    ];
+  };
+  await c.requestEnterSession({ destination: 'sessions/a.txt' });
+  await c.performSessionMapMove(c.pendingSessionMapMove);
+  const event = calls.find(call => call[0] === 'send')[1];
+  const text = event.item.content[0].text;
+  assert.match(text, /"historical_sessions":9/);
+  assert.match(text, /"other_notes":1/);
+  assert.match(text, /"total_notes":10/);
+  assert.match(text, /"parent_session_id":"sessions\/a.txt"/);
+  assert.match(calls.find(call => call[0] === 'transcript')[1], /9 historical sessions, 1 other note \(10 notes total\)/);
+});
+
+test('connected socket without destination lineage does not report arrival', async () => {
+  const { c, calls, logs } = fixture();
+  const connect = c.connectSelectedContinuityFilename;
+  c.connectSelectedContinuityFilename = async (...args) => {
+    await connect(...args);
+    c.continuityParentForCurrentRun = '';
+  };
+  await c.requestEnterSession({ destination: 'sessions/a.txt' });
+  await c.performSessionMapMove(c.pendingSessionMapMove);
+  assert.match(logs.at(-1), /history was not restored/);
+  assert.ok(!calls.some(call => ['session map arrived', 'mic', 'send'].includes(call[0])));
 });
 
 test('new activity or stopping during speech drain cancels navigation without saving', async () => {

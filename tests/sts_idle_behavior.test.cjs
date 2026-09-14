@@ -368,6 +368,7 @@ function stopContext(overrides = {}) {
     updateTypedInputButtons: noop, updateSaveAndHaltButton: noop,
     runtimeStep: async (_, operation) => operation(), waitForRealtimeClose: async () => {},
     waitForPendingUserTranscriptBeforeSessionSave: async () => {}, micStream: {},
+    stopVisionCamera: noop,
     stopMic: async () => { calls.push('stop mic'); c.micStream = null; },
     audioRecordingActive: () => false, audioRecordFinalizing: false, audioRecordStopPromise: null,
     recordExitPaneSnapshots: async () => {},
@@ -448,6 +449,7 @@ test('audio already awaiting playback setup cannot start after Disconnect', asyn
   let finish;
   const c = load(['playPcm16Bytes'], {
     realtimeSessionGeneration: 1, realtimeStopRequested: false,
+    audioPlaybackGeneration: 0, pendingAudioPlaybacks: new Set(), assistantFinishPending: false,
     ensurePlayback: () => new Promise(resolve => { finish = resolve; }),
     pcm16ToFloat32: () => assert.fail('stopped audio must not reach the output graph'),
   });

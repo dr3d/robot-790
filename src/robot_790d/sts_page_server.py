@@ -986,6 +986,7 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "idle_level12_cooldown_s": idle_level12_cooldown_s,
         "idle_timing": _runtime_idle_timing(payload.get("idle_timing")),
         "audio_interrupt": _runtime_audio_interrupt(payload.get("audio_interrupt")),
+        "image_continuation": _runtime_image_continuation(payload.get("image_continuation")),
         "context_history": history_config(payload.get("context_history")),
         "runtime_revision": "20260911-history-policy",
         "creature": creature,
@@ -1003,6 +1004,21 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
     warnings = [item for item in [config_error, creature_error] if item]
     if warnings:
         result["config_warning"] = " ".join(warnings)
+    return result
+
+
+def _runtime_image_continuation(value: object) -> dict[str, object]:
+    config = value if isinstance(value, dict) else {}
+    result: dict[str, object] = {"enabled": config.get("enabled") is True}
+    for key, default, low, high in (("max_steps", 3, 1, 4), ("window_ms", 120000, 1000, 120000)):
+        raw = config.get(key, default)
+        try:
+            number = float(raw) if type(raw) in (int, float) else default
+        except OverflowError:
+            number = default
+        if not math.isfinite(number):
+            number = default
+        result[key] = int(max(low, min(high, number)))
     return result
 
 
@@ -1605,6 +1621,21 @@ def _brain2_evidence_context(value: object) -> str:
             "camera_active", "b1_hard_brake", "b1_hard_brake_reason", "conversational_attention",
         }
     } if isinstance(runtime, dict) else {}
+    image_task = runtime.get("image_task_receipts") if isinstance(runtime, dict) else None
+    if isinstance(image_task, dict):
+        image_rows = image_task.get("receipts")
+        context["image_task_receipts"] = {
+            "request": short_text(image_task.get("request"), 800),
+            "artifact": short_text(image_task.get("artifact")),
+            "receipts": [
+                {"tool": short_text(row.get("tool"), 80),
+                 "status": short_text(row.get("status"), 20),
+                 "artifact": short_text(row.get("artifact")),
+                 "staged": row.get("staged") is True,
+                 "error": short_text(row.get("error"), 200)}
+                for row in image_rows[-4:] if isinstance(row, dict)
+            ] if isinstance(image_rows, list) else [],
+        }
     receipts = value.get("search_receipts")
     context["search_receipts"] = []
     if isinstance(receipts, list):

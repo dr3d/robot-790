@@ -155,17 +155,20 @@ test('normal conversation has one scheduler, with no separate forced reengagemen
   assert.equal(c.conversationReengageWindowActive(), false);
 });
 
-test('one warm beat leaves room for an answer, then independent idle resumes; a new user turn releases the hold', () => {
+test('followups leave a growing gap instead of exhausting the warm window after one beat', () => {
   const { c, time } = fixture();
   c.conversationPauseUserAt = c.lastAcceptedUserTranscriptAt;
   time(1030000);
+  c.lastConversationActivityAt = c.Date.now();
   assert.equal(c.idleBlockedReason(), 'leaving room for the operator');
   c.scheduleIdlePonder();
-  assert.equal(c.idleTimerFireAt, 1180000);
+  assert.ok(c.idleTimerFireAt < 1060000);
   time(1040000);
   c.armAssistantUtteranceFinished({ wasIdle: true });
   c.checkAssistantUtteranceFinished();
-  assert.equal(c.conversationPauseHoldUntil(), 1180000);
+  const secondHold = c.conversationPauseHoldUntil();
+  assert.ok(secondHold > 1052000 && secondHold < 1080000);
+  assert.equal(c.lastAssistantResponseDoneAt, 1000000, 'autonomous speech cannot reset attention');
   time(1180000);
   assert.equal(c.idleBlockedReason(), '');
   c.lastAcceptedUserTranscriptAt = c.Date.now();
@@ -173,6 +176,23 @@ test('one warm beat leaves room for an answer, then independent idle resumes; a 
   c.conversationPauseUserAt = c.lastAcceptedUserTranscriptAt;
   c.currentIdleDrift = () => 12;
   assert.equal(c.conversationPauseHoldUntil(), 0);
+});
+
+test('configured followup gaps are quick, quick, slow, slower and stay stable across polls', () => {
+  const { c, time } = fixture();
+  c.runtimeConfig = JSON.parse(fs.readFileSync(`${__dirname}/../config/runtime.json`, 'utf8'));
+  const gaps = [0, 20000, 60000, 120000, 240000].map(elapsed => {
+    time(1000000 + elapsed);
+    return c.conversationIdleDelayMs(c.idleDelayMs(), c.Date.now());
+  });
+  assert.equal(gaps[0], 8000);
+  assert.ok(gaps[1] < 11000);
+  for (let i = 1; i < gaps.length; i++) assert.ok(gaps[i] > gaps[i - 1]);
+  c.lastConversationActivityAt = 1120000;
+  c.conversationPauseUserAt = c.lastAcceptedUserTranscriptAt;
+  const deadline = c.conversationPauseHoldUntil();
+  time(1241000);
+  assert.equal(c.conversationPauseHoldUntil(), deadline);
 });
 
 test('no spoken turn, Drift off, and special lab modes preserve their original timing', () => {

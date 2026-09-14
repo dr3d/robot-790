@@ -7,7 +7,9 @@ const vm = require('node:vm');
 const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf8');
 function meter(limit = 131072) {
   const context = vm.createContext({ contextUsage: {}, lastConversationInputTokens: null,
+    contextLimitRefreshAt: 0, refreshCalls: 0, now: 100000,
     latestBrainStatus: { context: { context_window_tokens: limit } } });
+  vm.runInContext('Date.now = () => now; function refreshBrainStatusQuietly() { refreshCalls++; }', context);
   const start = page.indexOf('    function renderContextUsage()');
   const end = page.indexOf('    function updateGpuStatus(', start);
   assert.ok(start > 0 && end > start);
@@ -28,6 +30,25 @@ test('meter shows latest measured request, not cumulative tokens or session peak
   assert.match(m.contextUsage.title, /53,634.*131,072/);
   m.observeContextUsage(response(32768));
   assert.equal(m.contextUsage.textContent, 'CTX 25%');
+});
+
+test('missing context limit triggers a bounded retry without diagnostic logging', () => {
+  const m = meter(null);
+  m.refreshContextLimit(true);
+  assert.equal(m.refreshCalls, 1);
+  m.observeContextUsage(response(32768));
+  assert.equal(m.refreshCalls, 1);
+  m.now += 30000;
+  m.observeContextUsage(response(32768));
+  assert.equal(m.refreshCalls, 2);
+  m.latestBrainStatus.context.context_window_tokens = 131072;
+  m.renderContextUsage();
+  assert.equal(m.contextUsage.textContent, 'CTX 25%');
+  m.now += 30000;
+  m.observeContextUsage(response(32768));
+  assert.equal(m.refreshCalls, 2);
+  m.refreshContextLimit(true);
+  assert.equal(m.refreshCalls, 3, 'reconnect refreshes even a previously known limit');
 });
 
 test('isolated calls, cancellations and missing usage do not overwrite conversation usage', () => {

@@ -69,6 +69,46 @@ def adapter():
     state.client.close()
 
 
+@pytest.mark.parametrize("name", list(reachy.RECORDED_BEATS))
+def test_recorded_performance_runs_one_daemon_clip_and_waits_for_receipt(adapter, name):
+    state, daemon = adapter
+    mood = state.mood
+    result = state.beat(name)
+    move, duration = reachy.RECORDED_BEATS[name]
+    assert result["status"] == "accepted"
+    assert result["sequence"]["status"] == "running"
+    assert result["sequence"]["duration_s"] == duration
+    assert result["sequence"]["source"] == "recorded_dataset"
+    assert result["sequence"]["audio"] == "dataset_sound_if_present"
+    assert daemon.posts[0].url.path == f"/api/move/play/recorded-move-dataset/{reachy.RECORDED_DATASET}/{move}"
+    assert len(daemon.posts) == 1
+    assert state.mood == mood  # A performance does not replace persistent affect.
+    assert state.beat("thoughtful", automatic=True)["status"] == "held"
+    complete_step(state, daemon)
+    await_condition(lambda: state.sequence["status"] == "completed")
+    assert state.sequence["completed_steps"] == 1
+    assert len(daemon.posts) == 1
+
+
+@pytest.mark.parametrize("failure", ["post", "uuid", "foreign", "disabled", "stream"])
+def test_recorded_performance_never_falls_back_or_retries(adapter, failure):
+    state, daemon = adapter
+    if failure == "post":
+        daemon.fail_post = True
+    if failure == "uuid":
+        daemon.missing_uuid = True
+    if failure == "foreign":
+        daemon.running.add("other-controller")
+    if failure == "disabled":
+        state.settings = reachy.ReachyAdapterSettings(allow_motion=False)
+    if failure == "stream":
+        state.move_events.ready.clear()
+    result = state.beat("goofy")
+    assert result["ok"] is False
+    assert state.sequence is None
+    assert len(daemon.posts) == (1 if failure in {"post", "uuid"} else 0)
+
+
 def test_failed_move_stays_failed_after_healthy_state_and_mouth_reads(adapter) -> None:
     state, daemon = adapter
     daemon.fail_post = True
@@ -338,7 +378,7 @@ def test_failed_cancellation_does_not_submit_new_movement(adapter) -> None:
     assert len(daemon.posts) == 2
 
 
-@pytest.mark.parametrize("name", ["mischief", "wary", "startle", "affection", "daydream", "goofy", "silly", ""])
+@pytest.mark.parametrize("name", ["mischief", "unknown", ""])
 def test_unimplemented_beats_are_rejected_without_movement(adapter, name) -> None:
     state, daemon = adapter
     result = state.beat(name)
@@ -350,7 +390,10 @@ def test_unimplemented_beats_are_rejected_without_movement(adapter, name) -> Non
 def test_capability_lists_only_advertise_implemented_actions(adapter) -> None:
     state, _ = adapter
     for beat in reachy._list_payload("/beats")["beats"]:
-        assert reachy._goto_payload_for_beat(beat)["duration"] >= 0.6
+        if beat in reachy.RECORDED_BEATS:
+            assert reachy.RECORDED_BEATS[beat][1] <= 19
+        else:
+            assert reachy._goto_payload_for_beat(beat)["duration"] >= 0.6
     for mood in reachy._list_payload("/moods")["moods"]:
         assert reachy._goto_payload_for_mood(mood)
     assert reachy._list_payload("/mouth_shapes")["mouth_shapes"] == []
@@ -439,7 +482,7 @@ def complete_step(state, daemon, event_type="move_completed") -> None:
         state.move_events.receipts[uuid] = {"type": event_type, "uuid": uuid, "details": "test receipt"}
 
 
-@pytest.mark.parametrize("name", reachy.SUPPORTED_BEATS)
+@pytest.mark.parametrize("name", [name for name in reachy.SUPPORTED_BEATS if name not in reachy.RECORDED_BEATS])
 def test_sequences_wait_for_completion_and_only_report_completed_after_last_receipt(adapter, name) -> None:
     state, daemon = adapter
     frames = reachy.beat_frames(name)
@@ -512,6 +555,8 @@ def test_next_step_rechecks_foreign_controller_and_motor_gate(adapter) -> None:
 def test_gesture_frames_are_bounded_and_distinct() -> None:
     fingerprints = set()
     for name in reachy.SUPPORTED_BEATS:
+        if name in reachy.RECORDED_BEATS:
+            continue
         frames = reachy.beat_frames(name)
         assert 2 <= len(frames) <= 4
         assert sum(step["duration"] for step in frames) <= 5
@@ -525,7 +570,7 @@ def test_gesture_frames_are_bounded_and_distinct() -> None:
             assert abs(step["body_yaw"] or 0) <= 0.18
             assert 0.8 <= step["duration"] <= 1.6
         fingerprints.add(json.dumps(frames))
-    assert len(fingerprints) == len(reachy.SUPPORTED_BEATS)
+    assert len(fingerprints) == len(reachy.SUPPORTED_BEATS) - len(reachy.RECORDED_BEATS)
 
 
 def test_mdns_transport_prefers_ipv4_but_does_not_pin_a_dhcp_address() -> None:

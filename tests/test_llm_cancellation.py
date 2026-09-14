@@ -145,6 +145,53 @@ def test_cancelled_generation_does_not_commit_history_or_speak_apology(monkeypat
     assert response.closed.wait(1)
 
 
+@pytest.mark.parametrize("native_audio", [False, True])
+@pytest.mark.parametrize("second_private", [False, True])
+def test_real_generation_filtered_recovery_closes_turn_and_commits_only_public_history(
+    monkeypatch, native_audio, second_private
+):
+    from openai.types.realtime.realtime_conversation_item_assistant_message import Content
+    from speech_to_speech.LLM.base_openai_compatible_language_model import AssistantMessage, TextDelta
+    from speech_to_speech.LLM.chat import Chat, make_user_message
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+    from speech_to_speech.pipeline.messages import EndOfResponse
+
+    from robot_790d.realtime_entry import _filter_private_advisory_events, apply_interruptible_chat_generation_patch
+
+    monkeypatch.setattr(Handler, "_generate", Handler._generate)
+    monkeypatch.setattr(Handler, "_robot_790_interruptible_generation_patch", False, raising=False)
+    apply_interruptible_chat_generation_patch()
+    handler = object.__new__(Handler)
+    handler.stream = False
+    handler.compactor = None
+    handler._generation_is_stale = lambda _: False
+    handler._turn_is_latest = lambda *_: True
+    handler._turn_output_allowed = lambda *_: True
+    handler._chunk = lambda _, **kwargs: SimpleNamespace(**kwargs)
+    requests = []
+    def request(items, options):
+        requests.append(items)
+        raw = "[B2 advisory] private snapshot" if len(requests) == 1 or second_private else "Here is my answer."
+        return iter([AssistantMessage(content=[Content(type="output_text", text=raw)]), TextDelta(text=raw)])
+    handler._serialize = lambda chat: [item.model_dump() for item in chat.buffer]
+    handler._request = request
+    handler._iter_events = _filter_private_advisory_events
+    original = Chat(100)
+    user = original.add_item(make_user_message("Original question"))
+    turn = SimpleNamespace(gen=0, turn_id=None, turn_revision=None, response=None, wants_audio=False)
+    kwargs = {"transactional_user_message_id": user.id} if native_audio else {}
+    outputs = list(handler._generate(original.copy(), original, turn, {}, **kwargs))
+    assert len(requests) == 2
+    ends = [item for item in outputs if isinstance(item, EndOfResponse)]
+    assert len(ends) == 1
+    assert bool(ends[0].error) == second_private
+    history = str([item.model_dump() for item in original.buffer])
+    assert "private snapshot" not in history
+    assert "STS response recovery" not in history
+    assert ("Here is my answer." in history) == (not second_private)
+    assert ("Original question" in history) == (not native_audio or not second_private)
+
+
 def test_tool_followup_uses_voice_prefix_even_for_private_text_selection(monkeypatch):
     from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
 
@@ -163,7 +210,9 @@ def test_tool_followup_uses_voice_prefix_even_for_private_text_selection(monkeyp
     additions = []
     active = SimpleNamespace(add_item=additions.append)
     options = {"tools": ["all original schemas"], "tool_choice": "none"}
-    assert list(handler._generate(active, "original", turn, options)) == [options]
+    monkeypatch.delenv("ROBOT_790_B1_TEMPERATURE", raising=False)
+    assert list(handler._generate(active, "original", turn, options)) == [{**options, "temperature": 0.8}]
+    assert "temperature" not in options
     assert seen == [(active, "stable B1", True)]
     assert additions[0].role == "user"
     assert additions[0].content[0].text == "[STS tool continuation]\nSay it is loaded."

@@ -10,6 +10,9 @@ function fixture() {
     { id: 'file:panda.jpg', kind: 'image' }, { id: 'file:plexi.jpg', kind: 'image' },
   ] };
   const c = vm.createContext({
+    runtimeConfig: {}, Robot790ImageTask: require('../web/sts/image-task.js'),
+    imageTaskReceipt: null, handledFunctionCallIds: new Set(), toolFollowupDrainTimer: null, toolFollowupDrainStartedAt: 0,
+    outputAudioActive: () => false, setTimeout, clearTimeout,
     pendingSessionMapMove: null, sessionMapMoveBusy: false,
     sessionMapRequestEpoch: 0,
     llmRunOverview: null,
@@ -38,6 +41,10 @@ function fixture() {
     responseActive: false, idleInFlight: false, idleExhaustionScoredThisResponse: false,
     reengageInFlight: false, gpuWatchInFlight: false, standingRoutineInFlight: false,
     imageToolProtectionEnabled: false,
+    clearImageToolProtection() {},
+    imageFollowupText: () => 'I made the image.',
+    generatedImageToEyeFollowupText: () => 'I moved the generated image into my sensing eye.',
+    searchFollowupInstructions: () => 'Answer from search receipts.',
     updateIdleSchedulerStatus() {}, scheduleFaceIdle() {}, updateLanePressure() {},
     clearUserTurnPending() {}, resetSpeechMouthCue() {}, cueFaceMode() {},
     flushAudioQueue: async () => {}, clearLabGoalAfterOneShotResponse() {},
@@ -49,7 +56,7 @@ function fixture() {
     updateSessionTools() {}, appendBrain2AdvisoryToConversation() {}, appendRuntimeContextToConversation() {},
   });
   for (const name of ['containsToolMarkup', 'eventResponseId', 'responseOutputSuppressed',
-    'suppressToolMarkupResponse', 'sensingEyeRecallContinuation', 'sensingEyeRecallFollowupInstructions',
+    'suppressToolMarkupResponse', 'sensingEyeRecallContinuation', 'sensingEyeRecallFollowupInstructions', 'imageTaskContinuation', 'sessionMapContinuation',
     'handleFunctionCall', 'maybeCreateToolFollowup', 'finishSensingEyeChoice', 'handleEvent']) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
@@ -58,13 +65,247 @@ function fixture() {
   }
   function done(id) { c.handleEvent({ type: 'response.done', response: { id, status: 'completed' } }); }
   function created(id) { c.handleEvent({ type: 'response.created', response: { id } }); }
-  async function tool(name, args = {}, id = 'initial', callId = 'call-1') {
+  let nextCall = 0;
+  async function tool(name, args = {}, id = 'initial', callId = `call-${++nextCall}`) {
     c.handleEvent({ type: 'response.function_call_arguments.done', name, arguments: JSON.stringify(args), response_id: id, call_id: callId });
     await new Promise(setImmediate);
   }
   const directions = () => sent.filter(e => e.type === 'response.create').at(-1).response.robot790_tool_followup;
   return { c, sent, logs, calls, transcript, audio, finishes, catalog, done, created, tool, directions };
 }
+
+function mapFixture({ total = 1, request = 'Take us to Genius rehearsal.' } = {}) {
+  const f = fixture();
+  f.c.lastUserText = request;
+  f.c.enabledToolList = () => ['list_session_map', 'enter_session', 'read_text_file', 'set_chassis']
+    .map(name => ({ type: 'function', name }));
+  f.c.performSessionMapMove = move => f.calls.push({ name: 'transition', args: move });
+  f.c.executeTool = async (name, args) => {
+    f.calls.push({ name, args });
+    if (name === 'list_session_map') return { status: 'ok', total, sessions: total ? [
+      { session_id: 'sessions/genius.txt', title: 'Genius rehearsal', created: '2026-09-12' },
+      ...(total > 1 ? [{ session_id: 'sessions/other.txt', title: 'Genius rehearsal' }] : [])
+    ] : [] };
+    f.c.pendingSessionMapMove = { session_id: args.destination };
+    return { status: 'queued' };
+  };
+  return f;
+}
+
+test('map lookup -> private entry -> transition is one bounded action, with stable schemas', async () => {
+  const f = mapFixture();
+  await f.tool('list_session_map', { query: 'Genius' });
+  f.done('initial');
+  assert.equal(f.sent.at(-1).response.tool_choice, 'auto');
+  assert.deepEqual(Array.from(f.sent.at(-1).response.modalities), ['text']);
+  assert.equal(f.sent.at(-1).response.tools.length, 4);
+  assert.match(f.directions(), /Listing sessions does not authorize moving/);
+  assert.match(f.directions(), /sessions\/genius.txt/);
+  f.created('map-choice');
+  await f.tool('read_text_file', { filename: 'sessions/genius.txt' }, 'map-choice');
+  await f.tool('enter_session', { destination: 'sessions/not-listed.txt' }, 'map-choice');
+  await f.tool('enter_session', { destination: 'sessions/genius.txt' }, 'map-choice');
+  await f.tool('enter_session', { destination: 'sessions/genius.txt' }, 'map-choice');
+  f.done('map-choice');
+  assert.deepEqual(f.calls.map(call => call.name), ['list_session_map', 'enter_session', 'transition']);
+  assert.equal(f.transcript.length, 0, 'private decision is not spoken');
+});
+
+test('list-only/import request can finish without navigation; no automatic match dispatch', async () => {
+  for (const request of ['List the genius sessions.', 'Bring that transcript here as a note.']) {
+    const f = mapFixture({ request });
+    await f.tool('list_session_map');
+    f.done('initial');
+    assert.match(f.directions(), /read\/import a single note/);
+    f.created('map-choice');
+    f.c.handleEvent({ type: 'response.output_text.done', response_id: 'map-choice', text: 'I found Genius rehearsal.' });
+    f.done('map-choice');
+    assert.deepEqual(f.calls.map(call => call.name), ['list_session_map']);
+    assert.equal(f.sent.at(-1).response.tool_choice, 'none');
+  }
+});
+
+test('missing and ambiguous map results reject even an attempted listed entry', async () => {
+  for (const total of [0, 2]) {
+    const f = mapFixture({ total });
+    await f.tool('list_session_map');
+    f.done('initial');
+    assert.match(f.directions(), /Do not call any tool/);
+    f.created('map-choice');
+    await f.tool('enter_session', { destination: 'sessions/genius.txt' }, 'map-choice');
+    f.done('map-choice');
+    assert.deepEqual(f.calls.map(call => call.name), ['list_session_map']);
+    assert.match(f.directions(), /Which saved thread/);
+  }
+});
+
+test('new activity, cancellation epoch, expiry and completed selection reject late map entry', async () => {
+  for (const mode of ['activity', 'epoch', 'expiry', 'completed']) {
+    const f = mapFixture();
+    await f.tool('list_session_map');
+    f.done('initial');
+    f.created('map-choice');
+    if (mode === 'activity') f.c.lastUserTurnActivityAt++;
+    if (mode === 'epoch') f.c.sessionMapRequestEpoch++;
+    if (mode === 'expiry') f.c.eyeRecallResponses.get('map-choice').deadline = 0;
+    if (mode === 'completed') f.done('map-choice');
+    await f.tool('enter_session', { destination: 'sessions/genius.txt' }, 'map-choice');
+    assert.deepEqual(f.calls.map(call => call.name), ['list_session_map']);
+  }
+});
+
+function imageFixture() {
+  const f = fixture();
+  f.c.runtimeConfig = { image_continuation: { enabled: true } };
+  f.c.lastUserText = 'Look up and draw the house, then put it in your eye.';
+  f.c.enabledToolList = () => ['search_web', 'generate_image', 'move_generated_image_to_sensing_eye', 'set_chassis']
+    .map(name => ({ type: 'function', name }));
+  f.c.executeTool = async (name, args) => {
+    f.calls.push({ name, args });
+    if (name === 'search_web') return { status: 'ok', results: [{ title: 'House' }] };
+    if (name === 'generate_image') return { status: 'ok', filename: 'house.png', displayed: true };
+    return { status: 'ok', source_image: 'house.png', staged: true };
+  };
+  return f;
+}
+
+test('search -> private generation -> private staging -> speech completes one authorized image chain', async () => {
+  const f = imageFixture();
+  await f.tool('search_web', { query: 'house' });
+  f.done('initial');
+  assert.equal(f.sent.at(-1).response.tool_choice, 'auto');
+  assert.deepEqual(Array.from(f.sent.at(-1).response.modalities), ['text']);
+  assert.equal(f.sent.at(-1).response.tools.length, 4, 'stable complete schema set');
+  assert.match(f.directions(), /Search alone does not authorize drawing/);
+  f.created('draw-choice');
+  await f.tool('generate_image', { prompt: 'The house' }, 'draw-choice');
+  f.done('draw-choice');
+  assert.equal(f.sent.at(-1).response.tool_choice, 'auto');
+  assert.match(f.directions(), /house.png/);
+  f.created('eye-choice');
+  await f.tool('move_generated_image_to_sensing_eye', {}, 'eye-choice');
+  f.done('eye-choice');
+  assert.equal(f.sent.at(-1).response.tool_choice, 'none');
+  assert.match(f.directions(), /moved the generated image/);
+  assert.deepEqual(f.calls.map(call => call.name), ['search_web', 'generate_image', 'move_generated_image_to_sensing_eye']);
+  assert.equal(f.calls[2].args._expectedFilename, 'house.png');
+  assert.equal(f.c.imageTaskReceipt.receipts.at(-1).staged, true);
+  assert.equal(f.finishes.length, 0, 'no idle boundary during the chain');
+  f.created('spoken-receipt');
+  f.done('spoken-receipt');
+  assert.equal(f.finishes.length, 1);
+});
+
+test('search-only and draw-only requests may finish without an extra action', async () => {
+  for (const initial of ['search_web', 'generate_image']) {
+    const f = imageFixture();
+    f.c.lastUserText = initial === 'search_web' ? 'How old is the house?' : 'Draw the house; leave the eye alone.';
+    await f.tool(initial);
+    f.done('initial');
+    f.created('choice');
+    assert.match(f.directions(), /Generation alone does not authorize staging/);
+    f.c.handleEvent({ type: 'response.output_text.done', response_id: 'choice', text: 'Done with the requested step.' });
+    f.done('choice');
+    assert.equal(f.calls.length, 1);
+    assert.equal(f.sent.at(-1).response.tool_choice, 'none');
+    assert.match(f.directions(), /Done with the requested step/);
+  }
+});
+
+test('private image choices reject unrelated tools, double dispatch, extra generations, and late calls', async () => {
+  const f = imageFixture();
+  await f.tool('search_web', {}, 'initial', 'unique-search');
+  await f.tool('search_web', {}, 'initial', 'unique-search');
+  f.done('initial');
+  f.created('choice');
+  await f.tool('set_chassis', {}, 'choice');
+  await f.tool('generate_image', { prompt: 'house' }, 'choice', 'unique-image');
+  await f.tool('generate_image', { prompt: 'house' }, 'choice', 'unique-image');
+  await f.tool('generate_image', { prompt: 'another' }, 'choice');
+  f.done('choice');
+  await f.tool('generate_image', { prompt: 'late' }, 'choice');
+  assert.deepEqual(f.calls.map(call => call.name), ['search_web', 'generate_image']);
+});
+
+test('failed generation has one failure confirmation and no retry or staging', async () => {
+  const f = imageFixture();
+  f.c.executeTool = async name => { f.calls.push(name); throw new Error('Timeout; outcome unknown'); };
+  await f.tool('generate_image');
+  f.done('initial');
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.sent.at(-1).response.tool_choice, 'none');
+  assert.match(f.directions(), /could not make/);
+  assert.equal(f.c.imageTaskReceipt.receipts.at(-1).status, 'error');
+});
+
+test('new speech invalidates private image steps and late generation followups', async () => {
+  const f = imageFixture();
+  await f.tool('search_web');
+  f.done('initial');
+  f.created('choice');
+  f.c.handleEvent({ type: 'input_audio_buffer.speech_started' });
+  await f.tool('generate_image', {}, 'choice');
+  assert.equal(f.calls.length, 1);
+  const g = imageFixture();
+  let finish, args;
+  g.c.executeTool = (_name, value) => { args = value; return new Promise(resolve => { finish = resolve; }); };
+  const pending = g.tool('generate_image');
+  g.c.handleEvent({ type: 'input_audio_buffer.speech_started' });
+  assert.equal(args._isCurrent(), false);
+  finish({ status: 'ok', filename: 'late.png' });
+  await pending;
+  g.done('initial');
+  assert.equal(g.sent.filter(event => event.type === 'response.create').length, 0);
+});
+
+test('tool followup waits for queued audio and keeps the task boundary pending', async () => {
+  const f = imageFixture();
+  const timers = [];
+  f.c.setTimeout = callback => { timers.push(callback); return 1; };
+  f.c.outputAudioActive = () => true;
+  await f.tool('search_web');
+  f.done('initial');
+  assert.equal(f.sent.filter(event => event.type === 'response.create').length, 0);
+  assert.equal(f.c.toolFollowupNeeded, true);
+  assert.equal(timers.length, 1);
+  f.c.outputAudioActive = () => false;
+  timers[0]();
+  assert.equal(f.sent.filter(event => event.type === 'response.create').length, 1);
+});
+
+test('the rollout switch leaves existing speech-only image followups available for rollback', async () => {
+  const f = imageFixture();
+  f.c.runtimeConfig.image_continuation.enabled = false;
+  await f.tool('generate_image');
+  f.done('initial');
+  assert.equal(f.sent.at(-1).response.tool_choice, 'none');
+  assert.match(f.directions(), /I made the image/);
+  assert.equal(f.c.imageTaskReceipt, null);
+});
+
+test('a private selection expires without staging or speech after cancellation', async () => {
+  const f = imageFixture();
+  await f.tool('generate_image');
+  f.done('initial');
+  f.created('choice');
+  const before = f.sent.length;
+  f.c.handleEvent({ type: 'response.done', response: { id: 'choice', status: 'cancelled' } });
+  await f.tool('move_generated_image_to_sensing_eye', {}, 'choice');
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.sent.slice(before).filter(event => event.type === 'response.create').length, 0);
+});
+
+test('cancellation during a paid call retains its artifact without reviving the continuation', async () => {
+  const f = imageFixture();
+  let finish, args;
+  f.c.executeTool = (_name, value) => { args = value; return new Promise(resolve => { finish = resolve; }); };
+  const pending = f.tool('generate_image');
+  f.c.handleEvent({ type: 'response.done', response: { id: 'initial', status: 'cancelled' } });
+  assert.equal(args._isCurrent(), false);
+  finish({ status: 'ok', filename: 'late.png' });
+  await pending;
+  assert.equal(f.sent.filter(event => event.type === 'response.create').length, 0);
+});
 
 test('list -> real recall -> grounded speech keeps session context and never finishes the handoff early', async () => {
   const f = fixture();

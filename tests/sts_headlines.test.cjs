@@ -15,6 +15,8 @@ function setup(overrides = {}, extraFunctions = []) {
   const logs = [];
   let now = 120001;
   const context = vm.createContext({
+    pendingEyeRecallResponse: null,
+    eyeRecallResponses: new Map(),
     pendingSessionMapMove: null, sessionMapMoveBusy: false,
     realtimeStopRequested: false, updateSessionTools: () => {},
     Date: { now: () => now }, URL, AbortSignal, location: { href: 'http://127.0.0.1:8790/' },

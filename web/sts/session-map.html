@@ -1210,9 +1210,12 @@
       if (archiveBusy) return;
       const item = selectedSession();
       if (!item) return;
-      if (!confirm(`Move "${sessionDisplayName(item.filename, item.title)}" and its session-scoped eye captures out of Connect Select?`)) return;
       archiveBusy = true;
       try {
+        if (!await confirmBranchArchive({
+          sessions: [{ ...item }], session_count: 1, allowed: sessions.length > 1,
+          reason: sessions.length > 1 ? "" : "Keep at least one session in the map."
+        }, { single: true })) return;
         setStatus("archiving");
         const result = await apiJson(new URL("/api/continuity/archive", location.href), {
           method: "POST",
@@ -1230,16 +1233,18 @@
       }
     }
 
-    function confirmBranchArchive(plan) {
+    function confirmBranchArchive(plan, { single = false } = {}) {
       return new Promise(resolve => {
         const dialog = document.createElement("dialog");
         dialog.className = "archive-dialog";
         dialog.setAttribute("aria-labelledby", "archiveBranchTitle");
         const heading = document.createElement("h3");
         heading.id = "archiveBranchTitle";
-        heading.textContent = "Archive branch?";
+        heading.textContent = single ? "Archive session?" : "Archive branch?";
         const description = document.createElement("p");
-        description.textContent = `${plan.session_count} session${plan.session_count === 1 ? "" : "s"}, including the selected session and its descendants. Their saved forms and eye assets travel with them; assets used outside this branch remain available.`;
+        description.textContent = single
+          ? "Only this session will be archived; its descendants stay in the map. Saved forms and unshared eye captures move with it. Shared assets remain available. Nothing is deleted."
+          : `${plan.session_count} session${plan.session_count === 1 ? "" : "s"}, including the selected session and its descendants. Their saved forms and eye assets travel with them; assets used outside this branch remain available.`;
         const list = document.createElement("ul");
         for (const item of plan.sessions) {
           const row = document.createElement("li");

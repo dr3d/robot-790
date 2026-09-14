@@ -9,6 +9,7 @@ function fixture() {
   let now = 1000;
   class Clock extends Date { static now() { return now; } }
   const c = vm.createContext({
+    imageTaskReceipt: null,
     URLSearchParams, location: { search: '' },
     Date: Clock, ws: { readyState: 1 }, WebSocket: { OPEN: 1 }, realtimeStopRequested: false,
     responseActive: false, toolFollowupNeeded: false, pendingToolCalls: 0,

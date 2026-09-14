@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
+import time
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +17,7 @@ _VOICE_SHAPE_PREFIX = "[voice-shape:"
 _LLM_WIRE_CAPTURE_LOCK = Lock()
 _LLM_WIRE_CAPTURE_SEQUENCE = 0
 logger = logging.getLogger(__name__)
+PRIVATE_OUTPUT_SUPPRESSED = "robot790_private_output_suppressed"
 
 
 class _PrivateAdvisoryTextFilter:
@@ -55,19 +58,22 @@ class _PrivateAdvisoryTextFilter:
 
 def _filter_private_advisory_events(events: Iterator[Any]) -> Iterator[Any]:
     """Filter before sentence batching, TTS, transcript events, and history write-back."""
-    from speech_to_speech.LLM.base_openai_compatible_language_model import AssistantMessage, TextDelta
+    from speech_to_speech.LLM.base_openai_compatible_language_model import AssistantMessage, TextDelta, ToolCall
 
     guard = _PrivateAdvisoryTextFilter()
     history_blocked = False
+    public_output = False
     try:
         for event in events:
             if isinstance(event, TextDelta):
                 visible = guard.feed(event.text)
+                public_output = public_output or bool(visible.strip())
                 if visible:
                     yield event.model_copy(update={"text": visible})
             elif isinstance(event, AssistantMessage):
                 tail = guard.finish()
                 if tail:
+                    public_output = public_output or bool(tail.strip())
                     yield TextDelta(text=tail)
                 history_guard = _PrivateAdvisoryTextFilter()
                 content = []
@@ -82,10 +88,15 @@ def _filter_private_advisory_events(events: Iterator[Any]) -> Iterator[Any]:
                 if content:
                     yield event.model_copy(update={"content": content})
             else:
+                public_output = public_output or isinstance(event, ToolCall)
                 yield event
         tail = guard.finish()
         if tail:
             yield TextDelta(text=tail)
+            public_output = public_output or bool(tail.strip())
+        if (guard.blocked or history_blocked) and not public_output:
+            # The existing failure path announces even an implicit response and closes it.
+            raise RuntimeError(PRIVATE_OUTPUT_SUPPRESSED)
     finally:
         if guard.blocked or history_blocked:
             logger.warning("Suppressed private controller output from its marker to end of response")
@@ -116,6 +127,7 @@ def apply_private_advisory_output_patch() -> None:
 def apply_interruptible_chat_generation_patch() -> None:
     from speech_to_speech.LLM.chat import make_user_message
     from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler
+    from speech_to_speech.pipeline.messages import EndOfResponse
 
     from robot_790d.llm_cancellation import CancellableProviderEvents
 
@@ -125,6 +137,8 @@ def apply_interruptible_chat_generation_patch() -> None:
 
     def generate(self: Any, active_chat: Any, original_chat: Any, turn: Any,
                  optional_kwargs: dict[str, Any], **kwargs: Any) -> Iterator[Any]:
+        optional_kwargs = dict(optional_kwargs)
+        optional_kwargs.setdefault("temperature", _b1_temperature_from_env())
         followup = _extra_value(turn.response, "robot790_tool_followup")
         if isinstance(followup, str) and followup.strip():
             # Text-only private selection still shares B1's voice-system prefix.
@@ -142,11 +156,53 @@ def apply_interruptible_chat_generation_patch() -> None:
         def start(api_input: Any, options: dict[str, Any]) -> CancellableProviderEvents:
             return CancellableProviderEvents(lambda: request(api_input, options), iterate, cancelled)
 
-        yield from original(self, active_chat, original_chat, turn, optional_kwargs,
-                            request_fn=start, event_iterator_fn=iter, **kwargs)
+        provisional_id = kwargs.get("transactional_user_message_id")
+        provisional = (
+            next((item for item in active_chat.buffer if item.id == provisional_id), None) if provisional_id else None
+        )
+        for attempt in range(2):
+            retry_end = None
+            for output in original(self, active_chat, original_chat, turn, optional_kwargs,
+                                   request_fn=start, event_iterator_fn=iter, **kwargs):
+                if (isinstance(output, EndOfResponse) and output.error
+                        and PRIVATE_OUTPUT_SUPPRESSED in output.error and attempt == 0 and not cancelled()):
+                    retry_end = output
+                    continue
+                yield output
+            if retry_end is None:
+                break
+            if cancelled():
+                yield retry_end
+                break
+            logger.warning("Retrying fully filtered reply once; no speech or tool call was emitted")
+            active_chat = active_chat.copy()
+            # Native audio turns roll back their provisional input on failure.
+            if provisional is not None:
+                original_chat.add_item(provisional)
+            active_chat.add_item(make_user_message(
+                "[STS response recovery]\nThe previous generation produced no public answer. "
+                "Respond to the existing request using the conversation and actual tool receipts. "
+                "Do not repeat private controller messages. Do not invent an action or its completion."
+            ))
 
     ChatCompletionsApiModelHandler._generate = generate
     ChatCompletionsApiModelHandler._robot_790_interruptible_generation_patch = True
+
+
+def apply_unbounded_live_chat_patch() -> None:
+    """Make an explicit chat_size=0 disable both soft trimming and hard eviction."""
+    from speech_to_speech.LLM.chat import Chat
+
+    if getattr(Chat, "_robot_790_zero_size_patch", False):
+        return
+    original = Chat.trim_if_needed
+
+    def trim(self: Any, compactor: Any = None) -> None:
+        if self.size > 0:
+            original(self, compactor)
+
+    Chat.trim_if_needed = trim
+    Chat._robot_790_zero_size_patch = True
 
 
 def _extra_value(model: Any, name: str) -> Any:
@@ -473,6 +529,41 @@ def apply_chat_text_token_cap_patch() -> None:
     ChatCompletionsApiModelHandler._robot_790_text_token_cap_patch = True
 
 
+def apply_chat_auxiliary_temperature_patch() -> None:
+    """Pin inherited warmup/compaction calls without editing the installed package."""
+    from speech_to_speech.LLM.base_openai_compatible_language_model import WARMUP_MAX_RETRIES
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler
+
+    if getattr(ChatCompletionsApiModelHandler, "_robot_790_auxiliary_temperature_patch", False):
+        return
+
+    def complete(self: Any, client: Any, system: str, user: str) -> Any:
+        return client.chat.completions.create(
+            model=self.model_name,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            temperature=0.8,
+            extra_body=self._extra_body,
+            timeout=self.request_timeout,
+        )
+
+    def warmup(self: Any) -> None:
+        logger.info("Warming up %s (temperature=0.8)", self.__class__.__name__)
+        started = time.monotonic()
+        complete(self, self.client.with_options(max_retries=WARMUP_MAX_RETRIES),
+                 "You are a helpful assistant", "Hello")
+        logger.info("%s: warmed up! time: %.3f s", self.__class__.__name__, time.monotonic() - started)
+
+    def compaction(self: Any) -> Any:
+        def generate(system: str, user: str) -> str:
+            response = complete(self, self.client, system, user)
+            return response.choices[0].message.content or ""
+        return generate
+
+    ChatCompletionsApiModelHandler.warmup = warmup
+    ChatCompletionsApiModelHandler._build_compaction_generate_fn = compaction
+    ChatCompletionsApiModelHandler._robot_790_auxiliary_temperature_patch = True
+
+
 def apply_chat_completions_wire_capture_patch() -> None:
     """Optionally capture the literal request sent from STS to LM Studio."""
     from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler
@@ -549,6 +640,17 @@ def apply_visible_transcript_voice_shape_filter_patch() -> None:
     ConversationHandler._robot_790_voice_shape_filter_patch = True
 
 
+def _b1_temperature_from_env() -> float:
+    raw = os.environ.get("ROBOT_790_B1_TEMPERATURE", "0.8").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError("ROBOT_790_B1_TEMPERATURE must be a number from 0 to 2") from None
+    if not math.isfinite(value) or not 0 <= value <= 2:
+        raise ValueError("ROBOT_790_B1_TEMPERATURE must be a number from 0 to 2")
+    return value
+
+
 def _chat_text_max_tokens_from_env() -> int | None:
     raw = os.environ.get("ROBOT_790_TEXT_MAX_TOKENS", "").strip()
     if not raw:
@@ -561,11 +663,14 @@ def _chat_text_max_tokens_from_env() -> int | None:
 
 
 def main() -> None:
+    print(f"Robot 790 B1 sampling temperature: {_b1_temperature_from_env():g}", flush=True)
     apply_qwen3_tts_runtime_instruct_patch()
     apply_chat_text_token_cap_patch()
+    apply_chat_auxiliary_temperature_patch()
     apply_chat_completions_wire_capture_patch()
     apply_private_advisory_output_patch()
     apply_interruptible_chat_generation_patch()
+    apply_unbounded_live_chat_patch()
     apply_parakeet_voice_shape_patch()
     apply_visible_transcript_voice_shape_filter_patch()
     from speech_to_speech.s2s_pipeline import main as speech_to_speech_main

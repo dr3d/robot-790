@@ -248,6 +248,13 @@ picture still exists in the run's records.
 **Camera On** opens a browser camera preview after permission. **Capture To
 Eye** takes a frame into the sensing eye; **Camera Off** closes the preview.
 Turning the camera on is not, by itself, continuous video understanding.
+Eric can also turn it on/off when asked, using `set_live_camera`. Ask "turn on
+the camera and look at the audience" to open it and capture one frame together.
+The browser may ask you for camera permission. Disconnect stops the live stream,
+including a pending camera start; saved stills remain with the session.
+Drag the grip below the live preview to resize its height; the size is remembered
+in this browser. Double-click the grip to reset. With the grip focused, Up/Down
+resize it, Shift makes larger steps, and Home/End select the minimum/maximum.
 **Mirror Face** stages a one-shot capture of Browser Face so Eric can inspect
 his rendered appearance.
 
@@ -372,8 +379,11 @@ repeatedly analyzing unchanged text is not the goal. Candidates and eligible
 private advisories can inform Eric. A surfaced monitor line is not necessarily
 a spoken Eric response, and a logged suggestion is not proof that he used it.
 Normal isolated idle requests now include the actual bounded advisory snapshot,
-not just instructions describing Brain 2. Performance and substrate experiments
-keep their private-context exclusions. Current body and sensing-eye facts remain
+not just instructions describing Brain 2. Substrate experiments keep their
+private-context exclusions. The former Performance mode is disabled, including
+automatic activation from stage language. Rehearse through conversation or notes;
+this no longer changes context loading or the normal attention ramp.
+Current body and sensing-eye facts remain
 separate from historical dialogue; remembering a picture does not reload it.
 The `steering` log records B2's structured loop/grounding assessment and proposed
 next step. These are private judgments, not sensor receipts. A new-subject
@@ -413,7 +423,7 @@ one thing at a time when comparing runs.
 | Notes | How strongly loaded notes shape idle. It does not pin/unpin files or resize model memory. |
 | Ponder | Request an Eric idle turn now; useful for a spot check, but not required for a timed run. |
 | Idle status | The scheduler's explanation: waiting, firing, disconnected, busy, blocked, and so on. |
-| Performance / Substrate / First contact | Specialized lab conditions, not prerequisites for Connect Empty. Leave them off for an ordinary idle run. |
+| Substrate / First contact | Specialized lab conditions, not prerequisites for Connect Empty. Leave them off for an ordinary idle run. |
 | Arm Contact / Report | Arm the first-contact experiment, or export the lab report. Not normal conversation controls. |
 
 Check Lab Speed at the start of every test. The page's one-time operator
@@ -450,7 +460,7 @@ restart is needed for subsequent timing-only edits.
 3. Keep **Idle Drift** and **Wonder** above zero. Set **Lab Speed** to 12x for
    your accelerated observation run. For outward wandering, lower Self-focus
    rather than treating high drift as the only useful dial.
-4. Leave Lab Goal blank and Performance, Substrate, and First contact off.
+4. Leave Lab Goal blank and Substrate and First contact off.
    Active self-tasks can also defer the headline job.
 5. Leave the run quiet for at least two real minutes, and observe for 10-15
    real minutes. Busy speech, tools, or model work can postpone the opportunity.
@@ -565,7 +575,7 @@ without changing the unfiltered map's folding choices.
 | Copy Source | Copy the source filename, not the entire note text. |
 | Previous | Select this node's lineage parent. Unlike Connect Previous, this follows a relationship, not merely date order. |
 | Connect In STS | Ask the originating STS window to connect with the selected note and representation. Disconnect an existing conversation first. |
-| Archive | Move the selected session and its associated session-scoped eye captures out of the active collection, after confirmation. |
+| Archive | Confirm the selected title/date in an in-page dialog. Move only that session, its saved forms, and unshared eye captures out of the active collection; descendants stay. Cancel is the default. |
 | Archive Branch | Preview the selected session and all active descendants, then confirm the listed batch. Other branches and shared assets they use remain available. Disconnect first. |
 
 Open the map from STS when you intend to use Connect In STS. A standalone map
@@ -601,6 +611,13 @@ departure cancels a pending move. Failed saves prevent loading the destination;
 keep the page open and retry Disconnect as usual. A failed destination load or
 connection leaves the departed session saved. Check Events for `session map
 arrived` or a specific failure. A queued tool receipt is not proof of arrival.
+
+After a unique lookup, Eric can now call entry in a private follow-up instead of
+only describing the match. A list-only request does not authorize a jump.
+Successful arrival adds an `Entered ...` line with historical-session and other
+note counts; Events contains the full inventory. The current live conversation
+is not counted as another loaded historical session. With Auto history, the
+destination's retained source-checked history loads, not just its single transcript.
 
 Eric is instructed to use this only for an operator-requested thread change.
 Navigation tools are excluded from idle's tool list, and runtime checks reject

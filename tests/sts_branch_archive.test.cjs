@@ -63,3 +63,72 @@ test('preview dialog has a scrollable roster, safe default, and an explicit fina
   assert.match(page, /dialog.returnValue === "archive"/);
   assert.match(page, /for \(const item of plan.sessions\)/);
 });
+
+function singleFixture(confirmed) {
+  const requests = [], confirmations = [], notices = [];
+  const selected = { filename: 'sessions/one.txt', title: 'One session', created: '2026-09-13T11:00:00-04:00' };
+  const c = vm.createContext({
+    URL, location: { href: 'http://localhost:8790/session-map.html' }, archiveBusy: false,
+    sessions: [selected, { filename: 'sessions/child.txt' }], selectedFilename: selected.filename,
+    selectedSession: () => selected,
+    confirmBranchArchive: async (plan, options) => { confirmations.push({plan,options}); return confirmed; },
+    apiJson: async (url, options) => { requests.push({url:String(url),body:JSON.parse(options.body)}); return { status:'ok' }; },
+    setStatus: () => {}, postToSts: value => notices.push(value), refreshSessions: async () => {}, loadDetails: () => {},
+  });
+  const start = page.indexOf('    async function archiveSelected(');
+  const end = page.indexOf('\n    }\n', start);
+  vm.runInContext(page.slice(start, end + 6), c);
+  return {c,selected,requests,confirmations,notices};
+}
+
+test('single archive uses the in-page dialog and cancel sends no mutation', async () => {
+  const {c,requests,confirmations,notices} = singleFixture(false);
+  await c.archiveSelected();
+  assert.equal(confirmations[0].options.single, true);
+  assert.equal(confirmations[0].plan.sessions.length, 1);
+  assert.equal(confirmations[0].plan.allowed, true);
+  assert.equal(requests.length, 0);
+  assert.equal(notices.length, 0);
+  assert.equal(c.archiveBusy, false);
+});
+
+test('single archive submits the originally confirmed session, not a later selection', async () => {
+  const {c,requests} = singleFixture(true);
+  c.confirmBranchArchive = async () => {
+    c.selectedSession = () => ({filename:'sessions/child.txt'});
+    return true;
+  };
+  await c.archiveSelected();
+  assert.deepEqual(requests, [{url:'http://localhost:8790/api/continuity/archive',body:{session_filename:'sessions/one.txt'}}]);
+  assert.equal(c.archiveBusy, false);
+});
+
+test('single archive blocks a second operation while its dialog is open', async () => {
+  const {c,requests} = singleFixture(true);
+  let release;
+  c.confirmBranchArchive = () => new Promise(resolve => {release=resolve;});
+  const pending = c.archiveSelected();
+  assert.equal(c.archiveBusy, true);
+  await c.archiveSelected();
+  assert.equal(requests.length, 0);
+  release(false);
+  await pending;
+  assert.equal(c.archiveBusy, false);
+});
+
+test('single archive failure releases controls without sending refresh', async () => {
+  const {c,notices} = singleFixture(true);
+  c.apiJson = async () => {throw Error('archive unavailable');};
+  await assert.rejects(c.archiveSelected(), /archive unavailable/);
+  assert.equal(c.archiveBusy, false);
+  assert.equal(notices.length, 0);
+});
+
+test('single dialog warns that descendants remain and cannot archive the last session', async () => {
+  const {c,confirmations} = singleFixture(false);
+  c.sessions.length = 1;
+  await c.archiveSelected();
+  assert.equal(confirmations[0].plan.allowed, false);
+  assert.match(page, /its descendants stay in the map/);
+  assert.match(page, /single \? "Archive session\?" : "Archive branch\?"/);
+});
