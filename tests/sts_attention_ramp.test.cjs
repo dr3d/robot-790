@@ -56,7 +56,7 @@ function fixture() {
     'armAssistantUtteranceFinished', 'checkAssistantUtteranceFinished',
     'idleDiscoveryEnabled', 'noteIdleDiscovery', 'idleDiscoveryWeight', 'idlePacingAnchorAt', 'idlePacingDelayMs',
     'compactSearchText', 'compactSearchUrl', 'searchResultDomain', 'normalizeSearchReceiptResult',
-    'noteSearchContextReceipt', 'searchWeb', 'chooseIdleLane', 'idleSpecialLaneGapMs',
+    'noteSearchContextReceipt', 'searchWeb',
     'clearIdleHardBrake',
   ]) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
@@ -425,19 +425,13 @@ test('discovery timing is configurable, never slows faster lab pacing, and exclu
   assert.equal(c.noteIdleDiscovery(['off'], { source: 'test', detail: 'disabled' }), false);
 });
 
-test('discovery lane follows new evidence without displacing goals, tasks or changing human attention', () => {
-  const { c, time } = independentFixture();
+test('discovery renews pacing without prescribing a topic or rhetorical lane', () => {
+  const { c } = independentFixture();
+  const before = c.lastAcceptedUserTranscriptAt;
   c.noteSearchContextReceipt(discoveryResult);
-  assert.equal(c.chooseIdleLane(7).name, 'discovery');
-  assert.match(c.chooseIdleLane(7).prompt, /not another request from the operator/);
-  c.currentLabGoal = () => 'An active job';
-  assert.equal(c.chooseIdleLane(7).name, 'goal');
-  c.currentLabGoal = () => '';
-  c.activeIdleSelfTasks = () => [{ text: 'A task' }];
-  assert.equal(c.chooseIdleLane(7).name, 'self_task');
-  c.activeIdleSelfTasks = () => [];
-  time(1240000);
-  assert.equal(c.chooseIdleLane(7).name, 'object');
+  assert.ok(c.idleDiscoveryWeight() > 0);
+  assert.equal(c.lastAcceptedUserTranscriptAt, before);
+  assert.ok(!page.includes('function chooseIdleLane('));
 });
 
 for (const change of ['none', 'user', 'reconnect', 'disconnect', 'context-reset']) {

@@ -6,7 +6,9 @@ permissions. Multiple context diets, one public mouth.
 That is the intended boundary, not a claim that the current implementation
 already respects it everywhere. The September 16
 [agency/language audit](sts-agency-and-language-audit-2026-09-16.md) identifies
-controller interpretation and dialogue direction that are scheduled for removal.
+controller interpretation and dialogue direction; the
+[first removal pass](agency-boundary-change.md) records what changed and what
+still needs work.
 
 Safety is treated the same way: not as a personality prompt, but as body
 architecture. The project explicitly nods to the Asimov robot-law tradition, but

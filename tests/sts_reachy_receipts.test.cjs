@@ -73,26 +73,20 @@ test('compact idle receives only the active body facts, not the full tool manual
   assert.doesNotMatch(c.formatEmbodimentForInstructions({ compact: true }), /move motors only/);
 });
 
-test('gesture follow-up distinguishes acceptance, completion, and error', () => {
-  const c = load(['faceBeatFollowupInstructions']);
-  for (const receipt of [{ status: 'accepted' }, { sequence: { status: 'running' } }]) {
-    const prompt = c.faceBeatFollowupInstructions(receipt);
-    assert.match(prompt, /completion is not verified/);
-    assert.match(prompt, /not image capture/);
-    assert.doesNotMatch(prompt, /sequence is verified completed/);
-  }
-  assert.match(c.faceBeatFollowupInstructions({ sequence: { status: 'completed' } }), /sequence is verified completed/);
-  assert.match(c.faceBeatFollowupInstructions({ status: 'error' }), /failure or uncertainty/);
-  assert.doesNotMatch(page, /say the first move is done/);
-  assert.match(page, /event.name === "play_face_beat"\) toolFollowupInstructions = faceBeatFollowupInstructions\(result\)/);
+test('gesture evidence is retained without a tool-specific spoken script', () => {
+  assert.ok(!page.includes('function faceBeatFollowupInstructions('));
+  assert.ok(page.includes('await awaitFaceBeatCompletion(result'));
+  assert.ok(page.includes('Accepted, running, failed and unknown are not completed'));
 });
 
 function completionFixture(states) {
   let now = 100000;
   let reads = 0;
-  const c = load(['awaitFaceBeatCompletion', 'faceBeatFollowupInstructions', 'handleFunctionCall'], {
+  const c = load(['awaitFaceBeatCompletion', 'handleFunctionCall'], {
     Date: class extends Date { static now() { return now; } }, AbortSignal,
     activeRealtimeSession: () => true, normalizeFaceBaseUrl: () => 'http://body/',
+    suppressedResponseIds: new Set(), toolContinuationOrigin: 'conversation',
+    enabledToolList: () => [{ name: 'play_face_beat' }],
     sleepMs: async ms => { now += ms; },
     getFaceJson: async (_, options) => {
       assert.equal(options.baseUrl, 'http://body/');
@@ -171,8 +165,8 @@ test('the function-call pipeline delivers completion evidence before requesting 
   });
   await c.handleFunctionCall({ name: 'play_face_beat', call_id: 'call1', arguments: '{"name":"drowsy"}' }, options);
   assert.equal(sent.length, 1);
-  assert.equal(JSON.parse(sent[0].item.output).result.completion, 'verified');
-  assert.match(c.toolFollowupInstructions, /sequence is verified completed/);
+  assert.equal(JSON.parse(sent[0].item.output).completion, 'verified');
+  assert.equal(c.toolFollowupInstructions, undefined);
   assert.equal(followups, 1);
   assert.equal(c.pendingToolCalls, 0);
 });

@@ -229,6 +229,7 @@ test('response boundary dispatches once, without a speech-only followup in the d
   vm.runInContext(source('maybeCreateToolFollowup'), c);
   Object.assign(c, {
     toolFollowupNeeded: true, pendingToolCalls: 1, responseDoneAfterTool: true,
+    toolFollowupUserActivityAt: c.lastUserTurnActivityAt,
     pendingSessionMapMove: { session_id: 'sessions/a.txt' },
     performSessionMapMove: move => calls.push(['move', move.session_id]),
   });

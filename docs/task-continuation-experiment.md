@@ -1,5 +1,9 @@
 # Shared Activity And Task Continuation Experiment
 
+September 16: the private bounded planner described below is superseded by
+[general conversation continuation](agency-boundary-change.md). The following
+entries are historical experiment receipts, not current runtime instructions.
+
 Status: **bounded image continuation implemented September 13; failed first retest followed by successful live image chains from the earlier session**.
 The broader shared-activity design below remains a proposal. Recorded September 12
 at the operator's request so the next work does not depend on conversation recall.

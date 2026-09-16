@@ -147,12 +147,13 @@ def apply_interruptible_chat_generation_patch() -> None:
         is_followup = isinstance(followup, str) and bool(followup.strip())
         is_idle = _extra_value(turn.response, "robot790_idle_continuation") is True
         if is_idle:
-            if getattr(turn.response, "conversation", None) != "none" or is_followup:
+            if is_followup:
                 yield EndOfResponse(turn_id=turn.turn_id, turn_revision=turn.turn_revision,
-                                    error="Shared idle must be an out-of-band response, not a tool follow-up.")
+                                    error="Shared idle cannot also be a tool follow-up.")
                 return
-            # Out-of-band controls write-back, not what Eric may remember. Preserve
-            # B1's full prefix and put this beat's directions/media only at the tail.
+            # Ordinary idle records speech/tools once through the normal conversation
+            # lifecycle. Explicit out-of-band experiments still suppress write-back.
+            # Preserve B1's prefix and put temporary scheduler context only at the tail.
             active_chat = original_chat.copy()
             self._apply_config(active_chat, turn.runtime_config.session.instructions, True)
             active_chat.add_item(make_user_message(
@@ -164,7 +165,8 @@ def apply_interruptible_chat_generation_patch() -> None:
                     return
                 add_supported_item(active_chat, item)
             optional_kwargs.pop("tools", None)
-            optional_kwargs.update(self._build_optional_kwargs(turn.runtime_config.session.tools, "none"))
+            idle_choice = "none" if getattr(turn.response, "conversation", None) == "none" else optional_kwargs.get("tool_choice", "auto")
+            optional_kwargs.update(self._build_optional_kwargs(turn.runtime_config.session.tools, idle_choice))
         elif is_followup:
             # Text-only private selection still shares B1's voice-system prefix.
             self._apply_config(active_chat, turn.runtime_config.session.instructions, True)
@@ -173,7 +175,7 @@ def apply_interruptible_chat_generation_patch() -> None:
             active_chat.add_item(make_user_message(f"[STS tool continuation]\n{followup}"))
         request = kwargs.pop("request_fn", None) or self._request
         iterate = kwargs.pop("event_iterator_fn", None) or self._iter_events
-        no_tools = is_idle or (is_followup and optional_kwargs.get("tool_choice") == "none")
+        no_tools = (is_idle or is_followup) and optional_kwargs.get("tool_choice") == "none"
         tool_blocked_marker = IDLE_TOOL_BLOCKED if is_idle else FOLLOWUP_TOOL_BLOCKED
         local_provider = urlparse(str(getattr(getattr(self, "client", None), "base_url", ""))).hostname in {
             "localhost", "127.0.0.1", "::1",

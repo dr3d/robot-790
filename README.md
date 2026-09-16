@@ -108,11 +108,13 @@ instructions in one editable file; B3/B4 sections are reserved, not running brai
 Idle-art jobs, optional inference metrics, shared speech-mouth cues and gaze,
 and recursive session-map expansion are included in this checkpoint.
 
-This is not a clean bill of health. Image handoffs can still lose continuations,
-and the [agency/language audit](docs/sts-agency-and-language-audit-2026-09-16.md)
-identifies English intent gates, scripted confirmations and controller-selected
-idle subjects. The next change removes that interpretation/direction while
-retaining execution permissions, receipts, hardware limits and audio ownership.
+This is not a clean bill of health. The
+[agency/language audit](docs/sts-agency-and-language-audit-2026-09-16.md)
+identified English intent gates, scripted confirmations and controller-selected
+idle subjects. The [first removal pass](docs/agency-boundary-change.md) replaces
+those paths with capability checks, general tool continuation and model-chosen
+idle research. Permissions, receipts, hardware limits and audio ownership remain.
+Mechanism tests are not yet a live conversational comparison.
 See [Engineering Status](docs/engineering-status.md) for the current boundary
 between implemented work, observations and planned repairs.
 

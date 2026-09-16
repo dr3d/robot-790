@@ -274,7 +274,7 @@ test('acknowledgments fade without weakening actual requests or suppressing thei
   }
 });
 
-test('structured steering drives pressure without English keywords and clears when the subject advances', () => {
+test('structured steering is advisory data rather than imposed rhetorical pressure', () => {
   const c = load(['brain2LoopGuardText', 'recentBrain2LoopGuardCount', 'formatBrain2AdvisoryContent'], {
     brain2NoteCandidates: [], brain2RevisionCandidates: [], brain2QuestionCandidates: [],
     lastUserTurnActivityAt: 0, brain2LoopPressureInstruction: () => '',
@@ -284,8 +284,8 @@ test('structured steering drives pressure without English keywords and clears wh
     steering: { loop: true, unsupported_claim: true, topic: 'sounds', next: 'new_subject' },
   });
   assert.equal(c.recentBrain2LoopGuardCount(), 2);
-  assert.match(c.formatBrain2AdvisoryContent(), /Loop guard/);
-  assert.match(c.formatBrain2AdvisoryContent(), /Receipt guard/);
+  assert.match(c.formatBrain2AdvisoryContent(), /"loop":true/);
+  assert.match(c.formatBrain2AdvisoryContent(), /not commands/);
   c.brain2NoteCandidates.push({ text: 'stop repeat same receipt', at: 3, b1OutputId: 'a3',
     steering: { loop: false, unsupported_claim: false, topic: 'new discovery', next: 'continue' } });
   assert.equal(c.recentBrain2LoopGuardCount(), 0);

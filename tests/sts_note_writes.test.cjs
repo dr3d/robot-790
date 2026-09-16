@@ -14,7 +14,7 @@ function source(name) {
 function fixture(allowed = true) {
   const writes = [];
   const c = vm.createContext({
-    noteFileWriteAllowed: () => allowed,
+    llmNoteFileTools: { checked: allowed },
     location: { href: 'http://localhost/' }, URL, Date,
     currentModelStamp: () => 'test',
     conversationDisplayText: () => 'You: Original conversation\nRobot 790: Original reply',
@@ -80,7 +80,7 @@ test('authored content and code are not reformatted; write authorization remains
   await c.writeTextFile({ filename: 'example.py', content, source: 'conversation' });
   assert.equal(writes[0].content, content);
   const blocked = fixture(false);
-  await assert.rejects(blocked.c.writeTextFile({ filename: 'no.txt', content: 'note' }), /explicit user request/);
+  await assert.rejects(blocked.c.writeTextFile({ filename: 'no.txt', content: 'note' }), /disabled by the operator/);
   assert.equal(blocked.writes.length, 0);
 });
 

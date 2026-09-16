@@ -1,9 +1,7 @@
 {
   "creature": "eric",
-  "image_continuation": {
-    "enabled": true,
-    "max_steps": 3,
-    "window_ms": 120000
+  "tool_continuation": {
+    "max_rounds": 8
   },
   "context_history": {
     "use_summaries": false,

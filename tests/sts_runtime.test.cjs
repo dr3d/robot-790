@@ -293,7 +293,7 @@ test('idle prompts no longer teach an Empty Connect persona', () => {
   assert.doesNotMatch(page, /Empty Connect mode is active|during Empty Connect mode|An Empty Connect idle process/);
   const start = page.indexOf('async function triggerIdlePonder(');
   const end = page.indexOf('\n    }\n', start);
-  assert.match(page.slice(start, end), /brain2AdvisoryProtocolInstructions\(\)/);
+  assert.match(page.slice(start, end), /formatBrain2ForInstructions\(\)/);
 });
 
 test('Brain2 advisories accept the current session notes, questions, and revisions', () => {
@@ -345,7 +345,7 @@ test('local file tools can write source without granting execution', () => {
   assert.match(page, /LLM local files/);
   assert.match(page, /\.txt, \.md, \.py, \.json, \.csv, \.html, \.css, \.js, \.yaml, and \.yml/);
   assert.match(page, /Writing a source file does not execute it/);
-  assert.match(page, /localFileNoun = "[^"\n]*python[^"\n]*program/);
+  assert.doesNotMatch(page, /localFileNoun =/);
   assert.match(page, /Do not say you cannot write a file while write_text_file is available/);
 });
 
@@ -355,7 +355,7 @@ test('bounded adaptive deliberation is an Eric action, with Typed Think retained
   assert.match(page, /name: "deliberate_once"/);
   assert.match(page, /async function deliberateOnceForEric\(args = \{\}\)/);
   assert.match(page, /\.\.\.deliberationTools/);
-  assert.match(page, /Use the deliberate_once result as private, fallible support/);
+  assert.match(page, /Tool results are available in this conversation/);
   assert.match(prompt, /When the operator explicitly asks you to think harder[\s\S]*call deliberate_once before answering/);
   assert.match(prompt, /careful multi-step diagnosis, tradeoff, plan, or technical assessment/);
   assert.match(prompt, /If the operator says just answer, fast, or do not overthink, answer directly/);
@@ -1147,6 +1147,8 @@ test('stale async tool results cannot write into a newer realtime session', asyn
     endToolActivity: () => {},
     toolDetailFromArgs: () => '',
     executeTool: () => new Promise(resolve => { resolveTool = resolve; }),
+    enabledToolList: () => [{ name: 'get_brain_status' }],
+    toolContinuationOrigin: 'conversation', suppressedResponseIds: new Set(),
     log: () => {},
     events: {},
     updateSessionTools: () => {},
@@ -1315,7 +1317,8 @@ function loadFunctions(names, globals, source = page) {
 test('Reachy wake is explicit; routine idle and other bodies still release normally', async () => {
   const calls = [];
   let key = 'reachy_mini';
-  const context = loadFunctions(['setFaceMode', 'executeTool', 'maybeHandleDirectFaceCommand'], {
+  const context = loadFunctions(['setFaceMode', 'executeTool'], {
+    enabledToolList: () => [{ name: 'set_robot_mode' }],
     normalizeFaceTintColor: () => '', stopSpeechMouthCue: () => {},
     clearGazeHold: () => {}, clearFaceVisualHold: () => {},
     normalizeFaceBaseUrl: () => 'http://127.0.0.1:8792/',
@@ -1327,8 +1330,7 @@ test('Reachy wake is explicit; routine idle and other bodies still release norma
   assert.equal(calls.at(-1).route, 'release');
   await context.executeTool('set_robot_mode', { mode: 'idle' });
   assert.equal(calls.at(-1).route, 'wake');
-  assert.equal(context.maybeHandleDirectFaceCommand('Eric, wake up'), true);
-  assert.equal(calls.at(-1).route, 'wake');
+  assert.doesNotMatch(page, /function maybeHandleDirectFaceCommand/);
   for (key of ['browser_face', 'esp32_face', '']) {
     await context.executeTool('set_robot_mode', { mode: 'idle' });
     assert.equal(calls.at(-1).route, 'release');
@@ -1843,22 +1845,20 @@ test('a new connection resets unfinished tool follow-up state', async () => {
   const context = connectionContext();
   Object.assign(context, {
     pendingToolCalls: 2, toolFollowupNeeded: true, responseDoneAfterTool: true,
-    toolFollowupExactText: 'OLD REPLY', toolFollowupInstructions: 'OLD INSTRUCTIONS',
-    unidentifiedOutputSuppressed: true, pendingEyeRecallResponse: { used: true }, toolFollowupCatalog: { old: true },
+    toolContinuationRounds: 8, toolContinuationOrigin: 'idle', toolGenerationUncertain: true,
+    unidentifiedOutputSuppressed: true, idleWritesConversation: true,
   });
   context.suppressedResponseIds.add('old-response');
-  context.eyeRecallResponses.set('old-response', { used: true });
   await context.loadFreshContinuityContext({ coreNotesOnly: true });
   assert.equal(context.pendingToolCalls, 0);
   assert.equal(context.toolFollowupNeeded, false);
   assert.equal(context.responseDoneAfterTool, false);
-  assert.equal(context.toolFollowupExactText, '');
-  assert.equal(context.toolFollowupInstructions, '');
+  assert.equal(context.toolContinuationRounds, 0);
+  assert.equal(context.toolContinuationOrigin, 'conversation');
+  assert.equal(context.toolGenerationUncertain, false);
   assert.equal(context.suppressedResponseIds.size, 0);
-  assert.equal(context.eyeRecallResponses.size, 0);
   assert.equal(context.unidentifiedOutputSuppressed, false);
-  assert.equal(context.pendingEyeRecallResponse, null);
-  assert.equal(context.toolFollowupCatalog, null);
+  assert.equal(context.idleWritesConversation, false);
 });
 
 test('core-note loading honors an explicit unchecked core preference and reports read failures', async () => {

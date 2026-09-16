@@ -155,11 +155,9 @@ test('catalogue remarks follow the file-open receipt, never the next image captu
   assert.equal(result.images[0].remarks_after_open[0].source_session, 'sessions/test.txt');
 });
 
-test('recall follow-up distinguishes staged images from text and unstaged notes', () => {
-  const c = load(['sensingEyeRecallFollowupInstructions']);
-  assert.match(c.sensingEyeRecallFollowupInstructions({ selected: { staged: true, kind: 'image' } }), /actual staged image/);
-  assert.match(c.sensingEyeRecallFollowupInstructions({ selected: { staged: true, kind: 'text' } }), /actual staged text/);
-  assert.match(c.sensingEyeRecallFollowupInstructions({ selected: { staged: false } }), /not staged/);
+test('recall returns actual outcomes without a tool-specific spoken script', () => {
+  assert.ok(!page.includes('function sensingEyeRecallFollowupInstructions('));
+  assert.ok(page.includes('Tool results are available in this conversation'));
 });
 
 test('restored-note envelope stays byte-identical as wall time advances and preserves saved timestamps', () => {

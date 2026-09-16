@@ -2,6 +2,10 @@
 
 Date: September 16, 2026. Status: analysis and offline characterization only; no runtime or prompt changes.
 
+This audit describes checkpoint `74312a6`. Subsequent implementation is recorded
+separately in [Agency Boundary Change](agency-boundary-change.md); line references
+below are historical, not updated locations in the reduced controller.
+
 ## Verdict
 
 The concern is substantiated. STS is not merely an execution and scheduling layer. Several active paths interpret natural-language intent with English phrase matching, choose subjects and searches, constrain the next reasoning step, and prescribe Eric's exact spoken response. Other parts already have the better separation: models interpret meaning while code validates identifiers, receipts, permissions, freshness and persistence.
@@ -64,7 +68,7 @@ Recommendation: replace vocabulary-based permission with explicit operator-contr
 
 ### 4. Tool follow-ups have become a second, restricted action planner
 
-The main tool handler, [index.html:20047](../web/sts/index.html#L20047), creates workflow-specific continuation scopes. [image-task.js:4](../web/sts/image-task.js#L4) restricts the sequence and step count: search can lead to search/generation, generation can lead only to move-to-eye, failure ends eligibility. A normal search enters this research/artifact mechanism when enabled; it is not confined to requests already classified as images. Current runtime config enables it with three steps and a two-minute window.
+The checkpoint's main tool handler, [index.html:20047](../web/sts/index.html#L20047), creates workflow-specific continuation scopes. The now-retired `web/sts/image-task.js` at checkpoint `74312a6` restricts the sequence and step count: search can lead to search/generation, generation can lead only to move-to-eye, failure ends eligibility. A normal search enters this research/artifact mechanism when enabled; it is not confined to requests already classified as images. That checkpoint enables it with three steps and a two-minute window.
 
 Recall and session-map continuations also restrict actions. `maybeCreateToolFollowup`, [index.html:20304](../web/sts/index.html#L20304), chooses private prompts, modalities and tool permissions. Ordinary follow-up speech is logically tool-disabled. In the backend the catalogue may remain on the wire for prefix caching while returned tool calls are still blocked; visible schemas do not imply permission to act.
 

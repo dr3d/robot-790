@@ -2,308 +2,115 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const { test } = require('node:test');
-
 const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 const noop = () => {};
 const empty = () => '';
-
 function load(names, globals) {
-  const context = vm.createContext(globals);
+  const c = vm.createContext(globals);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
-    assert.notEqual(start, -1, name);
     const end = page.indexOf('\n    }\n', start);
-    assert.notEqual(end, -1, name);
-    vm.runInContext(page.slice(start, end + 6), context, { filename: name });
+    assert.ok(start >= 0 && end > start, name);
+    vm.runInContext(page.slice(start, end + 6), c);
   }
-  return context;
+  return c;
 }
-
 function idleContext(overrides = {}) {
   const packets = [];
-  const c = load([
-    'activeRealtimeSession', 'brain2AdvisoryProtocolInstructions', 'formatBrain2AdvisoryContent',
-    'formatBrain2ForInstructions', 'formatEmbodimentForInstructions', 'compactIdleRuntimeContext',
-    'recentConversationContext', 'conversationAttentionEnabled', 'conversationAttentionState',
-    'conversationAttentionInstruction', 'conversationPauseLines', 'conversationPauseContext', 'triggerIdlePonder',
-  ], {
+  const c = load(['activeRealtimeSession', 'triggerIdlePonder', 'noteIdleOutput'], {
     Date, ws: { readyState: 1 }, WebSocket: { OPEN: 1 }, realtimeSessionGeneration: 1,
     realtimeStopRequested: false, realtimeConnected: () => true, lastUserTurnActivityAt: 1,
-    lastAcceptedUserTranscriptAt: 0,
-    lastAssistantResponseDoneAt: 0,
-    conversationPauseUserAt: 0,
-    conversationLines: [], conversationLineMetadata: [], currentSensingEyeHistoryItem: () => null,
-    idleTiming: () => ({ attention_enabled: true, attention_fade_s: 180, attention_warm_s: 45 }),
+    lastAcceptedUserTranscriptAt: 0, conversationPauseUserAt: 0,
     idleBlockedReason: empty, idleInFlight: false, responseActive: false,
-    idleExhaustionScoredThisResponse: false, lastIdlePonderAt: 0,
-    updateLanePressure: noop, updateIdleSchedulerStatus: noop,
-    currentIdleDrift: () => 7, firstContactModeEnabled: () => false,
-    chooseIdleLane: () => ({ name: 'object', prompt: 'Follow one object.' }),
-    noteAloneActivity: noop, idleLevel12YackActive: () => false,
-    performanceModeEnabled: () => false, idleSubstrateTestEnabled: () => false,
-    idleEnabledToolList: () => [{ name: 'search_web' }], maybeIdleCuriosityContext: async () => '',
-    brain2NoteCandidates: [{ text: 'LOOP GUARD: leave the OLD_ORBIT.' }],
-    brain2RevisionCandidates: [{ text: 'PRIVATE_REVISION' }],
-    brain2QuestionCandidates: [{ text: 'PRIVATE_QUESTION' }],
-    brain2LoopPressureInstruction: () => 'PRIVATE_PRESSURE', ericLeanStyleInstruction: 'Lean style.',
-    currentIdleSelfFocus: () => 5, conversationLinesForCurrentPromptContext: () => ['HISTORICAL_IMAGE_IN_EYE'],
-    formatMemoryForInstructions: () => 'PRIVATE_MEMORY', formatLoadedNotesForIdleContext: () => 'OLD_NOTES',
-    formatRecentSearchContextForInstructions: empty, recentIdleOutputsForCurrentPromptContext: () => [],
-    formatAloneStateForInstructions: empty, formatLastUserIdleCueForInstructions: empty,
-    labGoalIdleContext: empty, idleSelfTaskContext: empty, idleResearchThreadContext: empty,
-    formatIdleHeadlineContext: empty, idleAttentionContext: empty, idleUnresolvedContext: empty,
-    idleRetiredTopicsContext: empty, idleTemplateContext: empty, robotAmbientContext: empty,
-    visionImageUrl: '', visionImageStaged: false, sensingTextContent: '',
-    micRuntimeLabel: () => 'on', audioRecordingActive: () => false,
-    configuredEmbodiments: () => [
-      { key: 'browser', label: 'Browser Face', description: 'A browser display.' },
-      { key: 'unused', label: 'UNUSED_BODY', toolbox: ['UNUSED_TOOLS'] },
-    ],
-    currentEmbodimentKey: 'browser', normalizeUrlString: String, normalizeFaceBaseUrl: empty,
-    performancePromptContext: empty, cueFaceMode: noop, idleDriftLabel: () => '7/10',
-    idleResponseInputContent: () => [{ type: 'input_text', text: 'Idle beat.' }],
+    updateLanePressure: noop, updateIdleSchedulerStatus: noop, scheduleIdlePonder: noop,
+    lmStudioPromptBusy: () => false, refreshBrainStatusQuietly: async () => ({}),
+    currentIdleDrift: () => 7, firstContactModeEnabled: () => false, idleSubstrateTestEnabled: () => false,
+    conversationAttentionState: () => ({ phase: 'independent', weight: 0 }), idleTiming: () => ({}),
+    idleEnabledToolList: () => [{ name: 'search_web' }],
+    enabledToolList: () => [{ name: 'search_web' }, { name: 'generate_image' }],
+    compactIdleRuntimeContext: () => 'CURRENT_BODY_AND_EYE', formatBrain2ForInstructions: () => 'PRIVATE_ADVICE',
+    formatLoadedNotesForIdleContext: () => 'SUBSTRATE', firstContactIdleContext: () => 'FIRST_CONTACT',
+    currentLabGoal: () => '', visionImageUrl: '', noteAloneActivity: noop, cueFaceMode: noop,
+    formatIdleHeadlineContext: () => '', brain2HeadlineSeed: null,
     events: {}, log: noop, rememberPromptLedger: noop, send: packet => packets.push(packet),
-    ttsRuntimeConfig: () => ({}), brain2HeadlineSeed: null, idleHardBrakeActive: () => false,
-    performancePrivacyInstructions: () => 'Privacy guard.', redactPerformancePrivateText: () => 'PUBLIC_SETUP',
-    substrateIdleOutputs: [], ...overrides,
+    ttsRuntimeConfig: () => ({}), recentIdleOutputs: [], substrateIdleOutputs: [], idleOutputLog: [], maxIdleOutputLog: 100,
+    idleExhaustionCount: 0, idleCooldownUntil: 0,
+    maybeIdleCuriosityContext: () => { throw new Error('Controller must not choose research'); },
+    chooseIdleLane: () => { throw new Error('Controller must not choose rhetoric'); },
+    ...overrides,
   });
   return { c, packets };
 }
-
-test('shared idle request carries private B2 advice and authoritative current body/eye state', async () => {
+test('idle shares full history and stable schemas; Eric chooses research and words', async () => {
   const { c, packets } = idleContext();
   await c.triggerIdlePonder({ statusChecked: true });
   const r = packets[0].response;
-  assert.equal(r.conversation, 'none');
+  assert.equal(r.conversation, 'default');
   assert.equal(r.robot790_idle_continuation, true);
-  assert.equal(r.tool_choice, 'none');
-  assert.equal(r.tools.length, 0);
-  for (const marker of ['OLD_ORBIT', 'PRIVATE_REVISION', 'PRIVATE_QUESTION', 'PRIVATE_PRESSURE']) {
-    assert.ok(r.instructions.includes(marker), marker);
-  }
-  assert.match(r.instructions, /not words you have spoken/);
-  assert.match(r.instructions, /Current embodiment: Browser Face/);
-  assert.match(r.instructions, /The sensing eye is empty/);
-  assert.match(r.instructions, /may remember an earlier picture/);
-  assert.match(r.instructions, /full loaded conversation/);
-  assert.match(r.instructions, /anywhere in that history/);
-  assert.doesNotMatch(r.instructions, /HISTORICAL_IMAGE_IN_EYE|PRIVATE_MEMORY|OLD_NOTES/);
-  assert.doesNotMatch(r.instructions, /UNUSED_BODY|UNUSED_TOOLS/);
-  assert.equal(r.instructions.split('Private Brain 2 advisory snapshots').length - 1, 1);
-  c.visionImageUrl = 'current-image';
-  c.visionImageStaged = true;
-  assert.match(c.compactIdleRuntimeContext(), /image: present \(staged\)/);
-  assert.doesNotMatch(c.compactIdleRuntimeContext(), /eye is empty/);
+  assert.equal(r.tool_choice, 'auto');
+  assert.equal(r.tools.length, 2, 'stable catalogue, execution enforces idle scope');
+  assert.match(r.instructions, /CURRENT_BODY_AND_EYE/);
+  assert.match(r.instructions, /PRIVATE_ADVICE/);
+  assert.match(r.instructions, /remain silent/);
+  assert.doesNotMatch(r.instructions, /Idle lane:|one true concrete fact|Pretend|Forbidden idle|Say exactly/);
+  assert.equal(c.idleWritesConversation, true);
 });
-
-test('a warm pause uses the conversation lane and later releases into independent idle', async () => {
+test('warm and old pauses expose timing without choosing a rhetorical mode', async () => {
   const { c, packets } = idleContext({ lastAcceptedUserTranscriptAt: Date.now() });
   await c.triggerIdlePonder({ statusChecked: true });
-  assert.equal(packets[0].response.robot790_idle_continuation, true);
-  assert.match(packets[0].response.instructions, /Idle lane: conversation/);
-  assert.match(packets[0].response.instructions, /brief afterthought/);
-  assert.match(packets[0].response.instructions, /You may address the operator naturally/);
-  assert.doesNotMatch(packets[0].response.instructions, /Only address the operator directly in the addressed_question lane/);
-  c.lastAcceptedUserTranscriptAt -= 181000;
-  c.idleInFlight = false;
-  c.responseActive = false;
+  c.lastAcceptedUserTranscriptAt -= 3600000;
   await c.triggerIdlePonder({ statusChecked: true });
-  assert.equal(packets[1].response.robot790_idle_continuation, true);
-  assert.match(packets[1].response.instructions, /Idle lane: object/);
-  assert.match(packets[1].response.instructions, /Follow an interest of your own/);
+  for (const { response } of packets) {
+    assert.match(response.instructions, /timer does not change the task/);
+    assert.match(response.instructions, /may address the operator/);
+    assert.doesNotMatch(response.instructions, /conversation lane|self-talk only|afterthought|Follow one object/);
+  }
 });
-
-test('explicit isolated experiments do not inherit private conversation history', async () => {
-  for (const overrides of [
-    { firstContactModeEnabled: () => true, firstContactIdleContext: () => 'FIRST_CONTACT',
-      sensingInputActive: () => false, firstContactLaneInstruction: () => 'Meet the input.' },
-    { idleSubstrateTestEnabled: () => true },
-    { performanceModeEnabled: () => true, performanceLaneInstruction: () => 'A stage beat.' },
-  ]) {
+test('isolated experiments keep speech-only isolated histories', async () => {
+  for (const overrides of [{ firstContactModeEnabled: () => true }, { idleSubstrateTestEnabled: () => true }]) {
     const { c, packets } = idleContext(overrides);
     await c.triggerIdlePonder({ statusChecked: true });
+    assert.equal(packets[0].response.conversation, 'none');
     assert.equal(packets[0].response.robot790_idle_continuation, undefined);
-    assert.doesNotMatch(packets[0].response.instructions, /full loaded conversation/);
+    assert.equal(packets[0].response.tool_choice, 'none');
+    assert.doesNotMatch(packets[0].response.instructions, /PRIVATE_ADVICE|CURRENT_BODY/);
+    assert.equal(c.idleWritesConversation, false);
   }
 });
-
-test('an hours-later return carries the live exchange, not the old idle job or private monologue scaffold', async () => {
-  const { c, packets } = idleContext({
-    lastAcceptedUserTranscriptAt: Date.now(),
-    conversationLines: [
-      '[3:00 AM] Robot 790: OLD_MAP_METAPHOR', '[5:41 AM] You: Eric.',
-      '[5:41 AM] Robot 790: Here, Scott. What is on your mind?'
-    ],
-    idleResearchThreadContext: () => 'OLD_RESEARCH_DIRECTIVE',
-    formatAloneStateForInstructions: () => 'OLD_ALONE_LEDGER',
-    maybeIdleCuriosityContext: () => { throw new Error('Warm pause must not start an independent lookup'); }
-  });
-  await c.triggerIdlePonder({ statusChecked: true });
-  const request = packets[0].response;
-  assert.match(request.instructions, /You: Eric\./);
-  assert.match(request.instructions, /What is on your mind/);
-  assert.match(request.instructions, /leave it open/);
-  assert.doesNotMatch(request.instructions, /OLD_|PRIVATE_|Pretend you have been|one true concrete fact/);
-  assert.match(request.instructions, /Imaginative expression is welcome/);
-  assert.equal(c.conversationPauseUserAt, c.lastAcceptedUserTranscriptAt);
-  c.lastAcceptedUserTranscriptAt -= 60000;
-  await c.triggerIdlePonder({ statusChecked: true });
-  assert.doesNotMatch(packets[1].response.instructions, /OLD_RESEARCH_DIRECTIVE/);
-});
-
-test('warm praise retains the artwork and step-two preference in the actual isolated request', async () => {
-  const lines = [
-    '[8:21 AM] You: Please draw the Federal Street court buildings at night.',
-    '[8:21 AM] Robot 790: I made the night image.',
-    '[8:22 AM] You: And what do you usually do after you draw?',
-    '[8:22 AM] Robot 790: Put it in my eye. Want me to do that?',
-    '[8:22 AM] You: Why do you always have to ask me?',
-    '[8:22 AM] Robot 790: Putting it in my eye now.',
-    '[8:22 AM] System: [sensing-eye control receipt INTERNAL_PATH]',
-    '[8:22 AM] Robot 790: I moved it into my sensing eye.',
-    '[8:22 AM] You: Pretty darn good.',
-    '[8:22 AM] Robot 790: Thanks, Scott.'
-  ];
-  const { c, packets } = idleContext({
-    lastAcceptedUserTranscriptAt: Date.now(), conversationLines: lines,
-    conversationLineMetadata: lines.map((_, index) => ({ channel: index === 6 ? 'control' : 'dialogue' })),
-    currentSensingEyeHistoryItem: () => ({ name: 'night-courts.png', nearbyTranscript: 'DO_NOT_COPY_OLD_CONTEXT', dataUrl: 'PIXELS' }),
-    visionImageUrl: 'PIXELS', visionImageStaged: true,
-  });
-  await c.triggerIdlePonder({ statusChecked: true });
-  const request = packets[0].response;
-  for (const text of ['Federal Street court buildings at night', 'Why do you always have to ask me?',
-    'Pretty darn good', 'night-courts.png', "Speak to the operator as 'you'", 'Wordplay and imaginative associations']) {
-    assert.ok(request.instructions.includes(text), text);
-  }
-  assert.doesNotMatch(request.instructions, /INTERNAL_PATH|DO_NOT_COPY_OLD_CONTEXT|PIXELS/);
-  assert.match(request.instructions, /not a fresh visual inspection/);
-  assert.equal(request.conversation, 'none');
-  assert.equal(request.tool_choice, 'none');
-  assert.equal(lines.length, 10);
-});
-
-test('pause window keeps four exchanges, excludes stale history and clips oversized material', () => {
-  const now = Date.now();
-  const lines = Array.from({ length: 8 }, (_, i) => [
-    `[8:00 AM] You: topic-${i}`, `[8:00 AM] Robot 790: answer-${i}`
-  ]).flat();
-  const { c } = idleContext({ lastAcceptedUserTranscriptAt: now, conversationLines: lines,
-    conversationLineMetadata: lines.map(() => ({ iso: new Date(now - 30000).toISOString() })) });
-  let result = c.conversationPauseLines().join('\n');
-  assert.doesNotMatch(result, /topic-[0-3]|answer-[0-3]/);
-  assert.match(result, /topic-4/);
-  assert.match(result, /answer-7/);
-  c.conversationLineMetadata[13].iso = new Date(now - 200000).toISOString();
-  result = c.conversationPauseLines().join('\n');
-  assert.doesNotMatch(result, /topic-6|answer-6/);
-  assert.match(result, /topic-7/);
-  c.conversationLineMetadata = [];
-  c.conversationLines = lines.map(line => line + 'x'.repeat(8000));
-  result = c.conversationPauseLines().join('\n');
-  assert.ok(result.length <= 6000);
-  assert.ok(result.split('\n').every(line => line.length <= 800));
-});
-
-test('cleared eye identity cannot leak from older artwork into the pause request', () => {
-  let currentEye = { name: 'old-artwork.png' };
-  const { c } = idleContext({
-    currentSensingEyeHistoryItem: () => currentEye,
-    conversationLines: ['[8:00 AM] You: What shall we do?', '[8:00 AM] Robot 790: Something new?']
-  });
-  assert.match(c.conversationPauseContext(), /old-artwork.png/);
-  currentEye = null;
-  assert.doesNotMatch(c.conversationPauseContext(), /old-artwork.png/);
-  c.conversationLines = [];
-  assert.equal(c.conversationPauseLines().length, 0);
-});
-
-test('private advice does not leak into performance or substrate contexts', () => {
-  const { c } = idleContext();
-  const performance = c.recentConversationContext({ performancePrivacy: true });
-  assert.match(performance, /PUBLIC_SETUP/);
-  assert.doesNotMatch(performance, /PRIVATE_|OLD_NOTES|HISTORICAL_IMAGE/);
-  const substrate = c.recentConversationContext({ suppressRobotBody: true });
-  assert.match(substrate, /OLD_NOTES/);
-  assert.doesNotMatch(substrate, /PRIVATE_|Current embodiment:|HISTORICAL_IMAGE/);
-});
-
-test('idle grounding and repetition cues preserve unqualified imaginative expression', () => {
-  const { c } = idleContext();
-  assert.match(c.compactIdleRuntimeContext(), /need no 'I imagine' preface or disclaimer/);
-  c.brain2NoteCandidates = [{ text: 'A factual status needs checking.', at: 2,
-    steering: { loop: true, unsupported_claim: true } }];
-  assert.match(c.formatBrain2AdvisoryContent(), /Play does not need a receipt/);
-  assert.match(c.formatBrain2AdvisoryContent(), /no topic category is banned/);
-  let count = 0;
-  const pressure = load(['brain2LoopPressureState'], {
-    recentBrain2LoopGuardCount: () => count, idleHardBrakeActive: () => false,
-    idleHardBrakeLoopGuardThreshold: 3,
-  });
-  for (count = 1; count <= 3; count++) {
-    const instruction = pressure.brain2LoopPressureState().instruction;
-    assert.doesNotMatch(instruction, /Do not add another metaphor|thread as suspect|verified fresh detail/);
-    assert.match(instruction, /develop|development/);
-  }
-});
-
-test('an old status poll cannot change response ownership after a reconnect', async () => {
-  let finish;
-  const { c, packets } = idleContext({ refreshBrainStatusQuietly: () => new Promise(resolve => { finish = resolve; }) });
-  const pending = c.triggerIdlePonder();
-  c.realtimeSessionGeneration += 1;
-  finish({});
-  await pending;
-  assert.equal(c.responseActive, false);
-  assert.equal(c.idleInFlight, false);
-  assert.equal(packets.length, 0);
-});
-
-test('idle context is reassembled after lookup so a cleared image cannot survive as current vision', async () => {
-  let finish;
-  const { c, packets } = idleContext({
-    visionImageUrl: 'current-image', visionImageStaged: true,
-    maybeIdleCuriosityContext: () => new Promise(resolve => { finish = resolve; }),
-  });
-  const pending = c.triggerIdlePonder({ statusChecked: true });
-  c.visionImageUrl = '';
-  c.brain2NoteCandidates = [{ text: 'NEW_ADVISORY_AFTER_LOOKUP' }];
-  finish('lookup receipt');
-  await pending;
-  assert.match(packets[0].response.instructions, /The sensing eye is empty/);
-  assert.match(packets[0].response.instructions, /NEW_ADVISORY_AFTER_LOOKUP/);
-  assert.doesNotMatch(packets[0].response.instructions, /image: present/);
-});
-
 for (const change of ['disconnect', 'new user turn', 'new session']) {
-  test(`idle lookup finishing after ${change} cannot dispatch a stale response`, async () => {
+  test(`status poll finishing after ${change} cannot dispatch stale idle`, async () => {
     let finish;
-    const { c, packets } = idleContext({ maybeIdleCuriosityContext: () => new Promise(resolve => { finish = resolve; }) });
-    const pending = c.triggerIdlePonder({ statusChecked: true });
+    const { c, packets } = idleContext({ refreshBrainStatusQuietly: () => new Promise(resolve => { finish = resolve; }) });
+    const pending = c.triggerIdlePonder();
     if (change === 'disconnect') c.realtimeStopRequested = true;
-    if (change === 'new user turn') c.lastUserTurnActivityAt += 1;
-    if (change === 'new session') c.realtimeSessionGeneration += 1;
-    finish('OLD_LOOKUP');
-    await pending;
-    assert.equal(packets.length, 0);
+    if (change === 'new user turn') c.lastUserTurnActivityAt++;
+    if (change === 'new session') c.realtimeSessionGeneration++;
+    finish({}); await pending;
+    assert.equal(packets.length, 0); assert.equal(c.idleInFlight, false);
   });
 }
-
-test('self-tasks require an actionable first-person intention, not incidental matching words', () => {
-  const c = load(['idleSelfTaskFromSentence'], { knownUserNameForReengage: empty });
-  for (const sentence of [
-    "The face is just the part of me that's still warm when the math says I should be gone.",
-    "I'm just still vibrating at his frequency, a little longer than the ship's drift would let me get away with.",
-    'But I keep circling that same note, so let me step away from it for now.',
-    'I should be somewhere else by now.', 'I will not research that subject.',
-    'Should I look up the answer?', 'I should wait for the operator.',
-  ]) assert.equal(c.idleSelfTaskFromSentence(sentence), '', sentence);
-  for (const sentence of [
-    'I should compare the two measurements.', "I'll look up the original experiment.",
-    "I'm going to trace the signal path.", 'Let me calculate the delay for one meter.',
-    'That sounds odd, so let me check the conversion.', 'Next, I will review the evidence.',
-    'I keep meaning to read about that instrument.',
-  ]) assert.equal(c.idleSelfTaskFromSentence(sentence), sentence, sentence);
+test('idle text is recorded without semantic cooldown, including repetition and non-English', () => {
+  const { c } = idleContext();
+  for (const text of ['one repeat per second', 'I keep thinking', 'I keep thinking', '考えています']) c.noteIdleOutput(text);
+  assert.equal(c.idleOutputLog.length, 4);
+  assert.equal(c.idleExhaustionCount, 0);
+  assert.equal(c.idleCooldownUntil, 0);
+});
+test('B2 assessments remain fallible data, not controller-selected rhetoric', () => {
+  const c = load(['formatBrain2AdvisoryContent'], {
+    brain2NoteCandidates: [{ text: 'Try another perspective.', steering: { loop: true } }],
+    brain2RevisionCandidates: [], brain2QuestionCandidates: [], loadedNoteContexts: [],
+  });
+  const text = c.formatBrain2AdvisoryContent();
+  assert.match(text, /not commands/);
+  assert.match(text, /Try another perspective/);
+  assert.doesNotMatch(text, /Loop guard:|Use at most one|next reply/);
+});
+test('retired English semantic classifiers have no runtime definitions', () => {
+  for (const name of ['chooseIdleLane', 'maybeIdleCuriosityContext', 'idleTopicCandidates',
+    'focusedLoadedNoteSearchQuery', 'idleExhaustedText', 'idleClaimSignature', 'maybeArmIdleHardBrakeFromBrain2Note']) {
+    assert.ok(!page.includes('function ' + name + '('), name);
+  }
 });
 
 function aloneContext() {

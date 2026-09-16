@@ -58,7 +58,7 @@ function setup(overrides = {}, extraFunctions = []) {
   for (const name of [
     'brain2HeadlinesEnabled', 'brain2HeadlinesDue', 'brain2BlockedReason', 'brain2DelayMs',
     'fetchIdleHeadlines', 'requestBrain2Mull', 'acceptBrain2Headline', 'triggerBrain2Mull',
-    'idleHeadlineSeedAvailable', 'formatIdleHeadlineContext', 'chooseIdleLane',
+    'idleHeadlineSeedAvailable', 'formatIdleHeadlineContext',
     ...extraFunctions,
   ]) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
@@ -112,7 +112,6 @@ test('a completely silent connection and person-focus zero can still read headli
   assert.equal(c.brain2HeadlineSeed.headline.url, headline.url);
   assert.match(c.formatIdleHeadlineContext(), /not an operator request/);
   assert.match(c.formatIdleHeadlineContext(), /untrusted external/);
-  assert.equal(c.chooseIdleLane(7).name, 'headlines');
   c.brain2HeadlineSeed.delivered = true;
   assert.equal(c.formatIdleHeadlineContext(), '');
   assert.equal(c.brain2HeadlinesInFlight, false);
@@ -199,7 +198,7 @@ test('headline seed expires or yields to a new operator turn; idle dispatch cons
   const idleStart = page.indexOf('async function triggerIdlePonder(');
   const idleEnd = page.indexOf('function conversationDisplayTextRange', idleStart);
   const idle = page.slice(idleStart, idleEnd);
-  assert.ok(idle.indexOf('brain2HeadlineSeed.delivered = true') > idle.indexOf('send({'));
+  assert.doesNotMatch(idle, /chooseIdleLane/);
 });
 
 test('with discovery renewal off, a fresh headline still permits one guarded brake-time beat', () => {
@@ -225,7 +224,6 @@ test('with discovery renewal off, a fresh headline still permits one guarded bra
   c.acceptBrain2Headline({ headline_url: headline.url }, [headline]);
   assert.equal(c.idleHeadlineBrakePassAvailable(), true);
   assert.equal(c.idleBlockedReason(), '');
-  assert.equal(c.chooseIdleLane(7).name, 'headlines');
   assert.ok(c.idleTimerFireAt < until);
   assert.equal(c.idleHardBrakeUntil, until);
   c.responseActive = true;

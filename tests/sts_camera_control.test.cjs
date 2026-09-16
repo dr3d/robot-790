@@ -24,7 +24,8 @@ function setup(getMedia = async () => stream()) {
     visionCameraPreview: { srcObject: null, play: async () => {}, pause() {}, removeAttribute() {} },
     navigator: { mediaDevices: { getUserMedia: getMedia } },
     updateSessionTools() {}, events: {}, log() {}, recordUiEvent() {},
-    captures: 0, parseToolArguments: JSON.parse
+    captures: 0, parseToolArguments: JSON.parse,
+    enabledToolList: () => [{ name: 'set_live_camera' }],
   });
   c.captureSensingEyeFrame = async () => { c.captures++; return { status: 'ok', filename: 'test.jpg' }; };
   for (const name of ['visionCameraActive', 'updateVisionCameraButtons', 'startVisionCamera', 'stopVisionCamera', 'setLiveCamera', 'executeTool']) {

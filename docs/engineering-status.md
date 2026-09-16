@@ -6,6 +6,22 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Agency Removal Pass
+
+The pre-change state is committed as `74312a6`. The subsequent
+[agency boundary change](agency-boundary-change.md) removes English consent
+classifiers, direct prose-to-actuation, scripted tool confirmations, narrow
+private continuation planners, controller-selected idle research/rhetoric and
+semantic silence penalties. General continuation retains capability checks,
+receipts, cancellation, a round budget and actual audio drain. Ordinary idle
+shares full B1 history and can choose the existing read/search tools.
+
+Runtime-generated instructions changed; creature identity, setup cards, model
+and sampling settings did not. Offline verification covers mechanisms; live
+creative quality and cache behavior still need comparison. Full multilingual
+voice/retrieval support is not implied. The dated checkpoint below describes
+the state before this removal.
+
 ### September 16 Checkpoint
 
 - B1 idle thinking uses the full conversation history, with stable prompt/tool
@@ -31,8 +47,8 @@ work; image recall/action scopes can block useful recovery; English phrase
 gates misinterpret negation and do not generalize across languages. The
 [agency/language audit](sts-agency-and-language-audit-2026-09-16.md) documents
 offline reproductions. The accepted next direction is subtraction of semantic
-controllers, not additional scripted behavior. No such removal is included in
-this pre-change checkpoint. Technical safety, permissions, identity, receipts,
+controllers, not additional scripted behavior. No such removal was included in
+the pre-change checkpoint. Technical safety, permissions, identity, receipts,
 audio serialization and cache stability remain requirements.
 
 ### Earlier Checkpoints

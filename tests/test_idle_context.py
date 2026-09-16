@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from openai.types.realtime import ResponseCreateEvent
+from openai.types.realtime import ConversationItemCreateEvent, ResponseCreateEvent
 from openai.types.responses import ResponseFunctionToolCall
 from speech_to_speech.LLM.base_openai_compatible_language_model import AssistantMessage, TextDelta, ToolCall
 from speech_to_speech.LLM.chat import Chat, make_assistant_message, make_user_message
@@ -12,6 +12,7 @@ from robot_790d.realtime_entry import (
     IDLE_TOOL_BLOCKED,
     _PrivateAdvisoryTextFilter,
     apply_interruptible_chat_generation_patch,
+    apply_unbounded_live_chat_patch,
 )
 
 
@@ -20,6 +21,9 @@ def runtime(monkeypatch):
     monkeypatch.setattr(Handler, "_generate", Handler._generate)
     monkeypatch.setattr(Handler, "_robot_790_interruptible_generation_patch", False, raising=False)
     apply_interruptible_chat_generation_patch()
+    monkeypatch.setattr(Chat, "trim_if_needed", Chat.trim_if_needed)
+    monkeypatch.setattr(Chat, "_robot_790_zero_size_patch", False, raising=False)
+    apply_unbounded_live_chat_patch()
     handler = object.__new__(Handler)
     handler.client = SimpleNamespace(base_url="http://127.0.0.1:1234/v1")
     handler.stream, handler.stream_batch_sentences = False, 1
@@ -134,8 +138,56 @@ def test_explicit_isolated_experiment_stays_isolated(runtime):
     assert runtime.requests[0][1]["tool_choice"] == "none"
 
 
+def test_default_idle_writes_assistant_once_without_persisting_controller_tail(runtime):
+    before = runtime.handler._serialize(runtime.chat)
+    run(runtime, idle_response(conversation="default", tools=runtime.session.tools, tool_choice="auto"))
+    messages, options = runtime.requests[0]
+    assert messages[:-2] == before
+    assert options["tool_choice"] == "auto"
+    saved = runtime.handler._serialize(runtime.chat)
+    assert saved[:-1] == before
+    assert str(saved).count("An older connection.") == 1
+    assert "STS idle continuation" not in str(saved)
+    assert "temporary idle cue" not in str(saved)
+    runtime.chat.add_item(make_user_message("I am back."))
+    run(runtime, None)
+    assert runtime.requests[1][0][:-1] == saved
+
+
+def test_default_idle_can_emit_tool_calls_without_a_tool_blocked_retry(runtime):
+    runtime.replies[:] = [[tool_event()]]
+    output = run(runtime, idle_response(conversation="default", tools=runtime.session.tools, tool_choice="auto"))
+    assert len(runtime.requests) == 1
+    assert len(runtime.calls) == 1
+    assert not any(item.error for item in output if isinstance(item, EndOfResponse))
+
+
+def test_default_idle_call_and_receipt_pair_in_real_history_before_followup(runtime):
+    del runtime.handler._record_tool_call
+    runtime.replies[:] = [[tool_event()]]
+    run(runtime, idle_response(conversation="default", tools=runtime.session.tools, tool_choice="auto"))
+    output = ConversationItemCreateEvent.model_validate({
+        "type": "conversation.item.create", "item": {
+            "type": "function_call_output", "call_id": "call_test",
+            "output": '{"status":"ok","filename":"retained.png"}',
+        },
+    }).item
+    runtime.chat.add_item(output)
+    saved = runtime.handler._serialize(runtime.chat)
+    assert "retained.png" in str(saved)
+    assert "call_test" in str(saved)
+    assert "STS idle continuation" not in str(saved)
+    runtime.replies[:] = [[AssistantMessage(content=[{"type": "output_text", "text": "A result."}])]]
+    response = ResponseCreateEvent.model_validate({"type": "response.create", "response": {
+        "robot790_tool_followup": "Choose what follows from the receipt.", "tool_choice": "auto",
+        "tools": runtime.session.tools, "output_modalities": ["audio"],
+    }}).response
+    run(runtime, response)
+    assert runtime.requests[-1][0][:-1] == saved
+    assert "STS tool continuation" not in str(runtime.handler._serialize(runtime.chat))
+
+
 @pytest.mark.parametrize("overrides", [
-    {"conversation": "default"},
     {"robot790_tool_followup": "Conflicting continuation."},
     {"input": [{"type": "message", "role": "system", "content": [
         {"type": "input_text", "text": "Must not replace the shared system prefix."}]}]},
@@ -150,7 +202,7 @@ def test_invalid_shared_idle_fails_without_inference_or_history_mutation(runtime
 
 def tool_event():
     return ToolCall(item=ResponseFunctionToolCall(
-        type="function_call", name="generate_image", arguments="{}", call_id="must_not_execute"))
+        type="function_call", name="generate_image", arguments="{}", call_id="call_test"))
 
 
 @pytest.mark.parametrize("repeat_tool", [False, True])
