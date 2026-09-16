@@ -4,6 +4,32 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 const page = fs.readFileSync('web/sts/index.html', 'utf8').replace(/\r\n/g, '\n');
 
+test('browser speech releases lifecycle gaze but preserves explicit holds and other bodies', async () => {
+  for (const [body, held] of [['browser_face', false], ['browser_face', true], ['s3_face', false], ['s3_face', true], ['reachy_mini', false]]) {
+    const c = load(['setFaceMode'], {
+      normalizeFaceTintColor: () => '', gazeHoldActive: () => held,
+      matchingConfiguredEmbodimentKey: () => body, normalizeFaceBaseUrl: () => '',
+      speechMouthSeq: 1, postFace: async (route, payload) => payload
+    });
+    const payload = await c.setFaceMode({ mode: 'speaking', automatic: true });
+    assert.equal(payload.gaze?.auto, ['browser_face', 's3_face'].includes(body) && !held ? true : undefined);
+  }
+});
+
+test('listening focus lasts through the utterance on browser and touch display', async () => {
+  for (const body of ['browser_face', 's3_face', 'reachy_mini']) {
+    const c = load(['setFaceMode'], {
+      normalizeFaceTintColor: () => '', gazeHoldActive: () => false,
+      matchingConfiguredEmbodimentKey: () => body, normalizeFaceBaseUrl: () => '',
+      postFace: async (route, payload) => payload
+    });
+    const payload = await c.setFaceMode({ mode: 'listening', automatic: true });
+    assert.equal(payload.gaze.x, 0);
+    assert.equal(payload.gaze.y, 0);
+    assert.equal(payload.gaze.duration, body === 'reachy_mini' ? 1.4 : 0);
+  }
+});
+
 function load(names, globals = {}) {
   globals.runtimeConfig ??= {};
   globals.handledFunctionCallIds ??= new Set();

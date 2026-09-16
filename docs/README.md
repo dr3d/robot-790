@@ -1,6 +1,12 @@
 # Robot 790 Public Docs
 
-Model proposes; deterministic layers decide. Four diets, one mouth.
+Models interpret and choose; deterministic layers execute within declared
+permissions. Multiple context diets, one public mouth.
+
+That is the intended boundary, not a claim that the current implementation
+already respects it everywhere. The September 16
+[agency/language audit](sts-agency-and-language-audit-2026-09-16.md) identifies
+controller interpretation and dialogue direction that are scheduled for removal.
 
 Safety is treated the same way: not as a personality prompt, but as body
 architecture. The project explicitly nods to the Asimov robot-law tradition, but
@@ -49,6 +55,16 @@ filename whose current artifact needs an explicit time.
 - `media/`: compressed public images, audio, and video.
 - `context-engineering-architecture.md`: session-note, pinned-note, latest, and
   runtime-truth architecture, including the standalone session-map chooser.
+- [brain2-setup-cards.md](brain2-setup-cards.md): shared and B1/B2 instructions
+  in ordinary notes, with reserved B3/B4 sections and backwards compatibility.
+- [idle-art.md](idle-art.md): permission, queue, durable job identity and
+  artifact receipts for model-proposed idle pictures.
+- [llm-metrics-capture.md](llm-metrics-capture.md): opt-in local inference
+  measurements for cache reuse and latency investigations.
+- [local-model-routing.md](local-model-routing.md): explicit local model
+  selection shared by B1, B2 and supporting model work.
+- [sts-agency-and-language-audit-2026-09-16.md](sts-agency-and-language-audit-2026-09-16.md):
+  reproduced semantic-control failures, multilingual risks and removal priorities.
 - `summary-research-plan.md`: research-backed exo-brain summary experiments,
   model comparisons, and proposed queued model swapping; not deployed behavior.
 - [task-continuation-experiment.md](task-continuation-experiment.md): proposed

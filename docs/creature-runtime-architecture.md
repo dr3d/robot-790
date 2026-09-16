@@ -10,6 +10,15 @@ The runtime should know how to load a creature and an embodiment. It should not 
 
 ## STS: Deterministic Orchestration Runtime
 
+Boundary clarification, September 16: orchestration should control scheduling,
+capabilities, execution and persistence, not infer consent from prose or select
+Eric's topics, rhetorical moves and spoken confirmations. The current runtime
+crosses that boundary in several places; see the
+[agency/language audit](sts-agency-and-language-audit-2026-09-16.md). Its proposed
+removals are not yet implemented in this checkpoint. References below to
+attention and lanes describe apparatus responsibilities, not authority to script
+the creature's choices.
+
 STS began as the project's speech-to-speech loop. `Realtime` still names its
 foreground, low-latency voice mode. The larger STS runtime is deterministic
 code and configuration that declares and runs Robot-790's cognitive

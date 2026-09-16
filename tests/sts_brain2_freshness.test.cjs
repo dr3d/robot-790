@@ -7,14 +7,18 @@ const { test } = require('node:test');
 const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 function load(names, globals = {}) {
+  globals.Robot790NoteBrains ??= require('../web/sts/note-brains.js');
+  globals.loadedNoteContexts ??= [];
   globals.imageTaskReceipt ??= null;
   globals.pendingToolCalls ??= 0;
   globals.toolFollowupNeeded ??= false;
   globals.pendingEyeRecallResponse ??= null;
   globals.eyeRecallResponses ??= new Map();
   globals.lastUserTurnActivityAt ??= 0;
+  globals.idleDiscovery ??= null;
   globals.realtimeStopRequested ??= false;
   globals.pendingSessionMapMove ??= null;
+  globals.brain2SetupCards ??= () => [];
   globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
   for (const name of names) {
@@ -40,6 +44,28 @@ function evidenceContext(extraNames = [], extra = {}) {
     searchContextReceipts: [], ...extra,
   });
 }
+
+test('setup companions follow pinned cards only, with stable order and no note bodies', () => {
+  const c = load(['brain2SetupCards'], { loadedNoteContexts: [
+    { filename: 'setup-cards/impossible-science.txt', content: 'private body' },
+    { filename: 'setup-cards\\curious-interviewer.txt' },
+    { filename: 'setup-cards/impossible-science.txt' },
+    { filename: 'sessions/interview.txt' },
+  ] });
+  assert.deepEqual(Array.from(c.brain2SetupCards()), [
+    'setup-cards/curious-interviewer.txt', 'setup-cards/impossible-science.txt'
+  ]);
+  c.loadedNoteContexts = [];
+  assert.equal(c.brain2SetupCards().length, 0);
+});
+
+test('changing pinned setups is fresh evidence even with no new speech', () => {
+  const c = evidenceContext();
+  const before = c.brain2EvidenceSnapshot();
+  c.brain2SetupCards = () => ['setup-cards/meeting-someone-new.txt'];
+  assert.notEqual(c.brain2EvidenceSnapshot().fingerprint, before.fingerprint);
+  assert.match(page, /JSON.stringify\(evidence.setup_cards\) === JSON.stringify\(brain2SetupCards\(\)\)/);
+});
 
 test('Brain2 evidence identifies chunks and remains unchanged when only time or Brain2 thoughts pass', () => {
   const context = evidenceContext();
@@ -120,7 +146,7 @@ test('automatic mulls wait for changed evidence; manual reflection stays availab
   assert.equal(context.brain2BlockedReason(), '');
 });
 
-for (const change of ['user', 'reset', 'failure', 'assistant']) {
+for (const change of ['user', 'reset', 'failure', 'assistant', 'setup', 'guidance']) {
   test(`Brain2 HTTP result handles ${change} during its request without consuming unseen evidence`, async () => {
     let finish;
     let posted;
@@ -141,6 +167,10 @@ for (const change of ['user', 'reset', 'failure', 'assistant']) {
     assert.equal(posted.evidence.fingerprint, undefined);
     if (change === 'user') context.conversationLines.push('[10:26:00 PM] You: Different question.');
     if (change === 'reset') context.brain2EvidenceGeneration += 1;
+    if (change === 'setup') context.brain2SetupCards = () => ['setup-cards/impossible-science.txt'];
+    if (change === 'guidance') context.loadedNoteContexts = [{ filename: 'test.txt', brain_context: {
+      version: 1, revision: 'new', shared: '', brains: { b2: 'new activity' }
+    } }];
     if (change === 'assistant') context.conversationLines.push('[10:26:00 PM] Robot 790: New output.');
     finish({ ok: change !== 'failure', json: async () => ({ status: change === 'failure' ? 'error' : 'ok', error: 'test failure' }) });
     if (change === 'failure') {
@@ -206,6 +236,22 @@ test('a loop guard cannot count the same Eric output repeatedly or carry pressur
   assert.equal(context.recentBrain2LoopGuardCount(), 2);
   context.lastUserTurnActivityAt = 201;
   assert.equal(context.recentBrain2LoopGuardCount(), 0);
+});
+
+test('fresh outside evidence retires old loop pressure without losing new loop evidence', () => {
+  const c = load(['brain2LoopGuardText', 'recentBrain2LoopGuardCount'], {
+    lastUserTurnActivityAt: 0, brain2NoteCandidates: [
+      { at: 10, b1OutputId: 'old1', steering: { loop: true, topic: 'old' } },
+      { at: 20, b1OutputId: 'old2', steering: { loop: true, topic: 'old' } },
+      { at: 30, b1OutputId: 'old3', steering: { loop: true, topic: 'old' } },
+    ],
+  });
+  assert.equal(c.recentBrain2LoopGuardCount(), 3);
+  c.idleDiscovery = { at: 40, source: 'idle-headline' };
+  assert.equal(c.recentBrain2LoopGuardCount(), 0);
+  c.brain2NoteCandidates.push({ at: 50, b1OutputId: 'new1', steering: { loop: true, topic: 'old' } });
+  assert.equal(c.recentBrain2LoopGuardCount(), 1);
+  assert.equal(c.lastUserTurnActivityAt, 0);
 });
 
 test('acknowledgments fade without weakening actual requests or suppressing their normal conversation', () => {

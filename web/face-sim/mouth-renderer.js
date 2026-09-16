@@ -13,7 +13,7 @@ class Robot790HumanMouth {
     const ctx = this.context;
     const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
     const scale = 0.66;
-    const lip = '#cf91a5', hi = '#f5c2cc', lo = '#966477';
+    const { lip, highlight: hi, lowlight: lo } = Robot790MouthContract.mouthPalette;
     const shadow = '#29171f', cavity = '#090005', enamel = '#eee4c6';
     const mix = (a, b, amount) => {
       const av = parseInt(a.slice(1), 16), bv = parseInt(b.slice(1), 16);

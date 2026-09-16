@@ -4,6 +4,36 @@ This file records intentional moves from the active repo tree into the adjacent
 `robot-790-archive` folder. These are not deletions; they are index/search
 relief sweeps for bulky or high-count runtime artifacts.
 
+## 2026-09-16 Cold Diagnostics
+
+- Archive: `D:\_PROJECTS\robot-790-archive\20260916-cold-diagnostics`
+- Moved and SHA-256 verified 4,034 untracked/ignored diagnostic files
+  (26.064 GiB), including 52 older PM entry reports. Nothing was discarded.
+- Kept September 14-16 material, recently modified files, rolling `latest-*`
+  files, and canonical runtime log paths. Older referenced artifacts remain
+  where needed; 916 retained source/editorial/note files were checked.
+- Old PM entry paths contain small Markdown forwarding notes, not directory
+  symlinks. Their full reports and evidence are in the archive under the same
+  repository-relative paths. Five shared evidence files were copied there
+  while retaining the active originals required by other references.
+- Preserved all 791 files across `notes/`, original audio/video recordings,
+  generated images, and sensing-eye assets; their paths, sizes, and modification
+  timestamps were verified unchanged. Current untracked source/tests, prompt
+  snapshots, credentials, environments, firmware builds, and published material
+  remain in place. Access-denied old test directories were not forcefully changed.
+- `logs/` fell from 4,750 files (27,210.3 MiB) to 927 files (581.89 MiB).
+  Most reclaimed working-tree bytes came from the obsolete 25.6 GiB
+  `sts-page-sweeps-only.stderr.log`. Disk space remains occupied in the adjacent
+  archive; the purpose is working-tree/index relief, not deletion.
+- Inventory/recovery: archive `README.md`, `manifest.json`, `manifest.csv`,
+  `moves.jsonl`, and `shared-copies.json`. Original paths and checksums are
+  retained. To restore a PM, replace its forwarding note only after checking
+  that no newer report has replaced it; restore companion evidence as needed.
+- Git status was unchanged by the moves. This index entry is the only tracked
+  documentation change for the sweep. No servers were stopped/restarted;
+  STS, realtime voice, and Browser Face listeners remained available. No commit
+  or push was performed. This same-drive archive is not an independent backup.
+
 ## 2026-09-12 Retired Labtable
 
 - Scott shelved the old multi-participant Labtable research workflow.

@@ -19,10 +19,14 @@
     "minimum_rms_ratio": 0.12
   },
   "idle_timing": {
+    "idle_art_quiet_s": 90,
     "attention_enabled": true,
     "attention_start_s": 8,
     "attention_fade_s": 240,
     "attention_warm_s": 75,
+    "discovery_enabled": true,
+    "discovery_start_s": 8,
+    "discovery_fade_s": 240,
     "post_user_quiet_s": 8,
     "minimum_gap_s": 90,
     "drift_base_s": 270,

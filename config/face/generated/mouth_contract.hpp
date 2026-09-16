@@ -115,4 +115,31 @@ template <typename Pose> Pose legacyMouthPose(const char *name) {
   if (name && strcmp(name, "sneer") == 0) return {0.18f, 0.62f, -0.30f, 0.66f, 0.72f, 0.78f, 0.72f, 0.92f};
   return mouthPose<Pose>(name);
 }
+template <typename Pose> Pose speechMouthPose(const char *name, float energy, const Pose &base) {
+  Pose target;
+  if (strcmp(name, "closed") == 0) target = Pose{0.03f, 0.55f, 0.08f, 0.00f, 0.00f, 0.20f, 0.00f, 0.00f};
+  else if (strcmp(name, "small") == 0) target = Pose{0.26f, 0.44f, 0.04f, 0.00f, 0.00f, 0.18f, 0.00f, 0.00f};
+  else if (strcmp(name, "open") == 0) target = Pose{0.58f, 0.52f, -0.02f, 0.00f, 0.04f, 0.14f, 0.00f, 0.00f};
+  else if (strcmp(name, "wide") == 0) target = Pose{0.34f, 0.88f, 0.10f, 0.00f, 0.12f, 0.28f, 0.00f, 0.00f};
+  else if (strcmp(name, "round") == 0) target = Pose{0.66f, 0.22f, -0.06f, 0.00f, 0.00f, 0.04f, 0.00f, 0.00f};
+  else if (strcmp(name, "teeth") == 0) target = Pose{0.18f, 0.78f, 0.02f, 0.00f, 0.82f, 0.78f, 0.00f, 0.00f};
+  else target = Pose{0.58f, 0.52f, -0.02f, 0.00f, 0.04f, 0.14f, 0.00f, 0.00f};
+  const float mix = 0.72f + energy * 0.18f;
+  Pose pose;
+  pose.open = base.open * (1.0f - mix) + target.open * mix;
+  pose.width = base.width * (1.0f - mix) + target.width * mix;
+  pose.curve = base.curve * (1.0f - 0.66f) + target.curve * 0.66f;
+  pose.skew = base.skew * (1.0f - 0.72f) + target.skew * 0.72f;
+  pose.teeth = base.teeth * (1.0f - mix) + target.teeth * mix;
+  pose.tension = base.tension * (1.0f - mix) + target.tension * mix;
+  pose.slant = base.slant * (1.0f - mix) + target.slant * mix;
+  pose.upperLift = base.upperLift * (1.0f - 0.75f) + target.upperLift * 0.75f;
+  return pose;
+}
+constexpr unsigned char mouth_lip[] = {207, 145, 165};
+constexpr unsigned char mouth_highlight[] = {245, 194, 204};
+constexpr unsigned char mouth_lowlight[] = {150, 100, 119};
+constexpr float speechGazeTargets[][2] = {{0.00f, 0.00f}, {-38.00f, -12.00f}, {0.00f, 0.00f}, {36.00f, 24.00f}, {0.00f, 0.00f}, {0.00f, 0.00f}, {8.00f, -27.00f}, {0.00f, 0.00f}, {-24.00f, 30.00f}};
+constexpr unsigned long speechGazeHoldMs = 4200;
+constexpr float speechGazeEaseMs = 180.00f;
 }

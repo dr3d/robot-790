@@ -50,4 +50,8 @@ function mouthPoseFor(shape) {
   return mouthPoses[shape] || mouthPoses.neutral;
 }
 
-globalThis.Robot790MouthContract = { mouthShapes, mouthPoses, mouthMoodMap, mouthShapeForMood, mouthPoseFor };
+const speechMouthPoses = {"closed": {"open": 0.03, "width": 0.55, "curve": 0.08, "skew": 0, "teeth": 0, "tension": 0.2, "slant": 0, "upperLift": 0}, "small": {"open": 0.26, "width": 0.44, "curve": 0.04, "skew": 0, "teeth": 0, "tension": 0.18, "slant": 0, "upperLift": 0}, "open": {"open": 0.58, "width": 0.52, "curve": -0.02, "skew": 0, "teeth": 0.04, "tension": 0.14, "slant": 0, "upperLift": 0}, "wide": {"open": 0.34, "width": 0.88, "curve": 0.1, "skew": 0, "teeth": 0.12, "tension": 0.28, "slant": 0, "upperLift": 0}, "round": {"open": 0.66, "width": 0.22, "curve": -0.06, "skew": 0, "teeth": 0, "tension": 0.04, "slant": 0, "upperLift": 0}, "teeth": {"open": 0.18, "width": 0.78, "curve": 0.02, "skew": 0, "teeth": 0.82, "tension": 0.78, "slant": 0, "upperLift": 0}};
+const mouthPalette = {"lip": "#cf91a5", "highlight": "#f5c2cc", "lowlight": "#966477"};
+const speechGaze = {"holdMs": 4200, "easeMs": 180, "targets": [[0, 0], [-38, -12], [0, 0], [36, 24], [0, 0], [0, 0], [8, -27], [0, 0], [-24, 30]]};
+
+globalThis.Robot790MouthContract = { mouthShapes, mouthPoses, mouthMoodMap, mouthShapeForMood, mouthPoseFor, speechMouthPoses, mouthPalette, speechGaze };

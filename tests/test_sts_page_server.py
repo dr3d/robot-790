@@ -92,11 +92,13 @@ def test_runtime_config_exposes_idle_timing_from_file(tmp_path) -> None:
         "attention_enabled": False, "attention_start_s": 8, "attention_fade_s": 90,
         "attention_warm_s": 20, "post_user_quiet_s": 5, "minimum_gap_s": 40,
         "drift_base_s": 180, "drift_step_s": 15, "drift_floor_s": 30,
+        "discovery_enabled": False, "discovery_start_s": 6, "discovery_fade_s": 300,
     }}), encoding="utf-8")
     timing = sts_page_server.runtime_config(repo_root=tmp_path)["idle_timing"]
     assert timing == {"attention_enabled": False, "attention_start_s": 8, "attention_fade_s": 90,
                       "attention_warm_s": 20, "post_user_quiet_s": 5, "minimum_gap_s": 40,
-                      "drift_base_s": 180, "drift_step_s": 15, "drift_floor_s": 30}
+                      "drift_base_s": 180, "drift_step_s": 15, "drift_floor_s": 30, "idle_art_quiet_s": 90,
+                      "discovery_enabled": False, "discovery_start_s": 6, "discovery_fade_s": 300}
 
 
 @pytest.mark.parametrize("value", [None, [], "wrong shape", {}])
@@ -106,6 +108,9 @@ def test_runtime_idle_timing_defaults(value) -> None:
     assert timing["attention_start_s"] == 12
     assert timing["attention_fade_s"] == 180
     assert timing["minimum_gap_s"] == 90
+    assert timing["discovery_enabled"] is True
+    assert timing["discovery_start_s"] == 8
+    assert timing["discovery_fade_s"] == 240
 
 
 def test_runtime_idle_timing_rejects_non_numbers_and_bounds_unsafe_values() -> None:
@@ -114,10 +119,12 @@ def test_runtime_idle_timing_rejects_non_numbers_and_bounds_unsafe_values() -> N
         "attention_fade_s": -4, "attention_warm_s": 40,
         "post_user_quiet_s": float("nan"), "minimum_gap_s": float("inf"),
         "drift_base_s": 10000, "drift_step_s": -2, "drift_floor_s": 10 ** 1000,
+        "discovery_enabled": "true", "discovery_start_s": -10, "discovery_fade_s": float("inf"),
     })
     assert timing == {"attention_enabled": True, "attention_start_s": 12, "attention_fade_s": 1,
                       "attention_warm_s": 1, "post_user_quiet_s": 12, "minimum_gap_s": 90,
-                      "drift_base_s": 3600, "drift_step_s": 0, "drift_floor_s": 45}
+                      "drift_base_s": 3600, "drift_step_s": 0, "drift_floor_s": 45, "idle_art_quiet_s": 90,
+                      "discovery_enabled": True, "discovery_start_s": 1, "discovery_fade_s": 240}
 
 
 def test_runtime_config_reads_embodiment_tool_options(tmp_path) -> None:
@@ -288,6 +295,9 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
         {
             "conversation": "Operator: I keep seeing it differently on replay.\nRobot 790: The cold pass has teeth.",
             "person_focus": 8,
+            "setup_cards": ["setup-cards/curious-interviewer.txt"],
+            "note_guidance": [{"target": "b2", "filename": "test.txt", "revision": "loaded-revision",
+                               "shared": "Shared purpose", "guidance": "Research is a detour; follow the person."}],
             "voice_shape": "loud-mid, trailing",
             "recent_brain2": "- mouth: replay changes the room",
         }
@@ -301,6 +311,41 @@ def test_mull_second_brain_returns_mouth_text(monkeypatch) -> None:
     assert result["person_focus"] == 8
     assert calls[0][0] == "http://127.0.0.1:1234/v1/chat/completions"
     assert "Recent Brain 2 outputs to avoid repeating" in calls[0][2]["messages"][1]["content"]
+    prompt = calls[0][2]["messages"][1]["content"]
+    assert prompt.startswith("Active note guidance")
+    assert "Research is a detour" in prompt
+    assert "loaded-revision" in prompt
+    assert "setup-cards/curious-interviewer.txt" not in prompt
+    assert result["prompt_debug"]["user"] == prompt
+    assert calls[0][2]["temperature"] == 0.55
+
+
+def test_brain2_setup_companions_are_exact_bounded_and_optional(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    (tmp_path / "setup-cards").mkdir()
+    (tmp_path / "setup-cards/impossible-science.txt").write_text(
+        "## STS NOTE 1\n## B1\nInvent\n## B2\nplayful impossible science", encoding="utf-8")
+    helper = sts_page_server._brain2_setup_context
+    assert helper(None) == ""
+    assert helper([]) == ""
+    assert helper(["../erics_memories.txt", "impossible-science.txt", "sessions/a.txt", {}]) == ""
+    key = "setup-cards/impossible-science.txt"
+    assert helper([key, key]) == helper([key])
+    assert "playful impossible science" in helper([key])
+    assert helper([key.upper().replace("/", "\\")]) == helper([key])
+    assert helper(["unknown"] * 8 + [key]) == ""
+
+
+def test_setup_names_route_inline_sections_without_config(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    (tmp_path / "setup-cards").mkdir()
+    for name in ("curious-interviewer", "impossible-science", "overqualified-advice",
+                 "salem-exhibit-host", "meeting-someone-new"):
+        (tmp_path / f"setup-cards/{name}.txt").write_text(
+            "## STS NOTE 1\n## B1\nSpeak\n## B2\nShared activity: observe", encoding="utf-8")
+        context = sts_page_server._brain2_setup_context([f"setup-cards/{name}.txt"])
+        assert "Shared activity:" in context
+        assert len(context) < 1600
 
 
 def test_mull_second_brain_requires_recent_conversation() -> None:
@@ -541,6 +586,24 @@ def brain2_completion(monkeypatch):
         })
 
     return complete
+
+
+def test_brain2_art_proposal_requires_live_grant(brain2_completion, monkeypatch, tmp_path):
+    import uuid
+    from robot_790d.idle_art import IdleArtService
+
+    service = IdleArtService(tmp_path)
+    monkeypatch.setattr(sts_page_server, "IDLE_ART", service)
+    content = json.dumps({"should_surface": False, "mouth_text": "",
+                          "art_prompt": "A small observatory inside a brass teacup.", "art_title": "Tea stars"})
+    assert brain2_completion(content)["art_proposal"] is None
+    grant = service.arm({"run_id": str(uuid.uuid4()), "consent": True})
+    result = brain2_completion(content, idle_art=grant)
+    assert result["art_proposal"]["title"] == "Tea stars"
+    assert "without a picture quota" in result["prompt_debug"]["system"]
+    assert grant["token"] not in json.dumps(result["prompt_debug"])
+    service.revoke(grant)
+    assert brain2_completion(content, idle_art=grant)["art_proposal"] is None
 
 
 @pytest.mark.parametrize("key,beat,expected", [

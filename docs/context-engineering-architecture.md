@@ -834,9 +834,64 @@ history or body manual, or counting controller directions as operator turns.
 Private text-only image selection uses the same voice-system prefix as B1.
 Its exact-ID, one-recall capability is enforced by the browser; the unchanged
 schema list is not permission to perform additional actions. Spoken receipt
-requests still use tool choice `none`. Server-specific template behavior and
-image stripping can still reduce cache reuse; this is not a guarantee of zero
-prefill on every tool transition.
+requests retain logical tool choice `none`. On the local provider, STS now keeps
+the rendered catalogue stable and enforces this restriction at event admission,
+as detailed below. Image stripping and deliberate context changes can still
+reduce cache reuse; this is not a guarantee of zero prefill on every transition.
+
+### Rendered Tool Prefix Repair (September 16)
+
+A bounded probe of the installed LM Studio llama.cpp runtime (2.38.0,
+`qwen3.8-27b-nvfp4-mtp`, four slots) found that `tool_choice: "none"` removes the
+tool catalogue from the rendered prompt even when the HTTP request includes
+the same `tools`. Keeping the JSON schemas identical was not sufficient.
+
+The synthetic long-prompt probe measured 26,363 input tokens with tools enabled.
+Switching only tool choice to `none` reduced the prompt to 24,923 tokens and
+caused **all 24,923 tokens** to be evaluated again (6.317 seconds prompt eval).
+Returning to the earlier tool-enabled prompt evaluated only four tokens. A
+short isolated idle request followed by the long prompt also recovered the
+warm prefix, evaluating four tokens. That test does not establish that idle or
+B2 can never cause eviction under other loads, but it does rule out treating
+every short idle request as an automatic cache flush.
+
+For a speech-only `robot790_tool_followup` sent to a loopback provider with a
+nonempty tool catalogue, the project-owned realtime adapter now sends wire
+choice `auto` to retain that catalogue. **The response's logical permission
+remains `none`.** A provider-event guard rejects every ToolCall before it can
+reach history recording, the browser, or execution. If no public text has been
+emitted, one fallback is allowed using the original provider choice `none`.
+The fallback shares the existing two-attempt ceiling with private-output
+recovery. A partial spoken reply is never automatically replayed. Authorized
+tool-selection continuations still work normally; remote providers keep the
+original wire setting. Cancellation and stale-turn checks remain active.
+
+An end-to-end probe through that patched adapter, with roughly 26K tokens,
+evaluated 30 new tokens for the follow-up and 27 for the next ordinary turn.
+Wall times were 0.578 and 0.594 seconds respectively. These are bounded
+synthetic measurements, not promised production latencies or a reconstruction
+of the earlier timed-out requests. The ordinary cold request took 7.719 seconds.
+No personality prompt, sampling, parallel-slot setting, or model was changed.
+
+Other traced boundaries:
+
+- Normal B1 instructions remain stable; runtime and B2 updates append to history.
+- Reading/pinning a new note still changes the system context intentionally.
+  The morning Robot Build read did this at 09:11:01. With the old tool-choice
+  behavior, warming its speech-only follow-up did not warm the same rendered
+  prefix as the next ordinary tool-enabled turn.
+- Tool-continuation directions are request-local tail messages, not permanent
+  history edits. Removing that temporary tail on the next turn changes a short
+  suffix, not the beginning of the conversation.
+- The installed speech backend removes consumed image payloads after a turn.
+  This changes context at the image's position, while retaining text history.
+  This policy was not changed to retain every historical image indefinitely.
+- B2 uses a separate compact request with stable role instructions before its
+  changing evidence. No fixed per-brain cache assignment is assumed.
+
+Probe evidence is retained under `logs/runs/20260916-prefix-audit/`; the temporary
+runtime log listener is stopped after testing. No permanent diagnostic logging
+is enabled by this repair.
 
 The project-owned realtime patch pumps provider events through a bounded queue.
 Cancellation and stale-turn checks run while the network is waiting, not only
@@ -1135,6 +1190,58 @@ referents, imaginative ideas, and the distinction between requested and complete
 actions. These checks belong to memory preparation, not restrictions on Eric's voice.
 
 ## Invariants
+
+### B1 Keeps Its Conversation During Idle (September 16, 2026)
+
+Normal B1 idle now reads the same full loaded conversation as a user-addressed
+reply. It does not replace that history with the last ten lines and clipped
+notes. This is an intentional product rule: the GPU serves an ongoing thinking
+creature, not merely low-cost isolated remarks. "Full" means the context actually
+loaded in the current session, not every archived file or an unlimited window.
+
+The browser tags normal idle requests with `robot790_idle_continuation: true`.
+The project-owned realtime patch copies the live chat, restores the identical
+voice system prefix, and appends temporary idle directions and current media at
+the tail. Loaded notes and memory are already in that prefix; the ordinary idle
+tail no longer duplicates clipped copies. Recent-exchange focus cues can still
+steer an attentive pause but are not a limit on accessible history. Idle Notes
+and Self controls do not remove already-loaded history from this shared copy.
+
+`conversation: "none"` still means no automatic write-back, not reduced memory.
+Only spoken idle text is added by the existing browser transcript-commit path.
+Temporary prompts/media never become fictitious user turns. New empty connections
+and thread changes read their own current chat, not a previous snapshot. Explicit
+First Contact, substrate, and legacy performance-privacy experiments retain their
+intentional isolation; B2 remains a separate focused worker.
+
+The local provider receives B1's same tool catalogue with `tool_choice: auto`
+because the installed LM Studio template omits it with `none`. Execution remains
+speech-only: returned tool calls are blocked before history/client dispatch.
+The existing bounded fallback may retry with provider `none` only before public
+text has been emitted. Controller-side idle lookups and opt-in idle art continue
+to own their respective actions. This change does not remove those abilities.
+
+Prompt disclosure: base personality and setup cards were not rewritten. The idle
+tail now explicitly says that full loaded history is available and recent cues
+are not a boundary on what Eric may draw from. Scheduling and conversational
+attention timing were not changed.
+
+Evidence: `logs/runs/20260916-shared-idle-context/verification.md`. A speech-free
+46K-token probe through the actual request patch, interleaving synthetic B2 and
+headline calls, evaluated 28 tokens in 0.384 seconds on return. This establishes
+prefix reuse in the controlled sequence, not permanent slot ownership or a
+guarantee against every cache eviction. A long live-idle return still needs a PM.
+
+### Fresh Evidence Renews Idle Pacing (September 16, 2026)
+
+The [discovery ramp](conversation-followup-pacing.md#discovery-follow-ups) is
+separate from the full-history change and from human attention. Accepted new
+search/headline/art receipts release old loop cooldowns, allow shorter follow-ups,
+and cool back to baseline over four real minutes. Own speech cannot renew the
+clock. A temporary discovery lane encourages continuing the new thought without
+rewriting the system prefix or adding another LLM request. Existing generation,
+playback, user-input and tool guards remain authoritative. Subsequent repetition
+can still trigger a new brake; duplicate receipts cannot release it.
 
 For the proposed next step beyond pause-context tweaks, see
 [Shared Activity And Task Continuation](task-continuation-experiment.md).

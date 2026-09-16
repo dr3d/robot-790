@@ -15,6 +15,7 @@ function setup(overrides = {}, extraFunctions = []) {
   const logs = [];
   let now = 120001;
   const context = vm.createContext({
+    Robot790NoteBrains: require('../web/sts/note-brains.js'), loadedNoteContexts: [],
     pendingEyeRecallResponse: null,
     eyeRecallResponses: new Map(),
     pendingSessionMapMove: null, sessionMapMoveBusy: false,
@@ -34,12 +35,14 @@ function setup(overrides = {}, extraFunctions = []) {
     brain2MinGapMs: 14000, brain2FastClockFloorMs: 14000, brain2FailureStreak: 0,
     compressIdleMs: (ms, { floorMs = 0 } = {}) => Math.max(ms / 12, floorMs),
     brain2LastEvidence: null, brain2EvidenceGeneration: 0, realtimeSessionGeneration: 1, ws: {},
-    brain2EvidenceSnapshot: () => ({ fingerprint: 'same', user_key: 'same', evidence_generation: 0 }),
+    brain2SetupCards: () => [],
+    brain2EvidenceSnapshot: () => ({ fingerprint: 'same', user_key: 'same', evidence_generation: 0, setup_cards: [], note_guidance: [] }),
     brain2ConversationContext: () => '', brain2RecentIdleContext: () => '', brain2RecentOutputContext: () => '',
     rememberBrain2Prompt: () => {}, updateBrain2Controls: () => {}, updateLanePressure: () => {},
     scheduleBrain2Mull: () => {}, bumpBrain2Counter: () => {}, scheduleIdlePonder: () => {},
     logBrain2: (...args) => logs.push(args), log: (...args) => logs.push(args), events: {},
     noteSearchContextReceipt: (result, options) => receipts.push({ result, options }), noteAloneActivity: () => {},
+    idleDiscoveryWeight: () => 0,
     fetch: async (url, options) => {
       calls.push({ url: String(url), options });
       if (String(url).endsWith('/api/headlines')) return {
@@ -199,7 +202,7 @@ test('headline seed expires or yields to a new operator turn; idle dispatch cons
   assert.ok(idle.indexOf('brain2HeadlineSeed.delivered = true') > idle.indexOf('send({'));
 });
 
-test('fresh headline permits one brake-time beat without clearing the brake or bypassing foreground work', () => {
+test('with discovery renewal off, a fresh headline still permits one guarded brake-time beat', () => {
   const timers = [];
   const { context: c, time } = setup({
     idleHardBrakeUntil: 3660000, idleHardBrakeMs: 3600000, idleCooldownUntil: 0,
@@ -209,6 +212,7 @@ test('fresh headline permits one brake-time beat without clearing the brake or b
     updateIdleLevel12State: () => {}, maybeLogIdleLevel12YackMode: () => {},
     idleDelayMs: () => 1000, idleGapMs: () => 1000, idleLevel12YackActive: () => false,
     conversationIdleDelayMs: value => value,
+    idlePacingDelayMs: value => value, idlePacingAnchorAt: () => 1,
     conversationPauseHoldUntil: () => 0,
     idleTiming: () => ({ post_user_quiet_s: 12 }),
     updateIdleSchedulerStatus: () => {}, scheduleIdleSchedulerStatusTimer: () => {},

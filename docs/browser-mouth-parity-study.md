@@ -98,3 +98,35 @@ Browser verification checks all thirteen poses for distinct, nonblank, bounded
 pixels, smirk and talking motion, and no page errors in a separate headless
 browser without changing live face state. All three firmware builds passed.
 Physical appearance on those devices was not tested; their drawing was not changed.
+
+## September 15: Two-Inch Speech Cue Support
+
+The live two-inch display was still running a September 6 build and ignored
+the nested `mouth.speech` cue object already sent by STS. It therefore received
+every cue as plain `shape: open, talking: true`, unlike Browser Face.
+
+The two-inch firmware now consumes closed/small/open/wide/round/teeth cues,
+blends them with the base expression, suppresses generic flapping during cue
+playback, and releases speech on auto/stop or timed expiry. `/state` reports
+the speech cue and sequence for verification. Speech pose data and the pale-pink
+palette are generated from the same contract for browser and hardware.
+
+Per the operator's clarification, the hardware lip drawing geometry and resting
+pose definitions remain unchanged. This is speech-control parity, not an attempt
+to make the two native rasterizers pixel-identical. The multi-display firmware
+has not received this new speech-cue handler in this change.
+
+## September 15: Touch Display Gaze Parity
+
+Browser Face is the reference for gaze only; the touch display remains the
+reference for lip geometry. The touch firmware now uses Browser Face's shared
+phrase-length glance targets, easing, center returns and small speaking eye
+movements, scaled to its viewport. Speaking gaze replaces idle direction rather
+than adding to it. Explicit manual gaze holds still win; eye styling is unchanged.
+
+STS listening cues hold center until a subsequent thinking/speaking/idle cue,
+instead of expiring after 1.4 seconds, on Browser Face and the two-inch display.
+Speaking releases lifecycle gaze on both bodies unless an explicit user gaze
+hold is active. The touch firmware now handles `gaze: {auto: true}` as a release.
+Refresh STS after an existing live session to load those client-side changes.
+This is simulated eye contact toward the viewer, not camera-based face tracking.

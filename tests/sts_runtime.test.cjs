@@ -1280,6 +1280,13 @@ function loadFunctions(names, globals, source = page) {
   globals.suppressedResponseIds ??= new Set();
   globals.eyeRecallResponses ??= new Map();
   globals.lastUserTurnActivityAt ??= 0;
+  globals.idleArt ??= {
+    resets: 0, disarms: 0, history: [],
+    reset() { this.resets++; }, disarm() { this.disarms++; },
+    proposalContext() { return null; },
+    snapshot() { return { run_id: 'test-idle-art', jobs: [] }; }
+  };
+  globals.idleArtEnabled ??= { checked: false };
   if (names.includes('handleFunctionCall')) names = [...names, 'eventResponseId'];
   if (names.includes('resetSessionContextForConnection') || names.includes('stopPlaybackNow')) {
     names = [...names, 'resetMicInterruptCandidate'];
@@ -1464,6 +1471,7 @@ function connectionContext() {
     conversationLines: ['OLD CONVERSATION'], conversationLineMetadata: [],
     brain2NoteCandidates: [{ text: 'OLD ADVICE' }],
     recentAssistantOutputs: ['OLD REPLY'], searchContextReceipts: [{ query: 'OLD SEARCH' }],
+    idleDiscovery: { at: Date.now(), source: 'idle', detail: 'OLD DISCOVERY' }, idleDiscoverySeen: ['old'],
     visionImageUrl: 'old-image', visionImageName: 'old.png', visionImageStaged: true,
     brain2Log: {}, contextPanel: { open: false }, visionHint: {},
     clearInputDraft: noop, resetConversationReengageCycle: noop,
@@ -1582,6 +1590,8 @@ for (const coreNotesOnly of [true, false]) {
     assert.equal(context.sensingEyeImageHistory[0].id, 'saved-image');
     assert.equal(context.sensingEyeTextHistory[0].id, 'saved-text');
     assert.ok(context.loadedNoteContexts.length > 0);
+    assert.equal(context.idleDiscovery, null);
+    assert.equal(context.idleDiscoverySeen.length, 0);
   });
 }
 

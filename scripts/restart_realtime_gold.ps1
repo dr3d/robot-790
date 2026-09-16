@@ -145,12 +145,19 @@ if ($DelaySeconds -gt 0) {
     Start-Sleep -Seconds $DelaySeconds
 }
 
+$Python = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+$SelectedBaseUrl = if ($selected.BaseUrl) { $selected.BaseUrl } else { "http://127.0.0.1:1234/v1" }
+& $Python -m robot_790d.runtime_model --model $selected.Model --base-url $SelectedBaseUrl
+if ($LASTEXITCODE -ne 0) { throw "Could not publish the selected LLM model." }
+
 if ($selected.Provider -eq "lmstudio") {
     try {
         $parallelPredictions = if ($selected.Parallel) { [int] $selected.Parallel } else { 1 }
         & lms unload --all | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "LM Studio unload failed." }
         Stop-StaleLmStudioBackends -SelectedModel $selected.Model
         & lms load $selected.Model --parallel $parallelPredictions --context-length $selected.ContextLength --gpu max --identifier $selected.Model -y | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "LM Studio model load failed." }
         Stop-StaleLmStudioBackends -SelectedModel $selected.Model
     } catch {
         throw "Could not switch LM Studio to $($selected.Model): $($_.Exception.Message)"

@@ -14,6 +14,7 @@ function fixture() {
     Date: Clock, currentIdleDrift: () => 7, firstContactModeEnabled: () => false,
     performanceModeEnabled: () => false, idleSubstrateTestEnabled: () => false,
     defaultIdleTiming: { attention_enabled: true, attention_start_s: 12, attention_fade_s: 180,
+      discovery_enabled: true, discovery_start_s: 8, discovery_fade_s: 240,
       attention_warm_s: 45, post_user_quiet_s: 12, minimum_gap_s: 90,
       drift_base_s: 270, drift_step_s: 22.5, drift_floor_s: 45 },
     runtimeConfig: {},
@@ -25,7 +26,7 @@ function fixture() {
     updateIdleLevel12State: noop, maybeLogIdleLevel12YackMode: noop, updateIdleSchedulerStatus: noop,
     scheduleIdleSchedulerStatusTimer: noop,
     userTurnPendingUntil: 0, idleCooldownUntil: 0, idleHardBrakeUntil: 0,
-    idleHeadlineBrakePassAvailable: () => false, ws: {}, realtimeSessionGeneration: 1,
+    idleHeadlineBrakePassAvailable: () => false, ws: {}, realtimeSessionGeneration: 1, brain2EvidenceGeneration: 0,
     setTimeout: (fn, delay) => { timers.set(++nextTimer, { fn, at: now + delay }); return nextTimer; },
     clearTimeout: id => timers.delete(id), activeRealtimeSession: () => true,
     refreshBrainStatusQuietly: async () => ({}), lmStudioPromptBusy: () => false,
@@ -37,6 +38,15 @@ function fixture() {
     userSpeechActive: false, userTurnPending: () => false, scheduleBrain2Mull: noop,
     assistantFinishTimer: null, assistantFinishPending: false, assistantFinishWasIdle: false,
     assistantFinishArmedAt: 0,
+    idleDiscovery: null, idleDiscoverySeen: [], searchContextReceipts: [],
+    idleHardBrakeReason: '', idleExhaustionCount: 0, idleLoopNoticeUntil: 0, idleLoopNoticeText: '',
+    maxSearchContextResults: 4, maxSearchContextReceipts: 4, contextPanel: { open: false },
+    normalizeIdleTopicKey: text => text.toLowerCase(), URL, location: { href: 'http://localhost:8790/' },
+    noteAloneActivity: noop, updateSessionTools: noop,
+    idleHeadlineSeedAvailable: () => false, currentLabGoal: () => '', activeIdleSelfTasks: () => [],
+    idleLaneDefinitions: [{ name: 'object', prompt: 'An object.' }, { name: 'goal' }, { name: 'self_task' }],
+    idleLaneAllowedByAttention: () => true, idleLaneCursor: -1,
+    lastGoalIdleAt: 0, lastIdleSelfTaskAt: 0,
   });
   for (const name of [
     'idleTiming', 'conversationAttentionEnabled', 'conversationAttentionState', 'conversationIdleDelayMs',
@@ -44,6 +54,10 @@ function fixture() {
     'clearConversationReengageTimer', 'scheduleConversationReengage', 'idleDelayMs', 'idleGapMs',
     'idleBlockedReason', 'scheduleIdlePonder', 'noteConversationActivity', 'clearAssistantFinishTimer',
     'armAssistantUtteranceFinished', 'checkAssistantUtteranceFinished',
+    'idleDiscoveryEnabled', 'noteIdleDiscovery', 'idleDiscoveryWeight', 'idlePacingAnchorAt', 'idlePacingDelayMs',
+    'compactSearchText', 'compactSearchUrl', 'searchResultDomain', 'normalizeSearchReceiptResult',
+    'noteSearchContextReceipt', 'searchWeb', 'chooseIdleLane', 'idleSpecialLaneGapMs',
+    'clearIdleHardBrake',
   ]) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
@@ -256,3 +270,192 @@ test('runtime config tunes the curve, base interval, gap, and quiet guard withou
   assert.equal(c.conversationIdleDelayMs(c.idleDelayMs(), c.Date.now()), 50000);
   assert.equal(c.conversationReengagePolicy().enabled, true);
 });
+
+function independentFixture() {
+  const result = fixture();
+  Object.assign(result.c, { lastAcceptedUserTranscriptAt: 0, lastAssistantResponseDoneAt: 0,
+    lastUserTurnActivityAt: 0 });
+  return result;
+}
+
+const discoveryResult = { status: 'ok', query: 'Unexpected discovery', results: [
+  { title: 'A harbor discovery', url: 'https://example.com/harbor', snippet: 'A genuinely new detail.' },
+] };
+
+test('fresh search advances a settled deadline, with stable polls and no manufactured user attention', () => {
+  const { c, time, timers } = independentFixture();
+  c.scheduleIdlePonder();
+  assert.equal(c.idleTimerFireAt, 1112500);
+  time(1010000);
+  c.noteSearchContextReceipt(discoveryResult, { source: 'idle' });
+  assert.equal(c.idleTimerFireAt, 1018000);
+  assert.equal(c.conversationAttentionState().phase, 'independent');
+  assert.equal(c.lastAcceptedUserTranscriptAt, 0);
+  assert.equal(c.lastUserTurnActivityAt, 0);
+  assert.equal(c.lastConversationActivityAt, 1000000);
+  for (const at of [1011000, 1015000, 1017000]) {
+    time(at);
+    c.scheduleIdlePonder();
+    assert.equal(c.idleTimerFireAt, 1018000);
+  }
+  assert.equal(timers.size, 1);
+});
+
+test('discovery followups cool back to normal, with no self-renewal from speech', () => {
+  const { c, time } = independentFixture();
+  c.noteSearchContextReceipt(discoveryResult, { source: 'idle' });
+  let previous = 0;
+  for (const elapsed of [0, 20000, 60000, 120000, 240000]) {
+    time(1000000 + elapsed);
+    const delay = c.idlePacingDelayMs(c.idleDelayMs(), c.Date.now());
+    assert.ok(delay > previous);
+    previous = delay;
+    c.armAssistantUtteranceFinished({ wasIdle: true });
+    c.checkAssistantUtteranceFinished();
+    assert.equal(c.idleDiscovery.at, 1000000);
+    assert.equal(c.lastAssistantResponseDoneAt, 0);
+    assert.equal(c.idleTimerFireAt, c.Date.now() + delay);
+  }
+  assert.equal(previous, 112500);
+  assert.equal(c.idleDiscoveryWeight(), 0);
+});
+
+test('identical, reordered or re-queried results do not renew discovery; actual new results do', () => {
+  const { c, time } = independentFixture();
+  const second = { title: 'Another story', url: 'https://example.com/other', snippet: 'Something different.' };
+  const receipt = { ...discoveryResult, results: [...discoveryResult.results, second] };
+  c.noteSearchContextReceipt(receipt);
+  time(1050000);
+  c.noteSearchContextReceipt({ ...receipt, query: 'Different wording', results: receipt.results.slice().reverse() });
+  assert.equal(c.idleDiscovery.at, 1000000);
+  assert.equal(c.idleDiscoverySeen.length, 2);
+  for (const result of [{ status: 'error', query: 'failed', results: [second] },
+    { status: 'ok', query: 'empty', results: [] }, { status: 'ok', query: 'bad', results: [null, {}] }]) {
+    c.noteSearchContextReceipt(result);
+    assert.equal(c.idleDiscovery.at, 1000000);
+  }
+  c.noteSearchContextReceipt({ ...discoveryResult, results: [{ ...second, snippet: 'A published update.' }] });
+  assert.equal(c.idleDiscovery.at, 1050000);
+  assert.equal(c.idleTimerFireAt, 1058000);
+});
+
+test('new headline and art receipts renew a bounded evidence ledger, not a recurring speech timer', () => {
+  const { c, time } = independentFixture();
+  c.noteSearchContextReceipt(discoveryResult, { source: 'idle-headline' });
+  assert.equal(c.idleDiscovery.detail, 'A harbor discovery');
+  time(1030000);
+  assert.equal(c.noteIdleDiscovery(['art:new.png'], { source: 'idle-art', detail: 'new.png' }), true);
+  assert.equal(c.idleDiscovery.at, 1030000);
+  time(1040000);
+  assert.equal(c.noteIdleDiscovery(['art:new.png'], { source: 'idle-art', detail: 'new.png' }), false);
+  assert.equal(c.idleDiscovery.at, 1030000);
+  c.noteIdleDiscovery(Array.from({ length: 300 }, (_, i) => `evidence:${i}`), { source: 'test', detail: 'bounded' });
+  assert.equal(c.idleDiscoverySeen.length, 256);
+});
+
+test('old conversation pause hold cannot veto a new discovery, but foreground and loop guards still can', () => {
+  const { c, time } = fixture();
+  c.conversationPauseUserAt = c.lastAcceptedUserTranscriptAt;
+  time(2000000);
+  c.noteConversationActivity();
+  c.noteSearchContextReceipt(discoveryResult, { source: 'idle' });
+  assert.equal(c.conversationPauseHoldUntil(), 2008000);
+  assert.equal(c.idleTimerFireAt, 2008000);
+  time(2008000);
+  assert.equal(c.idleBlockedReason(), '');
+  for (const [name, value, expected] of [
+    ['responseActive', true, 'assistant busy'], ['outputAudioActive', () => true, 'assistant busy'],
+    ['userSpeechActive', true, 'user speaking'], ['pendingToolCalls', 1, 'tool followup pending'],
+    ['brain2HeadlinesInFlight', true, 'Brain 2 reading headlines'],
+    ['idleHardBrakeActive', () => true, 'hard loop brake'],
+    ['idleCooldownUntil', 2030000, 'cooldown'],
+  ]) {
+    const original = c[name];
+    c[name] = value;
+    assert.equal(c.idleBlockedReason(), expected, name);
+    c[name] = original;
+  }
+});
+
+test('fresh evidence releases old loop cooldown and hard brake; duplicates cannot clear a new brake', () => {
+  const { c, time } = independentFixture();
+  c.idleCooldownUntil = 1900000;
+  c.idleHardBrakeUntil = 4600000;
+  c.idleHardBrakeReason = 'old subject';
+  c.idleExhaustionCount = 2;
+  c.noteSearchContextReceipt(discoveryResult, { source: 'idle-headline' });
+  assert.equal(c.idleCooldownUntil, 0);
+  assert.equal(c.idleHardBrakeUntil, 0);
+  assert.equal(c.idleExhaustionCount, 0);
+  assert.equal(c.idleTimerFireAt, 1008000);
+  assert.match(c.idleLoopNoticeText, /fresh idle-headline receipt/);
+  time(1010000);
+  c.idleCooldownUntil = 1910000;
+  c.idleHardBrakeUntil = 4610000;
+  c.noteSearchContextReceipt(discoveryResult, { source: 'idle-headline' });
+  assert.equal(c.idleCooldownUntil, 1910000);
+  assert.equal(c.idleHardBrakeUntil, 4610000);
+});
+
+test('discovery timing is configurable, never slows faster lab pacing, and excludes special modes', () => {
+  const { c, time } = independentFixture();
+  c.runtimeConfig.idle_timing = { discovery_start_s: 6, discovery_fade_s: 60 };
+  c.noteSearchContextReceipt(discoveryResult);
+  assert.equal(c.idlePacingDelayMs(112500, c.Date.now()), 6000);
+  c.compressIdleMs = value => value / 5;
+  assert.equal(c.idlePacingDelayMs(c.idleDelayMs(), c.Date.now()), 6000);
+  c.compressIdleMs = value => value / 100;
+  assert.equal(c.idlePacingDelayMs(c.idleDelayMs(), c.Date.now()), 1125);
+  time(1060000);
+  assert.equal(c.idleDiscoveryWeight(), 0);
+  time(1000000);
+  for (const mode of ['firstContactModeEnabled', 'performanceModeEnabled', 'idleSubstrateTestEnabled']) {
+    c[mode] = () => true;
+    assert.equal(c.idleDiscoveryWeight(), 0, mode);
+    assert.equal(c.idlePacingDelayMs(112500, c.Date.now()), 112500, mode);
+    c[mode] = () => false;
+  }
+  for (const level of [0, 11, 12]) {
+    c.currentIdleDrift = () => level;
+    assert.equal(c.idleDiscoveryWeight(), 0);
+  }
+  c.currentIdleDrift = () => 7;
+  c.runtimeConfig.idle_timing.discovery_enabled = false;
+  assert.equal(c.idleDiscoveryWeight(), 0);
+  assert.equal(c.noteIdleDiscovery(['off'], { source: 'test', detail: 'disabled' }), false);
+});
+
+test('discovery lane follows new evidence without displacing goals, tasks or changing human attention', () => {
+  const { c, time } = independentFixture();
+  c.noteSearchContextReceipt(discoveryResult);
+  assert.equal(c.chooseIdleLane(7).name, 'discovery');
+  assert.match(c.chooseIdleLane(7).prompt, /not another request from the operator/);
+  c.currentLabGoal = () => 'An active job';
+  assert.equal(c.chooseIdleLane(7).name, 'goal');
+  c.currentLabGoal = () => '';
+  c.activeIdleSelfTasks = () => [{ text: 'A task' }];
+  assert.equal(c.chooseIdleLane(7).name, 'self_task');
+  c.activeIdleSelfTasks = () => [];
+  time(1240000);
+  assert.equal(c.chooseIdleLane(7).name, 'object');
+});
+
+for (const change of ['none', 'user', 'reconnect', 'disconnect', 'context-reset']) {
+  test(`search completion accepts only current discovery receipts: ${change}`, async () => {
+    const { c } = independentFixture();
+    c.idleInFlight = true;
+    c.activeRealtimeSession = (socket, generation) => socket === c.ws
+      && generation === c.realtimeSessionGeneration && !c.realtimeStopRequested;
+    let complete;
+    c.fetch = () => new Promise(resolve => { complete = () => resolve({ ok: true, json: async () => discoveryResult }); });
+    const pending = c.searchWeb({ query: 'Unexpected discovery' });
+    if (change === 'user') c.lastUserTurnActivityAt = c.Date.now();
+    if (change === 'reconnect') c.realtimeSessionGeneration++;
+    if (change === 'context-reset') c.brain2EvidenceGeneration++;
+    if (change === 'disconnect') c.realtimeStopRequested = true;
+    complete();
+    await pending;
+    assert.equal(Boolean(c.idleDiscovery), change === 'none');
+    assert.equal(c.searchContextReceipts.length, change === 'none' ? 1 : 0);
+  });
+}

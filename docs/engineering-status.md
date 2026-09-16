@@ -1,10 +1,41 @@
 # Engineering Status
 
-Reviewed September 14, 2026. This is the maintained engineering view; session
+Reviewed September 16, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
+
+### September 16 Checkpoint
+
+- B1 idle thinking uses the full conversation history, with stable prompt/tool
+  prefixes. A measured return reused about 92% of the prompt with 1.39 seconds
+  of prefill, versus a prior 17.46 seconds. This is a run observation, not a
+  guarantee: private tool workflows still produced expensive cold transitions.
+- [Routed setup notes](brain2-setup-cards.md) keep shared and per-brain guidance
+  in the same editable note. B1/B2 are active; B3/B4 sections are reserved.
+- [Idle art](idle-art.md) has explicit operator enablement, serialized jobs and
+  durable receipts. [Metrics capture](llm-metrics-capture.md) is opt-in.
+  [Local model routing](local-model-routing.md) follows the chosen model across
+  consumers; it is not automatic parallel loading of different models.
+- Browser/S3 speech-mouth and gaze work shares contract data while preserving
+  the touch display's lip geometry. The older multi-display firmware does not
+  yet have the new speech-cue handler. See the dated entries in the
+  [mouth study](browser-mouth-parity-study.md), rather than treating older
+  hardware verification statements below as current deployment receipts.
+- Session-map Alt+plus expands the selected subtree; Alt+minus also clears
+  descendant expansion state. Ordinary expand/collapse behavior is unchanged.
+
+Known failures: a 30-second tool-followup playback timeout can discard pending
+work; image recall/action scopes can block useful recovery; English phrase
+gates misinterpret negation and do not generalize across languages. The
+[agency/language audit](sts-agency-and-language-audit-2026-09-16.md) documents
+offline reproductions. The accepted next direction is subtraction of semantic
+controllers, not additional scripted behavior. No such removal is included in
+this pre-change checkpoint. Technical safety, permissions, identity, receipts,
+audio serialization and cache stability remain requirements.
+
+### Earlier Checkpoints
 
 September 14 checkpoint: the latest illustrated Impossible Science run sustained
 ten questions and ten on-topic autonomous followups, with twelve generated images.

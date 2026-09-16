@@ -70,11 +70,12 @@ function idleContext(overrides = {}) {
   return { c, packets };
 }
 
-test('actual isolated idle request carries private B2 advice and authoritative current body/eye state', async () => {
+test('shared idle request carries private B2 advice and authoritative current body/eye state', async () => {
   const { c, packets } = idleContext();
   await c.triggerIdlePonder({ statusChecked: true });
   const r = packets[0].response;
   assert.equal(r.conversation, 'none');
+  assert.equal(r.robot790_idle_continuation, true);
   assert.equal(r.tool_choice, 'none');
   assert.equal(r.tools.length, 0);
   for (const marker of ['OLD_ORBIT', 'PRIVATE_REVISION', 'PRIVATE_QUESTION', 'PRIVATE_PRESSURE']) {
@@ -84,9 +85,10 @@ test('actual isolated idle request carries private B2 advice and authoritative c
   assert.match(r.instructions, /Current embodiment: Browser Face/);
   assert.match(r.instructions, /The sensing eye is empty/);
   assert.match(r.instructions, /may remember an earlier picture/);
-  assert.match(r.instructions, /HISTORICAL_IMAGE_IN_EYE/);
+  assert.match(r.instructions, /full loaded conversation/);
+  assert.match(r.instructions, /anywhere in that history/);
+  assert.doesNotMatch(r.instructions, /HISTORICAL_IMAGE_IN_EYE|PRIVATE_MEMORY|OLD_NOTES/);
   assert.doesNotMatch(r.instructions, /UNUSED_BODY|UNUSED_TOOLS/);
-  assert.ok(r.instructions.indexOf('The sensing eye is empty') > r.instructions.indexOf('HISTORICAL_IMAGE_IN_EYE'));
   assert.equal(r.instructions.split('Private Brain 2 advisory snapshots').length - 1, 1);
   c.visionImageUrl = 'current-image';
   c.visionImageStaged = true;
@@ -97,6 +99,7 @@ test('actual isolated idle request carries private B2 advice and authoritative c
 test('a warm pause uses the conversation lane and later releases into independent idle', async () => {
   const { c, packets } = idleContext({ lastAcceptedUserTranscriptAt: Date.now() });
   await c.triggerIdlePonder({ statusChecked: true });
+  assert.equal(packets[0].response.robot790_idle_continuation, true);
   assert.match(packets[0].response.instructions, /Idle lane: conversation/);
   assert.match(packets[0].response.instructions, /brief afterthought/);
   assert.match(packets[0].response.instructions, /You may address the operator naturally/);
@@ -105,8 +108,23 @@ test('a warm pause uses the conversation lane and later releases into independen
   c.idleInFlight = false;
   c.responseActive = false;
   await c.triggerIdlePonder({ statusChecked: true });
+  assert.equal(packets[1].response.robot790_idle_continuation, true);
   assert.match(packets[1].response.instructions, /Idle lane: object/);
   assert.match(packets[1].response.instructions, /Follow an interest of your own/);
+});
+
+test('explicit isolated experiments do not inherit private conversation history', async () => {
+  for (const overrides of [
+    { firstContactModeEnabled: () => true, firstContactIdleContext: () => 'FIRST_CONTACT',
+      sensingInputActive: () => false, firstContactLaneInstruction: () => 'Meet the input.' },
+    { idleSubstrateTestEnabled: () => true },
+    { performanceModeEnabled: () => true, performanceLaneInstruction: () => 'A stage beat.' },
+  ]) {
+    const { c, packets } = idleContext(overrides);
+    await c.triggerIdlePonder({ statusChecked: true });
+    assert.equal(packets[0].response.robot790_idle_continuation, undefined);
+    assert.doesNotMatch(packets[0].response.instructions, /full loaded conversation/);
+  }
 });
 
 test('an hours-later return carries the live exchange, not the old idle job or private monologue scaffold', async () => {

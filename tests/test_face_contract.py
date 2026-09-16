@@ -80,6 +80,27 @@ def test_generated_face_contract_is_current() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_speech_targets_and_palette_are_shared_without_replacing_lip_geometry() -> None:
+    spec = load_spec()["mouth"]
+    generated = (ROOT / "config/face/generated/mouth_contract.hpp").read_text(encoding="utf-8")
+    for name, expected in spec["speechPoses"].items():
+        match = re.search(r'strcmp\(name, "' + name + r'"\) == 0\) target = Pose\{([^}]+)\}', generated)
+        assert match, name
+        assert [float(v) for v in re.findall(r'-?\d+(?:\.\d+)?(?=f)', match[1])] == expected
+    result = subprocess.run(
+        ["node", "-e", "require('./web/face-sim/mouth-contract.js'); console.log(JSON.stringify(Robot790MouthContract));"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    )
+    browser = json.loads(result.stdout)
+    assert browser["mouthPalette"] == spec["palette"]
+    for name, expected in spec["speechPoses"].items():
+        assert [browser["speechMouthPoses"][name][field] for field in POSE_FIELDS] == expected
+    hardware = FIRMWARE_PATHS[0].read_text(encoding="utf-8")
+    assert "robot790::speechMouthPose(" in hardware
+    assert 'speech["active"] = mouthState.speechActive;' in hardware
+    assert "mouthState.talking && !mouthState.speechActive" in hardware
+
+
 def test_browser_face_mouth_contract_matches_spec() -> None:
     spec = load_spec()["mouth"]
     source = (ROOT / "web" / "face-sim" / "index.html").read_text(encoding="utf-8")

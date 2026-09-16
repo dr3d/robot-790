@@ -1089,11 +1089,12 @@
       const dt = clamp(t - (lastSpeechEyeAt || t), 0, 140);
       lastSpeechEyeAt = t;
       // Phrase-length glances, with regular returns toward the viewer. No camera tracking.
-      const targets = [[0, 0], [-24, -9], [0, 0], [22, 3], [8, -15], [0, 0], [-17, 5]];
-      const target = targets[Math.floor(t / 4200) % targets.length];
-      const targetX = target[0] * level;
-      const targetY = target[1] * level;
-      const amount = 1 - Math.exp(-dt / 180);
+      const { targets, holdMs, easeMs } = Robot790MouthContract.speechGaze;
+      const target = targets[Math.floor(t / holdMs) % targets.length];
+      const amplitude = 0.85 + 0.15 * level;
+      const targetX = target[0] * amplitude;
+      const targetY = target[1] * amplitude;
+      const amount = 1 - Math.exp(-dt / easeMs);
       easedSpeechEyeX = easeToward(easedSpeechEyeX, targetX, amount);
       easedSpeechEyeY = easeToward(easedSpeechEyeY, targetY, amount);
 
@@ -1303,8 +1304,10 @@
       const rawGazeY = Number(gaze.y || 0);
       const baseGazeX = Math.abs(rawGazeX) <= 1 ? rawGazeX * firmwareEye.maxGazeX : rawGazeX * (firmwareEye.maxGazeX / 64.6);
       const baseGazeY = Math.abs(rawGazeY) <= 1 ? rawGazeY * firmwareEye.maxGazeY : rawGazeY * (firmwareEye.maxGazeY / 48);
-      let gx = clamp(baseGazeX + idle.x * 0.58 + speech.x, -firmwareEye.maxGazeX, firmwareEye.maxGazeX);
-      let gy = clamp(baseGazeY + idle.y * 0.58 + speech.y, -firmwareEye.maxGazeY, firmwareEye.maxGazeY);
+      // Speech targets are absolute: a center beat must not inherit an upward idle/thinking bias.
+      const speechOwnsGaze = speechEyeLevel() > 0 && !state?.gaze?.manual;
+      let gx = clamp((speechOwnsGaze ? 0 : baseGazeX + idle.x * 0.58) + speech.x, -firmwareEye.maxGazeX, firmwareEye.maxGazeX);
+      let gy = clamp((speechOwnsGaze ? 0 : baseGazeY + idle.y * 0.58) + speech.y, -firmwareEye.maxGazeY, firmwareEye.maxGazeY);
 
       if (mood === "afraid") {
         gx += Math.sin(t * 0.032 + (eyeballLeft ? 0 : 1.4)) * 1.4;
@@ -1397,14 +1400,7 @@
     }
 
     function speechMouthPose(shape, energy, basePose) {
-      const targets = {
-        closed: { open: 0.03, width: 0.55, curve: 0.08, skew: 0, teeth: 0, tension: 0.20, slant: 0, upperLift: 0 },
-        small: { open: 0.26, width: 0.44, curve: 0.04, skew: 0, teeth: 0, tension: 0.18, slant: 0, upperLift: 0 },
-        open: { open: 0.58, width: 0.52, curve: -0.02, skew: 0, teeth: 0.04, tension: 0.14, slant: 0, upperLift: 0 },
-        wide: { open: 0.34, width: 0.88, curve: 0.10, skew: 0, teeth: 0.12, tension: 0.28, slant: 0, upperLift: 0 },
-        round: { open: 0.66, width: 0.22, curve: -0.06, skew: 0, teeth: 0, tension: 0.04, slant: 0, upperLift: 0 },
-        teeth: { open: 0.18, width: 0.78, curve: 0.02, skew: 0, teeth: 0.82, tension: 0.78, slant: 0, upperLift: 0 }
-      };
+      const targets = Robot790MouthContract.speechMouthPoses;
       const target = targets[shape] || targets.open;
       const mix = clamp(0.72 + energy * 0.18, 0.72, 0.90);
       const pose = {};

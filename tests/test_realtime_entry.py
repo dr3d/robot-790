@@ -4,6 +4,44 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+
+def test_llm_read_timeout_defaults_and_validation(monkeypatch):
+    from robot_790d.realtime_entry import _llm_read_timeout_from_env
+    monkeypatch.delenv("ROBOT_790_LLM_READ_TIMEOUT_SECONDS", raising=False)
+    assert _llm_read_timeout_from_env() == 60
+    for raw, expected in [("90", 90), ("20", 20), ("nan", 60), ("inf", 60), ("bad", 60), ("0", 60), ("301", 60)]:
+        monkeypatch.setenv("ROBOT_790_LLM_READ_TIMEOUT_SECONDS", raw)
+        assert _llm_read_timeout_from_env() == expected
+
+
+def test_llm_timeout_patch_changes_only_read_and_does_not_retry(monkeypatch):
+    import httpx
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+    from robot_790d.realtime_entry import apply_chat_read_timeout_patch
+    calls = []
+
+    def original(self, messages, options):
+        calls.append((messages, options))
+        assert self.request_timeout.read == 60
+        assert self.request_timeout.connect == 10
+        assert self.request_timeout.write == 20
+        assert self.request_timeout.pool == 20
+        assert self.request_timeout_s == 60
+        raise httpx.ReadTimeout("still bounded")
+
+    monkeypatch.delenv("ROBOT_790_LLM_READ_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.setattr(Handler, "_request", original)
+    monkeypatch.setattr(Handler, "_robot_790_read_timeout_patch", False, raising=False)
+    apply_chat_read_timeout_patch()
+    wrapped = Handler._request
+    apply_chat_read_timeout_patch()
+    assert Handler._request is wrapped
+    handler = object.__new__(Handler)
+    handler.request_timeout = httpx.Timeout(20, connect=10)
+    with pytest.raises(httpx.ReadTimeout):
+        handler._request([{"role": "user", "content": "Continue"}], {"temperature": 0.8})
+    assert len(calls) == 1
+
 from robot_790d.realtime_entry import (
     _append_voice_shape_to_transcript,
     _capture_llm_wire_request,

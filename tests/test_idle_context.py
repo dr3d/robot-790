@@ -1,0 +1,207 @@
+from types import SimpleNamespace
+
+import pytest
+from openai.types.realtime import ResponseCreateEvent
+from openai.types.responses import ResponseFunctionToolCall
+from speech_to_speech.LLM.base_openai_compatible_language_model import AssistantMessage, TextDelta, ToolCall
+from speech_to_speech.LLM.chat import Chat, make_assistant_message, make_user_message
+from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+from speech_to_speech.pipeline.messages import EndOfResponse
+
+from robot_790d.realtime_entry import (
+    IDLE_TOOL_BLOCKED,
+    _PrivateAdvisoryTextFilter,
+    apply_interruptible_chat_generation_patch,
+)
+
+
+@pytest.fixture
+def runtime(monkeypatch):
+    monkeypatch.setattr(Handler, "_generate", Handler._generate)
+    monkeypatch.setattr(Handler, "_robot_790_interruptible_generation_patch", False, raising=False)
+    apply_interruptible_chat_generation_patch()
+    handler = object.__new__(Handler)
+    handler.client = SimpleNamespace(base_url="http://127.0.0.1:1234/v1")
+    handler.stream, handler.stream_batch_sentences = False, 1
+    handler.compactor = None
+    handler.enable_lang_prompt = False
+    handler.cancel_scope = None
+    handler.audio_content_type = "input_audio"
+    handler._generation_is_stale = lambda _: False
+    handler._turn_is_latest = lambda *_: True
+    handler._turn_output_allowed = lambda *_: True
+    handler._chunk = lambda _, **kwargs: SimpleNamespace(**kwargs)
+    requests, calls = [], []
+    replies = [[AssistantMessage(content=[{"type": "output_text", "text": "An older connection."}])]]
+
+    def request(items, options):
+        requests.append((items, options))
+        return iter(replies[min(len(requests) - 1, len(replies) - 1)])
+
+    handler._request, handler._iter_events = request, iter
+    handler._record_tool_call = lambda *args: calls.append(args) or iter([])
+    chat = Chat(0)
+    system = "Stable Eric identity. Loaded parent-session note: the clock has eleven seconds."
+    handler._apply_config(chat, system, True)
+    chat.add_item(make_user_message("An early gem: the harbor bell is a violet triangle."))
+    for index in range(35):
+        chat.add_item(make_assistant_message(f"Historical reply {index}."))
+        chat.add_item(make_user_message(f"Later conversation {index}."))
+    session = SimpleNamespace(instructions=system, tools=[{
+        "type": "function", "name": "generate_image", "description": "Draw an image.",
+        "parameters": {"type": "object", "properties": {}},
+    }], tool_choice="auto")
+    return SimpleNamespace(
+        handler=handler, chat=chat, session=session, requests=requests, calls=calls, replies=replies)
+
+
+def idle_response(**overrides):
+    return ResponseCreateEvent.model_validate({"type": "response.create", "response": {
+        "conversation": "none", "output_modalities": ["audio"],
+        "robot790_idle_continuation": True,
+        "instructions": "Let a thought arise from any part of your history. Current eye is empty.",
+        "input": [{"type": "message", "role": "user", "content": [
+            {"type": "input_text", "text": "A temporary idle cue, not something Scott said."}
+        ]}], "tools": [], "tool_choice": "none", **overrides,
+    }}).response
+
+
+def run(runtime, response):
+    return list(runtime.handler.process(SimpleNamespace(
+        audio=None, runtime_config=SimpleNamespace(chat=runtime.chat, session=runtime.session),
+        response=response, language_code=None, turn_id=None, turn_revision=None, speech_stopped_at_s=None,
+    )))
+
+
+@pytest.mark.parametrize("stream", [False, True])
+def test_idle_uses_entire_serialized_history_and_catalogue_without_writing_back(runtime, stream):
+    runtime.handler.stream = stream
+    before = runtime.handler._serialize(runtime.chat)
+    output = run(runtime, idle_response())
+    messages, options = runtime.requests[0]
+    assert messages[:-2] == before
+    assert "violet triangle" in str(messages)
+    assert "eleven seconds" in str(messages[0])
+    assert messages[-2]["role"] == "user"
+    assert "[STS idle continuation]" in str(messages[-2])
+    assert "temporary idle cue" in str(messages[-1])
+    assert options["tools"] == runtime.handler._build_optional_kwargs(runtime.session.tools, "auto")["tools"]
+    assert options["tool_choice"] == "auto"
+    assert runtime.handler._serialize(runtime.chat) == before
+    assert runtime.calls == []
+    assert [item.error for item in output if isinstance(item, EndOfResponse)] == [None]
+
+
+def test_idle_media_is_appended_after_history_and_never_persists(runtime):
+    before = runtime.handler._serialize(runtime.chat)
+    response = idle_response(input=[{"type": "message", "role": "user", "content": [
+        {"type": "input_text", "text": "Current image, not a historical sensor."},
+        {"type": "input_image", "image_url": "data:image/png;base64,cGl4ZWxz"},
+    ]}])
+    run(runtime, response)
+    messages = runtime.requests[0][0]
+    assert messages[:-2] == before
+    assert messages[-1]["content"][1]["type"] == "image_url"
+    assert runtime.handler._serialize(runtime.chat) == before
+
+
+def test_idle_without_extra_input_still_reads_all_history(runtime):
+    before = runtime.handler._serialize(runtime.chat)
+    run(runtime, idle_response(input=None))
+    assert runtime.requests[0][0][:-1] == before
+
+
+def test_spoken_idle_is_committed_once_by_existing_client_path_not_backend(runtime):
+    before = runtime.handler._serialize(runtime.chat)
+    run(runtime, idle_response())
+    assert runtime.handler._serialize(runtime.chat) == before
+    runtime.chat.add_item(make_assistant_message("An older connection."))
+    committed = runtime.handler._serialize(runtime.chat)
+    run(runtime, idle_response(instructions="Another temporary idle beat."))
+    assert runtime.requests[1][0][:-2] == committed
+    assert str(runtime.handler._serialize(runtime.chat)).count("An older connection.") == 1
+    runtime.chat.add_item(make_user_message("I am back."))
+    next_conversation = runtime.handler._serialize(runtime.chat)
+    run(runtime, None)
+    assert runtime.requests[2][0] == next_conversation
+    assert "STS idle continuation" not in str(runtime.requests[2][0])
+
+
+def test_explicit_isolated_experiment_stays_isolated(runtime):
+    run(runtime, idle_response(robot790_idle_continuation=False))
+    assert "violet triangle" not in str(runtime.requests[0][0])
+    assert "eleven seconds" not in str(runtime.requests[0][0])
+    assert runtime.requests[0][1]["tool_choice"] == "none"
+
+
+@pytest.mark.parametrize("overrides", [
+    {"conversation": "default"},
+    {"robot790_tool_followup": "Conflicting continuation."},
+    {"input": [{"type": "message", "role": "system", "content": [
+        {"type": "input_text", "text": "Must not replace the shared system prefix."}]}]},
+])
+def test_invalid_shared_idle_fails_without_inference_or_history_mutation(runtime, overrides):
+    before = runtime.handler._serialize(runtime.chat)
+    output = run(runtime, idle_response(**overrides))
+    assert any(item.error for item in output if isinstance(item, EndOfResponse))
+    assert runtime.requests == []
+    assert runtime.handler._serialize(runtime.chat) == before
+
+
+def tool_event():
+    return ToolCall(item=ResponseFunctionToolCall(
+        type="function_call", name="generate_image", arguments="{}", call_id="must_not_execute"))
+
+
+@pytest.mark.parametrize("repeat_tool", [False, True])
+def test_idle_catalogue_does_not_grant_tool_execution_and_retry_is_bounded(runtime, repeat_tool):
+    before = runtime.handler._serialize(runtime.chat)
+    runtime.replies[:] = [[tool_event()], [tool_event()] if repeat_tool else [TextDelta(text="A thought.")]]
+    output = run(runtime, idle_response(tool_choice="auto"))
+    assert [options["tool_choice"] for _, options in runtime.requests] == ["auto", "none"]
+    assert runtime.requests[0][0] == runtime.requests[1][0]
+    assert runtime.calls == []
+    assert runtime.handler._serialize(runtime.chat) == before
+    errors = [item.error for item in output if isinstance(item, EndOfResponse)]
+    assert len(errors) == 1
+    assert (IDLE_TOOL_BLOCKED in (errors[0] or "")) == repeat_tool
+
+
+def test_idle_never_retries_after_public_text(runtime):
+    runtime.replies[:] = [[TextDelta(text="Already said."), tool_event()]]
+    run(runtime, idle_response())
+    assert len(runtime.requests) == 1
+    assert runtime.calls == []
+
+
+def test_shared_idle_preserves_remote_provider_no_tool_contract(runtime):
+    runtime.handler.client.base_url = "https://remote.example/v1"
+    run(runtime, idle_response())
+    assert runtime.requests[0][1]["tool_choice"] == "none"
+
+
+def test_empty_connection_does_not_retain_previous_sessions(runtime):
+    runtime.chat = Chat(0)
+    runtime.session.instructions = "New empty session."
+    run(runtime, idle_response())
+    assert "violet triangle" not in str(runtime.requests[0][0])
+    assert "eleven seconds" not in str(runtime.requests[0][0])
+
+
+def test_stale_idle_request_cannot_start_inference(runtime):
+    before = runtime.handler._serialize(runtime.chat)
+    runtime.handler._turn_is_latest = lambda *_: False
+    run(runtime, idle_response())
+    assert runtime.requests == []
+    assert runtime.handler._serialize(runtime.chat) == before
+
+
+@pytest.mark.parametrize("split", range(len("[STS idle continuation]") + 1))
+def test_private_idle_marker_cannot_leak_across_stream_chunks(split):
+    marker = "[STS idle continuation]"
+    guard = _PrivateAdvisoryTextFilter()
+    output = "".join(guard.feed(part) for part in [
+        "An actual thought. ", marker[:split], marker[split:], "Temporary controller directions.",
+    ]) + guard.finish()
+    assert output == "An actual thought. "
+    assert guard.blocked

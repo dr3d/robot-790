@@ -1014,6 +1014,25 @@
       return branch;
     }
 
+    function setLineageSubtreeExpanded(filename, collapsed, expand) {
+      const children = new Map();
+      for (const item of sessions) {
+        const parent = lineageKey(item.parent_session_filename);
+        if (!children.has(parent)) children.set(parent, []);
+        children.get(parent).push(lineageKey(item.filename));
+      }
+      const pending = [lineageKey(filename)];
+      const visited = new Set();
+      while (pending.length) {
+        const key = pending.pop();
+        if (visited.has(key)) continue;
+        visited.add(key);
+        if (expand) collapsed.delete(key);
+        else collapsed.add(key);
+        pending.push(...(children.get(key) || []));
+      }
+    }
+
     function renderNode(item, { hasChildren = false, expanded = false } = {}) {
       const row = document.createElement("div");
       row.className = "branch-row";
@@ -1024,11 +1043,12 @@
         toggle.textContent = expanded ? "-" : "+";
         toggle.setAttribute("aria-expanded", String(expanded));
         toggle.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} descendants of ${sessionTitle(item.filename, item.title)}`);
-        toggle.title = expanded ? "Collapse descendants" : "Expand descendants";
-        toggle.addEventListener("click", () => {
+        toggle.title = expanded ? "Collapse descendants (Alt: collapse all levels)" : "Expand descendants (Alt: expand all levels)";
+        toggle.addEventListener("click", (event) => {
           const key = lineageKey(item.filename);
           const collapsed = filterEl.value.trim() ? filteredCollapsedLineageNodes : collapsedLineageNodes;
-          if (collapsed.has(key)) collapsed.delete(key);
+          if (event.altKey) setLineageSubtreeExpanded(item.filename, collapsed, !expanded);
+          else if (collapsed.has(key)) collapsed.delete(key);
           else collapsed.add(key);
           renderGraph();
         });

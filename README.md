@@ -100,14 +100,21 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
-September 12 checkpoint: stable prompt ordering now preserves responsive warm
-conversation with retained history. Auto history uses source-checked swept
-sessions; generated summaries remain available for inspection but are disabled
-in the default reload policy. The session map has local-time dates, lineage
-colors, branch archiving, and new operator-requested navigation verbs. Spoken
-navigation is implemented and fixture-tested, with its live trial still pending.
-See [Engineering Status](docs/engineering-status.md) for remaining tool-handoff,
-speech, summary-quality, and performance-variety limitations.
+September 16 checkpoint: conversation and idle thinking now share B1 history,
+with stable prompt/tool ordering to preserve prefix reuse. Auto history uses
+source-checked swept sessions; generated summaries remain inspectable but are
+disabled in the default reload policy. Notes can carry shared and brain-specific
+instructions in one editable file; B3/B4 sections are reserved, not running brains.
+Idle-art jobs, optional inference metrics, shared speech-mouth cues and gaze,
+and recursive session-map expansion are included in this checkpoint.
+
+This is not a clean bill of health. Image handoffs can still lose continuations,
+and the [agency/language audit](docs/sts-agency-and-language-audit-2026-09-16.md)
+identifies English intent gates, scripted confirmations and controller-selected
+idle subjects. The next change removes that interpretation/direction while
+retaining execution permissions, receipts, hardware limits and audio ownership.
+See [Engineering Status](docs/engineering-status.md) for the current boundary
+between implemented work, observations and planned repairs.
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.

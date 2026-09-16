@@ -290,3 +290,110 @@ def test_tool_followup_preserves_serialized_system_and_does_not_persist_private_
     assert seen[0][:-1] == before
     assert seen[0][-1]["role"] == "user"
     assert handler._serialize(chat) == before
+
+
+def followup_fixture(monkeypatch, replies, *, choice="none", base_url="http://127.0.0.1:1234/v1", stream=False):
+    from speech_to_speech.LLM.chat import Chat, make_user_message
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+    from robot_790d.realtime_entry import apply_interruptible_chat_generation_patch
+
+    monkeypatch.setattr(Handler, "_generate", Handler._generate)
+    monkeypatch.setattr(Handler, "_robot_790_interruptible_generation_patch", False, raising=False)
+    apply_interruptible_chat_generation_patch()
+    handler = object.__new__(Handler)
+    handler.client = SimpleNamespace(base_url=base_url)
+    handler.stream, handler.stream_batch_sentences = stream, 1
+    handler.compactor = None
+    handler.audio_content_type = "input_audio"
+    handler._generation_is_stale = lambda _: False
+    handler._turn_is_latest = lambda *_: True
+    handler._turn_output_allowed = lambda *_: True
+    handler._chunk = lambda _, **kwargs: SimpleNamespace(**kwargs)
+    requests, calls = [], []
+    def request(items, options):
+        requests.append((items, options))
+        return iter(replies[min(len(requests) - 1, len(replies) - 1)])
+    def record_tool(state, turn, tool):
+        calls.append(tool)
+        return iter([])
+    handler._request, handler._iter_events = request, iter
+    handler._record_tool_call = record_tool
+    chat = Chat(100)
+    handler._apply_config(chat, "Stable identity and saved history", True)
+    chat.add_item(make_user_message("Show the picture."))
+    turn = SimpleNamespace(gen=0, turn_id=None, turn_revision=None, wants_audio=True,
+                           response=SimpleNamespace(conversation="default", robot790_tool_followup="Report the completed receipt."),
+                           runtime_config=SimpleNamespace(session=SimpleNamespace(instructions="Stable identity and saved history")))
+    options = {"tool_choice": choice, "tools": [{"type": "function", "function": {
+        "name": "generate_image", "parameters": {"type": "object", "properties": {}}}}]}
+    return handler, chat, turn, options, requests, calls
+
+
+def followup_tool_event():
+    from openai.types.responses import ResponseFunctionToolCall
+    from speech_to_speech.LLM.base_openai_compatible_language_model import ToolCall
+    return ToolCall(item=ResponseFunctionToolCall(
+        type="function_call", name="generate_image", arguments="{}", call_id="must_not_execute"))
+
+
+@pytest.mark.parametrize("stream", [True, False])
+def test_spoken_followup_retains_catalogue_prefix_but_not_private_tail(monkeypatch, stream):
+    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta
+    from speech_to_speech.pipeline.messages import EndOfResponse
+    handler, chat, turn, options, requests, calls = followup_fixture(
+        monkeypatch, [[TextDelta(text="The picture is ready.")]], stream=stream)
+    before = handler._serialize(chat)
+    outputs = list(handler._generate(chat.copy(), chat, turn, options))
+    assert requests[0][0][:-1] == before
+    assert requests[0][1]["tools"] == options["tools"]
+    assert requests[0][1]["tool_choice"] == "auto"
+    assert options["tool_choice"] == "none"
+    assert handler._serialize(chat) == before
+    assert calls == []
+    assert [item.error for item in outputs if isinstance(item, EndOfResponse)] == [None]
+
+
+@pytest.mark.parametrize("stream", [True, False])
+@pytest.mark.parametrize("repeat_tool", [True, False])
+def test_spoken_followup_blocks_tool_before_recording_and_falls_back_once(monkeypatch, stream, repeat_tool):
+    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta
+    from speech_to_speech.pipeline.messages import EndOfResponse
+    from robot_790d.realtime_entry import FOLLOWUP_TOOL_BLOCKED
+    tool = followup_tool_event()
+    handler, chat, turn, options, requests, calls = followup_fixture(
+        monkeypatch, [[tool], [tool] if repeat_tool else [TextDelta(text="It is ready.")]], stream=stream)
+    before = handler._serialize(chat)
+    outputs = list(handler._generate(chat.copy(), chat, turn, options))
+    assert [r[1]["tool_choice"] for r in requests] == ["auto", "none"]
+    assert requests[0][0] == requests[1][0]
+    assert calls == []
+    assert handler._serialize(chat) == before
+    errors = [item.error for item in outputs if isinstance(item, EndOfResponse)]
+    assert len(errors) == 1
+    assert (FOLLOWUP_TOOL_BLOCKED in (errors[0] or "")) == repeat_tool
+    if not repeat_tool:
+        assert errors == [None]
+
+
+def test_spoken_followup_never_retries_after_public_text(monkeypatch):
+    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta
+    from speech_to_speech.pipeline.messages import EndOfResponse
+    handler, chat, turn, options, requests, calls = followup_fixture(
+        monkeypatch, [[TextDelta(text="Already spoke."), followup_tool_event()]])
+    outputs = list(handler._generate(chat.copy(), chat, turn, options))
+    assert len(requests) == 1
+    assert calls == []
+    assert any(item.error for item in outputs if isinstance(item, EndOfResponse))
+    assert sum(getattr(item, "text", "") == "Already spoke." for item in outputs) == 1
+
+
+@pytest.mark.parametrize("base_url,choice,expected", [
+    ("https://remote.example/v1", "none", "none"),
+    ("http://127.0.0.1:1234/v1", "auto", "auto"),
+])
+def test_followup_keeps_remote_provider_contract_and_authorized_tool_selection(monkeypatch, base_url, choice, expected):
+    handler, chat, turn, options, requests, calls = followup_fixture(
+        monkeypatch, [[followup_tool_event()]], choice=choice, base_url=base_url)
+    list(handler._generate(chat.copy(), chat, turn, options))
+    assert all(r[1]["tool_choice"] == expected for r in requests)
+    assert len(calls) == (1 if choice == "auto" else 0)

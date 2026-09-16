@@ -21,6 +21,8 @@ FEATURES = [
     "display_flip",
     "boot_brightness_cycle",
     "arduino_ota",
+    "speech_mouth_cues",
+    "speech_gaze",
 ]
 
 

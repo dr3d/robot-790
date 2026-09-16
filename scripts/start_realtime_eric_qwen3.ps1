@@ -17,6 +17,7 @@ param(
     [string] $Speaker = "Eric",
     [string] $TtsInstruct = "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
     [switch] $CaptureLlmWire,
+    [switch] $CaptureLlmMetrics,
     [string] $PromptPath = "",
     [string[]] $ExtraArgs = @()
 )
@@ -41,6 +42,9 @@ if ($CaptureLlmWire) {
 }
 
 $Launcher = Join-Path $PSScriptRoot "start_realtime_server.ps1"
+$Python = Join-Path (Split-Path -Parent $PSScriptRoot) ".venv\Scripts\python.exe"
+& $Python -m robot_790d.runtime_model --model $LlmModel --base-url $LlmBaseUrl
+if ($LASTEXITCODE -ne 0) { throw "Could not publish the selected LLM model." }
 if (-not $PromptPath) {
     $PromptPath = Join-Path (Split-Path -Parent $PSScriptRoot) "prompts\robot-790-reachy-no-tools.md"
 }
@@ -62,6 +66,7 @@ $qwenArgs = @(
     "--qwen3_tts_speaker", $Speaker,
     "--qwen3_tts_instruct", $TtsInstruct,
     "--qwen3_tts_language", "English",
+    "--qwen3_tts_max_new_tokens", "3072",
     "--llm_backend", "chat-completions",
     "--responses_api_base_url", $LlmBaseUrl
 )
@@ -107,5 +112,8 @@ Write-Host "TTS instruct: $TtsInstruct"
 Write-Host "Prompt: $PromptPath"
 if ($CaptureLlmWire) {
     Write-Host "LLM wire capture: logs/live/llm-wire"
+}
+if ($CaptureLlmMetrics) {
+    & (Join-Path $PSScriptRoot 'start_llm_metrics.ps1')
 }
 & $Launcher -HostAddress $HostAddress -Port $Port -NumPipelines $NumPipelines -StreamBatchSentences $StreamBatchSentences -ExtraArgs $qwenArgs

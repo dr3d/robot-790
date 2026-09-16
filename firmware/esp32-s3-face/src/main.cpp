@@ -37,7 +37,7 @@
 #define ROBOT790_FIRMWARE_BUILT_AT __DATE__ " " __TIME__
 #endif
 #ifndef ROBOT790_FIRMWARE_FEATURES
-#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,touch_probe,imu_probe,eye_pose_modes,boot_brightness_cycle"
+#define ROBOT790_FIRMWARE_FEATURES "state_stamp,mouth_marquee_fit,touch_probe,imu_probe,eye_pose_modes,boot_brightness_cycle,speech_mouth_cues"
 #endif
 
 namespace {
@@ -402,6 +402,11 @@ struct MouthState {
   bool textMarquee = false;
   bool textFlash = false;
   bool talking = false;
+  bool speechActive = false;
+  bool speechPoseDirty = false;
+  char speechShape[8] = "closed";
+  float speechEnergy = 0.0f;
+  uint32_t speechSeq = 0;
   bool poseInitialized = false;
   uint32_t overrideUntil = 0;
   uint32_t textUntil = 0;
@@ -429,6 +434,8 @@ struct IdleDirector {
 
 MoodState moodState;
 GazeState gazeState;
+Vec2 speechGazeOffset = {0.0f, 0.0f};
+uint32_t lastSpeechGazeAt = 0;
 BlinkState blinkState;
 ApiState apiState;
 MouthState mouthState;
@@ -1127,6 +1134,33 @@ void updateGaze(uint32_t now)
   }
 }
 
+float speechGazeLevel()
+{
+  if (!apiState.idleEnabled || apiState.gazeOverride) return 0.0f;
+  if (mouthState.speechActive) return clampf(0.36f + mouthState.speechEnergy * 0.64f, 0.0f, 1.0f);
+  return mouthState.talking ? clampf(0.28f + mouthState.energy * 0.62f, 0.0f, 1.0f) : 0.0f;
+}
+
+Vec2 speakingEyeOffset(uint32_t now, bool leftEye)
+{
+  const float level = speechGazeLevel();
+  if (level <= 0.0f) {
+    lastSpeechGazeAt = 0;
+    speechGazeOffset = {0.0f, 0.0f};
+    return speechGazeOffset;
+  }
+  const uint32_t dt = lastSpeechGazeAt == 0 ? 0 : min(uint32_t(140), now - lastSpeechGazeAt);
+  lastSpeechGazeAt = now;
+  const size_t count = sizeof(robot790::speechGazeTargets) / sizeof(robot790::speechGazeTargets[0]);
+  const float *target = robot790::speechGazeTargets[(now / robot790::speechGazeHoldMs) % count];
+  const float amplitude = 0.85f + 0.15f * level;
+  const float amount = 1.0f - expf(-float(dt) / robot790::speechGazeEaseMs);
+  speechGazeOffset.x += (target[0] * amplitude - speechGazeOffset.x) * amount;
+  speechGazeOffset.y += (target[1] * amplitude - speechGazeOffset.y) * amount;
+  return {(speechGazeOffset.x + sinf(now * 0.012f + (leftEye ? 0.2f : 0.8f)) * 0.9f * level) * EYE_SCALE,
+          (speechGazeOffset.y + sinf(now * 0.009f + (leftEye ? 1.1f : 1.9f)) * 0.55f * level) * EYE_SCALE};
+}
+
 void triggerBlink(uint32_t now, uint32_t durationMs, bool doubleBlink)
 {
   const Mood mood = currentMood(now);
@@ -1727,22 +1761,25 @@ void renderEyeFrame(bool leftEye, uint32_t now)
 
   const bool eyeballLeft = eyePoseMode == EyePoseMode::Swapped ? !leftEye : leftEye;
   Vec2 gaze = projectTargetForEye(gazeState.now, eyeballLeft);
-  if (mood == Mood::Afraid) {
+  const Vec2 speechOffset = speakingEyeOffset(now, eyeballLeft);
+  const bool speechOwnsGaze = speechGazeLevel() > 0.0f;
+  if (speechOwnsGaze) gaze = speechOffset;
+  if (!speechOwnsGaze && mood == Mood::Afraid) {
     gaze.x += sinf(float(now) * 0.032f + (eyeballLeft ? 0.0f : 1.4f)) * 1.4f * EYE_SCALE;
     gaze.y += sinf(float(now) * 0.027f + 2.1f) * 0.8f * EYE_SCALE;
-  } else if (mood == Mood::Goofy) {
+  } else if (!speechOwnsGaze && mood == Mood::Goofy) {
     gaze.x += (eyeballLeft ? 5.5f : -5.5f) * EYE_SCALE;
     gaze.y += (eyeballLeft ? -4.5f : 4.5f) * EYE_SCALE;
-  } else if (mood == Mood::Robotic) {
+  } else if (!speechOwnsGaze && mood == Mood::Robotic) {
     gaze.x = roundf(gaze.x / (8.0f * EYE_SCALE)) * (8.0f * EYE_SCALE);
     gaze.y = roundf(gaze.y / (6.0f * EYE_SCALE)) * (6.0f * EYE_SCALE);
-  } else if (mood == Mood::Sleepy || mood == Mood::Bored) {
+  } else if (!speechOwnsGaze && (mood == Mood::Sleepy || mood == Mood::Bored)) {
     gaze.y += 8.0f * EYE_SCALE;
-  } else if (mood == Mood::Glitchy) {
+  } else if (!speechOwnsGaze && mood == Mood::Glitchy) {
     const int32_t tick = int32_t(now / 75 + (eyeballLeft ? 0 : 3));
     gaze.x += float((tick % 5) - 2) * 1.8f * EYE_SCALE;
     gaze.y += float(((tick / 2) % 3) - 1) * 1.6f * EYE_SCALE;
-  } else if (mood == Mood::Proud) {
+  } else if (!speechOwnsGaze && mood == Mood::Proud) {
     gaze.y -= 8.0f * EYE_SCALE;
   }
   applyEyePoseMode(gaze, leftEye, now);
@@ -1834,11 +1871,13 @@ void updateMouth(uint32_t now)
   if (mouthState.overrideShape && mouthState.overrideUntil != 0 && deadlineReached(now, mouthState.overrideUntil)) {
     mouthState.overrideShape = false;
     mouthState.talking = false;
+    mouthState.speechActive = false;
+    mouthState.speechPoseDirty = true;
   }
   if (mouthState.talkUpdated == 0) mouthState.talkUpdated = now;
   const uint32_t elapsed = now - mouthState.talkUpdated;
   mouthState.talkUpdated = now;
-  const float target = mouthState.talking ? 1.0f : 0.0f;
+  const float target = mouthState.talking && !mouthState.speechActive ? 1.0f : 0.0f;
   const uint32_t rateMs = target > mouthState.talkLevel ? MOUTH_TALK_ATTACK_MS : MOUTH_TALK_RELEASE_MS;
   const float step = rateMs == 0 ? 1.0f : clampf(float(elapsed) / float(rateMs), 0.0f, 1.0f);
   mouthState.talkLevel += (target - mouthState.talkLevel) * step;
@@ -1917,13 +1956,22 @@ void renderMouthText(uint32_t now)
 
 MouthShape activeMouthShape(uint32_t now)
 {
+  if (mouthState.speechActive) {
+    if (strcmp(mouthState.speechShape, "round") == 0) return MouthShape::O;
+    if (strcmp(mouthState.speechShape, "teeth") == 0) return MouthShape::Grimace;
+    return MouthShape::Open;
+  }
   if (mouthState.overrideShape) return mouthState.shape;
   return mouthShapeForMood(currentMood(now));
 }
 
 MouthPose easedMouthPose(MouthShape shape, uint32_t now)
 {
-  const MouthPose target = mouthPoseFor(shape);
+  MouthPose target = mouthPoseFor(shape);
+  if (mouthState.speechActive) {
+    const MouthShape base = mouthState.overrideShape ? mouthState.shape : mouthShapeForMood(currentMood(now));
+    target = robot790::speechMouthPose(mouthState.speechShape, mouthState.speechEnergy, mouthPoseFor(base));
+  }
   if (!mouthState.poseInitialized) {
     mouthState.renderedShape = shape;
     mouthState.poseFrom = target;
@@ -1933,7 +1981,8 @@ MouthPose easedMouthPose(MouthShape shape, uint32_t now)
     mouthState.poseInitialized = true;
     return target;
   }
-  if (shape != mouthState.renderedShape) {
+  if (shape != mouthState.renderedShape || mouthState.speechPoseDirty) {
+    mouthState.speechPoseDirty = false;
     mouthState.renderedShape = shape;
     mouthState.poseFrom = mouthState.poseNow;
     mouthState.poseTo = target;
@@ -2067,9 +2116,9 @@ void renderHumanMouth(MouthShape shape, MouthPose pose, uint32_t now)
   }
 
   const uint16_t shadow = rgb(28, 0, 10);
-  const uint16_t lip = rgb(156, 38, 58);
-  const uint16_t lipHi = rgb(236, 104, 112);
-  const uint16_t lipLo = rgb(82, 10, 30);
+  const uint16_t lip = rgb(robot790::mouth_lip[0], robot790::mouth_lip[1], robot790::mouth_lip[2]);
+  const uint16_t lipHi = rgb(robot790::mouth_highlight[0], robot790::mouth_highlight[1], robot790::mouth_highlight[2]);
+  const uint16_t lipLo = rgb(robot790::mouth_lowlight[0], robot790::mouth_lowlight[1], robot790::mouth_lowlight[2]);
   const uint16_t cavity = rgb(9, 0, 5);
   const uint16_t enamel = rgb(238, 228, 198);
 
@@ -2761,6 +2810,11 @@ void addState(JsonDocument &doc, uint32_t now)
   mouth["shape"] = mouthShapeName(activeMouthShape(now));
   mouth["manual"] = mouthState.overrideShape;
   mouth["talking"] = mouthState.talking;
+  JsonObject speech = mouth["speech"].to<JsonObject>();
+  speech["active"] = mouthState.speechActive;
+  speech["shape"] = mouthState.speechShape;
+  speech["energy"] = mouthState.speechEnergy;
+  speech["seq"] = mouthState.speechSeq;
   mouth["energy"] = mouthState.energy;
   mouth["talk_level"] = mouthState.talkLevel;
   mouth["text_active"] = mouthState.textActive;
@@ -2779,6 +2833,9 @@ void addState(JsonDocument &doc, uint32_t now)
 
   JsonObject gaze = doc["gaze"].to<JsonObject>();
   gaze["manual"] = apiState.gazeOverride;
+  gaze["speech_active"] = speechGazeLevel() > 0.0f;
+  gaze["speech_offset"]["x"] = speechGazeOffset.x;
+  gaze["speech_offset"]["y"] = speechGazeOffset.y;
   gaze["now"]["x"] = gazeState.now.x;
   gaze["now"]["y"] = gazeState.now.y;
   gaze["now"]["z"] = gazeState.now.z;
@@ -2952,6 +3009,8 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
     if (releaseToken(text)) {
       mouthState.overrideShape = false;
       mouthState.talking = false;
+      mouthState.speechActive = false;
+      mouthState.speechPoseDirty = true;
       return true;
     }
     MouthShape shape;
@@ -2969,6 +3028,8 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
 
   JsonObjectConst mouth = value.as<JsonObjectConst>();
   if (jsonBool(mouth["release"], false) || jsonBool(mouth["auto"], false)) {
+    mouthState.speechActive = false;
+    mouthState.speechPoseDirty = true;
     mouthState.overrideShape = false;
     mouthState.textActive = false;
     mouthState.textMarquee = false;
@@ -2978,6 +3039,8 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
     mouthState.talking = false;
   }
   if (mouth["text"].is<const char *>()) {
+    mouthState.speechActive = false;
+    mouthState.speechPoseDirty = true;
     const char *text = mouth["text"].as<const char *>();
     if (text == nullptr || text[0] == '\0') {
       mouthState.textActive = false;
@@ -3033,10 +3096,26 @@ bool handleHttpMouth(JsonVariantConst value, JsonVariantConst durationValue, uin
   }
   if (!mouth["talking"].isNull()) {
     mouthState.talking = jsonBool(mouth["talking"], false);
+    if (!mouthState.talking && mouth["speech"].isNull()) {
+      mouthState.speechActive = false;
+      mouthState.speechPoseDirty = true;
+    }
     if (mouthState.talking && !mouthState.overrideShape) {
       mouthState.shape = MouthShape::Open;
       mouthState.overrideShape = true;
     }
+  }
+  if (mouth["speech"].is<JsonObjectConst>()) {
+    JsonObjectConst speech = mouth["speech"].as<JsonObjectConst>();
+    mouthState.speechActive = jsonBool(speech["active"], false);
+    const char *shape = speech["shape"] | "open";
+    if (strcmp(shape, "closed") && strcmp(shape, "small") && strcmp(shape, "open") &&
+        strcmp(shape, "wide") && strcmp(shape, "round") && strcmp(shape, "teeth")) shape = "open";
+    strncpy(mouthState.speechShape, shape, sizeof(mouthState.speechShape) - 1);
+    mouthState.speechEnergy = clampf(speech["energy"] | mouthState.energy, 0.0f, 1.0f);
+    mouthState.speechSeq = speech["seq"] | 0UL;
+    mouthState.speechPoseDirty = true;
+    if (mouthState.speechActive) mouthState.talkLevel = 0.0f;
   }
   if (mouthState.overrideShape || mouthState.talking) {
     const uint32_t holdMs = jsonMilliseconds(
@@ -3060,6 +3139,11 @@ void handleHttpGaze(JsonVariantConst gazeValue, JsonVariantConst durationValue, 
   if (!gazeValue.is<JsonObjectConst>()) return;
 
   JsonObjectConst gaze = gazeValue.as<JsonObjectConst>();
+  if (jsonBool(gaze["auto"], false) || jsonBool(gaze["release"], false)) {
+    apiState.gazeOverride = false;
+    gazeState.next = now;
+    return;
+  }
   const float rawX = gaze["x"] | 0.0f;
   const float rawY = gaze["y"] | 0.0f;
   const bool hasZ = !gaze["z"].isNull();

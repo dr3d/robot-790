@@ -12,18 +12,21 @@ from datetime import datetime
 from pathlib import Path
 from threading import Lock
 from typing import Any
+from urllib.parse import urlparse
 
 _VOICE_SHAPE_PREFIX = "[voice-shape:"
 _LLM_WIRE_CAPTURE_LOCK = Lock()
 _LLM_WIRE_CAPTURE_SEQUENCE = 0
 logger = logging.getLogger(__name__)
 PRIVATE_OUTPUT_SUPPRESSED = "robot790_private_output_suppressed"
+FOLLOWUP_TOOL_BLOCKED = "robot790_spoken_followup_tool_blocked"
+IDLE_TOOL_BLOCKED = "robot790_idle_tool_blocked"
 
 
 class _PrivateAdvisoryTextFilter:
     """Hold only a possible marker prefix; stop a private dump at its marker."""
 
-    markers = ("[b2 advisory]", "[sts runtime]")
+    markers = ("[b2 advisory]", "[sts runtime]", "[sts idle continuation]")
 
     def __init__(self) -> None:
         self.pending = ""
@@ -125,7 +128,8 @@ def apply_private_advisory_output_patch() -> None:
 
 
 def apply_interruptible_chat_generation_patch() -> None:
-    from speech_to_speech.LLM.chat import make_user_message
+    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta, ToolCall
+    from speech_to_speech.LLM.chat import add_supported_item, make_user_message
     from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler
     from speech_to_speech.pipeline.messages import EndOfResponse
 
@@ -140,7 +144,28 @@ def apply_interruptible_chat_generation_patch() -> None:
         optional_kwargs = dict(optional_kwargs)
         optional_kwargs.setdefault("temperature", _b1_temperature_from_env())
         followup = _extra_value(turn.response, "robot790_tool_followup")
-        if isinstance(followup, str) and followup.strip():
+        is_followup = isinstance(followup, str) and bool(followup.strip())
+        is_idle = _extra_value(turn.response, "robot790_idle_continuation") is True
+        if is_idle:
+            if getattr(turn.response, "conversation", None) != "none" or is_followup:
+                yield EndOfResponse(turn_id=turn.turn_id, turn_revision=turn.turn_revision,
+                                    error="Shared idle must be an out-of-band response, not a tool follow-up.")
+                return
+            # Out-of-band controls write-back, not what Eric may remember. Preserve
+            # B1's full prefix and put this beat's directions/media only at the tail.
+            active_chat = original_chat.copy()
+            self._apply_config(active_chat, turn.runtime_config.session.instructions, True)
+            active_chat.add_item(make_user_message(
+                "[STS idle continuation]\n" + (turn.response.instructions or "")))
+            for item in turn.response.input or []:
+                if getattr(item, "type", None) != "message" or getattr(item, "role", None) != "user":
+                    yield EndOfResponse(turn_id=turn.turn_id, turn_revision=turn.turn_revision,
+                                        error="Shared idle input must contain only temporary user messages.")
+                    return
+                add_supported_item(active_chat, item)
+            optional_kwargs.pop("tools", None)
+            optional_kwargs.update(self._build_optional_kwargs(turn.runtime_config.session.tools, "none"))
+        elif is_followup:
             # Text-only private selection still shares B1's voice-system prefix.
             self._apply_config(active_chat, turn.runtime_config.session.instructions, True)
             # Request-local tail: do not count controller directions as user turns
@@ -148,13 +173,42 @@ def apply_interruptible_chat_generation_patch() -> None:
             active_chat.add_item(make_user_message(f"[STS tool continuation]\n{followup}"))
         request = kwargs.pop("request_fn", None) or self._request
         iterate = kwargs.pop("event_iterator_fn", None) or self._iter_events
+        no_tools = is_idle or (is_followup and optional_kwargs.get("tool_choice") == "none")
+        tool_blocked_marker = IDLE_TOOL_BLOCKED if is_idle else FOLLOWUP_TOOL_BLOCKED
+        local_provider = urlparse(str(getattr(getattr(self, "client", None), "base_url", ""))).hostname in {
+            "localhost", "127.0.0.1", "::1",
+        }
+        stable_tool_prefix = no_tools and local_provider and bool(optional_kwargs.get("tools"))
+        public_text_seen = False
+        original_tool_mode = False
+
+        def admitted_events(response: Any) -> Iterator[Any]:
+            nonlocal public_text_seen
+            events = iterate(response)
+            try:
+                for event in events:
+                    if no_tools and isinstance(event, ToolCall):
+                        # Enforce the original permission before history or execution sees a call.
+                        raise RuntimeError(tool_blocked_marker)
+                    if isinstance(event, TextDelta) and event.text.strip():
+                        public_text_seen = True
+                    yield event
+            finally:
+                close = getattr(events, "close", None)
+                if callable(close):
+                    close()
 
         def cancelled() -> bool:
             return (self._generation_is_stale(turn.gen)
                     or not self._turn_is_latest(turn.turn_id, turn.turn_revision))
 
         def start(api_input: Any, options: dict[str, Any]) -> CancellableProviderEvents:
-            return CancellableProviderEvents(lambda: request(api_input, options), iterate, cancelled)
+            wire_options = dict(options)
+            if stable_tool_prefix and not original_tool_mode:
+                # LM Studio omits schemas with choice=none, changing the history's prefix.
+                # Keep the rendered catalogue; admission above still forbids every tool.
+                wire_options["tool_choice"] = "auto"
+            return CancellableProviderEvents(lambda: request(api_input, wire_options), admitted_events, cancelled)
 
         provisional_id = kwargs.get("transactional_user_message_id")
         provisional = (
@@ -162,10 +216,15 @@ def apply_interruptible_chat_generation_patch() -> None:
         )
         for attempt in range(2):
             retry_end = None
+            public_text_seen = False
+            blocked_tool = False
             for output in original(self, active_chat, original_chat, turn, optional_kwargs,
                                    request_fn=start, event_iterator_fn=iter, **kwargs):
-                if (isinstance(output, EndOfResponse) and output.error
-                        and PRIVATE_OUTPUT_SUPPRESSED in output.error and attempt == 0 and not cancelled()):
+                error = output.error if isinstance(output, EndOfResponse) else None
+                blocked_tool = bool(error and tool_blocked_marker in error)
+                retryable = bool(error and (PRIVATE_OUTPUT_SUPPRESSED in error
+                                           or (blocked_tool and not public_text_seen)))
+                if retryable and attempt == 0 and not cancelled():
                     retry_end = output
                     continue
                 yield output
@@ -174,6 +233,11 @@ def apply_interruptible_chat_generation_patch() -> None:
             if cancelled():
                 yield retry_end
                 break
+            if blocked_tool:
+                logger.warning("Blocked a tool in a speech-only %s; retrying once with provider tool_choice=none",
+                               "idle continuation" if is_idle else "follow-up")
+                original_tool_mode = True
+                continue
             logger.warning("Retrying fully filtered reply once; no speech or tool call was emitted")
             active_chat = active_chat.copy()
             # Native audio turns roll back their provisional input on failure.
@@ -529,6 +593,34 @@ def apply_chat_text_token_cap_patch() -> None:
     ChatCompletionsApiModelHandler._robot_790_text_token_cap_patch = True
 
 
+def _llm_read_timeout_from_env() -> float:
+    raw = os.getenv("ROBOT_790_LLM_READ_TIMEOUT_SECONDS", "60")
+    try:
+        value = float(raw)
+    except ValueError:
+        return 60.0
+    return value if math.isfinite(value) and 5 <= value <= 300 else 60.0
+
+
+def apply_chat_read_timeout_patch() -> None:
+    """Allow long prefills without changing cancellation or adding retries."""
+    import httpx
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler
+
+    if getattr(ChatCompletionsApiModelHandler, "_robot_790_read_timeout_patch", False):
+        return
+    original = ChatCompletionsApiModelHandler._request
+
+    def request(self: Any, api_input: Any, optional_kwargs: Any) -> Any:
+        seconds = _llm_read_timeout_from_env()
+        self.request_timeout = httpx.Timeout(**{**self.request_timeout.as_dict(), "read": seconds})
+        self.request_timeout_s = seconds
+        return original(self, api_input, optional_kwargs)
+
+    ChatCompletionsApiModelHandler._request = request
+    ChatCompletionsApiModelHandler._robot_790_read_timeout_patch = True
+
+
 def apply_chat_auxiliary_temperature_patch() -> None:
     """Pin inherited warmup/compaction calls without editing the installed package."""
     from speech_to_speech.LLM.base_openai_compatible_language_model import WARMUP_MAX_RETRIES
@@ -664,9 +756,11 @@ def _chat_text_max_tokens_from_env() -> int | None:
 
 def main() -> None:
     print(f"Robot 790 B1 sampling temperature: {_b1_temperature_from_env():g}", flush=True)
+    print(f"Robot 790 LLM read timeout: {_llm_read_timeout_from_env():g}s", flush=True)
     apply_qwen3_tts_runtime_instruct_patch()
     apply_chat_text_token_cap_patch()
     apply_chat_auxiliary_temperature_patch()
+    apply_chat_read_timeout_patch()
     apply_chat_completions_wire_capture_patch()
     apply_private_advisory_output_patch()
     apply_interruptible_chat_generation_patch()

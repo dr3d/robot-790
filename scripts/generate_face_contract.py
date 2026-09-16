@@ -51,6 +51,9 @@ def validate_spec(spec: dict[str, Any]) -> None:
     for shape, values in mouth.get("legacyPoseOverrides", {}).items():
         if shape not in shapes or len(values) != len(POSE_FIELDS):
             raise ValueError(f"Invalid legacy mouth pose: {shape}")
+    for shape, values in mouth["speechPoses"].items():
+        if len(values) != len(POSE_FIELDS):
+            raise ValueError(f"Invalid speech mouth pose: {shape}")
 
 
 def float_js(value: float | int) -> str:
@@ -93,6 +96,10 @@ def render_js(spec: dict[str, Any]) -> str:
             "",
         ]
     )
+    speech = {name: dict(zip(POSE_FIELDS, values)) for name, values in mouth["speechPoses"].items()}
+    lines.extend([f"export const speechMouthPoses = {json.dumps(speech)};",
+                  f"export const mouthPalette = {json.dumps(mouth['palette'])};",
+                  f"export const speechGaze = {json.dumps(spec['speechGaze'])};", ""])
     return "\n".join(lines)
 
 
@@ -146,7 +153,27 @@ def render_cpp(spec: dict[str, Any]) -> str:
     for shape, values in mouth.get("legacyPoseOverrides", {}).items():
         rendered = ", ".join(float_cpp(value) for value in values)
         lines.append(f'  if (name && strcmp(name, "{shape}") == 0) return {{{rendered}}};')
-    lines.extend(["  return mouthPose<Pose>(name);", "}", "}", ""])
+    lines.extend(["  return mouthPose<Pose>(name);", "}",
+                  "template <typename Pose> Pose speechMouthPose(const char *name, float energy, const Pose &base) {",
+                  "  Pose target;"])
+    for index, (name, values) in enumerate(mouth["speechPoses"].items()):
+        rendered = ", ".join(float_cpp(value) for value in values)
+        lines.append(f'  {"if" if index == 0 else "else if"} (strcmp(name, "{name}") == 0) target = Pose{{{rendered}}};')
+    rendered = ", ".join(float_cpp(value) for value in mouth["speechPoses"]["open"])
+    lines.extend([f"  else target = Pose{{{rendered}}};", "  const float mix = 0.72f + energy * 0.18f;", "  Pose pose;"])
+    for field in POSE_FIELDS:
+        weight = {"curve": "0.66f", "skew": "0.72f", "upperLift": "0.75f"}.get(field, "mix")
+        lines.append(f"  pose.{field} = base.{field} * (1.0f - {weight}) + target.{field} * {weight};")
+    lines.extend(["  return pose;", "}"])
+    for name, color in mouth["palette"].items():
+        components = ", ".join(str(int(color[i:i+2], 16)) for i in (1, 3, 5))
+        lines.append(f"constexpr unsigned char mouth_{name}[] = {{{components}}};")
+    gaze = spec["speechGaze"]
+    targets = ", ".join("{" + ", ".join(float_cpp(n) for n in point) + "}" for point in gaze["targets"])
+    lines.extend([f"constexpr float speechGazeTargets[][2] = {{{targets}}};",
+                  f"constexpr unsigned long speechGazeHoldMs = {gaze['holdMs']};",
+                  f"constexpr float speechGazeEaseMs = {float_cpp(gaze['easeMs'])};"])
+    lines.extend(["}", ""])
     return "\n".join(lines)
 
 
@@ -197,7 +224,7 @@ def main() -> int:
         OUT_DIR / "mouth_contract.hpp": render_cpp(spec),
         OUT_DIR / "mouth_contract.md": render_markdown(spec),
         ROOT / "web" / "face-sim" / "mouth-contract.js": render_js(spec).replace("export ", "")
-        + "\nglobalThis.Robot790MouthContract = { mouthShapes, mouthPoses, mouthMoodMap, mouthShapeForMood, mouthPoseFor };\n",
+        + "\nglobalThis.Robot790MouthContract = { mouthShapes, mouthPoses, mouthMoodMap, mouthShapeForMood, mouthPoseFor, speechMouthPoses, mouthPalette, speechGaze };\n",
     }
 
     changed = []

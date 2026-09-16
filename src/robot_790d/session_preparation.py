@@ -17,6 +17,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
+from robot_790d.runtime_model import local_runtime_model
 
 from robot_790d.continuity import (
     archive_continuity_branch,
@@ -245,7 +246,7 @@ def summary_request(transcript: str) -> dict[str, Any]:
     word_limit = min(400, max(80, len(transcript) // 20))
     instruction = f"{SUMMARY_PROMPT} Use at most {word_limit} words in the summary; be shorter when little happened."
     return {
-        "model": os.getenv("ROBOT_790_SUMMARY_MODEL") or "qwen3.8-27b-nvfp4-mtp",
+        "model": local_runtime_model(os.getenv("ROBOT_790_SUMMARY_BASE_URL") or "http://127.0.0.1:1234/v1") or os.getenv("ROBOT_790_SUMMARY_MODEL") or "qwen3.8-27b-nvfp4-mtp",
         "messages": [{"role": "system", "content": instruction}, {"role": "user", "content": transcript}],
         "stream": False,
         "temperature": 0.2,
