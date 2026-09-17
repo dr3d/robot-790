@@ -47,6 +47,9 @@ and contention with conversation still matter. Some tools use external services.
 Start with the public story, receipts, and open questions:
 
 - [Eric Robot 790 public page](docs/index.md)
+- [Memory Jar Lab Report](docs/articles/2026-09-17-eric-memory-jar-lab-report.md):
+  a sustained B1/B2 collaboration, with timestamped evidence and a repeat-test
+  protocol. [Watch the edited session (6:32)](https://dr3d.github.io/robot-790/?media=media/videos/The%20Memory%20Jar.mp4#media).
 - [Project Overview: Conversation, Continuity, And A Body](docs/articles/2026-09-10-022329-robot-790-project-overview.md)
 - [Listening Companion](https://dr3d.github.io/robot-790/?media=media/videos/Robot-790-Conversation-And-Continuity-Listening-Companion-2026-09-10.mp4#media): an AI-generated interpretation of the overview for people who prefer to listen.
 - [STS UI Operator Guide](docs/sts-ui-guide.md)

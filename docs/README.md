@@ -10,6 +10,14 @@ controller interpretation and dialogue direction; the
 [first removal pass](agency-boundary-change.md) records what changed and what
 still needs work.
 
+The [Companion Design Contract](companion-design-contract.md) defines the intended
+experience, not only the agency boundary. The
+[September 17 alignment audit](companion-alignment-audit-2026-09-17.md) reviews
+recent regressions while preserving established behavior. Its earlier, broader
+observations are explicitly outside the current repair scope.
+The subsequent [idle quiet-loop repair](idle-quiet-loop-repair.md) records the
+failed silence-tool experiment, its rollback, and local-model verification limits.
+
 Safety is treated the same way: not as a personality prompt, but as body
 architecture. The project explicitly nods to the Asimov robot-law tradition, but
 puts safety in deterministic tool gates, verifier receipts, actuator limits, and
@@ -45,6 +53,9 @@ filename whose current artifact needs an explicit time.
 - `catalog.json`: generated site index consumed by `index.html`.
 - `assets/`: CSS and JavaScript for the static page.
 - `articles/`: public Markdown articles and essays.
+- [Memory-jar lab report](articles/2026-09-17-eric-memory-jar-lab-report.md):
+  illustrated newcomer-facing account of sustained B1/B2 development, with a
+  [benchmark evidence sheet](logs/2026-09-17-memory-jar-benchmark.md) and repeat-test protocol.
 - `articles/context-engineering-as-directed-graph.md`: public article framing
   session dependencies as a directed graph, distinguishing the working loader
   from proposed three-representation notes and weighted relationships.

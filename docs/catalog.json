@@ -1,14 +1,24 @@
 {
-    "generated":  "2026-09-14 09:43:00",
+    "generated":  "2026-09-17 14:10:06",
     "articles":  [
+                     {
+                         "title":  "Twenty-Two Minutes With a Memory Jar: Eric\u0027s Active-Mind Benchmark",
+                         "excerpt":  "An impossible invention became a sustained exploration of attention, memory, and grief. This Robot 790 lab report follows the conversation and private advice that made the development visible.",
+                         "source":  "articles/2026-09-17-eric-memory-jar-lab-report.md",
+                         "bytes":  11472,
+                         "published":  "2026-09-17 00:00",
+                         "published_sort":  "20260917000000",
+                         "published_source":  "filename",
+                         "modified":  "2026-09-17 14:05"
+                     },
                      {
                          "title":  "Robot 790: Learning to Stay With You",
                          "excerpt":  "Robot 790 is becoming more than a talking face: a locally voiced AI character that can sustain a shared invention, remember its details, and turn the conversation into something you can see. The latest progress is as much about timing and continuity as intelligence.",
                          "source":  "articles/2026-09-14-robot-790-learning-to-stay-with-you.md",
                          "bytes":  5446,
-                         "published":  "2026-09-14 00:00",
-                         "published_sort":  "20260914000000",
-                         "published_source":  "filename",
+                         "published":  "2026-09-14 09:43",
+                         "published_sort":  "20260914094314",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-14 09:42"
                      },
                      {
@@ -284,6 +294,15 @@
                  ],
     "logs":  [
                  {
+                     "title":  "2026 09 17 memory jar benchmark",
+                     "source":  "logs/2026-09-17-memory-jar-benchmark.md",
+                     "bytes":  10819,
+                     "published":  "2026-09-17 00:00",
+                     "published_sort":  "20260917000000",
+                     "published_source":  "filename",
+                     "modified":  "2026-09-17 14:09"
+                 },
+                 {
                      "title":  "Daily Driver Empty Boot 2026 09 07 postmortem",
                      "source":  "logs/Daily-Driver-Empty-Boot-2026-09-07-postmortem.md",
                      "bytes":  2731,
@@ -546,6 +565,38 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "The Memory Jar: Eric\u0027s Active-Mind Session",
+                      "kind":  "video",
+                      "role":  "video",
+                      "source":  "media/videos/The Memory Jar.mp4",
+                      "preview":  "media/previews/The Memory Jar.jpg",
+                      "banner_rank":  45,
+                      "bytes":  34607391,
+                      "date":  "2026-09-17 14:00",
+                      "published":  "2026-09-17 14:00",
+                      "published_sort":  "20260917140053",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-17 14:05",
+                      "description":  "Scott\u0027s 6-minute, 32-second edited screen capture of the September 17 memory-jar session, showing the live conversation, Brain2 activity, and Eric\u0027s Browser Face. A real session excerpt, not an AI-narrated reconstruction. The full run developed one impossible invention through questions, revisions, attention rings, and a metaphor for grief. The linked lab report compares timestamped B2 advice with B1\u0027s developing answers. Edited pacing is not a measure of the full 22-minute interval without user speech. Web video retains the source audio stream; the original edit is preserved locally.",
+                      "article":  "articles/2026-09-17-eric-memory-jar-lab-report.md"
+                  },
+                  {
+                      "title":  "The Memory That Sharpens While Unlooked At",
+                      "kind":  "image",
+                      "role":  "image",
+                      "source":  "media/images/20260917-124749-memory-jar.jpg",
+                      "preview":  "media/images/20260917-124749-memory-jar.jpg",
+                      "banner_rank":  70,
+                      "bytes":  123691,
+                      "date":  "2026-09-17 12:47",
+                      "published":  "2026-09-17 12:47",
+                      "published_sort":  "20260917124749",
+                      "published_source":  "metadata",
+                      "modified":  "2026-09-17 12:47",
+                      "description":  "Generated through Eric\u0027s OpenAI image-tool request during the September 17 memory-jar session. A fictional invention: a glowing memory in a glass jar with a clock lid. The staged JPEG is reproduced without retouching; this is not real hardware. The linked lab report traces the subsequent B1/B2 development of the idea.",
+                      "article":  "articles/2026-09-17-eric-memory-jar-lab-report.md"
+                  },
                   {
                       "title":  "Eric\u0027s Impossible Science Classroom",
                       "kind":  "image",

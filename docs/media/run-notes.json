@@ -1,4 +1,16 @@
 {
+  "media/videos/The Memory Jar.mp4": {
+    "published": "2026-09-17T14:00:53-04:00",
+    "title": "The Memory Jar: Eric's Active-Mind Session",
+    "article": "articles/2026-09-17-eric-memory-jar-lab-report.md",
+    "description": "Scott's 6-minute, 32-second edited screen capture of the September 17 memory-jar session, showing the live conversation, Brain2 activity, and Eric's Browser Face. A real session excerpt, not an AI-narrated reconstruction. The full run developed one impossible invention through questions, revisions, attention rings, and a metaphor for grief. The linked lab report compares timestamped B2 advice with B1's developing answers. Edited pacing is not a measure of the full 22-minute interval without user speech. Web video retains the source audio stream; the original edit is preserved locally."
+  },
+  "media/images/20260917-124749-memory-jar.jpg": {
+    "published": "2026-09-17T12:47:49-04:00",
+    "title": "The Memory That Sharpens While Unlooked At",
+    "article": "articles/2026-09-17-eric-memory-jar-lab-report.md",
+    "description": "Generated through Eric's OpenAI image-tool request during the September 17 memory-jar session. A fictional invention: a glowing memory in a glass jar with a clock lid. The staged JPEG is reproduced without retouching; this is not real hardware. The linked lab report traces the subsequent B1/B2 development of the idea."
+  },
   "media/generated-images/eric-impossible-science-classroom-2026-09-14.png": {
     "published": "2026-09-14T00:00:00-04:00",
     "title": "Eric's Impossible Science Classroom",
