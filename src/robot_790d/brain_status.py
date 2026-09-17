@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from robot_790d.tts_activity import read_tts_activity
+
 DEFAULT_TAIL_BYTES = 2_000_000
 NVIDIA_SMI_CACHE_SECONDS = 2.0
 _NVIDIA_SMI_CACHE: tuple[float, tuple[Any, Any], dict[str, Any]] | None = None
@@ -78,6 +80,11 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
 
 def get_gpu_status() -> dict[str, Any]:
     """Read compact GPU telemetry for the local STS dashboard."""
+    status = _get_gpu_hardware_status()
+    return {**status, "tts_activity": read_tts_activity()}
+
+
+def _get_gpu_hardware_status() -> dict[str, Any]:
     windows_utilization = _read_windows_gpu_engine_utilization()
     nvidia_status = _read_nvidia_smi_gpu_status_cached()
     if nvidia_status.get("status") != "ok":

@@ -5,6 +5,26 @@ import pytest
 from robot_790d import sts_page_server
 
 
+def test_note_list_keeps_operator_shelf_complete_and_tool_pages_bounded(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    for index in range(55):
+        (tmp_path / f"note-{index:03d}.txt").write_text("Note", encoding="utf-8")
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+    handler._handle_note_list()
+    assert len(replies[-1][1]["files"]) == 55
+    handler._handle_note_list("limit=20&offset=20")
+    assert replies[-1][0] == 200
+    assert len(replies[-1][1]["files"]) == 20
+    assert replies[-1][1]["next_offset"] == 40
+    handler._handle_note_list("query=NOTE+054&limit=20")
+    assert replies[-1][1]["files"] == ["note-054.txt"]
+    for invalid in ("offset=bad", "limit=100", "directory=..%2F"):
+        handler._handle_note_list(invalid)
+        assert replies[-1][0] == 400
+
+
 def test_image_continuation_config_is_opt_in_and_bounded(tmp_path) -> None:
     assert sts_page_server._runtime_image_continuation(None) == {
         "enabled": False, "max_steps": 3, "window_ms": 120000,
@@ -372,6 +392,38 @@ def test_brain2_steering_is_structured_and_bound_to_evidence(brain2_completion):
         "A recurring motif that develops the joke, scene, or thought is not a stuck loop"
         in result["prompt_debug"]["system"]
     )
+    assert "quiet means passing this one opportunity" in result["prompt_debug"]["system"]
+    assert "absence of advice, not a recommendation" in result["prompt_debug"]["system"]
+    assert "new_subject asks the controller" not in result["prompt_debug"]["system"]
+
+
+def test_brain2_companion_prompt_separates_assessment_from_advice(brain2_completion):
+    result = brain2_completion(json.dumps({"mouth_text": "", "note_for_eric": "",
+                                          "should_surface": False}),
+                               note_guidance=[{"target": "b2", "filename": "example.txt",
+                                               "revision": "1", "guidance": "Let a completed answer stand."}])
+    system = result["prompt_debug"]["system"]
+    user = result["prompt_debug"]["user"]
+    assert "private thinking partner" in system
+    assert "A completed answer is a local milestone" in system
+    assert "reason and steering record your assessment; they are not messages to Eric" in system
+    assert "not note_for_eric" in system
+    assert "An actual operator request for quiet is different" in system
+    assert "Let a completed answer stand." in user
+    assert "contribute one useful possibility" in user
+    assert "otherwise abstain without prescribing a wait" in user
+    assert result["note_for_eric"] == ""
+
+
+@pytest.mark.parametrize("advice", [
+    "The operator asked for quiet until they speak again.",
+    "El usuario pide silencio hasta que vuelva a hablar.",
+    "What happens when furniture can negotiate its placement?",
+])
+def test_brain2_advice_is_not_rewritten_by_english_behavior_filters(brain2_completion, advice):
+    result = brain2_completion(json.dumps({"mouth_text": "", "note_for_eric": advice,
+                                          "should_surface": False}))
+    assert result["note_for_eric"] == advice
 
 
 @pytest.mark.parametrize("change", [
@@ -630,7 +682,7 @@ def test_brain2_cue_without_text_is_valid_and_does_not_request_a_mouth(brain2_co
     assert result["mouth_text"] == ""
     assert result["body_choice"] == {"status": "selected", "proposed": "slow_smile"}
     prompt = result["prompt_debug"]
-    assert "Task: consider one optional body_beat" in prompt["user"]
+    assert "An optional body_beat is available; no mouth display is available" in prompt["user"]
     assert "produce one mouth-display" not in prompt["user"]
     assert "without waiting for an operator command" in prompt["system"]
     assert "B1's isolated idle replies cannot call movement tools" in prompt["system"]

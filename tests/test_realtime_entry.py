@@ -147,8 +147,8 @@ def test_b1_temperature_reaches_provider_request(monkeypatch, explicit):
     assert received[0]["tool_choice"] == "auto"
 
 
-@pytest.mark.parametrize("marker", ["[B2 advisory]", "[STS runtime]"])
-@pytest.mark.parametrize("split", range(len("[B2 advisory]") + 1))
+@pytest.mark.parametrize("marker", _PrivateAdvisoryTextFilter.markers)
+@pytest.mark.parametrize("split", range(max(map(len, _PrivateAdvisoryTextFilter.markers)) + 1))
 def test_private_advisory_filter_handles_every_marker_split(split, marker) -> None:
     guard = _PrivateAdvisoryTextFilter()
     output = "".join(guard.feed(part) for part in [
@@ -178,6 +178,75 @@ def test_private_advisory_filter_preserves_ordinary_text(text) -> None:
     guard = _PrivateAdvisoryTextFilter()
     assert "".join(guard.feed(char) for char in text) + guard.finish() == text
     assert not guard.blocked
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("<think>private analysis</think>Hello.", "Hello."),
+    ("Hello.<think>private</think> More.", "Hello. More."),
+    ("<THINK>private [B2 advisory] note</THINK>Answer", "Answer"),
+    ("<think>outer<think>inner</think>outer</think>Answer", "Answer"),
+    ("<think>never closed", ""),
+    ("</think>Answer", "Answer"),
+    ("One<think>first</think> two<think>second</think> three", "One two three"),
+    ("I need to figure out a name for this imaginary machine.",
+     "I need to figure out a name for this imaginary machine."),
+    ("A <thought> and a [B2 battery] are ordinary text.",
+     "A <thought> and a [B2 battery] are ordinary text."),
+    ("\u6211\u89c9\u5f97<think>\u79c1\u6709</think>\u53ef\u4ee5", "\u6211\u89c9\u5f97\u53ef\u4ee5"),
+])
+def test_explicit_thinking_boundary_handles_every_split_without_language_guessing(raw, expected):
+    for split in range(len(raw) + 1):
+        guard = _PrivateAdvisoryTextFilter()
+        assert guard.feed(raw[:split]) + guard.feed(raw[split:]) + guard.finish() == expected
+    guard = _PrivateAdvisoryTextFilter()
+    assert "".join(guard.feed(char) for char in raw) + guard.finish() == expected
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize("raw, expected", [
+    ("<think>private analysis</think>Public answer.", "Public answer."),
+    ("<think>unfinished private analysis", ""),
+    ("[STS sensing image]\n{\"source\":\"generated image\"}", ""),
+    ("[STS tool continuation] private directions", ""),
+])
+def test_provider_boundary_preserves_tools_usage_and_clean_history(streaming, raw, expected):
+    from speech_to_speech.LLM.base_openai_compatible_language_model import (
+        AssistantMessage,
+        TextDelta,
+        ToolCall,
+        Usage,
+    )
+    from speech_to_speech.LLM.chat_completions_language_model import (
+        _iter_chat_response_events,
+        _iter_chat_stream_events,
+    )
+    usage = SimpleNamespace(prompt_tokens=10, completion_tokens=20)
+    function = SimpleNamespace(name="move_generated_image_to_sensing_eye", arguments="{}")
+    tool = SimpleNamespace(index=0, id="call_eye", function=function)
+    if streaming:
+        chunks = [SimpleNamespace(usage=None, choices=[SimpleNamespace(delta=SimpleNamespace(
+            content=char, reasoning_content="separate private channel", tool_calls=None,
+        ))]) for char in raw]
+        chunks.append(SimpleNamespace(usage=usage, choices=[SimpleNamespace(delta=SimpleNamespace(
+            content=None, reasoning_content="never spoken", tool_calls=[tool],
+        ))]))
+        events = _iter_chat_stream_events(iter(chunks))
+    else:
+        events = _iter_chat_response_events(SimpleNamespace(usage=usage, choices=[SimpleNamespace(
+            message=SimpleNamespace(content=raw, reasoning_content="never spoken", tool_calls=[tool]),
+        )]))
+    filtered = list(_filter_private_advisory_events(events))
+    assert "".join(event.text for event in filtered if isinstance(event, TextDelta)) == expected
+    assert "".join(part.text for event in filtered if isinstance(event, AssistantMessage)
+                   for part in event.content) == expected
+    assert [event.item.name for event in filtered if isinstance(event, ToolCall)] == [function.name]
+    assert [event.output_tokens for event in filtered if isinstance(event, Usage)] == [20]
+
+
+def test_thinking_only_reply_uses_existing_bounded_recovery():
+    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta
+    with pytest.raises(RuntimeError, match="robot790_private_output_suppressed"):
+        list(_filter_private_advisory_events(iter([TextDelta(text="<think>private</think>")])))
 
 
 def test_private_advisory_events_filter_speech_and_history_but_preserve_tools_and_usage(caplog) -> None:

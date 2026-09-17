@@ -21,6 +21,13 @@ habits, tools, and continuity. The motive is design, not biography:
 companionship is a real target, and embodied local agents like Eric may become
 one more way to make some rooms feel less empty.
 
+Engineering changes must preserve that target. The
+[Companion Design Contract](docs/companion-design-contract.md) makes initiative,
+continuity and active idle explicit acceptance criteria. The
+[September 17 alignment audit](docs/companion-alignment-audit-2026-09-17.md)
+reviews recent changes against the working baseline; older policies are not a
+redesign target for that repair pass.
+
 Eric is not presented here as a brand-new kind of AI model. The base machinery
 is chatbot-class language modeling, but the lived shape is closer to an agentic
 system: tools plus a loop. Like a coding agent with Bash, Python, Playwright,
@@ -557,7 +564,9 @@ The realtime page can expose these tools to the LLM:
 - `write_text_file`, `read_text_file`, `list_text_files`: sandboxed local text,
   source, and data file tools inside `notes/`. Supported extensions are `.txt`,
   `.md`, `.py`, `.json`, `.csv`, `.html`, `.css`, `.js`, `.yaml`, and `.yml`;
-  writing source never executes it.
+  writing source never executes it. Model note lookups use bounded pages (20 names
+  by default, 50 maximum), with `query`, `directory`, `offset` and `limit` arguments.
+  The operator's shelf and session map still receive their complete inventories.
 - `list_session_map` / `enter_session`: inspect saved thread titles and parent
   links, then request a save-and-switch to an exact destination. These STS
   maintenance tools are not offered to autonomous idle turns.

@@ -15,7 +15,7 @@ from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, Fac
 from robot_790d.image_generation import generate_image
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.memory import forget_fact, remember_fact
-from robot_790d.note_files import list_note_files, read_note_file, write_note_file
+from robot_790d.note_files import list_note_files_page, read_note_file, write_note_file
 from robot_790d.smart_home import control_smart_home_device
 from robot_790d.state import Affect, RobotMode
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
@@ -656,8 +656,15 @@ TOOLS: list[dict[str, object]] = [
     {
         "type": "function",
         "name": "list_text_files",
-        "description": "List supported local text, source, and data files when the user explicitly asks what exists.",
-        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        "description": (
+            "Find notes by partial filename or directory. Results are paginated; use next_offset for more. "
+            "Spaces, hyphens and underscores match alike."
+        ),
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string"}, "directory": {"type": "string"},
+            "offset": {"type": "integer", "minimum": 0},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20},
+        }, "additionalProperties": False},
     },
 ]
 
@@ -707,7 +714,7 @@ async def execute_tool(name: str, arguments: dict[str, object] | str | None) -> 
     elif name == "read_text_file":
         result = await asyncio.to_thread(_read_text_file, parsed)
     elif name == "list_text_files":
-        result = await asyncio.to_thread(_list_text_files)
+        result = await asyncio.to_thread(_list_text_files, parsed)
     else:
         result = {"status": "error", "error": f"Unknown Robot 790 tool: {name}"}
 
@@ -1126,12 +1133,12 @@ def _read_text_file(arguments: dict[str, object]) -> dict[str, object]:
     return {"status": "ok", "tool": "read_text_file", "filename": note.filename, "content": note.content}
 
 
-def _list_text_files() -> dict[str, object]:
+def _list_text_files(arguments: dict | None = None) -> dict[str, object]:
     try:
-        filenames = list_note_files(os.getenv("ROBOT_790_INSTANCE_PATH"))
-    except OSError as exc:
+        result = list_note_files_page(os.getenv("ROBOT_790_INSTANCE_PATH"), **(arguments or {}))
+    except (OSError, ValueError, TypeError) as exc:
         return {"status": "error", "error": str(exc)}
-    return {"status": "ok", "tool": "list_text_files", "files": filenames}
+    return {"status": "ok", "tool": "list_text_files", **result}
 
 
 def _build_daemon() -> tuple[BehaviorDaemon, Esp32FaceClient]:

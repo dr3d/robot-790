@@ -14,6 +14,7 @@ function load(c, names) {
 function fixture() {
   const stored = new Map([['legacy', 'true']]);
   const c = vm.createContext({ performanceMode: { checked: true }, performanceAutoUntil: Date.now() + 480000,
+    toolScopeDenials: new Map(), toolFollowupTerminal: false,
     performancePrompt: 'OLD STAGE HANDOFF', performanceModeStorageKey: 'legacy',
     localStorage: { removeItem: key => stored.delete(key) },
     resetConversationReengageCycle() {}, lastUserText: '', recentUserTexts: [] });

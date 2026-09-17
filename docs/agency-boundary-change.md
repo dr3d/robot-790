@@ -3,6 +3,11 @@
 September 16, 2026. Pre-change checkpoint: `74312a6` on `master`.
 First removal pass from the [agency/language audit](sts-agency-and-language-audit-2026-09-16.md).
 
+The first live trial exposed transport growth and an idle-image capability
+mismatch. The follow-up [context transport repair](context-transport-repair.md)
+fixes these without restoring semantic controllers. The descriptions below
+record the original removal pass, before that repair.
+
 ## Removed
 
 - English remember/forget/write classifiers, assistant-offer permission windows,

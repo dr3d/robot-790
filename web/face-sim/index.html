@@ -768,7 +768,8 @@
           status: "ok",
           error: "",
           primary,
-          sampledAt: gpu.sampled_at || payload?.generated_at || ""
+          sampledAt: gpu.sampled_at || payload?.generated_at || "",
+          ttsActivity: gpu.tts_activity
         };
       }
       return {
@@ -848,7 +849,9 @@
           return;
         }
         gpuTelemetry = { status: "ok", error: "", primary: normalized.primary, sampledAt: normalized.sampledAt || "", lastOkAt: performance.now() };
-        pushGpuHistory(normalized.primary.utilization_percent);
+        const receivedAt = Date.now();
+        pushGpuHistory(normalized.primary.utilization_percent, receivedAt);
+        markGpuTtsHistory(gpuUtilHistory, normalized.ttsActivity, receivedAt);
       } catch (error) {
         gpuTelemetry = {
           status: "unavailable",
@@ -858,6 +861,16 @@
         };
       } finally {
         gpuStatusPollTimer = setTimeout(refreshGpuStatusQuietly, 1000);
+      }
+    }
+
+    function markGpuTtsHistory(history, activity, receivedAt = Date.now()) {
+      const offset = receivedAt - Number(activity?.sampled_at_ms);
+      const intervals = activity?.status === "ok" && Array.isArray(activity.intervals) ? activity.intervals : [];
+      for (const sample of history) {
+        if (typeof sample !== "object" || !sample) continue;
+        sample.tts = intervals.some(span => Number.isFinite(span.start_ms) && Number.isFinite(span.end_ms)
+          && span.start_ms + offset < sample.t + gpuHistoryBucketMs && span.end_ms + offset > sample.t);
       }
     }
 
@@ -890,6 +903,18 @@
         else ctx.lineTo(point.x, point.y);
       });
       ctx.stroke();
+
+      const ttsSegments = points.slice(1).map((point, index) => ({ point, index }))
+        .filter(({ index }) => gpuUtilHistory[Math.min(index + 1, gpuUtilHistory.length - 1)]?.tts);
+      if (ttsSegments.length) {
+        ctx.strokeStyle = ok ? "#ffc56e" : "rgba(255, 197, 110, 0.45)";
+        ctx.beginPath();
+        ttsSegments.forEach(({ point, index }) => {
+          ctx.moveTo(points[index].x, points[index].y);
+          ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+      }
 
       const statusLine = String(state?.status_line || gpuTelemetry.error || "tools: idle").replace(/\s+/g, " ").trim();
       const statusState = String(state?.status_line_state || "off");

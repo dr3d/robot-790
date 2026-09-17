@@ -123,6 +123,20 @@ test('runtime updates defer during generation and tools, then flush at a complet
   assert.equal(sent.length, 2);
 });
 
+test('B1 does not replay cumulative image receipts already present as tool outputs', () => {
+  const { c, sent } = fixture();
+  c.updateSessionTools();
+  const count = sent.length;
+  for (let i = 0; i < 20; i++) {
+    c.imageTaskReceipt = { artifact: `${i}.png`, receipts: Array.from({ length: 12 }, (_, j) => ({
+      tool: 'generate_image', artifact: `${j}.png`, status: 'ok'
+    })) };
+    c.appendRuntimeContextToConversation({ toolBoundary: true });
+  }
+  assert.equal(sent.length, count);
+  assert.doesNotMatch(JSON.stringify(sent), /image_task/);
+});
+
 test('reconnect sends a fresh snapshot; disconnect and first-contact cannot append one', () => {
   const { c, sent } = fixture();
   c.updateSessionTools();

@@ -1,12 +1,192 @@
 # Engineering Status
 
-Reviewed September 16, 2026. This is the maintained engineering view; session
+Reviewed September 17, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### GPU Speech Tint
+
+STS and Browser Face retain their purple total-load trace, with amber segments
+where observed Qwen3-TTS synthesis overlaps a sample. No new numbers or Browser
+Face labels. This is activity annotation, not per-process GPU attribution: LLM
+and TTS can overlap. It uses existing TTFA/completion log timestamps, not speaking
+animation or audio playback. First-audio timing identifies in-flight synthesis;
+completion timings correct the recent interval. Sampling/logging adds a short
+delay; an unclosed activity observation expires after 60 seconds. The reader is
+bounded to 128KB and a two-minute window, and missing logs leave the trace purple.
+No realtime/TTS pipeline or prompt changes. Both UI servers were restarted;
+refresh both pages to load the renderer changes. Verification: 19 Python and 125
+JavaScript tests, synthetic-history Playwright screenshots in desktop/narrow
+windows, Browser Face amber-pixel checks, and both live telemetry endpoints.
+
+### Companion Alignment
+
+The [September 17 alignment audit](companion-alignment-audit-2026-09-17.md) was
+corrected after it exceeded the requested scope. Review recent changes against
+`74312a6`, not older mechanisms that have worked well. The scoped concerns are
+the new indefinite wait (removed), batch-wide termination after a denied tool,
+and an assessment-freshness check lost in the recent B2 advisory rewrite.
+Inherited note clipping, busy-question handling, response length, capability
+policy and broader B2 architecture are not on this repair roster.
+
+The [Companion Design Contract](companion-design-contract.md) is the acceptance
+standard: active full-context idle, initiative, shared-task continuity, one public
+mouth and model-selected meaning. Repetitive speech is a failure to correct, not
+a reason to stop cognition. The audit made no additional runtime or prompt changes;
+its prioritized repairs and offline evidence are recorded in the report.
+Operator clarification: the longstanding one-sentence default is intentional and
+must remain unchanged; it is excluded from companion-alignment repairs.
+
+September 17 follow-up: the [B2 companion advisory trial](b2-companion-advisory-trial.md)
+revises B2 role/task wording and the two active cards' B2 sections. Assessment
+of completion belongs in private diagnostics; advice to Eric should contribute
+content or remain empty, except to honor actual operator instructions. A bounded
+local replay improved after the initial revision failed. The 12:46-13:10 live
+continuation then completed draw/eye/explain without a reminder, sustained 26
+idle turns with clear B2-to-B1 idea uptake, and summarized its evolved idea when
+the user returned. No repeated waiting loop appeared. This is a successful rich-
+context trial, not a guarantee across setups. 137 focused tests passed before
+deployment. B1, timers, sampling, full context and tool execution are unchanged.
+PM: `logs/runs/20260917-131021-memory-jar-companion/postmortem.md`.
+
+### Idle Denial Loop
+
+**Latest live result: September 17, 12:46-13:10 successful companion trial.**
+The memory-jar premise developed into attention rings, salvage and crystallization
+without new user speech for about 22 minutes. B2 supplied concrete possibilities
+that B1 elaborated. Return first audio was 3.931s; the ensuing summary 2.640s.
+Context grew 29.12% -> 39.59%. One 22.497s idle LLM stretch remains unexplained;
+news was fetched twice but not discussed. Lab speed rose from 5x to 12x during
+the run. No behavior changes were made in its PM; preserve this working example.
+
+**Earlier live result: September 17, 09:38-10:15 encouraging but incomplete.**
+Two draw/eye/explain sequences succeeded after reminders. Thirty-seven idle
+dispatches produced sustained creative development, including older-context
+connections, but repeated closings and a nearly verbatim final passage remain.
+B2 still advises waiting/"capstones"; three headline selections never entered
+spoken conversation. Clearing the eye preceded a broader focus, not a history
+erase. Context grew 27.35% -> 44.18%; a separate startup overlap has anomalous
+usage accounting and needs a targeted test, not a confirmed cache diagnosis.
+Only the requested STS 1500px width cap was removed; no further runtime or prompt
+changes. PM: `logs/runs/20260917-101518-grandma-cloud-idle/postmortem.md`.
+
+**Earlier live result: September 17, 09:31-09:33 failed after wait-tool removal.**
+Eric promised a rain-bottle render/eye/explanation repeatedly but issued zero
+tool calls and answered none of the mechanism questions. All three idle turns
+again announced quiet. B2 initially treated the unsubmitted render as pending;
+later advice did not recover execution. No scope denial or image-provider error
+occurred. Context was 29.31% -> 31.11%, with short post-startup response times.
+The rollback/prompt smoke test did not establish live recovery. Full PM:
+`logs/runs/20260917-093355-rain-bottle-no-actions/postmortem.md`.
+No runtime changes were made during that PM; inspect the assembled request and
+execution-state evidence before another behavioral patch.
+
+The September 17 00:40-01:15 run completed four draw/eye/explain sequences and
+showed no visible repeat of the prior private-text leak, but idle deteriorated
+into repeated silence announcements. Lab speed was logged at 7x. B2 flagged
+looping 28 times. Idle attempted 31 disallowed `stop_standing_routine` calls and
+one disallowed face call; each denial triggered another generic model turn.
+The routine-stop tool does not stop ordinary idle, even if permitted. Scope
+denials need structured non-retryable handling, and model-selected silence needs
+an explicit non-spoken control path, without English behavioral classification.
+Context grew 23.49% to 49.35%, including 19,519 tokens during the repetitive
+interval. The final first-output wait was 38.729 seconds for another repeated
+line and rejected tool call; B2 overlapped, and exact cache/GPU attribution is
+unavailable without engine metrics. The diagnostic PM changed no runtime:
+`logs/runs/20260917-011514-idle-repeat/postmortem.md`.
+
+The subsequent [denial/yield repair](silent-wait-and-tool-denials.md) ends
+automatic continuation after scope denial and carries execution scope into every
+followup. Its first version incorrectly allowed an indefinite B1 hold: the
+08:22-08:29 run completed draw/eye/explain, then parked on its first idle turn,
+despite a fresh B2 headline. Changing to 5x could not override that hold. See
+`logs/runs/20260917-082918-idle-silence/postmortem.md`.
+
+The single-turn replacement also failed live: the 08:52-08:58 run repeatedly
+announced quiet while B2 advised waiting for input. The latest
+[quiet-loop repair](idle-quiet-loop-repair.md) removes the wait-tool experiment,
+replaces accumulated B2 assessments with its latest current prose note, keeps
+diagnostic steering out of B1, and explicitly restores active-curiosity guidance
+in B1/B2 prompts. The one-sentence default, cards, timing and full history remain.
+Offline local-model tests improved but do not prove sustained live behavior.
+The page server must run the new B2 code; refresh disconnected STS and continue
+the rich thread. No model or realtime-server restart is required.
+
+The follow-up PM of that same 08:52-08:58 run also found a separate unresolved
+image-error classification bug: an explicit provider HTTP 400 rejection is marked
+as an unknown generation outcome, so a subsequent call is blocked locally and
+Eric/B2 receive misleading state. Preserve definitive rejection versus ambiguous
+transport failure without weakening provider refusals or paid-duplicate guards.
+Context rose only 28.50% to 31.51%; the repeated idle lines were fresh generations,
+not audio replay. Full findings: `logs/runs/20260917-085854-quiet-loop/postmortem.md`.
+
+### Private Text Reaching Speech
+
+The post-reboot 11:47 PM-12:00 AM continued run completed four render/eye/explain
+chains, but B1 echoed the sensing-eye staging instructions before its final eye
+move. This text matches the unmarked image wrapper supplied to B1, not the B2
+note logged at that moment. An earlier answer also narrated deliberative prose.
+The marker guard suppressed two other private dumps but cannot protect unmarked
+copies. The final wrapper generated 59.77 seconds of audio; playback drain, not
+a minute of measured prefill, accounted for most of the delay before the answer.
+Context grew from 19.82% to 32.28%. Repair targets are image metadata/instruction
+separation and provider output-channel verification, not English phrase filters.
+No runtime changes were made during that PM. Evidence and recommendations:
+`logs/runs/20260917-000024-brain-leak/postmortem.md`.
+
+The subsequent [boundary repair](private-output-boundary-repair.md) replaces
+the image instruction paragraph with marked provenance, strengthens stable B1
+public/private instructions, and filters explicit thinking spans before speech
+and history. Tools remain intact. 771 Python and 424 JavaScript tests passed;
+two local model smoke checks produced public output or the correct eye tool
+without a wrapper echo. Untagged deliberation is addressed by prompting, not an
+English classifier; the full resumed conversation still needs a listening test.
+
+### Context Transport Repair
+
+The [September 16 repair](context-transport-repair.md) projects only public B2
+advisory fields into B1, pages/searches model note lookups, and stops cumulative
+image-receipt replay. SDK image stripping is disabled for live history; shared
+idle does not resubmit an already staged picture. Ordinary idle can render and
+stage using the existing Idle art grant, with B2 optional. No English intent
+classifier, automatic drawing plan or forced speech was restored.
+
+A local 12K-token image/history probe on the already-loaded Qwen model measured
+26-29 evaluated tokens and about 0.30 seconds of prefill for retained-image turns,
+including idle return. Simulating image removal evaluated all 11,706 tokens in
+3.20 seconds. This verifies the specific mutation hazard, not every long pause
+in the preceding live session. Long-form creative performance needs a live trial.
+
+The 10:37-10:50 PM follow-up completed two draw/stage/explain acts and kept its
+topic during idle. Context rose from 14.1% to 38.1%; this shorter two-image run is
+not a full repair validation. Python servers were still the pre-repair processes:
+even Eric's targeted `query: "boot eric"` received 452 filenames. Two early mic
+barge-ins cancelled playback at sensitivity 5; later short VAD bursts were dropped.
+The longest continuous work included 31.5 seconds producing 129 seconds of voice.
+An additional 17.8-second first LLM chunk wait remains unattributed without
+engine telemetry. PM: `logs/runs/20260916-225011-impossible-science/postmortem.md`.
+
 ### Agency Removal Pass
+
+The first live trial (September 16, 9:34-10:00 PM) found a new advisory
+serialization bug: complete B2/shared card text stored in each candidate's
+internal `noteGuidanceKey` was copied into B1. A four-note reproduction carried
+14,088 unnecessary characters. Repeated receipt snapshots and a 447-file note
+catalogue also enlarged context. The observed prompt grew from 18,312 to 109,743
+tokens; that growth is not all speech or useful memory. Fix transport payloads
+without restoring deterministic behavioral direction.
+
+Nine generation/eye moves succeeded, but ordinary idle rejected a later drawing
+call because its read/search-only scope excludes image tools. B2 also repeatedly
+advised waiting despite an open-ended invitation. The last idle beat waited
+55.7 seconds for a first speakable chunk and produced only 65 tokens. Exact
+prefill attribution is unavailable because numeric engine capture had expired;
+an offline probe confirms consumed-image history mutation as a cache-risk path,
+not a measured cause of every stall. PM and reproductions:
+`logs/runs/20260916-220001-agency-context-growth/postmortem.md`.
+No runtime repairs or prompt changes were made during this PM.
 
 The pre-change state is committed as `74312a6`. The subsequent
 [agency boundary change](agency-boundary-change.md) removes English consent
@@ -478,6 +658,15 @@ fixtures passed. The public catalogue was regenerated. The Python suite reported
 one upstream Starlette/httpx deprecation warning. No hardware was moved or flashed,
 and no user session was switched during this review. The last dual-eye firmware
 build check remains the successful September 10 build, not a new hardware test.
+
+September 17 publication checkpoint: 782 Python tests and 442 Node tests passed,
+along with face-contract generation, launcher/shutdown fixtures, and whitespace
+checks. The Python suite reports one upstream Starlette/httpx deprecation warning.
+Ruff still reports 28 pre-existing import-order/line-length issues, matching the
+HEAD baseline in the affected files; the new TTS helper's import ordering was
+corrected. No hardware, live session, or model settings were changed for this
+publication check. The memory-jar report and edited screen capture are a separate
+publication commit from the runtime checkpoint.
 
 ## Retired Material
 

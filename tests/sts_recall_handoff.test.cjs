@@ -9,6 +9,9 @@ function fixture() {
   const names = ['search_web', 'generate_image', 'move_generated_image_to_sensing_eye',
     'list_sensing_eye_notes', 'recall_sensing_eye_note', 'read_text_file', 'list_session_map', 'enter_session'];
   const c = vm.createContext({
+    toolScopeDenials: new Map(), toolFollowupTerminal: false,
+    clearTimeout() {},
+    imageToolProtectionEnabled: false, armAssistantUtteranceFinished() {},
     runtimeConfig: { tool_continuation: { max_rounds: 8 } },
     ws: {}, realtimeSessionGeneration: 1, activeRealtimeSession: () => true,
     suppressedResponseIds: new Set(), handledFunctionCallIds: new Set(),
@@ -96,6 +99,55 @@ test('disabled capabilities and duplicate call IDs cannot execute', async () => 
   assert.equal(f.calls.length, 1);
 });
 
+test('scope denial is terminal and structured, including repeated response.done and timer polls', async () => {
+  const f = fixture(); f.c.toolContinuationOrigin = 'idle';
+  const finished = [];
+  f.c.armAssistantUtteranceFinished = value => finished.push(value);
+  await f.tool('stop_standing_routine');
+  const receipt = JSON.parse(f.sent[0].item.output);
+  assert.equal(receipt.code, 'scope_denied');
+  assert.equal(receipt.retryable, false);
+  assert.equal(receipt.scope, 'idle');
+  assert.ok(receipt.allowed_tools.includes('search_web'));
+  for (let i = 0; i < 100; i++) f.done();
+  assert.equal(f.responses().length, 0);
+  assert.equal(f.c.toolFollowupNeeded, false);
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.c.toolScopeDenials.size, 1);
+  assert.equal(finished.length, 1);
+  assert.equal(finished[0].wasIdle, true);
+});
+
+test('scope denial still delivers successful sibling receipts but cannot restart the denied batch', async () => {
+  const f = fixture();
+  let complete;
+  f.c.executeTool = () => new Promise(resolve => { complete = resolve; });
+  const pending = f.tool('search_web');
+  await f.tool('disabled_tool'); f.done();
+  complete({ status: 'ok', results: ['useful evidence'] }); await pending;
+  assert.equal(f.sent.filter(e => e.item?.type === 'function_call_output').length, 2);
+  assert.match(f.sent.at(-1).item.output, /useful evidence/);
+  assert.equal(f.responses().length, 0);
+});
+
+test('retired silent-wait calls are denied without restarting a follow-up loop', async () => {
+  const f = fixture();
+  await f.tool('wait_silently'); f.done();
+  assert.equal(JSON.parse(f.sent[0].item.output).code, 'scope_denied');
+  assert.equal(f.responses().length, 0);
+});
+
+test('permitted recovery carries execution scope on every turn without changing catalogue', async () => {
+  const f = fixture(); f.c.toolContinuationOrigin = 'idle';
+  for (const name of ['search_web', 'read_text_file']) {
+    await f.tool(name); f.done();
+    const response = f.responses().at(-1);
+    assert.match(response.robot790_tool_followup, /Execution scope remains idle/);
+    assert.match(response.robot790_tool_followup, /allowed tools: search_web, read_text_file/);
+    assert.deepEqual(response.tools, f.c.enabledToolList());
+  }
+});
+
 test('unknown paid-generation outcome cannot trigger an automatic paid retry', async () => {
   const f = fixture(); let attempts = 0;
   f.c.executeTool = async () => { attempts++; throw new Error('connection lost after submission'); };
@@ -109,6 +161,37 @@ test('idle allows model-selected research but not ungranted effects', async () =
   const f = fixture(); f.c.toolContinuationOrigin = 'idle';
   await f.tool('generate_image'); assert.equal(f.calls.length, 0);
   await f.tool('search_web', { query: 'model chosen question' }); assert.equal(f.calls.length, 1);
+});
+
+test('local image rejection before submission does not invent an unknown paid outcome', async () => {
+  const f = fixture();
+  f.c.executeTool = async () => { throw Object.assign(new Error('busy'), { generationSubmitted: false }); };
+  await f.tool('generate_image');
+  assert.equal(f.c.toolGenerationUncertain, false);
+  assert.equal(f.c.imageTaskReceipt.receipts.at(-1).status, 'error');
+});
+
+test('granted B1 idle art routes through permission and retains grant freshness while staging', async () => {
+  const f = fixture();
+  f.c.idleToolAllowedNames = new Set(['search_web']);
+  f.c.firstContactModeEnabled = () => false;
+  f.c.performanceModeEnabled = () => false;
+  f.c.idleArt = { grant: {}, authorized: () => true, history: [] };
+  const start = page.indexOf('    function idleEnabledToolList(');
+  vm.runInContext(page.slice(start, page.indexOf('\n    }\n', start) + 6), f.c);
+  f.c.toolContinuationOrigin = 'idle';
+  await f.tool('generate_image'); f.done();
+  assert.equal(f.calls[0].args._idleArt, true);
+  assert.equal(f.calls[0].args._isCurrent(), true);
+  await f.tool('move_generated_image_to_sensing_eye');
+  assert.equal(f.calls.length, 2);
+  const current = f.calls[1].args._isCurrent;
+  f.c.idleArt.grant = null;
+  f.c.idleArt.authorized = () => false;
+  assert.equal(current(), false);
+  await f.tool('generate_image');
+  assert.equal(f.calls.length, 2);
+  assert.equal(f.c.idleEnabledToolList().length, 1);
 });
 
 test('playback beyond 30 seconds cannot drop work or double dispatch', async () => {

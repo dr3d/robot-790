@@ -9,16 +9,16 @@ import time
 import uuid
 from pathlib import Path
 
-from robot_790d.image_generation import generate_image
+from robot_790d.image_generation import MAX_PROMPT_CHARS, generate_image
 
 
-def validate_proposal(value: object) -> dict | None:
+def validate_proposal(value: object, *, min_prompt_chars: int = 12, max_prompt_chars: int = 1200) -> dict | None:
     if not isinstance(value, dict):
         return None
     prompt, title = value.get("prompt"), value.get("title")
     if not isinstance(prompt, str) or not isinstance(title, str):
         return None
-    if not 12 <= len(prompt.strip()) <= 1200 or not 1 <= len(title.strip()) <= 80:
+    if not min_prompt_chars <= len(prompt.strip()) <= max_prompt_chars or not 1 <= len(title.strip()) <= 80:
         return None
     return {"prompt": prompt.strip(), "title": title.strip()}
 
@@ -89,9 +89,12 @@ class IdleArtService:
         return {"status": "ok"}
 
     def render(self, payload: dict) -> dict:
-        proposal = validate_proposal(payload.get("proposal"))
+        proposal = validate_proposal(payload.get("proposal"), min_prompt_chars=1, max_prompt_chars=MAX_PROMPT_CHARS)
         if not proposal:
             raise ValueError("Invalid idle-art proposal")
+        size = payload.get("size", "1024x1024")
+        if not isinstance(size, str) or size not in {"1024x1024", "1536x1024", "1024x1536", "auto"}:
+            raise ValueError("Idle-art size must be 1024x1024, 1536x1024, 1024x1536 or auto")
         with self.lock:
             if not self._authorized(payload):
                 raise ValueError("Idle-art permission absent or revoked")
@@ -118,7 +121,7 @@ class IdleArtService:
             result = self.renderer(
                 proposal["prompt"],
                 title=proposal["title"],
-                size="1024x1024",
+                size=size,
                 model=grant["model"] or None,
                 quality=grant["quality"] or None,
                 repo_root=self.root,

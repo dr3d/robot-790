@@ -21,6 +21,7 @@ function fixture() {
   let now = 1000;
   class Clock extends Date { static now() { return now; } }
   const c = vm.createContext({
+    toolFollowupTerminal: false,
     Date: Clock, ws: { readyState: 1 }, WebSocket: { OPEN: 1, CONNECTING: 0, CLOSED: 3 },
     realtimeSessionGeneration: 1, realtimeStopRequested: false,
     pendingSessionMapMove: null, sessionMapMoveBusy: false, sessionMapRequestEpoch: 0, continuitySaveBusy: false,

@@ -13,6 +13,7 @@ from robot_790d.realtime_entry import (
     _PrivateAdvisoryTextFilter,
     apply_interruptible_chat_generation_patch,
     apply_unbounded_live_chat_patch,
+    apply_visual_history_patch,
 )
 
 
@@ -24,6 +25,9 @@ def runtime(monkeypatch):
     monkeypatch.setattr(Chat, "trim_if_needed", Chat.trim_if_needed)
     monkeypatch.setattr(Chat, "_robot_790_zero_size_patch", False, raising=False)
     apply_unbounded_live_chat_patch()
+    monkeypatch.setattr(Chat, "strip_images", Chat.strip_images)
+    monkeypatch.setattr(Chat, "_robot_790_visual_history_patch", False, raising=False)
+    apply_visual_history_patch()
     handler = object.__new__(Handler)
     handler.client = SimpleNamespace(base_url="http://127.0.0.1:1234/v1")
     handler.stream, handler.stream_batch_sentences = False, 1
@@ -113,6 +117,32 @@ def test_idle_without_extra_input_still_reads_all_history(runtime):
     before = runtime.handler._serialize(runtime.chat)
     run(runtime, idle_response(input=None))
     assert runtime.requests[0][0][:-1] == before
+
+
+def test_image_followup_idle_and_return_preserve_historical_media_prefix(runtime):
+    image = ConversationItemCreateEvent.model_validate({
+        "type": "conversation.item.create", "item": {
+            "type": "message", "role": "user", "content": [
+                {"type": "input_text", "text": "Staged drawing A."},
+                {"type": "input_image", "image_url": "data:image/png;base64,cGl4ZWxz"},
+            ],
+        },
+    }).item
+    runtime.chat.add_item(image)
+    before = runtime.handler._serialize(runtime.chat)
+    run(runtime, None)
+    saved = runtime.handler._serialize(runtime.chat)
+    assert saved[:len(before)] == before
+    run(runtime, idle_response(conversation="default", input=None, tool_choice="auto"))
+    assert runtime.requests[-1][0][:len(saved)] == saved
+    runtime.chat.add_item(make_user_message("The eye is clear now. That drawing is historical."))
+    returned = runtime.handler._serialize(runtime.chat)
+    run(runtime, None)
+    assert runtime.requests[-1][0] == returned
+    assert returned[:len(before)] == before
+    assert str(returned).count("data:image/png;base64,cGl4ZWxz") == 1
+    runtime.chat.reset()
+    assert not runtime.chat.image_message_ids()
 
 
 def test_spoken_idle_is_committed_once_by_existing_client_path_not_backend(runtime):

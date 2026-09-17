@@ -36,7 +36,7 @@ from robot_790d.headlines import read_headlines
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.idle_art import IdleArtService, validate_proposal
 from robot_790d.media_cast import CastMediaClient
-from robot_790d.note_files import list_note_files, read_note_file, write_note_file
+from robot_790d.note_files import list_note_files, list_note_files_page, read_note_file, write_note_file
 from robot_790d.note_brains import parse_note_brains, format_brain_guidance
 from robot_790d.session_preparation import session_preparer
 from robot_790d.runtime_model import local_runtime_model
@@ -135,7 +135,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._handle_note_read(parsed.query)
             return
         if parsed.path == "/api/notes/list":
-            self._handle_note_list()
+            self._handle_note_list(parsed.query)
             return
         if parsed.path == "/api/operator/poll":
             self._handle_operator_poll(parsed.query)
@@ -333,13 +333,23 @@ class StsPageHandler(SimpleHTTPRequestHandler):
              **({"brain_context": brain_context} if brain_context is not None else {})},
         )
 
-    def _handle_note_list(self) -> None:
+    def _handle_note_list(self, query_string: str = "") -> None:
         try:
-            filenames = list_note_files()
-        except OSError as exc:
+            params = parse_qs(query_string)
+            if params:
+                result = list_note_files_page(
+                    query=_first_param(params, "query") or "",
+                    directory=_first_param(params, "directory") or "",
+                    offset=int(_first_param(params, "offset") or "0"),
+                    limit=int(_first_param(params, "limit") or "20"),
+                )
+            else:
+                # Existing operator shelf/map clients still request the complete list.
+                result = {"files": list_note_files()}
+        except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
-        self._send_json(200, {"status": "ok", "tool": "list_text_files", "files": filenames})
+        self._send_json(200, {"status": "ok", "tool": "list_text_files", **result})
 
     def _handle_note_write(self) -> None:
         try:
@@ -1830,7 +1840,8 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
 
     system = (
         "You are Brain 2 for Robot 790, spoken name Eric. You do not speak aloud. "
-        "You are a private recent-conversation ruminator that may write one tiny mouth-display aside. "
+        "You are Eric's private thinking partner: help him notice possibilities, connect ideas and "
+        "carry unfinished shared work forward. You may also write one tiny mouth-display aside. "
         "Watch the shared scene: Eric, the operator, the face, the tools, the media, the room, and the timing. "
         "The operator is a collaborator in the room, not a patient, customer, subject, boss, or suspect. "
         "Do not turn every aside into commentary about the operator. Do not litigate their choices, imply they are "
@@ -1869,8 +1880,21 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "ambiguous and no practical decision depends on it, let the play stand. "
         "If new Eric output repeats an exhausted thought without developing it, set steering.loop true and "
         "suggest a way forward in note_for_eric. No special prose prefix is needed. "
-        "Prefer an advancing thought, playful variation, or a new outward subject over repeating the same "
-        "thought. No subject category is banned. Quiet is an option, not the default cure. "
+        "A completed answer is a local milestone, not the end of Eric's independent activity. "
+        "Your job is to contribute a possibility, not decide that a conversation has had enough. "
+        "When a thought develops, support its new detail. When it repeats, consider an untested consequence, "
+        "a connection to another available detail, or an outward question Eric could investigate. "
+        "Offer one concrete possibility rather than a verdict about closure or how much he should say. "
+        "He chooses whether to pursue it; neither more speech nor a subject change is compulsory. "
+        "No subject category is banned. A blocked tool does not close other interests. "
+        "An earlier closing by Eric or B2 is not an operator request for quiet. "
+        "Card guidance to let a completed answer or picture stand means avoid reworking that artifact, "
+        "not wait for the operator or close independent thinking. "
+        "If you have no useful angle, leave note_for_eric empty; that is "
+        "absence of advice, not a recommendation that Eric stop thinking or speaking. "
+        "quiet means passing this one opportunity for B2 to contribute, not directing B1 to be silent. "
+        "An actual operator request for quiet is different: respect its requested duration or condition "
+        "without proposing more spoken activity. "
         "If Eric promised an ongoing habit but the logs show no tool/action "
         "receipts for that habit, write note_for_eric starting with 'ROUTINE GAP:' and tell him not to claim "
         "the routine ran until a receipt exists. Do not demand receipts for a question, metaphor, imagined "
@@ -1889,14 +1913,20 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "does need supporting evidence. ground means correct that factual claim, not police his character. "
         "Assess the recent packet, not only its final sentence; evidence_id binds the pass to the latest "
         "supplied output. A loop can be redirected without declaring its imaginative premise false. "
-        "new_subject asks the controller for another available outward seed; it is not a "
-        "claim that research has already happened. Never treat your assessment as a sensor receipt. "
+        "new_subject suggests that Eric explore another interest himself; it does not require a "
+        "controller-supplied topic or claim that research has already happened. "
+        "Never treat your assessment as a sensor receipt. "
         "All text fields must be strings, and should_surface must be a JSON boolean. "
         "mouth_text must be 96 characters or less. revision_candidate is empty unless you want Brain 1 to later "
         "publicly take back, correct, or complicate an earlier claim; write it as a compact note such as "
         "'I said X; thinking about it more, Y.' "
-        "note_for_eric is a private one-sentence advisory note for Brain 1's next reply or idle beat. "
-        "Use it only when there is a concrete correction, situational cue, or next move Eric should carry. "
+        "reason and steering record your assessment; they are not messages to Eric. "
+        "note_for_eric is one sentence of useful content for Brain 1: a specific unexplored possibility, "
+        "an unfinished user request, a factual correction or a current operator instruction. "
+        "A judgment that an answer is complete, repetitive, a capstone or enough belongs in reason, "
+        "not note_for_eric. Without a useful contribution, return an empty note_for_eric, not an "
+        "instruction to rest, hold, wait, stop adding layers or let silence stand. "
+        "If the operator actually requested quiet, that instruction can be passed along. "
         "It is advice, not a command."
     )
     if body_beats:
@@ -1953,10 +1983,12 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "Task: choose one fresh headline as a possible new interest, or pass. Return the JSON contract "
             "including headline_url. Do not summarize the whole news list."
             if headline_mode else (
-                ("Task: consider one optional body_beat or a private thought; no mouth display is available. "
-                 if body_beats else "Task: consider one optional mouth-display thought fragment. ")
-                + "If a private note would help Eric's next move, "
-                "include it as note_for_eric. If a useful question is forming, include it as question. "
+                "Task: contribute one useful possibility for Eric's ongoing thought or unfinished shared work, "
+                "if you see one; otherwise abstain without prescribing a wait. "
+                + ("An optional body_beat is available; no mouth display is available. "
+                   if body_beats else "An optional mouth-display thought fragment is secondary. ")
+                + "Put a concrete private possibility in note_for_eric. "
+                "If a useful question is forming, include it as question. "
                 "If an earlier claim needs revision, include it as revision_candidate for the speaking brain to "
                 "consider later. "
                 "Use should_surface true only when it is worth showing on the mouth during a pause. "

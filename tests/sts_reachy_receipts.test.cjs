@@ -31,6 +31,8 @@ test('listening focus lasts through the utterance on browser and touch display',
 });
 
 function load(names, globals = {}) {
+  globals.toolScopeDenials ??= new Map();
+  globals.toolFollowupTerminal ??= false;
   globals.runtimeConfig ??= {};
   globals.handledFunctionCallIds ??= new Set();
   const c = vm.createContext(globals);

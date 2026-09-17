@@ -117,6 +117,40 @@ test('disarm/rearm while display is finishing does not permanently block the que
   assert.equal(c.offer({ ...proposal, prompt: 'A different picture.' }), true);
 });
 
+test('B1 uses the same grant without B2 and receives an artifact, not auto-staging', async () => {
+  const { controller: c, state, calls, shown } = setup();
+  state.proposalsEnabled = false;
+  await assert.rejects(c.renderRequested(proposal), /permission/);
+  await c.arm({});
+  assert.equal(c.proposalContext(), null);
+  const result = await c.renderRequested(proposal, { size: '1536x1024' });
+  assert.equal(result.retained, false);
+  assert.equal(result.filename, 'art.png');
+  assert.equal(calls.at(-1).payload.size, '1536x1024');
+  await c.tick();
+  assert.equal(shown.length, 0, 'Eric decides whether to call the eye move');
+  assert.equal(c.history.length, 1);
+});
+
+test('B1 and B2 cannot render concurrently; revocation/new activity retain late art only', async () => {
+  for (const change of ['revoke', 'user', 'eye', 'reset']) {
+    const { controller: c, state, shown } = setup();
+    await c.arm({});
+    let finish;
+    c.api = action => action === 'render' ? new Promise(resolve => { finish = resolve; }) : Promise.resolve({});
+    const pending = c.renderRequested(proposal);
+    assert.equal(c.proposalContext(), null);
+    await assert.rejects(c.renderRequested(proposal), /already in progress/);
+    if (change === 'revoke') c.disarm();
+    if (change === 'user') state.userKey = 'new';
+    if (change === 'eye') state.eyeKey = 'new';
+    if (change === 'reset') c.reset();
+    finish({ status: 'ok', filename: 'late.png', idle_art_job: 'job' });
+    assert.equal((await pending).retained, true);
+    assert.equal(shown.length, 0);
+  }
+});
+
 test('runtime receipts are bounded without losing full session history', async () => {
   const { controller: c } = setup();
   c.history = Array.from({ length: 20 }, (_, i) => ({ prompt: 'private long prompt', title: `${i}`, status: 'complete' }));

@@ -6,6 +6,9 @@ const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').repla
 const noop = () => {};
 const empty = () => '';
 function load(names, globals) {
+  globals.toolScopeDenials ??= new Map();
+  globals.toolFollowupTerminal ??= false;
+  globals.lastUserTurnActivityAt ??= 0;
   const c = vm.createContext(globals);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
@@ -30,7 +33,7 @@ function idleContext(overrides = {}) {
     enabledToolList: () => [{ name: 'search_web' }, { name: 'generate_image' }],
     compactIdleRuntimeContext: () => 'CURRENT_BODY_AND_EYE', formatBrain2ForInstructions: () => 'PRIVATE_ADVICE',
     formatLoadedNotesForIdleContext: () => 'SUBSTRATE', firstContactIdleContext: () => 'FIRST_CONTACT',
-    currentLabGoal: () => '', visionImageUrl: '', noteAloneActivity: noop, cueFaceMode: noop,
+    currentLabGoal: () => '', visionImageUrl: '', visionImageStaged: false, noteAloneActivity: noop, cueFaceMode: noop,
     formatIdleHeadlineContext: () => '', brain2HeadlineSeed: null,
     events: {}, log: noop, rememberPromptLedger: noop, send: packet => packets.push(packet),
     ttsRuntimeConfig: () => ({}), recentIdleOutputs: [], substrateIdleOutputs: [], idleOutputLog: [], maxIdleOutputLog: 100,
@@ -98,7 +101,7 @@ test('idle text is recorded without semantic cooldown, including repetition and 
 });
 test('B2 assessments remain fallible data, not controller-selected rhetoric', () => {
   const c = load(['formatBrain2AdvisoryContent'], {
-    brain2NoteCandidates: [{ text: 'Try another perspective.', steering: { loop: true } }],
+    brain2NoteCandidates: [{ text: 'Try another perspective.', at: 1, steering: { loop: true } }],
     brain2RevisionCandidates: [], brain2QuestionCandidates: [], loadedNoteContexts: [],
   });
   const text = c.formatBrain2AdvisoryContent();
@@ -106,6 +109,76 @@ test('B2 assessments remain fallible data, not controller-selected rhetoric', ()
   assert.match(text, /Try another perspective/);
   assert.doesNotMatch(text, /Loop guard:|Use at most one|next reply/);
 });
+test('B2 freshness metadata never becomes B1 instruction payload', () => {
+  const brainOnly = 'PRIVATE_B2_GUIDANCE '.repeat(200);
+  const c = load(['formatBrain2AdvisoryContent'], {
+    Robot790NoteBrains: { isCurrent: item => item.noteGuidanceKey === brainOnly }, loadedNoteContexts: [],
+    brain2NoteCandidates: Array.from({ length: 4 }, (_, i) => ({
+      text: `A useful observation ${i}.`, at: i, noteGuidanceKey: brainOnly, privateFutureField: brainOnly,
+      steering: { status: 'ok', loop: false }
+    })),
+    brain2RevisionCandidates: [{ text: 'A correction.', noteGuidanceKey: brainOnly }],
+    brain2QuestionCandidates: [{ text: 'A question?', noteGuidanceKey: brainOnly }, { text: 'STALE', noteGuidanceKey: 'old' }]
+  });
+  const output = c.formatBrain2AdvisoryContent();
+  assert.ok(output.length < 1100);
+  assert.doesNotMatch(output, /noteGuidanceKey|PRIVATE_B2|privateFutureField|STALE/);
+  assert.match(output, /A useful observation 3/);
+  assert.match(output, /A correction/);
+  assert.match(output, /A question/);
+});
+
+test('only the latest B2 next-turn assessment is current, and new user input retires it', () => {
+  const c = load(['formatBrain2AdvisoryContent'], {
+    lastUserTurnActivityAt: 10,
+    brain2NoteCandidates: [
+      { at: 9, text: 'OLD_USER_TURN', steering: { next: 'quiet' } },
+      { at: 11, text: 'SUPERSEDED', steering: { next: 'quiet' } },
+      { at: 12, text: 'CURRENT', steering: { next: 'new_subject' } },
+    ],
+    brain2RevisionCandidates: [], brain2QuestionCandidates: [], loadedNoteContexts: [],
+  });
+  assert.match(c.formatBrain2AdvisoryContent(), /CURRENT/);
+  assert.doesNotMatch(c.formatBrain2AdvisoryContent(), /OLD_USER_TURN|SUPERSEDED|"quiet"/);
+  c.lastUserTurnActivityAt = 13;
+  assert.equal(c.formatBrain2AdvisoryContent(), '');
+});
+
+test('an empty fresh B2 note supersedes old advice without turning diagnostic quiet into direction', () => {
+  const c = load(['formatBrain2AdvisoryContent'], {
+    brain2NoteCandidates: [
+      { at: 1, text: 'OLD_WAIT_ADVICE', steering: { next: 'quiet' } },
+      { at: 2, text: '', steering: { next: 'quiet', loop: true } },
+    ],
+    brain2RevisionCandidates: [], brain2QuestionCandidates: [], loadedNoteContexts: [],
+  });
+  const text = c.formatBrain2AdvisoryContent();
+  assert.match(text, /"text":""/);
+  assert.doesNotMatch(text, /OLD_WAIT_ADVICE|"next"|"loop"|"steering"/);
+});
+
+test('idle treats historical waiting and B2 quiet as past choices, not a continuing halt', async () => {
+  const { c, packets } = idleContext({
+    formatBrain2ForInstructions: () => 'PRIVATE_ADVICE: wait for new operator input.',
+  });
+  await c.triggerIdlePonder({ statusChecked: true });
+  const text = packets[0].response.instructions;
+  assert.match(text, /relationship across the conversation/);
+  assert.match(text, /share what interests you now/);
+  assert.doesNotMatch(text, /wait_silently/);
+  assert.match(text, /Honor actual user requests for quiet/);
+  assert.ok(text.indexOf('past choices, not standing instructions') > text.indexOf('PRIVATE_ADVICE'));
+});
+
+test('shared idle does not resubmit a staged image; isolated experiments still get it', async () => {
+  const { c, packets } = idleContext({ visionImageUrl: 'data:image/png;base64,test', visionImageStaged: true });
+  await c.triggerIdlePonder({ statusChecked: true });
+  assert.equal(packets[0].response.input[0].content.length, 1);
+  c.idleSubstrateTestEnabled = () => true;
+  await c.triggerIdlePonder({ statusChecked: true });
+  assert.equal(packets[1].response.input[0].content.length, 2);
+});
+
 test('retired English semantic classifiers have no runtime definitions', () => {
   for (const name of ['chooseIdleLane', 'maybeIdleCuriosityContext', 'idleTopicCandidates',
     'focusedLoadedNoteSearchQuery', 'idleExhaustedText', 'idleClaimSignature', 'maybeArmIdleHardBrakeFromBrain2Note']) {

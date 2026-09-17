@@ -211,3 +211,30 @@ def list_note_files(instance_path: str | Path | None = None) -> list[str]:
         if path.is_file() and path.suffix.lower() in ALLOWED_EXTENSIONS:
             filenames.append(relative_note_name(path, instance_path))
     return sorted(filenames)
+
+
+def list_note_files_page(
+    instance_path: str | Path | None = None, *, query: str = "", directory: str = "",
+    offset: int = 0, limit: int = 20,
+) -> dict[str, object]:
+    if not isinstance(query, str) or not isinstance(directory, str):
+        raise ValueError("Query and directory must be strings.")
+    if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 50:
+        raise ValueError("Offset must be nonnegative and limit must be 1-50.")
+    directory = directory.replace("\\", "/").strip()
+    relative = Path(directory)
+    if (directory.startswith("/") or relative.is_absolute() or relative.drive
+            or ".." in relative.parts or ":" in directory):
+        raise ValueError("Directory must stay inside the notes folder.")
+    prefix = relative.as_posix().rstrip("/") + "/" if directory and directory != "." else ""
+
+    def key(text: str) -> str:
+        return " ".join(text.casefold().replace("_", " ").replace("-", " ").split())
+
+    needle = key(query)
+    files = [name for name in list_note_files(instance_path)
+             if (not prefix or name.casefold().startswith(prefix.casefold())) and needle in key(name)]
+    page = files[offset:offset + limit]
+    return {"files": page, "total": len(files), "offset": offset, "limit": limit,
+            "next_offset": offset + len(page) if offset + len(page) < len(files) else None,
+            "query": query, "directory": directory}

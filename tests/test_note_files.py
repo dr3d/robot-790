@@ -4,7 +4,42 @@ from pathlib import Path
 
 import pytest
 
-from robot_790d.note_files import list_note_files, read_note_file, resolve_note_path, write_note_file
+from robot_790d.note_files import (
+    list_note_files,
+    list_note_files_page,
+    read_note_file,
+    resolve_note_path,
+    write_note_file,
+)
+
+
+def test_paginated_note_lookup_is_bounded_searchable_and_keeps_the_full_shelf(tmp_path):
+    for index in range(73):
+        write_note_file(tmp_path, f"sessions/session-{index:03d}.txt", "a note")
+    write_note_file(tmp_path, "from_codex.txt", "a note")
+    write_note_file(tmp_path, "core/\u65e5\u8a18.txt", "a note")
+    first = list_note_files_page(tmp_path)
+    assert len(first["files"]) == 20
+    assert first["total"] == 75
+    assert first["next_offset"] == 20
+    second = list_note_files_page(tmp_path, offset=20)
+    assert not set(first["files"]) & set(second["files"])
+    assert len(list_note_files(tmp_path)) == 75
+    assert list_note_files_page(tmp_path, query="FROM CODEX")["files"] == ["from_codex.txt"]
+    assert list_note_files_page(tmp_path, query="\u65e5\u8a18")["files"] == ["core/\u65e5\u8a18.txt"]
+    assert list_note_files_page(tmp_path, directory="core")["total"] == 1
+    assert list_note_files_page(tmp_path, directory="sessions", offset=70)["next_offset"] is None
+    assert list_note_files_page(tmp_path, offset=999)["files"] == []
+
+
+@pytest.mark.parametrize("options", [
+    {"limit": 0}, {"limit": 51}, {"limit": True}, {"offset": -1},
+    {"directory": "../"}, {"directory": "/etc"}, {"directory": "C:/Users"},
+    {"directory": "\\\\server\\folder"}, {"query": []},
+])
+def test_note_lookup_rejects_invalid_scopes_and_page_sizes(tmp_path, options):
+    with pytest.raises(ValueError):
+        list_note_files_page(tmp_path, **options)
 
 
 def test_note_files_default_to_txt_and_append(tmp_path: Path) -> None:

@@ -24,38 +24,59 @@ IDLE_TOOL_BLOCKED = "robot790_idle_tool_blocked"
 
 
 class _PrivateAdvisoryTextFilter:
-    """Hold only a possible marker prefix; stop a private dump at its marker."""
+    """Separate explicit private protocol from public text, independent of language."""
 
-    markers = ("[b2 advisory]", "[sts runtime]", "[sts idle continuation]")
+    markers = (
+        "[b2 advisory]", "[sts runtime]", "[sts idle continuation]",
+        "[sts tool continuation]", "[sts response recovery]", "[sts sensing image]",
+    )
 
     def __init__(self) -> None:
         self.pending = ""
         self.blocked = False
+        self.thinking_depth = 0
+        self.suppressed = False
 
     def feed(self, text: str) -> str:
         if self.blocked:
             return ""
         self.pending += text
-        lowered = self.pending.lower()
-        matches = [lowered.find(marker) for marker in self.markers if marker in lowered]
-        start = min(matches, default=-1)
-        if start >= 0:
-            visible = self.pending[:start]
-            self.pending = ""
-            self.blocked = True
-            return visible
-        # A marker can straddle any provider token boundary.
-        held = 0
-        for length in range(min(len(lowered), max(map(len, self.markers)) - 1), 0, -1):
-            if any(length < len(marker) and lowered.endswith(marker[:length]) for marker in self.markers):
-                held = length
-                break
-        end = len(self.pending) - held
-        visible, self.pending = self.pending[:end], self.pending[end:]
-        return visible
+        visible = []
+        while self.pending:
+            lowered = self.pending.lower()
+            markers = ("<think>", "</think>") + (() if self.thinking_depth else self.markers)
+            matches = [(lowered.find(marker), marker) for marker in markers if marker in lowered]
+            if matches:
+                start, marker = min(matches)
+                if not self.thinking_depth:
+                    visible.append(self.pending[:start])
+                self.pending = self.pending[start + len(marker):]
+                self.suppressed = True
+                if marker == "<think>":
+                    self.thinking_depth += 1
+                elif marker == "</think>":
+                    self.thinking_depth = max(0, self.thinking_depth - 1)
+                else:
+                    self.pending = ""
+                    self.blocked = True
+                    break
+                continue
+            # Retain only an incomplete protocol token, never a whole thought.
+            held = 0
+            for length in range(min(len(lowered), max(map(len, markers)) - 1), 0, -1):
+                if any(length < len(marker) and lowered.endswith(marker[:length]) for marker in markers):
+                    held = length
+                    break
+            end = len(self.pending) - held
+            if not self.thinking_depth:
+                visible.append(self.pending[:end])
+            self.pending = self.pending[end:]
+            break
+        return "".join(visible)
 
     def finish(self) -> str:
-        visible, self.pending = self.pending, ""
+        visible = "" if self.thinking_depth or self.blocked else self.pending
+        self.pending = ""
         return visible
 
 
@@ -87,7 +108,7 @@ def _filter_private_advisory_events(events: Iterator[Any]) -> Iterator[Any]:
                 tail = history_guard.finish()
                 if tail and event.content:
                     content.append(event.content[-1].model_copy(update={"text": tail}))
-                history_blocked = history_blocked or history_guard.blocked
+                history_blocked = history_blocked or history_guard.suppressed
                 if content:
                     yield event.model_copy(update={"content": content})
             else:
@@ -97,12 +118,12 @@ def _filter_private_advisory_events(events: Iterator[Any]) -> Iterator[Any]:
         if tail:
             yield TextDelta(text=tail)
             public_output = public_output or bool(tail.strip())
-        if (guard.blocked or history_blocked) and not public_output:
+        if (guard.suppressed or history_blocked) and not public_output:
             # The existing failure path announces even an implicit response and closes it.
             raise RuntimeError(PRIVATE_OUTPUT_SUPPRESSED)
     finally:
-        if guard.blocked or history_blocked:
-            logger.warning("Suppressed private controller output from its marker to end of response")
+        if guard.suppressed or history_blocked:
+            logger.warning("Suppressed private controller output or explicit thinking markup before speech/history")
         close = getattr(events, "close", None)
         if callable(close):
             close()
@@ -269,6 +290,22 @@ def apply_unbounded_live_chat_patch() -> None:
 
     Chat.trim_if_needed = trim
     Chat._robot_790_zero_size_patch = True
+
+
+def apply_visual_history_patch() -> None:
+    """Preserve consumed images in history instead of mutating a cached prefix."""
+    from speech_to_speech.LLM.chat import Chat
+
+    if getattr(Chat, "_robot_790_visual_history_patch", False):
+        return
+
+    def retain_images(self: Any, only_ids: set[str] | None = None) -> None:
+        # Images remain historical evidence. Current-eye receipts determine which
+        # one is active; normal session reset/explicit history removal still work.
+        return None
+
+    Chat.strip_images = retain_images
+    Chat._robot_790_visual_history_patch = True
 
 
 def _extra_value(model: Any, name: str) -> Any:
@@ -767,6 +804,7 @@ def main() -> None:
     apply_private_advisory_output_patch()
     apply_interruptible_chat_generation_patch()
     apply_unbounded_live_chat_patch()
+    apply_visual_history_patch()
     apply_parakeet_voice_shape_patch()
     apply_visible_transcript_voice_shape_filter_patch()
     from speech_to_speech.s2s_pipeline import main as speech_to_speech_main

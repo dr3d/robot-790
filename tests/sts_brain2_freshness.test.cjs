@@ -98,6 +98,13 @@ test('image tool receipts change B2 evidence even when the dialogue did not chan
   assert.equal(next.runtime.sensing_eye_image, null);
 });
 
+test('B2 evidence has no persistent B1 silent-wait state', () => {
+  const c = evidenceContext();
+  const before = c.brain2EvidenceSnapshot();
+  assert.equal(before.runtime.b1_silent_wait, undefined);
+  assert.equal(c.brain2EvidenceSnapshot().fingerprint, before.fingerprint);
+});
+
 test('attention reaches B2 as a coarse state, not a ticking clock that retriggers every poll', () => {
   let phase = 'engaged';
   const context = evidenceContext([], {
@@ -274,7 +281,7 @@ test('acknowledgments fade without weakening actual requests or suppressing thei
   }
 });
 
-test('structured steering is advisory data rather than imposed rhetorical pressure', () => {
+test('structured steering stays diagnostic; only B2 prose suggestions reach B1', () => {
   const c = load(['brain2LoopGuardText', 'recentBrain2LoopGuardCount', 'formatBrain2AdvisoryContent'], {
     brain2NoteCandidates: [], brain2RevisionCandidates: [], brain2QuestionCandidates: [],
     lastUserTurnActivityAt: 0, brain2LoopPressureInstruction: () => '',
@@ -284,7 +291,8 @@ test('structured steering is advisory data rather than imposed rhetorical pressu
     steering: { loop: true, unsupported_claim: true, topic: 'sounds', next: 'new_subject' },
   });
   assert.equal(c.recentBrain2LoopGuardCount(), 2);
-  assert.match(c.formatBrain2AdvisoryContent(), /"loop":true/);
+  assert.match(c.formatBrain2AdvisoryContent(), /Un autre sujet/);
+  assert.doesNotMatch(c.formatBrain2AdvisoryContent(), /"loop"|"next"|"steering"|"unsupported_claim"/);
   assert.match(c.formatBrain2AdvisoryContent(), /not commands/);
   c.brain2NoteCandidates.push({ text: 'stop repeat same receipt', at: 3, b1OutputId: 'a3',
     steering: { loop: false, unsupported_claim: false, topic: 'new discovery', next: 'continue' } });

@@ -512,7 +512,10 @@ def test_text_file_tools_use_instance_notes_folder(tmp_path, monkeypatch) -> Non
         "filename": "session_summary.txt",
         "content": "Robot 790 is awake.",
     }
-    assert listed == {"status": "ok", "tool": "list_text_files", "files": ["session_summary.txt"]}
+    assert listed["status"] == "ok"
+    assert listed["tool"] == "list_text_files"
+    assert listed["files"] == ["session_summary.txt"]
+    assert listed["next_offset"] is None
 
 
 def test_text_file_tool_names_the_missing_note(tmp_path, monkeypatch) -> None:

@@ -1268,6 +1268,8 @@ test('a deliberate quiet Brain2 result succeeds without speech, advisories, or f
 
 // Exercise the shipped functions without starting a socket, microphone, or device.
 function loadFunctions(names, globals, source = page) {
+  globals.toolScopeDenials ??= new Map();
+  globals.toolFollowupTerminal ??= false;
   globals.runtimeConfig ??= {};
   globals.imageTaskReceipt ??= null;
   globals.handledFunctionCallIds ??= new Set();
@@ -1286,6 +1288,7 @@ function loadFunctions(names, globals, source = page) {
     resets: 0, disarms: 0, history: [],
     reset() { this.resets++; }, disarm() { this.disarms++; },
     proposalContext() { return null; },
+    authorized() { return false; },
     snapshot() { return { run_id: 'test-idle-art', jobs: [] }; }
   };
   globals.idleArtEnabled ??= { checked: false };

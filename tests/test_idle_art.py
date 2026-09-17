@@ -66,6 +66,22 @@ def test_failure_is_not_retried_but_does_not_block_new_ideas(tmp_path):
         service.render(job(grant))
 
 
+def test_idle_render_respects_requested_dimensions_and_rejects_invalid_size(tmp_path):
+    calls = []
+    def render(*args, **kwargs):
+        calls.append(kwargs)
+        return {"status": "ok", "filename": "art.png"}
+    service = IdleArtService(tmp_path, render)
+    grant = arm(service)
+    with pytest.raises(ValueError):
+        service.render({**job(grant), "size": "99999x99999"})
+    assert not calls
+    service.render({**job(grant), "size": "1536x1024"})
+    assert calls[0]["size"] == "1536x1024"
+    assert service.render(job(grant, {"prompt": "x" * 1500, "title": "Long B1 prompt"}))["status"] == "ok"
+    assert len(calls) == 2
+
+
 def test_concurrent_requests_and_revoke_inflight(tmp_path):
     started, finish = threading.Event(), threading.Event()
 
