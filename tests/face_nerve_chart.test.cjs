@@ -7,11 +7,12 @@ const page = fs.readFileSync(path.join(__dirname, '../web/face-sim/index.html'),
 const start = page.indexOf('    function drawGpuStrip(');
 const end = page.indexOf('    function fitCanvasText(', start);
 
-test('browser face draws one full-width nerve trace without telemetry text or fill', () => {
+test('browser face draws a filled full-width nerve trace without telemetry labels', () => {
   for (const samples of [[], [40], [0, 100, 20]]) {
-    const points = [], labels = [], strokes = [];
+    const points = [], labels = [], strokes = [], fills = [];
     const ctx = { save() {}, restore() {}, beginPath() {},
       moveTo: (x, y) => points.push([x, y]), lineTo: (x, y) => points.push([x, y]),
+      closePath() {}, fill() { fills.push(this.fillStyle); },
       stroke() { strokes.push(this.strokeStyle); }, fillText: text => labels.push(text) };
     const context = vm.createContext({ ctx, faceLayout: { width: 768 }, gpuUtilHistory: samples,
       gpuHistoryValue: value => value, boundedPercent: value => Math.min(100, Math.max(0, value)),
@@ -20,7 +21,8 @@ test('browser face draws one full-width nerve trace without telemetry text or fi
     assert.ok(start > 0 && end > start);
     vm.runInContext(page.slice(start, end), context);
     context.drawGpuStrip(0);
-    assert.deepEqual(strokes, ['#e05cff']);
+    assert.deepEqual(strokes, ['#d85df1']);
+    assert.deepEqual(fills, ['rgba(100, 12, 116, 0.74)']);
     assert.deepEqual(labels, ['tools: idle']);
     assert.equal(points[0][0], 24);
     assert.equal(points.at(-1)[0], 744);

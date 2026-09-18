@@ -895,7 +895,28 @@
         x: chartX + (index / lastIndex) * chartW,
         y: chartY + chartH - (boundedPercent(value) ?? 0) / 100 * chartH
       }));
-      ctx.strokeStyle = ok ? "#e05cff" : "rgba(224, 92, 255, 0.45)";
+      const segments = points.slice(1).map((point, index) => ({
+        from: points[index], to: point,
+        tts: Boolean(gpuUtilHistory[Math.min(index + 1, gpuUtilHistory.length - 1)]?.tts)
+      }));
+      // Separate areas keep the speech tint amber instead of mixing it with purple.
+      for (const speech of [false, true]) {
+        const areas = segments.filter(segment => segment.tts === speech);
+        if (!areas.length) continue;
+        ctx.fillStyle = speech
+          ? (ok ? "rgba(255, 181, 58, 0.24)" : "rgba(255, 181, 58, 0.10)")
+          : (ok ? "rgba(100, 12, 116, 0.74)" : "rgba(100, 12, 116, 0.25)");
+        ctx.beginPath();
+        areas.forEach(({ from, to }) => {
+          ctx.moveTo(from.x, chartY + chartH);
+          ctx.lineTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.lineTo(to.x, chartY + chartH);
+          ctx.closePath();
+        });
+        ctx.fill();
+      }
+      ctx.strokeStyle = ok ? "#d85df1" : "rgba(216, 93, 241, 0.45)";
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       points.forEach((point, index) => {
@@ -904,14 +925,13 @@
       });
       ctx.stroke();
 
-      const ttsSegments = points.slice(1).map((point, index) => ({ point, index }))
-        .filter(({ index }) => gpuUtilHistory[Math.min(index + 1, gpuUtilHistory.length - 1)]?.tts);
+      const ttsSegments = segments.filter(segment => segment.tts);
       if (ttsSegments.length) {
         ctx.strokeStyle = ok ? "#ffc56e" : "rgba(255, 197, 110, 0.45)";
         ctx.beginPath();
-        ttsSegments.forEach(({ point, index }) => {
-          ctx.moveTo(points[index].x, points[index].y);
-          ctx.lineTo(point.x, point.y);
+        ttsSegments.forEach(({ from, to }) => {
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
         });
         ctx.stroke();
       }

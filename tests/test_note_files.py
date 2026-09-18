@@ -42,6 +42,47 @@ def test_note_lookup_rejects_invalid_scopes_and_page_sizes(tmp_path, options):
         list_note_files_page(tmp_path, **options)
 
 
+@pytest.mark.parametrize("query,directory", [
+    ("setup cards companion robot", ""),
+    ("setup-cards/companion-robot", ""),
+    ("setup_cards\\companion_robot", ""),
+    ("companion robot", "setup cards"),
+    ("COMPANION ROBOT", "SETUP_CARDS/"),
+    ("companion robot", "./setup-cards"),
+])
+def test_note_lookup_matches_spoken_path_separators(tmp_path, query, directory):
+    filename = "setup-cards/companion-robot.txt"
+    write_note_file(tmp_path, filename, "companion")
+    write_note_file(tmp_path, "other/companion-robot.txt", "other")
+    result = list_note_files_page(tmp_path, query=query, directory=directory)
+    assert result["files"] == [filename]
+    assert result["total"] == 1
+    assert result["query"] == query
+
+
+def test_note_directory_matching_preserves_boundaries_and_returns_ambiguity(tmp_path):
+    for filename in ["setup-cards/first.txt", "setup_cards/second.txt",
+                     "setup-cards/nested/third.txt", "setup-cards-old/fourth.txt",
+                     "setup/cards/fifth.txt", "setup-cards.txt"]:
+        write_note_file(tmp_path, filename, "note")
+    assert list_note_files_page(tmp_path, directory="setup cards")["files"] == [
+        "setup-cards/first.txt", "setup-cards/nested/third.txt", "setup_cards/second.txt",
+    ]
+    assert list_note_files_page(tmp_path, directory="setup\\cards")["files"] == [
+        "setup/cards/fifth.txt",
+    ]
+    assert list_note_files_page(tmp_path, directory="setup cards/nested")["files"] == [
+        "setup-cards/nested/third.txt",
+    ]
+
+
+def test_spoken_path_lookup_preserves_non_ascii_names(tmp_path):
+    filename = "\u65e5\u8a18-\u30ab\u30fc\u30c9/\u4eca\u65e5_\u306e\u8a71.txt"
+    write_note_file(tmp_path, filename, "note")
+    assert list_note_files_page(tmp_path, query="\u65e5\u8a18 \u30ab\u30fc\u30c9 \u4eca\u65e5 \u306e\u8a71")["files"] == [filename]
+    assert list_note_files_page(tmp_path, directory="\u65e5\u8a18 \u30ab\u30fc\u30c9")["files"] == [filename]
+
+
 def test_note_files_default_to_txt_and_append(tmp_path: Path) -> None:
     written = write_note_file(tmp_path, "session_summary", "First line.")
     appended = write_note_file(tmp_path, "session_summary", "Second line.", mode="append")

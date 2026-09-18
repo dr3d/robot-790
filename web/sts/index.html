@@ -606,6 +606,9 @@
     .gpu-area {
       fill: rgba(100, 12, 116, 0.74);
     }
+    .gpu-tts-area {
+      fill: rgba(255, 181, 58, 0.24);
+    }
     .gpu-trace {
       fill: none;
       stroke: #d85df1;
@@ -2845,7 +2848,7 @@
               <label class="toggle-row"><input id="llmCastMediaTools" type="checkbox" checked> LLM cast media</label>
               <label class="toggle-row"><input id="llmNoteFileTools" type="checkbox" checked> LLM local files</label>
               <label class="toggle-row"><input id="llmImageTools" type="checkbox" checked> LLM image generation</label>
-              <label class="toggle-row" title="Allow paid autonomous image generation and eye staging while connected. No picture quota; one render at a time. Disconnect clears permission."><input id="idleArtEnabled" type="checkbox"> Idle art</label>
+              <label class="toggle-row" title="Allow paid autonomous image generation and eye staging while connected. No picture quota; one render at a time. Remembers your choice across connections."><input id="idleArtEnabled" type="checkbox"> Idle art</label>
               <label class="toggle-row"><input id="llmSmartHomeTools" type="checkbox" checked> LLM smart home</label>
             </div>
           </div>
@@ -3672,6 +3675,7 @@
     ]);
     const imageModelStorageKey = "robot790.imageModel.v1";
     const imageCostStorageKey = "robot790.imageCost.v1";
+    const idleArtEnabledStorageKey = "robot790.idleArtEnabled.v1";
     const operatorDefaultsStorageKey = "robot790.operatorDefaults.v1";
     const operatorDefaultsVersion = "nvfp4-return-20260903b";
     const operatorCommandSeqStorageKey = "robot790.operatorCommandSeq.v1";
@@ -14944,14 +14948,23 @@
         const y = 100 - (percent / 100) * 100;
         return `${x.toFixed(2)},${y.toFixed(2)}`;
       });
-      const areaPath = `M 0,100 L ${points.join(" L ")} L 100,100 Z`;
-      const ttsPath = points.slice(1).map((point, index) =>
-        history[Math.min(index + 1, history.length - 1)]?.tts
-          ? `M ${points[index]} L ${point}` : "").join(" ");
+      const segments = points.slice(1).map((point, index) => ({
+        from: points[index], to: point,
+        left: ((index / lastIndex) * 100).toFixed(2),
+        right: (((index + 1) / lastIndex) * 100).toFixed(2),
+        tts: Boolean(history[Math.min(index + 1, history.length - 1)]?.tts)
+      }));
+      const segmentArea = segment =>
+        `M ${segment.left},100 L ${segment.from} L ${segment.to} L ${segment.right},100 Z`;
+      const areaPath = segments.filter(segment => !segment.tts).map(segmentArea).join(" ");
+      const ttsAreaPath = segments.filter(segment => segment.tts).map(segmentArea).join(" ");
+      const ttsPath = segments.filter(segment => segment.tts)
+        .map(segment => `M ${segment.from} L ${segment.to}`).join(" ");
       container.dataset.scale = "100%";
       container.innerHTML = `
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
           <path class="gpu-area" d="${areaPath}"></path>
+          <path class="gpu-tts-area" d="${ttsAreaPath}"></path>
           <polyline class="gpu-trace" points="${points.join(" ")}"></polyline>
           <path class="gpu-trace gpu-tts-trace" style="stroke: #ffc56e" d="${ttsPath}"></path>
         </svg>
@@ -16632,7 +16645,6 @@
 
     function haltRealtimeActivity(reason = "runtime halt") {
       idleArt.disarm();
-      idleArtEnabled.checked = false;
       pendingSessionMapMove = null;
       if (toolFollowupDrainTimer) clearTimeout(toolFollowupDrainTimer);
       toolFollowupDrainTimer = null;
@@ -19855,7 +19867,6 @@
       toolScopeDenials.clear();
       toolFollowupTerminal = false;
       idleArt.reset();
-      idleArtEnabled.checked = false;
       suppressedResponseIds.clear();
       unidentifiedOutputSuppressed = false;
       toolContinuationRounds = 0;
@@ -20068,7 +20079,6 @@
         await ensurePlayback();
         socket = new WebSocket(serverUrl.value.trim());
         idleArt.reset();
-        idleArtEnabled.checked = false;
         realtimeStopRequested = false;
         continuitySaveHalted = false;
         realtimeSessionGeneration += 1;
@@ -20085,6 +20095,7 @@
         if (!activeRealtimeSession(socket, sessionGeneration)) return;
         beginRealtimeSession();
         setState("Connected", "ok");
+        void syncIdleArtPermission();
         setConnectionButtonsDisabled(true);
         disconnectButton.disabled = false;
         startMicButton.disabled = false;
@@ -21272,26 +21283,47 @@
     });
     setInterval(() => { void idleArt.tick().catch(error => log(events, `idle art controller: ${error.message}`)); }, 2000);
     window.addEventListener("pagehide", () => idleArt.disarm());
-    idleArtEnabled.addEventListener("change", async () => {
-      if (!idleArtEnabled.checked) { idleArt.disarm(); return; }
+    let idleArtArmingEpoch = null;
+
+    function loadIdleArtPref() {
+      idleArtEnabled.checked = localStorage.getItem(idleArtEnabledStorageKey) === "true";
+    }
+
+    function handleIdleArtPreferenceChange() {
+      localStorage.setItem(idleArtEnabledStorageKey, String(idleArtEnabled.checked));
+      return syncIdleArtPermission();
+    }
+
+    async function syncIdleArtPermission() {
+      // The preference persists; each connection still needs its own revocable grant.
+      if (!idleArtEnabled.checked || !llmImageTools.checked || !realtimeConnected() || realtimeStopRequested) {
+        idleArt.disarm();
+        return;
+      }
+      if (idleArt.grant || idleArtArmingEpoch === idleArt.epoch) return;
+      const pending = idleArt.arm({ model: currentImageModel(), quality: currentImageQuality() });
+      const epoch = idleArt.epoch;
+      idleArtArmingEpoch = epoch;
       try {
-        if (!llmImageTools.checked) throw new Error("Enable image tools first.");
-        const armed = await idleArt.arm({ model: currentImageModel(), quality: currentImageQuality() });
+        const armed = await pending;
         if (armed) {
           brain2LastEvidence = null;
           log(events, "idle art armed: autonomous rendering, no picture quota, one render at a time");
           scheduleBrain2Mull();
         }
       } catch (error) {
-        idleArtEnabled.checked = false;
-        log(events, `idle art not armed: ${error.message}`);
+        if (epoch === idleArt.epoch) {
+          idleArtEnabled.title = `Idle art not armed: ${error.message}`;
+          log(events, `idle art not armed: ${error.message}`);
+        }
+      } finally {
+        if (idleArtArmingEpoch === epoch) idleArtArmingEpoch = null;
       }
-    });
+    }
+
+    idleArtEnabled.addEventListener("change", handleIdleArtPreferenceChange);
     llmImageTools.addEventListener("change", () => {
-      if (!llmImageTools.checked) {
-        idleArtEnabled.checked = false;
-        idleArt.disarm();
-      }
+      void syncIdleArtPermission();
       recordToolSwitchChange(`image ${llmImageTools.checked ? "on" : "off"}`);
     });
     llmCastMediaTools.addEventListener("change", () => recordToolSwitchChange(`cast media ${llmCastMediaTools.checked ? "on" : "off"}`));
@@ -21862,6 +21894,7 @@
     loadEricMemoriesPref();
     loadLabGoalOneShotPref();
     loadImageSettings();
+    loadIdleArtPref();
     loadToolPrefs();
     loadRunPreset();
     loadLogDisplayControls();

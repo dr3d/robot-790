@@ -226,14 +226,15 @@ def list_note_files_page(
     if (directory.startswith("/") or relative.is_absolute() or relative.drive
             or ".." in relative.parts or ":" in directory):
         raise ValueError("Directory must stay inside the notes folder.")
-    prefix = relative.as_posix().rstrip("/") + "/" if directory and directory != "." else ""
-
     def key(text: str) -> str:
-        return " ".join(text.casefold().replace("_", " ").replace("-", " ").split())
+        return " ".join(text.casefold().translate(str.maketrans("_-/\\", "    ")).split())
 
+    # Match spoken separators, but retain folder boundaries for directory scope.
+    directory_key = tuple(key(part) for part in relative.parts)
     needle = key(query)
     files = [name for name in list_note_files(instance_path)
-             if (not prefix or name.casefold().startswith(prefix.casefold())) and needle in key(name)]
+             if tuple(key(part) for part in Path(name).parts[:-1])[:len(directory_key)] == directory_key
+             and needle in key(name)]
     page = files[offset:offset + limit]
     return {"files": page, "total": len(files), "offset": offset, "limit": limit,
             "next_offset": offset + len(page) if offset + len(page) < len(files) else None,

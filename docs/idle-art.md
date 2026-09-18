@@ -15,23 +15,28 @@ After loading the updated page/server, connect and read
 `setup-cards/willing-artist.txt`. Other setup cards can supply subject matter.
 Enable image tools, then check **Idle art** in tool settings. B2 is optional;
 enable it for the additional proposal route.
-The checkbox authorizes generation AND eye staging for this connection only.
-It is not persisted, exposed to Eric's UI-control verb, or restored from notes.
+The checkbox authorizes generation AND eye staging. Its on/off choice persists
+in this browser across disconnects and page refreshes, defaulting off until the
+operator enables it. Each connection obtains a fresh session-scoped grant when
+image tools are enabled. The preference is not exposed to Eric's UI-control verb
+or restored from notes. Disabling image tools suspends idle art without erasing
+the choice; enabling them again restores authorization while connected.
 Discuss something visually interesting, then leave room for him to choose.
 
 There is no picture quota: Scott explicitly prefers creative freedom and will
 turn it down if needed. There is also no promise that Eric will propose art.
 One render runs at a time, and an identical proposal/request is not charged twice.
 Failures/timeouts are not automatically retried; a genuinely new idea may still
-be proposed. Another connection starts with permission off. A provider request
+be proposed. Disconnect revokes the current grant, not the saved preference. A provider request
 already sent may finish after cancellation and may still be charged.
 
 For queued B2 proposals, the default minimum quiet is 90 seconds, configured as
 `idle_timing.idle_art_quiet_s` in `config/runtime.json` (10-3600 seconds).
 Lab speed does not compress this timer. New user activity invalidates queued
 proposals; busy speech/tool work delays dispatch. Proposals expire after 15 minutes.
-One queued job is allowed at a time. Permission lasts until disabled, disconnect,
-or page-server restart. Ordinary image settings at authorization determine model
+One queued job is allowed at a time. The session grant lasts until disabled,
+disconnect, or page-server restart. Reconnect obtains a new grant from the saved
+preference; old queued work never carries over. Ordinary image settings at authorization determine model
 and quality; the LLM cannot pick a different model/provider. There is no extra
 inter-picture cooldown; the quiet timer only protects active conversation.
 B1's tool choices occur within its existing scheduled idle opportunity, not a
@@ -91,5 +96,7 @@ unchanged, and the note cannot authorize spending on its own.
 
 Unit tests use fake renderers: consent, revoke, serialization and idempotency under
 concurrency, restart durability, failures, opt-in schema, stale queues, late results,
-and protected eye delivery. No paid autonomous render was made during development.
+and protected eye delivery. Preference tests cover refresh/reconnect, explicit off,
+image-tools suspension, authorization failure and revocation while arming.
+No paid autonomous render was made during development.
 An actual connected artistic trial is still needed to evaluate taste and timing.

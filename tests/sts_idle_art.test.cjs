@@ -1,6 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Controller } = require('../web/sts/idle-art.js');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 
 function setup() {
   const state = { connected: true, eligible: true, blocked: false, quietMs: 100000,
@@ -158,4 +161,121 @@ test('runtime receipts are bounded without losing full session history', async (
   assert.equal(c.snapshot().jobs.length, 20);
   assert.equal(c.snapshot(6).attempts, 20);
   assert.equal(JSON.stringify(c.snapshot()).includes('private long prompt'), false);
+});
+
+function preferenceUi(storage = new Map()) {
+  const fixture = setup();
+  const c = vm.createContext({
+    idleArt: fixture.controller, idleArtEnabled: { checked: false },
+    llmImageTools: { checked: true }, realtimeStopRequested: false,
+    realtimeConnected: () => fixture.state.connected,
+    idleArtEnabledStorageKey: 'robot790.idleArtEnabled.v1', idleArtArmingEpoch: null,
+    localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+    currentImageModel: () => 'test-model', currentImageQuality: () => 'low',
+    brain2LastEvidence: 'old', scheduleBrain2Mull: () => {}, log: () => {}, events: {}
+  });
+  for (const name of ['loadIdleArtPref', 'handleIdleArtPreferenceChange', 'syncIdleArtPermission']) {
+    const start = page.indexOf(`    ${name === 'syncIdleArtPermission' ? 'async ' : ''}function ${name}(`);
+    assert.notEqual(start, -1);
+    const end = page.indexOf('\n    }\n', start);
+    vm.runInContext(page.slice(start, end + 6), c);
+  }
+  fixture.controller.context = () => ({ ...fixture.state,
+    connected: fixture.state.connected && !c.realtimeStopRequested,
+    eligible: c.idleArtEnabled.checked && c.llmImageTools.checked });
+  return { ...fixture, c, storage };
+}
+
+test('idle-art choice defaults off and survives refresh, disconnect and reconnect', async () => {
+  const { c, controller, state, calls, storage } = preferenceUi();
+  c.loadIdleArtPref();
+  assert.equal(c.idleArtEnabled.checked, false);
+  state.connected = false;
+  c.idleArtEnabled.checked = true;
+  await c.handleIdleArtPreferenceChange();
+  assert.equal(calls.length, 0, 'disconnected preference does not authorize work');
+  const refreshed = preferenceUi(storage);
+  refreshed.c.loadIdleArtPref();
+  assert.equal(refreshed.c.idleArtEnabled.checked, true);
+  state.connected = true;
+  await c.syncIdleArtPermission();
+  const firstRun = controller.runId;
+  assert.equal(controller.authorized(), true);
+  state.connected = false;
+  controller.disarm();
+  controller.reset();
+  assert.equal(c.idleArtEnabled.checked, true);
+  assert.equal(controller.grant, null);
+  state.connected = true;
+  await c.syncIdleArtPermission();
+  assert.notEqual(controller.runId, firstRun);
+  assert.equal(calls.filter(x => x.action === 'arm').length, 2);
+  assert.equal(calls.filter(x => x.action === 'render').length, 0);
+  c.idleArtEnabled.checked = false;
+  await c.handleIdleArtPreferenceChange();
+  assert.equal(controller.grant, null);
+  const disabled = preferenceUi(storage);
+  disabled.c.loadIdleArtPref();
+  assert.equal(disabled.c.idleArtEnabled.checked, false);
+});
+
+test('image-tools toggle suspends idle art without erasing preference', async () => {
+  const { c, controller, calls } = preferenceUi();
+  c.idleArtEnabled.checked = true;
+  c.llmImageTools.checked = false;
+  await c.handleIdleArtPreferenceChange();
+  assert.equal(calls.length, 0);
+  c.llmImageTools.checked = true;
+  await c.syncIdleArtPermission();
+  assert.equal(controller.authorized(), true);
+  c.llmImageTools.checked = false;
+  await c.syncIdleArtPermission();
+  assert.equal(controller.grant, null);
+  assert.equal(c.idleArtEnabled.checked, true);
+  c.llmImageTools.checked = true;
+  await c.syncIdleArtPermission();
+  assert.equal(controller.authorized(), true);
+  c.realtimeStopRequested = true;
+  await c.syncIdleArtPermission();
+  assert.equal(controller.grant, null);
+});
+
+test('pending preference authorization is single-flight and revocable', async () => {
+  const { c, controller, calls } = preferenceUi();
+  const originalApi = controller.api;
+  let finish;
+  controller.api = (action, payload) => action === 'arm'
+    ? new Promise(resolve => { finish = () => resolve(originalApi(action, payload)); })
+    : originalApi(action, payload);
+  c.idleArtEnabled.checked = true;
+  const pending = c.handleIdleArtPreferenceChange();
+  const epoch = controller.epoch;
+  await c.syncIdleArtPermission();
+  assert.equal(controller.epoch, epoch);
+  c.idleArtEnabled.checked = false;
+  await c.handleIdleArtPreferenceChange();
+  finish();
+  await pending;
+  assert.equal(controller.grant, null);
+  assert.equal(calls.at(-1).action, 'revoke');
+});
+
+test('authorization failure preserves the preference but never grants work', async () => {
+  const { c, controller, storage } = preferenceUi();
+  controller.api = async () => { throw new Error('offline'); };
+  c.idleArtEnabled.checked = true;
+  await c.handleIdleArtPreferenceChange();
+  assert.equal(controller.grant, null);
+  assert.equal(c.idleArtEnabled.checked, true);
+  assert.equal(storage.get(c.idleArtEnabledStorageKey), 'true');
+  assert.match(c.idleArtEnabled.title, /not armed: offline/);
+});
+
+test('page wiring restores authorization on connect and never clears the saved choice on halt', () => {
+  assert.match(page, /setState\("Connected", "ok"\);\s+void syncIdleArtPermission\(\);/);
+  assert.match(page, /loadImageSettings\(\);\s+loadIdleArtPref\(\);/);
+  assert.match(page, /idleArtEnabled.addEventListener\("change", handleIdleArtPreferenceChange\)/);
+  assert.doesNotMatch(page, /idleArtEnabled.checked = false/);
+  assert.match(page, /function haltRealtimeActivity[^]*?idleArt.disarm\(\);/);
+  assert.match(page, /window.addEventListener\("pagehide", \(\) => idleArt.disarm\(\)\)/);
 });

@@ -6,6 +6,34 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Idle Art Preference
+
+September 18: Idle art now retains the operator's on/off choice in browser
+storage, like other tool preferences. Disconnect still revokes its session grant
+and discards queued work; reconnect obtains a fresh grant if selected and image
+tools are enabled. Image tools can suspend it without erasing the preference.
+Default remains off until selected. No quota, timing or personality changes.
+
+Verification: 449 Node tests and seven Python idle-art tests pass, including
+refresh/reconnect persistence, explicit off, pending-authorization cancellation,
+late-result isolation and failed authorization. No paid images were generated.
+Refresh STS after ending the active run to load this client-only change; no
+server restart is required.
+
+### Spoken Note Lookup
+
+September 18: the companion-card trial exposed two empty shelf searches for an
+existing file: query `setup cards companion robot`, and directory `setup cards`
+with query `companion robot`. Paged listing now normalizes spaces, hyphens,
+underscores and path separators for search while preserving directory-component
+boundaries. Results retain canonical filenames; ambiguous matches remain listed,
+not silently chosen. No English vocabulary mapping or prompt changes.
+
+Eight regression cases cover the failed queries, nested scopes, ambiguity and
+non-English names; 62 note-file/routing tests pass. Eric independently recovered
+and read the exact card during the live run. The fix is saved but awaits a page-
+server restart; the active conversation was deliberately left undisturbed.
+
 ### GPU Speech Tint
 
 STS and Browser Face retain their purple total-load trace, with amber segments
@@ -20,6 +48,13 @@ No realtime/TTS pipeline or prompt changes. Both UI servers were restarted;
 refresh both pages to load the renderer changes. Verification: 19 Python and 125
 JavaScript tests, synthetic-history Playwright screenshots in desktop/narrow
 windows, Browser Face amber-pixel checks, and both live telemetry endpoints.
+
+September 18 visual refinement: both graphs now fill to the baseline in matching
+purple/amber colors. Speech-active intervals have their own amber area rather
+than tinting over purple; amber fill opacity is softened to 24% on both surfaces
+(10% for stale Browser Face samples). Browser Face remains free of telemetry labels. Activity
+detection and the realtime/TTS pipeline are unchanged. Refresh both pages to load
+the updated renderers; no model or realtime-server restart is needed.
 
 ### Companion Alignment
 
