@@ -13,6 +13,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 from urllib.parse import urlparse
+from uuid import uuid4
 
 _VOICE_SHAPE_PREFIX = "[voice-shape:"
 _LLM_WIRE_CAPTURE_LOCK = Lock()
@@ -149,7 +150,7 @@ def apply_private_advisory_output_patch() -> None:
 
 
 def apply_interruptible_chat_generation_patch() -> None:
-    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta, ToolCall
+    from speech_to_speech.LLM.base_openai_compatible_language_model import TextDelta, ToolCall, Usage
     from speech_to_speech.LLM.chat import add_supported_item, make_user_message
     from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler
     from speech_to_speech.pipeline.messages import EndOfResponse
@@ -205,11 +206,21 @@ def apply_interruptible_chat_generation_patch() -> None:
         public_text_seen = False
         original_tool_mode = False
 
-        def admitted_events(response: Any) -> Iterator[Any]:
+        def admitted_events(response: Any, request_id: str) -> Iterator[Any]:
             nonlocal public_text_seen
             events = iterate(response)
             try:
                 for event in events:
+                    if isinstance(event, Usage) and not cancelled():
+                        logger.info("B1 request usage: %s", json.dumps({
+                            "request_id": request_id,
+                            "turn_id": turn.turn_id,
+                            "turn_revision": turn.turn_revision,
+                            "generation": turn.gen,
+                            "conversation": getattr(turn.response, "conversation", None) or "default",
+                            "input_tokens": event.input_tokens,
+                            "output_tokens": event.output_tokens,
+                        }))
                     if no_tools and isinstance(event, ToolCall):
                         # Enforce the original permission before history or execution sees a call.
                         raise RuntimeError(tool_blocked_marker)
@@ -226,12 +237,16 @@ def apply_interruptible_chat_generation_patch() -> None:
                     or not self._turn_is_latest(turn.turn_id, turn.turn_revision))
 
         def start(api_input: Any, options: dict[str, Any]) -> CancellableProviderEvents:
+            request_id = uuid4().hex
             wire_options = dict(options)
             if stable_tool_prefix and not original_tool_mode:
                 # LM Studio omits schemas with choice=none, changing the history's prefix.
                 # Keep the rendered catalogue; admission above still forbids every tool.
                 wire_options["tool_choice"] = "auto"
-            return CancellableProviderEvents(lambda: request(api_input, wire_options), admitted_events, cancelled)
+            return CancellableProviderEvents(
+                lambda: request(api_input, wire_options),
+                lambda response: admitted_events(response, request_id), cancelled,
+            )
 
         provisional_id = kwargs.get("transactional_user_message_id")
         provisional = (
@@ -794,6 +809,9 @@ def _chat_text_max_tokens_from_env() -> int | None:
 
 
 def main() -> None:
+    from robot_790d.realtime_lifecycle import apply_native_response_lifecycle_patch
+
+    apply_native_response_lifecycle_patch()
     print(f"Robot 790 B1 sampling temperature: {_b1_temperature_from_env():g}", flush=True)
     print(f"Robot 790 LLM read timeout: {_llm_read_timeout_from_env():g}s", flush=True)
     apply_qwen3_tts_runtime_instruct_patch()

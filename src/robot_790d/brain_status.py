@@ -32,6 +32,7 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
 
     latest_response = _parse_latest_response(err_text)
     token_usage = _parse_latest_token_usage(err_text)
+    request_usage = _parse_latest_request_usage(err_text)
     model = _parse_startup(out_text, err_text)
     runtime_args = _read_realtime_runtime_args(root)
     if runtime_args.get("model_name"):
@@ -55,7 +56,7 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
     performance = _parse_performance(err_text)
     session = _parse_session(err_text, live_events_text, live_conversation_text)
     _add_estimated_throughput(performance, latest_response, token_usage)
-    context = _parse_context(latest_response, token_usage, model)
+    context = _parse_context(latest_response, token_usage, model, request_usage)
 
     return {
         "status": "ok",
@@ -65,6 +66,7 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
         "model": model,
         "session": session,
         "latest_response": latest_response,
+        "latest_request": request_usage,
         "performance": performance,
         "context": context,
         "gpu": get_gpu_status(),
@@ -763,10 +765,26 @@ def _add_estimated_throughput(
         performance["estimated_throughput_basis"] = "unavailable"
 
 
+def _parse_latest_request_usage(text: str) -> dict[str, Any]:
+    for line in reversed(text.splitlines()):
+        _, marker, payload = line.partition("B1 request usage: ")
+        if not marker:
+            continue
+        try:
+            usage = json.loads(payload)
+        except (ValueError, TypeError):
+            continue
+        if (isinstance(usage, dict) and usage.get("request_id") and usage.get("conversation") != "none"
+                and type(usage.get("input_tokens")) is int and usage["input_tokens"] > 0):
+            return usage
+    return {}
+
+
 def _parse_context(
     latest_response: dict[str, Any],
     token_usage: dict[str, Any],
     model: dict[str, Any] | None = None,
+    request_usage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     input_tokens = latest_response.get("input_tokens")
     if not isinstance(input_tokens, int) or input_tokens <= 0:
@@ -775,6 +793,10 @@ def _parse_context(
             input_tokens = previous.get("input_tokens")
     if not isinstance(input_tokens, int) or input_tokens <= 0:
         input_tokens = token_usage.get("input_tokens")
+    source = "legacy_response_usage"
+    if request_usage and isinstance(request_usage.get("input_tokens"), int) and request_usage["input_tokens"] > 0:
+        input_tokens = request_usage["input_tokens"]
+        source = "provider_request_usage"
     pressure = "unknown"
     if isinstance(input_tokens, int):
         if input_tokens >= 48_000:
@@ -797,8 +819,11 @@ def _parse_context(
         "remaining_context_tokens": remaining_context_tokens,
         "window_usage_percent": window_usage_percent,
         "pressure_estimate": pressure,
+        "source": source,
+        "request_id": request_usage.get("request_id") if source == "provider_request_usage" else None,
         "pressure_basis": (
-            "last response input token count compared with configured thresholds; "
+            ("last measured provider request input tokens; " if source == "provider_request_usage" else
+             "legacy response usage estimate, possibly accumulated across requests; ") +
             "context window is read from LM Studio when available"
         ),
     }
@@ -813,7 +838,8 @@ def _build_notes(
     notes: list[str] = []
     if latest_response.get("status") == "unavailable":
         notes.append("Last response token usage was not found in Robot 790 logs.")
-    elif latest_response.get("input_tokens") == 0 and latest_response.get("previous_measured_response"):
+    elif (context.get("source") != "provider_request_usage" and latest_response.get("input_tokens") == 0
+          and latest_response.get("previous_measured_response")):
         notes.append(
             "Latest response was cancelled or token-empty; context pressure uses the previous measured response."
         )

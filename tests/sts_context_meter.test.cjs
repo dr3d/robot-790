@@ -18,8 +18,7 @@ function meter(limit = 131072) {
   return context;
 }
 function response(input, extra = {}) {
-  return { type: 'response.done', response: { status: 'completed', conversation_id: 'main',
-    usage: { input_tokens: input }, ...extra } };
+  return { type: 'robot790.request.usage', conversation_id: 'main', input_tokens: input, ...extra };
 }
 
 test('meter shows latest measured request, not cumulative tokens or session peak', () => {
@@ -51,11 +50,12 @@ test('missing context limit triggers a bounded retry without diagnostic logging'
   assert.equal(m.refreshCalls, 3, 'reconnect refreshes even a previously known limit');
 });
 
-test('isolated calls, cancellations and missing usage do not overwrite conversation usage', () => {
+test('isolated calls, aggregated response totals and missing usage do not overwrite request usage', () => {
   const m = meter();
   m.observeContextUsage(response(32768));
-  for (const event of [response(100, { conversation_id: null }), response(90000, { status: 'cancelled' }),
-    response(0), response(null), response('9000'), response(NaN), response(100, { usage: null }),
+  for (const event of [response(100, { conversation_id: null }),
+    { type: 'response.done', response: { status: 'completed', conversation_id: 'main', usage: { input_tokens: 126419 } } },
+    response(0), response(null), response('9000'), response(NaN), response(100, { input_tokens: undefined }),
     { type: 'response.created' }]) m.observeContextUsage(event);
   assert.equal(m.contextUsage.textContent, 'CTX 25%');
 });

@@ -1,10 +1,43 @@
 # Engineering Status
 
-Reviewed September 17, 2026. This is the maintained engineering view; session
+Reviewed September 18, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
+
+### Pending Replies And Context Accounting
+
+September 18: native speech replies now emit `response.created` when queued,
+before any model output. STS and the backend therefore retain response ownership
+through a slow provider wait, using existing completion/failure/cancellation
+events to release it. Previously the UI's temporary user-turn hold could expire
+while a real reply was pending, admitting an extra idle response. No idle timing,
+prompt, card, output-length or creative-initiative changes are part of this fix.
+
+The CTX badge now consumes `robot790.request.usage`, carrying one provider input
+count, rather than accumulated `response.done` usage. Original response totals
+remain available for workload accounting. Numeric `B1 request usage` records
+include request/turn/generation identity without prompt capture; the status API
+prefers those counts, skips isolated requests and labels old-log fallback as an
+estimate. Neither measure describes KV reuse, physical cache occupancy or VRAM.
+
+The motivating run had an overlapping idle admission during a 45.9-second B1
+wait, and response totals that temporarily added two roughly 63K prompts into
+126K. This repair removes the overlap opportunity and the misleading sum; it
+does **not** establish why that first provider wait was slow. Cache/eval timings
+were not captured in that run. Preserve the successful companion behavior and
+evaluate another normal continuation before making further performance changes.
+
+Regression coverage exercises native text/audio input, pre-output interruption,
+failure, duplicate admission, per-request versus aggregate usage, isolated/stale
+usage, and an active reply surviving 90 seconds at 12x lab speed. Deployment
+requires a realtime/page-server restart and an STS browser refresh; ordinary
+Connect can resume the existing conversation. No LM Studio model swap is needed.
+Verification: 803 Python tests and 450 JavaScript tests pass. Page and realtime
+servers were restarted with the same model/settings, and the status API and idle
+realtime pool were checked. Refresh STS before the next connection. The new
+lifecycle still needs a live companion continuation; no paid art trial was run.
 
 ### Idle Art Preference
 
@@ -31,8 +64,8 @@ not silently chosen. No English vocabulary mapping or prompt changes.
 
 Eight regression cases cover the failed queries, nested scopes, ambiguity and
 non-English names; 62 note-file/routing tests pass. Eric independently recovered
-and read the exact card during the live run. The fix is saved but awaits a page-
-server restart; the active conversation was deliberately left undisturbed.
+and read the exact card during the live run. The later September 18 page-server
+restart deployed the lookup fix after that conversation had ended.
 
 ### GPU Speech Tint
 

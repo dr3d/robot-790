@@ -67,6 +67,20 @@ function fixture() {
   return { c, timers, time: value => { now = value; } };
 }
 
+test('announced native reply stays busy after pending-turn timeout at 12x lab speed', () => {
+  const { c, time } = fixture();
+  c.compressIdleMs = value => value / 12;
+  c.responseActive = true;
+  c.userTurnPendingUntil = 1002500;
+  c.userTurnPending = () => c.Date.now() < c.userTurnPendingUntil;
+  for (const elapsed of [3000, 25000, 60000, 90000]) {
+    time(1000000 + elapsed);
+    assert.equal(c.idleBlockedReason(), 'assistant busy');
+  }
+  c.responseActive = false;
+  assert.equal(c.idleBlockedReason(), '');
+});
+
 test('delay eases continuously from 12 seconds to the existing idle interval over three real minutes', () => {
   const { c, time } = fixture();
   let previous = 0;

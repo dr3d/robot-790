@@ -14996,7 +14996,7 @@
       contextUsage.title = measured
         ? `Latest B1 conversation request: ${tokens.toLocaleString("en-US")} input tokens` +
           (knownLimit ? ` / ${limit.toLocaleString("en-US")} context limit.` : "; context limit unavailable.") +
-          " Request size, not VRAM or cache reuse. Excludes isolated tool/idle responses."
+          " Provider request size, not accumulated response totals, VRAM or cache reuse. Excludes isolated responses."
         : "Context usage appears after a conversation response.";
     }
 
@@ -15011,10 +15011,8 @@
     }
 
     function observeContextUsage(event) {
-      const response = event.response;
-      if (event.type !== "response.done" || response?.status !== "completed" ||
-          !response.conversation_id) return;
-      const tokens = response.usage?.input_tokens;
+      if (event.type !== "robot790.request.usage" || !event.conversation_id) return;
+      const tokens = event.input_tokens;
       if (!Number.isFinite(tokens) || tokens <= 0) return;
       lastConversationInputTokens = tokens;
       renderContextUsage();
