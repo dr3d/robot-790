@@ -267,6 +267,7 @@ function stopContext(overrides = {}) {
     runtimeStep: async (_, operation) => operation(), waitForRealtimeClose: async () => {},
     waitForPendingUserTranscriptBeforeSessionSave: async () => {}, micStream: {},
     stopVisionCamera: noop,
+    stopEsp32Camera: noop,
     stopMic: async () => { calls.push('stop mic'); c.micStream = null; },
     audioRecordingActive: () => false, audioRecordFinalizing: false, audioRecordStopPromise: null,
     recordExitPaneSnapshots: async () => {},

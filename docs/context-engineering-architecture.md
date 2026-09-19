@@ -972,17 +972,24 @@ beats follows the same ramp, so it cannot silently impose the old 90-second
 floor. These defaults are editable in `config/runtime.json` under `idle_timing`,
 not additional UI dials.
 
-| Config key | Default | Meaning |
+September 19 active-companion configuration: independent thinking no longer
+requires a global 10x lab clock. The configured base waits at 1x match the former
+10x Drift 1-10 waits, while human quiet/attention windows remain real-time.
+Current ordinary idle can take successive opportunities through the attention
+ramp; the September 12 one-beat-only policy described above is historical, not
+the current scheduler. Full-conversation idle and B2 advisory delivery are unchanged.
+
+| Config key | Current Config | Meaning |
 | --- | ---: | --- |
 | `attention_enabled` | `true` | Enable the ramp; `false` restores the preceding separate nudge/idle behavior. |
-| `attention_start_s` | 12 | Initial conversational idle interval, in real seconds. |
-| `attention_fade_s` | 180 | Time after the exchange (user input or direct-reply playback completion) to reach ordinary idle. |
-| `attention_warm_s` | 45 | Initial shared-topic context window; cannot exceed the fade duration. |
-| `post_user_quiet_s` | 12 | Existing minimum quiet guard after user activity. |
-| `minimum_gap_s` | 90 | Ordinary minimum gap between idle starts; also eases during the ramp. |
-| `drift_base_s` | 270 | Baseline for ordinary Drift 1-10 delay calculation. |
-| `drift_step_s` | 22.5 | Amount subtracted from that baseline per Drift level. |
-| `drift_floor_s` | 45 | Lower bound on the ordinary Drift delay before Lab Speed scaling. |
+| `attention_start_s` | 8 | Initial conversational idle interval, in real seconds. |
+| `attention_fade_s` | 240 | Time after the exchange (user input or direct-reply playback completion) to reach ordinary idle. |
+| `attention_warm_s` | 75 | Initial shared-topic context window; cannot exceed the fade duration. |
+| `post_user_quiet_s` | 8 | Existing minimum quiet guard after user activity. |
+| `minimum_gap_s` | 9 | Ordinary minimum gap between idle starts; also eases during the ramp. |
+| `drift_base_s` | 27 | Baseline for ordinary Drift 1-10 delay calculation. |
+| `drift_step_s` | 2.25 | Amount subtracted from that baseline per Drift level. |
+| `drift_floor_s` | 8 | Lower bound on the ordinary Drift delay before Lab Speed scaling. |
 
 The normal interval is `max(drift_floor_s, drift_base_s - level*drift_step_s)`
 before Lab Speed scaling. Other guards still win; a shorter attention start

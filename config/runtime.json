@@ -1,11 +1,21 @@
 {
   "creature": "eric",
+  "esp32_camera": {
+    "enabled": true,
+    "base_url": "http://esp32-cam.local/",
+    "rotation_degrees": -90,
+    "preview_interval_ms": 1000
+  },
   "tool_continuation": {
     "max_rounds": 8
   },
   "context_history": {
     "use_summaries": false,
     "recent_swept_sessions": 2
+  },
+  "note_cards": {
+    "max_cards": 8,
+    "b1_characters": 32000
   },
   "current_embodiment": "Your current embodiment is the Browser Face simulator: a local browser-window face with the same semantic face API as the ESP32-S3 face, plus mirror capture and inspection tools.",
   "body_trajectory": "Your body is an evolving 790-inspired robot platform; treat live runtime state and tool results as the authority on what you can currently do.",
@@ -26,10 +36,10 @@
     "discovery_start_s": 8,
     "discovery_fade_s": 240,
     "post_user_quiet_s": 8,
-    "minimum_gap_s": 90,
-    "drift_base_s": 270,
-    "drift_step_s": 22.5,
-    "drift_floor_s": 45
+    "minimum_gap_s": 9,
+    "drift_base_s": 27,
+    "drift_step_s": 2.25,
+    "drift_floor_s": 8
   },
   "default_embodiment": "browser_face",
   "embodiments": [

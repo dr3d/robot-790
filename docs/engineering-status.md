@@ -6,6 +6,237 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### September 19 Checkpoint
+
+Current source combines complete optional-card admission, compact searchable
+file receipts, idle Eye recall and image-handoff repairs, the measured cache
+investigation, TimerCam integration/auto-exposure, and small sidebar layout
+improvements. Personality prompt files are unchanged in this batch; tool
+descriptions, routed-card assembly and four explicit idle timing values changed.
+Setup cards are optional, not a requirement for baseline companionship.
+
+The page helper was restarted after the camera addition; camera proxy and
+browser checks passed. This checkpoint does not restart services or change
+the loaded model. Earlier dated sections below preserve their original
+deployment/test status; later activation records supersede those statements.
+The latest full suite passes 521 JavaScript and 871 Python tests, with one
+existing Starlette/httpx deprecation warning. Scoped Ruff checks retain the same
+six pre-existing page-server findings; the other checked changed Python files
+pass. Optional detailed LLM capture remains off. Private notes, PMs, images and
+firmware fallback binaries are not part of the Git checkpoint.
+
+The latest Empty Connect Mars trial completed five image generations, all five
+Eye transfers, and one search without failed tool receipts. Context rose from
+14.6% to 32.8%; median first server audio was 2.24 seconds and the final reply
+1.39 seconds. These are end-to-end measurements, not an exact cache-reuse test.
+Audio recording was off. B1 resisted the fictional premise initially and twice
+described a generated picture before inspecting it; B2 noticed the correction
+but did not ensure consistent follow-through. One filtered reply recovered on
+retry. No prompt repair was made in response to this PM.
+
+Remaining acceptance work includes sustained idle at the new 1x baseline,
+queued background-art race paths in live use, and model-driven TimerCam use.
+The Mars run did not exercise those paths, file lookup, or chassis controls.
+Keep permission/execution repairs separate from interpretation and personality;
+do not turn these behavioral gaps into English phrase-matching rules.
+
+### ESP32 Camera Into Sensing Eye
+
+September 19: added an optional ESP32 Camera section beneath Browser Live
+Camera, with snapshot preview and Capture To Eye. A separate
+`capture_esp32_camera` tool gives B1 the same one-shot saved/staged image path.
+`set_esp32_camera` adds matching on/off and optional capture-on-start control;
+both tool descriptions identify the camera as TimerCam as well as ESP32.
+Preview alone never supplies visual context, writes image memories, or invokes
+the model. No personality, browser-camera, motor or idle-permission changes.
+New tool description only; no behavioral prompt repair.
+
+The page helper reads only the operator-configured camera's `/jpg` endpoint,
+without accepting arbitrary client URLs or following redirects. Reads are
+bounded, serialized, JPEG-only and uncached. Preview polls sequentially, stops
+on error, and is canceled on Disconnect/page exit. Late captures cannot refill
+a cleared eye or cross session/user-request boundaries. Config is under
+`esp32_camera` in `config/runtime.json`; no firmware change required.
+
+Live hardware initially accepted TCP but did not answer HTTP. After Scott
+closed the chassis camera viewer, `/status` and `/jpg` responded successfully.
+This matches the firmware's blocking MJPEG loop. Do not keep a separate MJPEG
+viewer open while using STS snapshots. Page helper restarted and the live camera
+proxy returned a JPEG. Headless Edge checks at 1440x1000 and 390x844 captured
+and decoded actual 240x320 upright frames, exercised preview on/off and the eye
+handoff, and verified no page errors. Test saves were intercepted to keep QA
+images out of Scott's memories; no live LLM session was opened. All 521 JS and
+871 Python tests pass (one existing Starlette/httpx deprecation warning).
+Refresh STS while disconnected to load the new controls/tool.
+
+TimerCam brightness follow-up: built the original fixed-exposure firmware as a
+local fallback, enabled primary sensor auto-exposure, removed the fixed value
+of 220, and flashed `timer-cam-ota` to `192.168.0.252` successfully. The rebooted
+board reports `aec=1`, `aec2=0`, `agc=1`; direct JPEG and STS proxy captures both
+succeed. The comparison frame is visibly brighter, but this was not a controlled
+lighting test. Brightness +1, gain ceiling, QVGA and all other sensor settings
+remain unchanged. Source and fallback binary are retained locally under
+`logs/maintenance/20260919-timercam-auto-exposure/` (ignored, not for publishing).
+Build succeeded for both versions; no changes to chassis firmware or servers.
+
+### Active Idle At Normal Speed
+
+September 19: Scott wants a thinking companion without routinely selecting
+10x-plus Lab Speed. Only four existing `idle_timing` configuration values change:
+`minimum_gap_s` 90 -> 9, `drift_base_s` 270 -> 27, `drift_step_s` 22.5 -> 2.25,
+and `drift_floor_s` 45 -> 8. Independent Drift 1-10 now has the same base waits
+at 1x as the previous configuration at 10x: 24.75 down to 8 seconds. Drift 8 is
+9 seconds. These are opportunities after activity, not guaranteed speech times.
+
+Human quiet/attention timing, B2 logic, headline cadence, art grants, playback
+ownership, user priority, full-context idle, prompts and sampling are unchanged.
+This is not a promise to occupy every GPU cycle or a new private-reasoning loop.
+Normal B1 idle still waits for existing speech and tool work; B2's existing
+fresh-evidence checks and timing apply. No new instrumentation or model calls.
+Use Lab Speed 1x for the next trial: 10x now further compresses these waits.
+The page helper reads this file on demand; refresh while disconnected to apply.
+No server restart is required. Live acceptance remains pending.
+
+### Compact File Lookup
+
+September 19: repaired the oversized catalogue seen in the lighthouse trial.
+The existing eye-tool names remain compatible, but now accept a query and return
+five compact matches by default (maximum eight), with explicit pagination.
+Names, saved reasons and attributed past remarks help find files; old dialogue,
+capture-adjacent transcript, duplicate paths/URLs and file contents are not put
+back into the conversation just to identify a file. Exact saved IDs can reopen
+files beyond the former newest-25 window without listing first. Ambiguity stays
+visible: STS returns candidates, not a guessed replacement for the eye.
+
+Replaying that saved 32,414-character receipt through the new projection yields
+1,710 characters for the first page (94.7% less), or 558 for a targeted single
+match. This is a serialized-character comparison, not measured token/cache/latency
+improvement. Existing oversized receipts already in history are not rewritten;
+the repair prevents future lookup bloat without invalidating the live prefix.
+Ordinary note lookup also defaults to five names, capped at eight. Operator
+note shelves and the session map remain unchanged. Known filenames still read
+directly. Tool schemas/descriptions change; personality, cadence, idle scope,
+sampling and model configuration do not. No new telemetry or model calls.
+
+Offline tests cover bounded payloads, both eye aliases, old-file lookup, exact
+identity, ambiguous matches, Unicode, pagination, stale page helpers and recall
+freshness. All 506 JavaScript and 861 Python tests pass (the existing
+Starlette/httpx warning remains). September 19, 12:35: the page-only restart
+succeeded through the standard launcher after the earlier denied attempt.
+The served browser lookup functions passed read-only checks against the live
+helper: five compact matches across 167 saved files, a single targeted match,
+and exact-ID resolution. Boot-note B1/B2 routing also passed. Browser refresh
+activates the client changes; conversational acceptance is still pending.
+Realtime, LM Studio, TTS and Browser Face stayed running.
+
+### Lighthouse Recovery Trial
+
+September 19, 11:52-12:00: positive continued run. Search/draw/eye/explain,
+a second image and recall of the first all succeeded; ambiguous recall recovered
+without regenerating. After the 14.787-second opening, first server audio for
+user turns was 1.282-2.903 seconds, including 2.642 seconds on return after idle
+search. Engine capture was off, so there is no measured cache-reuse percentage.
+
+The deliberate idle write was denied and ended its tool continuation. A new
+idle turn delivered the already-researched story, and a real write succeeded
+after user return. This is recovery via the scheduler, not validation of a fixed
+denial path. The authored note incorrectly claims an idle write succeeded;
+execution receipts, not that note, establish the result. B2 also delivered one
+assessment already behind completed tool events.
+
+Concrete follow-up: image listing returned 25 records / 32,414 characters;
+the adjacent prompt grew 13,037 tokens. Overall context rose 32.3% to 54.4%.
+Compact searchable image metadata deserves priority alongside denial recovery.
+Two cards survived post-save pin churn; ordinary profile-pin eviction remains
+the existing policy. No queued idle-art job or provider rejection occurred,
+so those paths were not exercised. No runtime changes made by this PM.
+Private evidence: `logs/runs/20260919-120013-lighthouse-recovery-probe/postmortem.md`.
+
+### Context Refill Investigation
+
+September 19: reproduced the long GPU/no-output stretch outside STS. With 32
+rewind checkpoints, LM Studio's saved prompt state exceeded its 8 GiB RAM cache
+limit; the next return reevaluated 59,844 tokens in 20.46 seconds. Eight checkpoints
+kept ten equivalent image/B2/return cycles warm; the failing request became
+31 evaluated tokens / 0.42 seconds. Full 128K context, two slots, model, prompts,
+history and idle behavior are unchanged. Applied to the active model and its
+workstation-specific default; the first image-heavy live acceptance is below.
+Another ten-cycle test at 74K-81.6K input tokens also kept every return warm.
+
+The numeric collector now preserves oversized-cache-save and restore-failure
+diagnostics without prompt/output text. Eight focused telemetry tests pass.
+See [cache measurements and configuration](llm-metrics-capture.md#oversized-cache-state-2026-09-19).
+
+September 19 live continuation (10:33-10:58): after the initial 41,839-token
+load, all 56 measured completed B1 calls reused at least 90.1% of their prompt
+(median 98.4%); no subsequent full refill or oversized-cache-state warning was
+recorded. Context reached 83,743 tokens / 63.9%. Median subsequent prefill was
+1.07 seconds, worst 8.90 seconds: positive acceptance, not uniformly instant
+inference. One fully filtered private-output reply needed a retry near the end.
+
+### Idle-Art Handoff Repair
+
+September 19 Boston continuation: eleven images generated, nine staged, two
+completed background files stranded. A B1 render request can pass the page's
+`busy` preflight, clear the image reference, then be rejected by the controller
+because a completed result is `ready`. Move-to-eye then sees no image; later
+delivery sees the wrapper's clearing as a replacement and retains the file.
+The files are intact and idle-art permission was enabled. This is not evidence
+for restricting autonomy or rewriting Eric's prompt.
+
+Reproduced using the actual page functions/controller with mock I/O. Repaired
+separately from note admission: preflight rejects another render before preview
+mutation; automatic and model-requested moves share single-owner staging of the
+completed artifact. History distinguishes ready, staged, retained and display
+failure. Real user/eye replacement, cancellation and permission revocation still
+prevent late delivery. Tests exercise actual page callbacks as well as controller
+state; no paid generation, new cooldown or behavioral prompt was used.
+Private evidence: `logs/runs/20260919-105831-boston-idle-art-handoff/postmortem.md`.
+
+### Complete Optional Card Admission
+
+September 19: explicitly routed notes now have a separate eight-card / 32,000
+UTF-16-unit B1 allowance configured in `config/runtime.json`. Direct loads and
+restored threads validate whole sets before mutation; invalid or over-limit
+changes fail visibly and preserve prior snapshots. Ordinary pins cannot evict
+cards, and cards do not take space from already admitted history. B1/B2 routing
+uses the same revisions; private sections stay private and B3/B4 remain inactive.
+
+This changes card-bearing prompt assembly, not card wording or baseline behavior.
+Empty Connect still needs no card, and unmarked-note prompt goldens match the
+prior formatter. Provider acknowledgement remains the existing session-update
+mechanism, not a newly guaranteed atomic B1/B2 transaction. See the
+[admission record](setup-card-admission-plan-2026-09-19.md).
+
+Both repairs pass offline mechanism tests; a refreshed, connected continuation
+is still required for live acceptance. No real image generation or LLM request
+was used in validation.
+
+Verification: 497 JavaScript tests and 857 Python tests pass (one existing
+Starlette/httpx warning). Six pre-existing Ruff findings in the page-server
+module remain outside this repair. The terminal tool initially rejected the
+page-server restart; this was resolved by the successful page-only restart at
+12:35 noted above. The runtime-config exposure and typed malformed-card error
+are now served by the updated helper. Realtime, LM Studio and TTS were not
+restarted or reconfigured.
+
+### Idle Eye Recall
+
+September 19: ordinary full-history idle can now list and recall existing
+sensing-eye images/text without the paid-art grant. The old scope denied recall
+even when generation was authorized. Generation/staging permissions are otherwise
+unchanged; camera capture, eye clearing and session jumps remain outside this
+idle allowance. First Contact/performance exclusions still apply.
+
+Recall now rejects asynchronous results superseded by user activity, a replaced
+eye, a canceled response or a disconnected/reset session. Its freshness is
+independent of the paid-art grant. No personality, cadence, context selection or
+spoken-line changes; the stable wire catalogue is unchanged.
+
+Verification: 475 JavaScript tests pass, including 10 new permission/freshness
+regressions. No backend code changed and no paid generation was exercised. Refresh
+STS to activate; a connected idle-recall trial remains the live acceptance check.
+
 ### Contained Browser Repairs
 
 September 19 follow-ups: browser unpin lookup now preserves Unicode letters and
@@ -22,10 +253,10 @@ hashes. Pin-limit removals are logged. This measures assembled browser text, not
 provider transmission, KV usage or B2 admission. No private guidance/body content
 is copied into the diagnostic receipts.
 
-Whole-card admission is **not yet repaired**: the existing per-file/aggregate
-budgets and pin replacement rules remain. Changing those requires choosing how
-to trade instructions against history, reject loads or expand capacity. Work
-stops at that policy boundary. These browser repairs need refresh; earlier
+At this earlier diagnostic checkpoint, whole-card admission was not repaired;
+the subsequent separate admission repair above resolves that boundary by adding
+bounded space and rejecting invalid sets, without removing history. These browser
+repairs need refresh; earlier
 Python batches still await safe server restarts. No running session was changed.
 Verification: 847 Python tests and 465 JavaScript tests pass, with the existing
 Starlette/httpx warning. A live companion continuation is still needed to assess

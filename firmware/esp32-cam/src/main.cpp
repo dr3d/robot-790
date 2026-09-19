@@ -31,7 +31,6 @@ constexpr int PIN_BAT_HOLD = 33;
 constexpr framesize_t STREAM_FRAME_SIZE = FRAMESIZE_QVGA;
 constexpr uint8_t STREAM_JPEG_QUALITY = 18;
 constexpr uint8_t STREAM_FB_COUNT = 3;
-constexpr int FIXED_AEC_VALUE = 220;
 constexpr int CAMERA_BRIGHTNESS = 1;
 constexpr int CAMERA_CONTRAST = 0;
 constexpr int CAMERA_RAW_GMA = 1;
@@ -101,7 +100,7 @@ void statusHandler() {
 
   char body[560];
   const int n = snprintf(body, sizeof(body),
-                         "ok\nip=%s\nmode=%s\nhostname=%s\nrssi=%d\nframes=%lu\nstream_clients=%lu\nfps=%.1f\nlast_frame_bytes=%lu\nfree_heap=%lu\npsram=%s\nota=%s\nbrightness=%d\ncontrast=%d\nraw_gma=%u\nlenc=%u\n",
+                         "ok\nip=%s\nmode=%s\nhostname=%s\nrssi=%d\nframes=%lu\nstream_clients=%lu\nfps=%.1f\nlast_frame_bytes=%lu\nfree_heap=%lu\npsram=%s\nota=%s\nbrightness=%d\ncontrast=%d\nraw_gma=%u\nlenc=%u\naec=%u\naec2=%u\nagc=%u\n",
                          ip.c_str(),
                          accessPointMode ? "ap" : "sta",
                          OTA_HOSTNAME,
@@ -116,7 +115,10 @@ void statusHandler() {
                          sensor ? cameraStatus.brightness : 0,
                          sensor ? cameraStatus.contrast : 0,
                          sensor ? cameraStatus.raw_gma : 0,
-                         sensor ? cameraStatus.lenc : 0);
+                         sensor ? cameraStatus.lenc : 0,
+                         sensor ? cameraStatus.aec : 0,
+                         sensor ? cameraStatus.aec2 : 0,
+                         sensor ? cameraStatus.agc : 0);
   web.sendHeader("Cache-Control", "no-store");
   web.send(200, "text/plain", String(body).substring(0, n));
 }
@@ -314,9 +316,8 @@ bool initCamera() {
     sensor->set_brightness(sensor, CAMERA_BRIGHTNESS);
     sensor->set_contrast(sensor, CAMERA_CONTRAST);
     sensor->set_saturation(sensor, 0);
-    sensor->set_exposure_ctrl(sensor, 0);
+    sensor->set_exposure_ctrl(sensor, 1);
     sensor->set_aec2(sensor, 0);
-    sensor->set_aec_value(sensor, FIXED_AEC_VALUE);
     sensor->set_gain_ctrl(sensor, 1);
     sensor->set_gainceiling(sensor, GAINCEILING_16X);
     sensor->set_raw_gma(sensor, CAMERA_RAW_GMA);

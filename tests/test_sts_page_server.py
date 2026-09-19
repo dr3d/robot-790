@@ -45,6 +45,39 @@ def test_image_continuation_config_is_opt_in_and_bounded(tmp_path) -> None:
     }
 
 
+@pytest.mark.parametrize("value", [None, [], "invalid", {}, {
+    "max_cards": True, "b1_characters": 10**1000,
+}, {"max_cards": 9, "b1_characters": 0}])
+def test_runtime_note_cards_rejects_invalid_limits(value) -> None:
+    assert sts_page_server._runtime_note_cards(value) == {
+        "max_cards": 8, "b1_characters": 32000,
+    }
+
+
+def test_runtime_note_card_allowance_is_configurable(tmp_path) -> None:
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "runtime.json").write_text(json.dumps({
+        "note_cards": {"max_cards": 3, "b1_characters": 12000},
+    }), encoding="utf-8")
+    assert sts_page_server.runtime_config(tmp_path)["note_cards"] == {
+        "max_cards": 3, "b1_characters": 12000,
+    }
+
+
+def test_note_read_invalid_directives_has_a_typed_error_not_partial_content(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    (tmp_path / "bad.txt").write_text("## STS NOTE 1\n## B2\n" + "x" * 1201, encoding="utf-8")
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+    handler._handle_note_read("filename=bad.txt&brain_context=1")
+    status, payload = replies[-1]
+    assert status == 400
+    assert payload["code"] == "invalid_note_directives"
+    assert payload["filename"] == "bad.txt"
+    assert "content" not in payload
+
+
 def test_brain2_receives_bounded_image_receipts_not_just_a_spoken_success() -> None:
     evidence = {"runtime": {"image_task_receipts": {
         "request": "Draw and show it", "artifact": "new.png",
@@ -1156,6 +1189,79 @@ def test_sensing_eye_text_save_and_list_share_eye_folder(tmp_path) -> None:
     assert listed["files"][0]["url"] == "/sensing-eye/operator-paste.md"
     assert listed["files"][0]["source"] == "operator paste"
     assert listed["files"][0]["last_user_text"] == "read that pasted lab note"
+
+
+def test_eye_lookup_searches_older_files_and_exact_ids_without_adjacent_dialogue(tmp_path):
+    import os
+
+    root = tmp_path / "logs" / "sensing-eye"
+    root.mkdir(parents=True)
+    names = ["old-harbor-lighthouse.jpg", "camera-001.jpg", "A&B #1.jpg"]
+    names += [f"new-{i:03d}.jpg" for i in range(30)]
+    for index, name in enumerate(names):
+        path = root / name
+        path.write_bytes(b"image")
+        os.utime(path, (1000 + index, 1000 + index))
+    (root / "camera-001.jpg.json").write_text(json.dumps({
+        "memory_context": {"last_user_text": "harbor lighthouse", "nearby_transcript": "harbor lighthouse"},
+    }), encoding="utf-8")
+
+    lookup = sts_page_server.list_sensing_eye_images
+    assert names[0] not in [f["filename"] for f in lookup(limit=25, repo_root=tmp_path)["files"]]
+    found = lookup(query="harbor LIGHTHOUSE", repo_root=tmp_path)
+    assert [f["filename"] for f in found["files"]] == [names[0]]
+    assert found["total"] == 1
+    assert found["next_offset"] is None
+    exact = lookup(filename=names[0], query="not its subject", repo_root=tmp_path)
+    assert exact["files"][0]["filename"] == names[0]
+    hinted = lookup(query="square tower", hints=[names[1]], repo_root=tmp_path)
+    assert hinted["files"][0]["filename"] == names[1]
+    assert lookup(filename="../elsewhere.jpg", repo_root=tmp_path)["total"] == 0
+    assert lookup(query="no match", repo_root=tmp_path)["files"] == []
+    assert lookup(query="!!!", repo_root=tmp_path)["files"] == []
+    assert lookup(filename=names[2], repo_root=tmp_path)["files"][0]["url"] == "/sensing-eye/A%26B%20%231.jpg"
+
+
+def test_eye_lookup_unicode_and_pagination(tmp_path):
+    root = tmp_path / "logs" / "sensing-eye"
+    root.mkdir(parents=True)
+    for name in ["Lumière_du_port.jpg", "港の灯台.jpg", "Caf\u0065\u0301.jpg"]:
+        (root / name).write_bytes(b"image")
+    lookup = sts_page_server.list_sensing_eye_images
+    for query in ["LUMIÈRE port", "港の灯台", "café"]:
+        assert lookup(query=query, repo_root=tmp_path)["total"] == 1
+    first = lookup(limit=2, repo_root=tmp_path)
+    second = lookup(limit=2, offset=first["next_offset"], repo_root=tmp_path)
+    assert first["total"] == second["total"] == 3
+    assert first["lookup_version"] == 1
+    assert len(first["files"]) == 2
+    assert len(second["files"]) == 1
+    assert second["next_offset"] is None
+    assert len({f["filename"] for f in first["files"] + second["files"]}) == 3
+    assert lookup(offset=99, repo_root=tmp_path)["files"] == []
+    for args in [{"offset": -1}, {"offset": 0.5}, {"limit": 0}, {"limit": 99},
+                 {"query": "x" * 161}, {"query": 42}, {"hints": "not a list"}]:
+        with pytest.raises(ValueError):
+            lookup(repo_root=tmp_path, **args)
+
+
+def test_eye_lookup_http_passes_search_and_exact_filename_and_reports_bad_arguments(monkeypatch):
+    calls, replies = [], []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+
+    def lookup(**kwargs):
+        calls.append(kwargs)
+        return {"lookup_version": 1, "files": [], "total": 0}
+
+    monkeypatch.setattr(sts_page_server, "list_sensing_eye_images", lookup)
+    handler._handle_sensing_eye_list(urlencode({
+        "query": "港", "filename": "A&B #1.jpg", "hint": ["other.jpg"], "offset": 5, "limit": 8,
+    }, doseq=True))
+    assert calls[0] == {"query": "港", "filename": "A&B #1.jpg", "hints": ["other.jpg"], "offset": 5, "limit": 8}
+    assert replies[-1][0] == 200
+    handler._handle_sensing_eye_list("limit=bad")
+    assert replies[-1][0] == 400
 
 
 def test_sensing_eye_inbox_rejects_non_image_data_url() -> None:

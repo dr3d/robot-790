@@ -7,7 +7,8 @@ const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').repla
 function fixture() {
   const sent = [], calls = [], timers = [];
   const names = ['search_web', 'generate_image', 'move_generated_image_to_sensing_eye',
-    'list_sensing_eye_notes', 'recall_sensing_eye_note', 'read_text_file', 'list_session_map', 'enter_session'];
+    'list_sensing_eye_notes', 'recall_sensing_eye_note', 'list_sensing_eye_images', 'select_sensing_eye_image',
+    'read_text_file', 'list_session_map', 'enter_session', 'capture_sensing_eye', 'clear_sensing_eye'];
   const c = vm.createContext({
     toolScopeDenials: new Map(), toolFollowupTerminal: false,
     clearTimeout() {},
@@ -44,6 +45,64 @@ function fixture() {
   const done = () => { c.responseDoneAfterTool = true; c.maybeCreateToolFollowup(); };
   const responses = () => sent.filter(e => e.type === 'response.create').map(e => e.response);
   return { c, sent, calls, timers, tool, done, responses };
+}
+
+function useIdlePolicy(f) {
+  f.c.firstContactModeEnabled = () => false;
+  f.c.performanceModeEnabled = () => false;
+  f.c.idleArt = { grant: null, authorized: () => false };
+  const policy = page.match(/const idleToolAllowedNames = new Set\(\[[\s\S]*?\]\);/);
+  assert.ok(policy);
+  vm.runInContext(policy[0], f.c);
+  const start = page.indexOf('    function idleEnabledToolList(');
+  vm.runInContext(page.slice(start, page.indexOf('\n    }\n', start) + 6), f.c);
+  f.c.toolContinuationOrigin = 'idle';
+}
+
+test('idle can list and recall existing eye notes with paid art off, preserving the full catalogue', async () => {
+  const f = fixture();
+  useIdlePolicy(f);
+  const names = ['list_sensing_eye_notes', 'recall_sensing_eye_note', 'list_sensing_eye_images', 'select_sensing_eye_image'];
+  for (const name of names) {
+    await f.tool(name, { note_id: 'file:existing.png', image_id: 'file:existing.png' }); f.done();
+    assert.equal(f.calls.at(-1)?.name, name);
+    assert.equal(f.c.toolFollowupTerminal, false);
+    assert.deepEqual(f.responses().at(-1).tools, f.c.enabledToolList());
+    assert.match(f.responses().at(-1).robot790_tool_followup, /Execution scope remains idle/);
+  }
+  const allowed = Array.from(f.c.idleEnabledToolList(), tool => tool.name);
+  for (const name of ['generate_image', 'move_generated_image_to_sensing_eye', 'capture_sensing_eye', 'clear_sensing_eye', 'enter_session']) {
+    assert.ok(!allowed.includes(name), name);
+  }
+  const tools = f.c.enabledToolList();
+  f.c.enabledToolList = () => tools.filter(tool => tool.name !== 'recall_sensing_eye_note');
+  assert.ok(!f.c.idleEnabledToolList().some(tool => tool.name === 'recall_sensing_eye_note'));
+  assert.equal(f.c.idleEnabledToolList({ firstContactActive: true }).length, 0);
+  assert.equal(f.c.idleEnabledToolList({ performanceActive: true }).length, 0);
+});
+
+for (const name of ['recall_sensing_eye_note', 'select_sensing_eye_image']) {
+  test(`${name} freshness is session-bound, not tied to the paid-art grant`, async () => {
+    const f = fixture();
+    useIdlePolicy(f);
+    f.c.idleArt = { grant: {}, authorized: () => true };
+    await f.tool(name);
+    const current = f.calls[0].args._isCurrent;
+    assert.equal(typeof current, 'function');
+    assert.equal(current(), true);
+    assert.equal(f.calls[0].args._idleArt, undefined);
+    f.c.idleArt.grant = null;
+    f.c.idleArt.authorized = () => false;
+    assert.equal(current(), true);
+    f.c.lastUserTurnActivityAt++;
+    assert.equal(current(), false);
+    f.c.lastUserTurnActivityAt--;
+    f.c.suppressedResponseIds.add('response');
+    assert.equal(current(), false);
+    f.c.suppressedResponseIds.clear();
+    f.c.activeRealtimeSession = () => false;
+    assert.equal(current(), false);
+  });
 }
 
 test('search, note consultation, generation and staging use one conversation and stable tools', async () => {

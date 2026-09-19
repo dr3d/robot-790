@@ -38,6 +38,10 @@ Captured when the installed engine emits them:
 - `slot_selection`: slot, LRU or prefix similarity, reported similarity/keep ratios.
 - `task_start` / `task_end`: runtime task IDs, resident tokens, truncation flag.
 - `cache_eviction`: engine's oldest-prompt-cache-entry eviction and size.
+- `cache_save_skipped`: a single saved prompt state exceeds the RAM cache limit;
+  records state/limit MiB, not a guessed slot or brain. This is not ordinary eviction.
+- `cache_reprocess` / `cache_restore_failed`: recognized missing-cache-data or
+  failed-restore diagnostics, when emitted at the runtime's logging level.
 - `prediction_stats`: LM Studio's prompt/output counts, time to first token,
   total prediction time and generation speed.
 
@@ -65,7 +69,7 @@ evaluation with its model TTFT, total generation time and STS first-audio time.
 This separates cache refill from hidden-output draining and speech latency.
 
 These are version-dependent engine diagnostics (tested with LM Studio's llama.cpp
-runtime 2.38.0), not a stable public inference API contract. Unknown log lines are
+runtime 2.38.0 and 2.41.0), not a stable public inference API contract. Unknown log lines are
 ignored rather than persisted. `tests/test_llm_metrics.py` covers the observed
 multiline format, safe filtering and duplicate-process lock.
 
@@ -83,3 +87,44 @@ even after LRU selection. Later headline/deeper-idle work preceded complete
 reevaluation, but the trace does not identify the particular evicted snapshot
 or prove web use alone caused it. Preserve the conversation prefix across idle
 work as the next measured repair target; do not infer permanent per-brain slots.
+
+## Oversized Cache State (2026-09-19)
+
+Four full refills in the Salem image run took 16.24-29.63 seconds, while B1/B2
+kept their respective slot numbers. Context reached only 57.8%. An isolated
+reproduction on CUDA12 runtime 2.41.0 exposed a different cause from the earlier
+idle-prefix repair: a saved prompt state reached 8194.865 MiB, above the engine's
+8192 MiB RAM prompt-cache limit. The following B1 return reevaluated 59,844 tokens.
+
+Reducing the model's `context_checkpoints` from 32 to 8 kept all ten test returns
+warm; the matching failing request evaluated 31 tokens in 0.421 seconds instead
+of 59,844 in 20.458 seconds. This changes saved rewind states, **not** history,
+context length (131072), slots (2), prompts or idle behavior. Fewer checkpoints
+can reduce reuse for a deep rewind; full context remains available.
+An additional ten-cycle test reached 81.6K input tokens; all returns stayed
+warm, with the final return evaluating 31 tokens in 0.488 seconds.
+
+The tested setting is in this workstation's model-specific LM Studio default:
+`llm.load.llama.contextCheckpoints: 8` for `qwen3.8-27b-nvfp4-mtp`. Other models
+are unchanged. New machines should verify the effective value after load via
+`GET /api/v1/models` (`loaded_instances[].config.context_checkpoints`). The CLI
+does not expose this setting directly. Do not confuse the RAM snapshot limit
+with GPU KV placement or the context meter.
+An ordinary CLI unload/reload with the gold launcher's model/context/parallel
+arguments was verified to retain the new eight-checkpoint default.
+
+Private evidence/backup and reproduction: `logs/runs/20260919-095428-salem-image-cache-refills/`.
+The original collector discarded oversized-state warnings; their cause cannot
+be proved retrospectively for each original stall. The added `cache_save_skipped`
+record closes that gap.
+
+Live acceptance on September 19, 10:33-10:58: the image-heavy Boston continuation
+started at 41,839 input tokens and ended at 83,743 (31.9% to 63.9%). After the
+initial 11.79-second prefill, all 56 completed measured B1 calls reused at least
+90.1% of the prompt, median 98.4%, with no full refill or recognized cache-save/
+restore failure. Subsequent prefill median was 1.07 seconds, worst 8.90 seconds.
+The last user return reused 95.0%, evaluating 4,216 tokens in 3.36 seconds.
+This validates the change for this run, not every future workload. A separate
+idle-art delivery defect and one filtered-output retry were not cache failures.
+Evidence and reproducible numeric analysis:
+`logs/runs/20260919-105831-boston-idle-art-handoff/`.

@@ -91,16 +91,18 @@ test('capture-adjacent prose and current preference cannot steal a recall; ties 
 });
 
 test('saved file ID is stable across local recalls and note catalogs do not duplicate images', async () => {
-  const c = load(['sensingEyeSavedRemarks', 'listSensingEyeImages', 'listSensingEyeNotes'], {
+  const c = load(['sensingEyeSavedRemarks', 'sensingEyeLookupItems', 'listSensingEyeImages', 'listSensingEyeNotes'], {
+    Robot790FileLookup: require('../web/sts/file-lookup.js'),
     loadedNoteContexts: [],
-    fetchSensingEyeVisualNoteFiles: async () => [{ filename: 'rig.jpg', url: '/sensing-eye/rig.jpg' }, { filename: 'panda.jpg' }],
+    fetchSensingEyeFilePage: async () => ({ total: 2, files: [{ filename: 'rig.jpg', url: '/sensing-eye/rig.jpg' }, { filename: 'panda.jpg' }] }),
     sensingEyeImageHistoryList: () => [{ id: 'eye-1', saved_filename: 'rig.jpg', created_at: 'now' }],
     sensingEyeTextHistoryList: () => [], sensingInputActive: () => false, sensingInputLabel: () => '',
     URL, location: { href: 'http://127.0.0.1:8790/' }, events: {}, log: () => {},
   });
   const result = await c.listSensingEyeNotes();
   assert.equal(result.notes[0].id, 'file:rig.jpg');
-  assert.equal(result.notes[0].history_id, 'eye-1');
+  assert.equal(result.notes[0].history_id, undefined);
+  assert.equal((await c.sensingEyeLookupItems({ image_id: 'file:rig.jpg' })).images[0].history_id, 'eye-1');
   assert.equal(result.notes.length, 2);
   assert.equal(result.images, undefined);
 });
@@ -110,7 +112,8 @@ test('recalling an existing file registers its dependency without resaving it', 
   const assets = [];
   const c = load(['selectSensingEyeImage', 'chooseSensingEyeNote'], {
     sensingEyeGeneration: 1, maxSensingEyeImageHistory: 5,
-    listSensingEyeImages: async () => ({ images: [{ id: 'file:rig.jpg', history_id: 'eye-1', kind: 'image', location: 'session' }] }),
+    visionImageUrl: '', sensingTextContent: '',
+    sensingEyeLookupItems: async () => ({ images: [{ id: 'file:rig.jpg', history_id: 'eye-1', kind: 'image', location: 'session' }] }),
     requireCurrentSensingEyeLoad: () => {}, sensingEyeImageHistory: [item],
     visionPreview: { classList: { add() {} } }, visionDrop: { classList: { remove() {} } }, visionHint: {},
     updateVisionButtons() {}, events: {}, log() {}, recordUiEvent() {}, updateSessionTools() {},
@@ -124,7 +127,7 @@ test('recalling an existing file registers its dependency without resaving it', 
 });
 
 test('catalogue remarks follow the file-open receipt, never the next image capture', async () => {
-  const c = load(['sensingEyeSavedRemarks', 'listSensingEyeImages'], {
+  const c = load(['sensingEyeSavedRemarks'], {
     loadedNoteContexts: [{ filename: 'sessions/test.txt', content: [
       'Transcript Since Clean Connect', '------------------------------',
       '[1:00:00 PM] Robot 790: The previous image had yellow wood.',
@@ -140,19 +143,11 @@ test('catalogue remarks follow the file-open receipt, never the next image captu
       'B2 Notes For Eric', '------------------',
       '[1:00:10 PM] Robot 790: Not image evidence.',
     ].join('\n') }],
-    fetchSensingEyeVisualNoteFiles: async () => [
-      { filename: 'panda.jpg', nearby_transcript: 'yellow wood' },
-      { filename: 'next.jpg', nearby_transcript: 'A panda face with black ears.', last_user_text: 'panda' },
-    ],
-    sensingEyeImageHistoryList: () => [], sensingEyeTextHistoryList: () => [],
-    sensingInputActive: () => false, sensingInputLabel: () => '',
   });
-  const result = await c.listSensingEyeImages();
-  assert.deepEqual(Array.from(result.images[0].remarks_after_open[0].remarks), ['A panda face with black ears.', 'Big blue eyes.']);
-  assert.deepEqual(Array.from(result.images[1].remarks_after_open[0].remarks), ['A cardboard face.']);
-  assert.equal(result.images[1].nearby_transcript, undefined);
-  assert.equal(result.images[1].last_user_text, undefined);
-  assert.equal(result.images[0].remarks_after_open[0].source_session, 'sessions/test.txt');
+  const result = c.sensingEyeSavedRemarks();
+  assert.deepEqual(Array.from(result.get('panda.jpg')[0].remarks), ['A panda face with black ears.', 'Big blue eyes.']);
+  assert.deepEqual(Array.from(result.get('next.jpg')[0].remarks), ['A cardboard face.']);
+  assert.equal(result.get('panda.jpg')[0].source_session, 'sessions/test.txt');
 });
 
 test('recall returns actual outcomes without a tool-specific spoken script', () => {

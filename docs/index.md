@@ -10,8 +10,9 @@ The focus is narrow on purpose: can a local, embodied, tool-using loop become
 good company in a room?
 
 The public posture is modest. Eric is not presented as proof of a new kind of
-mind, and this is not a generic agent framework. The model proposes;
-deterministic layers decide. The mechanisms stay visible: prompt, voice, face,
+mind, and this is not a generic agent framework. Models interpret meaning and
+choose conversational actions; deterministic layers enforce permissions,
+execution, scheduling and storage. The mechanisms stay visible: prompt, voice, face,
 notes, search receipts, sensors, hardware controllers, Brain2 advisories, and
 the run ledger.
 
@@ -29,11 +30,14 @@ to be readable without digging through live private logs.
 
 ## Articles
 
-September 12 checkpoint: warm conversation is responsive with retained history
-after a prompt-ordering repair. Session history uses conservative sweeps by
-default; summaries remain experimental. The session map now includes branch
-archiving and fixture-tested spoken navigation. See [Engineering Status](engineering-status.md)
-for current capabilities, remaining speech/tool issues, and untested work.
+September 19 checkpoint: conversation and idle thinking share retained history,
+with measured cache-reuse repairs, compact memory lookup, and more reliable
+image handoffs. Optional setup notes can guide both speaking and advisory
+brains; they are not required for companionship. A small TimerCam can now put
+the physical room into Eric's Sensing Eye. Session sweeps remain the default;
+summaries remain experimental. See [Engineering Status](engineering-status.md)
+for test evidence, live observations, and the remaining gaps between successful
+tool execution and consistently thoughtful behavior.
 
 Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 

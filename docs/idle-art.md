@@ -9,6 +9,26 @@ Both idle routes share the permission service and one render lane. No extra LLM
 loop is introduced. Headline selection passes do not propose art. With idle art
 off, the B2 system prompt and schema remain unchanged.
 
+## Existing Eye Memories
+
+Browsing and recalling saved sensing-eye images or text is ordinary idle tool
+use, independent of the **Idle art** checkbox and paid-generation grant. B1 can
+choose `list_sensing_eye_notes` and `recall_sensing_eye_note`, or their image
+aliases, to put an existing item back in the eye. This does not generate an image
+or automatically start a slideshow. First Contact/performance exclusions and
+the enabled tool catalogue still apply; camera capture and eye clearing are not
+newly authorized for idle.
+
+Recall checks session/response freshness, intervening user activity and eye
+replacement before applying asynchronous loads. A late recall cannot replace
+newer eye content or cross a disconnect/reset. Revoking paid-art permission does
+not cancel an otherwise-current existing-memory recall.
+
+The September 19 repair needs an STS page refresh, not a backend restart. The full
+tool catalogue and prompt wording are unchanged; the idle tail's allowed-tools
+list now accurately includes recall. It does not change idle timing or require
+Eric to choose an image.
+
 ## Trial
 
 After loading the updated page/server, connect and read
@@ -52,6 +72,19 @@ its system prefix or forcing speech immediately. Successfully staged art renews
 the [discovery follow-up ramp](conversation-followup-pacing.md#discovery-follow-ups);
 Eric may mention the picture from the receipt but must not claim unseen details.
 The receipt distinguishes rendered from actually staged.
+
+September 19 handoff repair: a completed background result owns the delivery lane
+until staged or explicitly retained. A competing generation request is rejected
+before changing the preview and names the completed file; no new render is sent.
+B1's move-to-eye tool can claim that ready result even while its own tool call
+blocks the automatic tick. Both paths share single-owner delivery and the normal
+eye loader. The manual Move button still refers to the visible preview.
+
+Ready, staged, retained and display-failed receipts now update the matching job
+history. A denied generation cannot masquerade as a user replacing the image.
+Concurrent model moves, revoked permission, disconnect and actual eye/user
+replacement are tested, including replacement during asynchronous image fetching.
+No new rendering quota, cooldown, automatic retry or spoken script was added.
 
 For B1's direct route, rendering returns the actual artifact as its tool result.
 The controller does not automatically add a move or spoken line: B1 can choose
@@ -98,5 +131,7 @@ Unit tests use fake renderers: consent, revoke, serialization and idempotency un
 concurrency, restart durability, failures, opt-in schema, stale queues, late results,
 and protected eye delivery. Preference tests cover refresh/reconnect, explicit off,
 image-tools suspension, authorization failure and revocation while arming.
+Existing-memory tests cover idle permission with paid art off, stable tool
+catalogues, image/text recall, and stale session/user/eye results.
 No paid autonomous render was made during development.
 An actual connected artistic trial is still needed to evaluate taste and timing.

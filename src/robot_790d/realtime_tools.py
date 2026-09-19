@@ -657,13 +657,13 @@ TOOLS: list[dict[str, object]] = [
         "type": "function",
         "name": "list_text_files",
         "description": (
-            "Find notes by partial filename or directory. Results are paginated; use next_offset for more. "
+            "Find notes by partial filename or directory. Returns a few matching names; use next_offset for more. "
             "Spaces, hyphens and underscores match alike."
         ),
         "parameters": {"type": "object", "properties": {
             "query": {"type": "string"}, "directory": {"type": "string"},
             "offset": {"type": "integer", "minimum": 0},
-            "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 8, "default": 5},
         }, "additionalProperties": False},
     },
 ]
@@ -1135,7 +1135,10 @@ def _read_text_file(arguments: dict[str, object]) -> dict[str, object]:
 
 def _list_text_files(arguments: dict | None = None) -> dict[str, object]:
     try:
-        result = list_note_files_page(os.getenv("ROBOT_790_INSTANCE_PATH"), **(arguments or {}))
+        options = {"limit": 5, **(arguments or {})}
+        if type(options["limit"]) is not int or not 1 <= options["limit"] <= 8:
+            raise ValueError("Lookup limit must be 1-8.")
+        result = list_note_files_page(os.getenv("ROBOT_790_INSTANCE_PATH"), **options)
     except (OSError, ValueError, TypeError) as exc:
         return {"status": "error", "error": str(exc)}
     return {"status": "ok", "tool": "list_text_files", **result}

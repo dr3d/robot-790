@@ -38,6 +38,14 @@ A setup card focuses an already curious companion; it must not become necessary
 for initiative or associative thinking. Brand-new, card-free Eric must continue
 to work well, as must Eric with a growing conversation history.
 
+September 19 clarification: setup cards are optional task preparation, not a
+central dependency of this project. Empty Connect without a setup card is a
+primary companion acceptance case, not an incomplete configuration. Baseline
+personality, proactive engagement and useful B2 support must not depend on a
+companion card. Do not automatically load a card to hide a baseline weakness.
+Card-loading correctness matters when the mechanism is used, but card features
+must not displace work on the companion itself.
+
 Silence is an available choice, not the success metric or default repetition
 repair. A silent turn does not cancel future thinking opportunities. The runtime
 does not infer that the operator left, revoked an activity, or requires a new

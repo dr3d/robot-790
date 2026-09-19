@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import threading
 import time
+import unicodedata
 from datetime import datetime
 from email import policy
 from email.parser import BytesParser
@@ -18,7 +19,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 import httpx
 
@@ -37,6 +38,7 @@ from robot_790d.headlines import read_headlines
 from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.idle_art import IdleArtService, validate_proposal
 from robot_790d.media_cast import CastMediaClient
+from robot_790d.network_camera import camera_config, capture_frame
 from robot_790d.note_files import list_note_files, list_note_files_page, read_note_file, write_note_file
 from robot_790d.note_brains import parse_note_brains, format_brain_guidance
 from robot_790d.session_preparation import session_preparer
@@ -115,6 +117,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/runtime-config":
             self._handle_runtime_config()
+            return
+        if parsed.path == "/api/camera/esp32/frame":
+            self._handle_esp32_camera_frame()
             return
         if parsed.path == "/api/search":
             self._handle_search(parsed.query)
@@ -259,6 +264,21 @@ class StsPageHandler(SimpleHTTPRequestHandler):
     def _handle_runtime_config(self) -> None:
         self._send_json(200, runtime_config())
 
+    def _handle_esp32_camera_frame(self) -> None:
+        try:
+            config = runtime_config()["esp32_camera"]
+            body = capture_frame(config)
+        except (ValueError, RuntimeError, httpx.HTTPError, httpx.InvalidURL) as exc:
+            self._send_json(502, {"status": "error", "error": f"ESP32 camera unavailable: {exc}"})
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Camera-Rotation", str(config["rotation_degrees"]))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _handle_operator_poll(self, query_string: str) -> None:
         params = parse_qs(query_string)
         after = _int_param(params, "after", 0)
@@ -290,8 +310,18 @@ class StsPageHandler(SimpleHTTPRequestHandler):
 
     def _handle_sensing_eye_list(self, query_string: str) -> None:
         params = parse_qs(query_string)
-        limit = _int_param(params, "limit", 5)
-        self._send_json(200, list_sensing_eye_images(limit=limit))
+        try:
+            result = list_sensing_eye_images(
+                limit=int(_first_param(params, "limit") or "5"),
+                offset=int(_first_param(params, "offset") or "0"),
+                query=_first_param(params, "query") or "",
+                filename=_first_param(params, "filename") or "",
+                hints=params.get("hint", []),
+            )
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, result)
 
     def _handle_sensing_eye_inbox_push(self) -> None:
         try:
@@ -318,8 +348,6 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         filename = _first_param(params, "filename") or _first_param(params, "name") or ""
         try:
             note = read_note_file(None, filename)
-            content, snapshot = parse_note_brains(note.content)
-            brain_context = snapshot if _first_param(params, "brain_context") == "1" else None
         except FileNotFoundError:
             self._send_json(404, {
                 "status": "error",
@@ -331,6 +359,13 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
+        try:
+            content, snapshot = parse_note_brains(note.content)
+        except ValueError as exc:
+            self._send_json(400, {"status": "error", "code": "invalid_note_directives",
+                                  "filename": note.filename, "error": str(exc)})
+            return
+        brain_context = snapshot if _first_param(params, "brain_context") == "1" else None
         self._send_json(
             200,
             {"status": "ok", "tool": "read_text_file", "filename": note.filename, "content": content,
@@ -1013,6 +1048,12 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "ROBOT_790_IDLE_LEVEL12_COOLDOWN_S",
         _runtime_float(payload, "idle_level12_cooldown_s", 12.0),
     )
+    camera_warning = ""
+    try:
+        esp32_camera = camera_config(payload.get("esp32_camera"))
+    except ValueError as exc:
+        esp32_camera = camera_config(None)
+        camera_warning = str(exc)
     result: dict[str, object] = {
         "status": "ok",
         "current_embodiment": current_embodiment,
@@ -1023,6 +1064,8 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "audio_interrupt": _runtime_audio_interrupt(payload.get("audio_interrupt")),
         "image_continuation": _runtime_image_continuation(payload.get("image_continuation")),
         "context_history": history_config(payload.get("context_history")),
+        "note_cards": _runtime_note_cards(payload.get("note_cards")),
+        "esp32_camera": esp32_camera,
         "runtime_revision": "20260911-history-policy",
         "creature": creature,
         "creature_source": creature_source,
@@ -1036,10 +1079,18 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "default_embodiment": _runtime_string(payload, "default_embodiment", ""),
         "embodiments": _runtime_embodiments(payload.get("embodiments")),
     }
-    warnings = [item for item in [config_error, creature_error] if item]
+    warnings = [item for item in [config_error, creature_error, camera_warning] if item]
     if warnings:
         result["config_warning"] = " ".join(warnings)
     return result
+
+
+def _runtime_note_cards(value: object) -> dict[str, int]:
+    config = value if isinstance(value, dict) else {}
+    return {
+        key: raw if type(raw := config.get(key)) is int and 1 <= raw <= maximum else default
+        for key, default, maximum in (("max_cards", 8, 8), ("b1_characters", 32000, 128000))
+    }
 
 
 def _runtime_image_continuation(value: object) -> dict[str, object]:
@@ -1502,14 +1553,30 @@ def save_sensing_eye_text(payload: dict[str, Any], repo_root: Path | None = None
     }
 
 
-def list_sensing_eye_images(limit: int = 5, repo_root: Path | None = None) -> dict[str, object]:
-    safe_limit = max(1, min(25, int(limit or 5)))
+def list_sensing_eye_images(
+    limit: int = 5, repo_root: Path | None = None, *, query: str = "", offset: int = 0,
+    filename: str = "", hints: list[str] | None = None,
+) -> dict[str, object]:
+    if type(limit) is not int or not 1 <= limit <= 25 or type(offset) is not int or offset < 0:
+        raise ValueError("Offset must be nonnegative and limit must be 1-25.")
+    if not isinstance(query, str) or len(query) > 160 or not isinstance(filename, str):
+        raise ValueError("Query must be at most 160 characters and filename must be a string.")
+    if hints is not None and (not isinstance(hints, list) or any(not isinstance(h, str) for h in hints)):
+        raise ValueError("Lookup hints must be filenames.")
+    hinted_names = set(hints or [])
+
+    def key(value: str) -> str:
+        return " ".join(re.findall(r"[^\W_]+", unicodedata.normalize("NFKC", value).lower()))
+
+    words = key(query).split()
     root = repo_root or Path(__file__).resolve().parents[2]
     out_dir = root / "logs" / "sensing-eye"
     files: list[dict[str, object]] = []
     if out_dir.is_dir():
         for path in out_dir.iterdir():
             if not path.is_file():
+                continue
+            if filename and path.name != filename:
                 continue
             if path.name.startswith("latest-sensing-eye."):
                 continue
@@ -1530,11 +1597,16 @@ def list_sensing_eye_images(limit: int = 5, repo_root: Path | None = None) -> di
                 continue
             stat = path.stat()
             metadata = _read_sensing_eye_metadata(path)
+            # Only file metadata or explicitly attributed browser hints, not adjacent conversation.
+            searchable = key(path.name + " " + str(metadata.get("reason") or ""))
+            if not filename and query.strip() and path.name not in hinted_names:
+                if not words or not all(word in searchable for word in words):
+                    continue
             memory_context = metadata.get("memory_context") if isinstance(metadata.get("memory_context"), dict) else {}
             files.append(
                 {
                     "filename": path.name,
-                    "url": f"{SENSING_EYE_IMAGE_URL_PREFIX}{path.name}",
+                    "url": f"{SENSING_EYE_IMAGE_URL_PREFIX}{quote(path.name)}",
                     "kind": kind,
                     "source": str(metadata.get("source") or "sensing-eye filesystem"),
                     "reason": str(metadata.get("reason") or ""),
@@ -1547,7 +1619,7 @@ def list_sensing_eye_images(limit: int = 5, repo_root: Path | None = None) -> di
                     "_sort_mtime": stat.st_mtime,
                 }
             )
-    files.sort(key=lambda item: float(item.get("_sort_mtime") or 0), reverse=True)
+    files.sort(key=lambda item: (-float(item.get("_sort_mtime") or 0), str(item["filename"])))
     for item in files:
         item.pop("_sort_mtime", None)
     return {
@@ -1555,7 +1627,12 @@ def list_sensing_eye_images(limit: int = 5, repo_root: Path | None = None) -> di
         "tool": "list_sensing_eye_images",
         "directory": str(out_dir),
         "count": len(files),
-        "files": files[:safe_limit],
+        "lookup_version": 1,
+        "total": len(files),
+        "offset": offset,
+        "limit": limit,
+        "next_offset": offset + limit if offset + limit < len(files) else None,
+        "files": files[offset:offset + limit],
     }
 
 

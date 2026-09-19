@@ -63,6 +63,15 @@ def parse_event(line: str) -> list[dict]:
             )
             if eviction:
                 records.append({**base, "kind": "cache_eviction", "size_mib": float(eviction[1])})
+            oversized = re.search(
+                r"prompt state size (\d+(?:\.\d+)?) MiB exceeds cache size limit (\d+(?:\.\d+)?) MiB, skipping",
+                message,
+            )
+            if oversized:
+                records.append({
+                    **base, "kind": "cache_save_skipped", "reason": "state_exceeds_limit",
+                    "state_mib": float(oversized[1]), "limit_mib": float(oversized[2]),
+                })
             continue
         context = {**base, "slot": int(slot[2]), "task": int(slot[3])}
         body = slot[4]
@@ -86,6 +95,10 @@ def parse_event(line: str) -> list[dict]:
             records.append(record)
         elif body.startswith("processing task,"):
             records.append({**context, "kind": "task_start"})
+        elif body.startswith("forcing full prompt re-processing due to lack of cache data"):
+            records.append({**context, "kind": "cache_reprocess", "reason": "missing_cache_data"})
+        elif body.strip() == "failed to load prompt from cache":
+            records.append({**context, "kind": "cache_restore_failed"})
         elif body.startswith("stop processing:"):
             match = re.search(r"n_tokens\s*=\s*(\d+), truncated\s*=\s*(\d+)", body)
             if match:

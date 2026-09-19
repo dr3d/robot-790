@@ -77,7 +77,7 @@
       padding: 16px 0 18px;
       display: grid;
       --control-sidebar-width: 360px;
-      grid-template-columns: minmax(0, 1fr) 10px minmax(180px, var(--control-sidebar-width));
+      grid-template-columns: minmax(0, 1fr) 10px minmax(225px, var(--control-sidebar-width));
       grid-template-rows: auto minmax(0, 1fr);
       grid-template-areas:
         "header header header"
@@ -1151,18 +1151,27 @@
       -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
     }
+    #sensingEyeExpando > .runtime-settings-expando-body {
+      container-type: inline-size;
+      container-name: sensing-eye;
+    }
     .sensing-eye-actions {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      grid-template-columns: minmax(0, 0.7fr) minmax(0, 0.7fr) repeat(2, minmax(0, 1fr));
+      gap: 6px;
       min-width: 0;
     }
     #controlSidebar .sensing-eye-actions > button {
       width: 100%;
       min-height: 38px;
-      padding: 7px 10px;
-      font-size: 13px;
+      padding: 7px 5px;
+      font-size: 12px;
       line-height: 1.2;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    @container sensing-eye (max-width: 260px) {
+      .sensing-eye-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     .camera-card {
       width: 152px;
@@ -1199,6 +1208,34 @@
       display: grid;
       gap: 8px;
     }
+    .esp32-camera-preview {
+      display: block;
+      width: 100%;
+      height: 180px;
+      object-fit: contain;
+      background: #0c0d10;
+    }
+    .esp32-camera-preview:not(.ready) { display: none; }
+    .esp32-camera-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    #controlSidebar .esp32-camera-actions label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: auto;
+      white-space: nowrap;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    #controlSidebar .esp32-camera-actions input { width: 14px; height: 14px; flex: 0 0 14px; }
+    #controlSidebar .esp32-camera-actions button { width: auto; flex: 1 1 150px; }
+    .esp32-camera-actions svg { width: 16px; height: 16px; vertical-align: middle; }
+    #esp32CameraHint { display: block; margin-top: 6px; overflow-wrap: anywhere; }
     .generated-image-card {
       min-height: 96px;
       display: grid;
@@ -1484,6 +1521,7 @@
     #controlSidebar #generatedImageExpando .generated-image-controls {
       grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 8px;
+      padding-top: 0;
     }
     #controlSidebar #generatedImageExpando .generated-image-card {
       grid-column: 1 / -1;
@@ -2029,7 +2067,7 @@
     }
     @media (max-width: 980px) {
       main {
-        grid-template-columns: minmax(0, 1fr) 10px minmax(180px, var(--control-sidebar-width));
+        grid-template-columns: minmax(0, 1fr) 10px minmax(225px, var(--control-sidebar-width));
         grid-template-rows: auto minmax(0, 1fr);
         grid-template-areas:
           "header header header"
@@ -2502,6 +2540,24 @@
               </div>
             </div>
           </details>
+          <details id="esp32CameraExpando" class="runtime-settings-expando">
+            <summary>
+              <span class="runtime-settings-label">ESP32 Camera</span>
+              <span class="subtle">TimerCam preview and capture</span>
+            </summary>
+            <div class="runtime-settings-expando-body">
+              <img id="esp32CameraPreview" class="esp32-camera-preview" alt="ESP32 camera snapshot">
+              <div class="esp32-camera-actions">
+                <label><input id="esp32CameraPreviewEnabled" type="checkbox">Preview</label>
+                <button id="esp32CameraCapture" type="button" title="Capture an ESP32 camera snapshot to Sensing Eye">
+                  <!-- Lucide camera, ISC license: assets/lucide-LICENSE.txt -->
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                  Capture To Eye
+                </button>
+              </div>
+              <span id="esp32CameraHint" class="vision-hint" role="status">Preview off</span>
+            </div>
+          </details>
         </section>
         <details id="typedInputExpando" class="runtime-settings-expando typed-input-expando">
           <summary>
@@ -2943,6 +2999,8 @@
 
   <script src="llm-overview.js"></script>
   <script src="note-brains.js"></script>
+  <script src="file-lookup.js"></script>
+  <script src="network-camera.js"></script>
   <script src="idle-art.js"></script>
   <script>
     const serverUrl = document.querySelector("#serverUrl");
@@ -3166,6 +3224,8 @@
     let visionCameraStream;
     let visionCameraStartPromise = null;
     let visionCameraGeneration = 0;
+    let esp32CameraClient = null;
+    let esp32CameraCapturePromise = null;
     let micSource;
     let micProcessor;
     let brain2MonitorAudioActive = false;
@@ -3671,7 +3731,11 @@
       "get_current_time",
       "get_brain_status",
       "read_text_file",
-      "list_text_files"
+      "list_text_files",
+      "list_sensing_eye_notes",
+      "recall_sensing_eye_note",
+      "list_sensing_eye_images",
+      "select_sensing_eye_image"
     ]);
     const imageModelStorageKey = "robot790.imageModel.v1";
     const imageCostStorageKey = "robot790.imageCost.v1";
@@ -4754,14 +4818,14 @@
       {
         type: "function",
         name: "list_text_files",
-        description: "Find supported files in the notes folder. Results are paginated. Use query for a partial filename, directory to narrow the folder, or next_offset for another page. Listing reads names, not contents.",
+        description: "Find a note by partial filename with query, optionally narrowing directory. Returns a few matching names, not contents. With no query returns a small browse page; next_offset retrieves another page when needed.",
         parameters: {
           type: "object",
           properties: {
             query: { type: "string", description: "Case-insensitive partial filename; spaces, hyphens and underscores match alike." },
             directory: { type: "string", description: "Relative notes directory, including descendants; empty means all notes." },
             offset: { type: "integer", minimum: 0, description: "Start at the previous result's next_offset." },
-            limit: { type: "integer", minimum: 1, maximum: 50, default: 20 }
+            limit: { type: "integer", minimum: 1, maximum: 8, default: 5 }
           },
           additionalProperties: false
         }
@@ -4965,6 +5029,31 @@
     const liveCameraTools = [
       {
         type: "function",
+        name: "set_esp32_camera",
+        description: "Turn the TimerCam / ESP32 robot camera snapshot preview on or off when requested. This is the separate network camera, not the browser webcam. Set capture_frame true to also capture one still into Sensing Eye for visual inspection. Preview alone does not supply visual context. Off and Disconnect stop STS camera requests, not power to the hardware. No motor commands are involved.",
+        parameters: {
+          type: "object",
+          properties: {
+            enabled: { type: "boolean", description: "True to start TimerCam preview, false to stop it." },
+            capture_frame: { type: "boolean", description: "Also capture a frame into Sensing Eye when enabling." },
+            reason: { type: "string", maxLength: 120, description: "Reason for the camera action." }
+          },
+          required: ["enabled"],
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
+        name: "capture_esp32_camera",
+        description: "Capture one current still from the separate TimerCam / ESP32 robot camera into Sensing Eye for visual inspection. This is not the browser webcam. Preview does not need to be on. Only a successful staged capture supplies visual context; report an unavailable camera honestly. No motor commands are involved.",
+        parameters: {
+          type: "object",
+          properties: { reason: { type: "string", maxLength: 120, description: "Reason for looking through the ESP32 camera." } },
+          additionalProperties: false
+        }
+      },
+      {
+        type: "function",
         name: "set_live_camera",
         description: "Turn the browser live camera on or off when the user requests it. Browser permission is required. Set capture_frame true when the user also asks for a picture or asks you to look at the current view; this captures one frame into the sensing eye after opening the camera. Enabling alone does not give you visual context. Disconnect stops the camera.",
         parameters: {
@@ -5009,14 +5098,18 @@
         type: "function",
         name: "list_sensing_eye_notes",
         description: (
-          "List recent sensing-eye memories kept in this browser session or saved under logs/sensing-eye. " +
+          "Find sensing-eye memories in this browser session or saved under logs/sensing-eye using query: a partial name or identifying words. " +
           "A sensing-eye memory can be a picture memory or a pasted/dropped text memory. " +
           "Use when the user refers to previous eye material, the last few pictures/texts, visual notes, picture memories, text memories, or asks what eye material is available. " +
-          "This returns metadata only; recall a note before treating it as the current sensing-eye context."
+          "Returns a few compact matches, not file contents or old dialogue. Omit query for recent files; use next_offset for more matches. Recall an exact returned id to inspect it."
         ),
         parameters: {
           type: "object",
-          properties: {},
+          properties: {
+            query: { type: "string", maxLength: 160, description: "Identifying words from the filename, saved reason, or previously attributed remarks; not a full instruction." },
+            offset: { type: "integer", minimum: 0, description: "Previous result's next_offset for more matches." },
+            limit: { type: "integer", minimum: 1, maximum: 8, default: 5 }
+          },
           additionalProperties: false
         }
       },
@@ -5025,7 +5118,7 @@
         name: "recall_sensing_eye_note",
         description: (
           "Load one recalled sensing-eye memory back into the current sensing eye and stage it as current image or text context. " +
-          "Use after list_sensing_eye_notes. Pass the exact note_id, not a guessed index or a subject query. IDs of saved files remain stable when the current image changes."
+          "Pass the exact note_id from a lookup or earlier receipt, not a guessed index or a subject query. IDs of saved files remain stable when the current image changes."
         ),
         parameters: {
           type: "object",
@@ -5039,7 +5132,7 @@
             note_id: {
               type: "string",
               minLength: 1,
-              description: "Required exact note id from list_sensing_eye_notes. Use attributed saved remarks as retrieval clues, then inspect the recalled note itself."
+              description: "Exact note id from a lookup or an earlier tool receipt. Older saved IDs still work; no need to list again."
             },
             query: {
               type: "string",
@@ -5055,13 +5148,17 @@
         type: "function",
         name: "list_sensing_eye_images",
         description: (
-          "List recent sensing-eye notes kept in this browser session or saved under logs/sensing-eye. Notes can be images or pasted/dropped text. " +
+          "Find saved images or pasted/dropped text by query (partial name or identifying words). Searches older saved eye files too. " +
           "Use when the user refers to a previous image, pasted text, last few eye notes, visual notes, picture notes, or asks what eye material is available. " +
-          "This returns metadata only; select a note to reopen it as current sensing-eye context."
+          "Returns a few compact matches. Omit query for recent files; use next_offset for more matches. Select an exact returned id to inspect it."
         ),
         parameters: {
           type: "object",
-          properties: {},
+          properties: {
+            query: { type: "string", maxLength: 160, description: "Identifying words, not a full instruction." },
+            offset: { type: "integer", minimum: 0, description: "Previous result's next_offset for more matches." },
+            limit: { type: "integer", minimum: 1, maximum: 8, default: 5 }
+          },
           additionalProperties: false
         }
       },
@@ -5069,7 +5166,7 @@
         type: "function",
         name: "select_sensing_eye_image",
         description: (
-          "Make one recent sensing-eye note current again and stage it as current image or text context. " +
+          "Make one saved sensing-eye note current again and stage it as current image or text context. " +
           "Use after list_sensing_eye_images, or when the user says to go back to the previous/last sensing-eye image, pasted text, or picture note."
         ),
         parameters: {
@@ -5084,7 +5181,7 @@
             image_id: {
               type: "string",
               minLength: 1,
-              description: "Required exact note id from list_sensing_eye_images. Saved-file IDs remain stable."
+              description: "Exact note id from a lookup or an earlier tool receipt. Saved-file IDs remain stable, including older files."
             },
             query: {
               type: "string",
@@ -5728,12 +5825,14 @@
         { filename, content, brain_context: result.brain_context, loadedAt: Date.now() },
         ...loadedNoteContexts.filter((item) => item.filename !== filename)
       ];
-      const reservedCount = updatedContexts.filter((item) => (
+      Robot790NoteBrains.admit(updatedContexts, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards);
+      const reservedCount = updatedContexts.filter(item => item.brain_context?.version !== 1).filter((item) => (
         (loadEricMemoriesEnabled() && noteFilenameInSet(item.filename, baseStartupNoteFilenames))
         || noteFilenameIsCurrentContinuitySession(item.filename)
       )).length;
       let ordinaryCount = 0;
       loadedNoteContexts = updatedContexts.filter((item) => {
+        if (item.brain_context?.version === 1) return true;
         if (
           (loadEricMemoriesEnabled() && noteFilenameInSet(item.filename, baseStartupNoteFilenames))
           || noteFilenameIsCurrentContinuitySession(item.filename)
@@ -6014,7 +6113,7 @@
       const seen = new Set();
       // The core checkbox is a current preference, independent of old saved pins.
       const coreNotes = ericMemoryNoteContexts().map((item) => ({ ...item, status: "ok" }));
-      loadedNoteContexts = [...(results || []), ...coreNotes]
+      const restoredContexts = [...(results || []), ...coreNotes]
         .filter((item) => item?.status === "ok" && typeof item.content === "string")
         .map((item) => ({
           filename: String(item.filename || "").trim(),
@@ -6028,6 +6127,8 @@
           seen.add(key);
           return true;
         });
+      Robot790NoteBrains.admit(restoredContexts, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards);
+      loadedNoteContexts = restoredContexts;
       loadedNoteContextDirty = true;
       updateLoadedNoteControls();
       if (contextPanel?.open) renderContextMap();
@@ -6455,8 +6556,8 @@
         const notes = current.history_notes.filter(item => (
           loadEricMemoriesEnabled() || !noteFilenameInSet(item.filename, baseStartupNoteFilenames)
         ));
-        currentContinuitySessionFilename = filename;
         setLoadedNoteContextsForContinuity(notes);
+        currentContinuitySessionFilename = filename;
         continuityParentForCurrentRun = filename;
         const inventory = current.history_inventory || [];
         const rawCharacters = inventory.reduce((sum, item) => sum + item.raw_characters, 0);
@@ -6471,15 +6572,8 @@
         });
         return current;
       }
-      currentContinuitySessionFilename = filename;
       const loadFilename = String(current.load_filename || filename).trim();
-      let sessionResult = null;
-      try {
-        sessionResult = await readTextFile({ filename: loadFilename, pin: false });
-      } catch (error) {
-        currentContinuitySessionFilename = "";
-        throw error;
-      }
+      const sessionResult = await readTextFile({ filename: loadFilename, pin: false });
       const receipts = Array.isArray(current.pinned_notes) ? current.pinned_notes : [];
       const receiptFilenames = receipts
         .filter((item) => item?.status !== "missing" && item?.current_status !== "missing")
@@ -6497,6 +6591,7 @@
         try {
           loaded.push(await readTextFile({ filename, pin: false }));
         } catch (error) {
+          if (error.code === "invalid_note_directives") throw error;
           failed.push(`${filename} (${error.message})`);
         }
       }
@@ -6512,6 +6607,7 @@
       // Keep the raw source filename on the active context so the next save
       // preserves the real lineage even when its text came from a derivative.
       setLoadedNoteContextsForContinuity([{ ...sessionResult, filename }, ...loaded]);
+      currentContinuitySessionFilename = filename;
       continuityParentForCurrentRun = filename;
       log(events, [
         `session note loaded from ${source}: ${filename} / ${current.resume_form_label || continuityScrubModeLabel(current.resume_form)} (${loadFilename})`,
@@ -6888,9 +6984,11 @@
     function loadedNoteAdmissionReport() {
       const notes = [];
       const text = formatLoadedNoteContextsForInstructions(loadedNoteContexts, { admission: notes });
+      const cards = Robot790NoteBrains.admit(loadedNoteContexts, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards);
       return {
         basis: "Browser-assembled B1 note section, not proof of transmission, provider token usage or B2 admission.",
         limit_characters: maxLoadedNoteChars,
+        routed_cards: { limit_characters: cards.limit, assembled_characters: cards.characters, count: cards.cards.length, units: cards.units },
         assembled_characters: text.length,
         partial_notes: notes.filter(item => item.status === "partial").length,
         omitted_notes: notes.filter(item => item.status === "omitted").length,
@@ -6913,11 +7011,20 @@
     } = {}) {
       const contexts = Array.isArray(noteContexts) ? noteContexts : [];
       if (!contexts.length) return "";
+      const routed = contexts.filter(item => item.brain_context?.version === 1);
+      const cards = routed.length ? Robot790NoteBrains.admit(routed, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards) : null;
+      if (admission && cards) {
+        for (const { note, body, text } of cards.blocks) admission.push({
+          filename: note.filename, source_characters: String(note.content || "").length,
+          instruction_bearing: true, status: "full", reasons: [], revision: note.brain_context.revision,
+          desired_body_characters: body.length, assembled_block_characters: text.length
+        });
+      }
       const lines = [
         heading,
         ...description
       ];
-      const blocks = contexts.map((item) => {
+      const blocks = contexts.filter(item => item.brain_context?.version !== 1).map((item) => {
         const core = noteFilenameInSet(item.filename, baseStartupNoteFilenames);
         const enabled = loadEricMemoriesEnabled() || !core;
         const receipt = {
@@ -6940,7 +7047,7 @@
           core, receipt
         };
       }).filter(Boolean);
-      if (!blocks.length) return "";
+      if (!blocks.length) return cards?.text || "";
       // Reserve core memory without changing the operator's loaded-note order.
       const introLength = lines.join("\n").length + blocks.length + 1;
       const noteBudget = Math.max(0, maxLoadedNoteChars - introLength);
@@ -6964,7 +7071,7 @@
         if (core) coreRemaining -= clippedBlock.length;
         else remaining -= clippedBlock.length;
       }
-      return lines.join("\n");
+      return [lines.join("\n"), cards?.text].filter(Boolean).join("\n\n");
     }
 
     function formatEricMemoriesForInstructions() {
@@ -7248,6 +7355,7 @@
           idle_level12_cooldown_s: Number(result.idle_level12_cooldown_s) || 12,
           idle_timing: result.idle_timing && typeof result.idle_timing === "object" ? result.idle_timing : {},
           image_continuation: result.image_continuation || {},
+          esp32_camera: result.esp32_camera || {},
           audio_interrupt: result.audio_interrupt && typeof result.audio_interrupt === "object" ? result.audio_interrupt : {},
           creature: result.creature && typeof result.creature === "object" ? result.creature : null,
           creature_source: String(result.creature_source || ""),
@@ -8710,7 +8818,7 @@
     function controlSidebarWidthBounds() {
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1200;
       return {
-        min: 180,
+        min: 225,
         max: Math.max(320, Math.min(620, Math.round(viewportWidth * 0.48)))
       };
     }
@@ -9194,9 +9302,15 @@
       log(events, opened ? `generated image opened: ${generatedImageUrl}` : "generated image popup blocked");
     }
 
-    async function moveGeneratedImageToSensingEye({ reason = "", _expectedFilename = "", _isCurrent = () => true } = {}) {
+    async function moveGeneratedImageToSensingEye({ reason = "", _expectedFilename = "", _isCurrent = () => true, _usePending = false } = {}) {
       const generation = sensingEyeGeneration;
       if (!_isCurrent()) throw new Error("Image request was superseded.");
+      if (_usePending && typeof idleArt !== "undefined" && idleArt.busy) {
+        throw new Error("An idle-art generation or delivery is already in progress.");
+      }
+      if (_usePending && typeof idleArt !== "undefined" && idleArt.ready) {
+        return idleArt.stageReady({ isCurrent: _isCurrent, expectedFilename: _expectedFilename });
+      }
       if (!generatedImageUrl) throw new Error("No generated image is available.");
       const imageUrl = generatedImageUrl;
       const imageName = generatedImageName || filenameFromPath(imageUrl) || "generated-image.jpg";
@@ -15802,6 +15916,7 @@
         loaded_notes: estimateTextContext(loadedNotesText),
         loaded_note_admission: {
           basis: noteAdmission.basis,
+          routed_cards: noteAdmission.routed_cards,
           partial_notes: noteAdmission.partial_notes, omitted_notes: noteAdmission.omitted_notes,
           instruction_warnings: noteAdmission.instruction_warnings
         },
@@ -16023,6 +16138,7 @@
           details: [
             `Loaded files: ${loadedNoteContexts.length}`,
             `Conversation note cap: ${maxLoadedNoteChars} chars`,
+            `Routed-card B1 allowance: ${noteAdmission.routed_cards.assembled_characters}/${noteAdmission.routed_cards.limit_characters} UTF-16 units`,
             `B1 assembly: ${noteAdmission.assembled_characters} chars / ${noteAdmission.partial_notes} partial / ${noteAdmission.omitted_notes} omitted`,
             `Declared instruction warnings: ${noteAdmission.instruction_warnings}`,
             "Assembly only; not provider token usage or B2 admission.",
@@ -16347,6 +16463,7 @@
       if (generatedImageStatusState === "generating" || (typeof idleArt !== "undefined" && idleArt.busy)) {
         throw Object.assign(new Error("An image generation is already in progress."), { generationSubmitted: false });
       }
+      if (typeof idleArt !== "undefined") idleArt.assertCanRender({ requirePermission: _idleArt });
       const requestGeneration = ++generatedImageRequestGeneration;
       const ownsProgress = () => requestGeneration === generatedImageRequestGeneration && generatedImageStatusState === "generating";
       const shortTitle = String(title || "").replace(/\s+/g, " ").trim().slice(0, 80);
@@ -17231,7 +17348,19 @@
         throw error;
       }
       log(events, `note file read: ${result.filename}`);
-      if (pin) rememberLoadedNoteContext(result);
+      if (pin) {
+        try {
+          rememberLoadedNoteContext(result);
+        } catch (error) {
+          error.message = `File read but not activated: ${result.filename}. ${error.message}`;
+          log(events, error.message);
+          throw error;
+        }
+        if (result.brain_context?.version === 1) result.pin_admission = {
+          status: "admitted", revision: result.brain_context.revision,
+          basis: "Complete browser snapshot for declared brains; not proof of provider consumption."
+        };
+      }
       return result;
     }
 
@@ -17281,7 +17410,8 @@
       }
     }
 
-    async function listTextFiles({ query = "", directory = "", offset = 0, limit = 20 } = {}) {
+    async function listTextFiles({ query = "", directory = "", offset = 0, limit = 5 } = {}) {
+      ({ query, offset, limit } = Robot790FileLookup.options({ query, offset, limit }));
       const url = new URL("/api/notes/list", location.href);
       for (const [key, value] of Object.entries({ query, directory, offset, limit })) url.searchParams.set(key, String(value));
       const response = await fetch(url, { cache: "no-store" });
@@ -17496,15 +17626,17 @@
         : "none"}. Earlier identities remain in tool receipts and the sensing-eye catalogue.`;
     }
 
-    async function fetchSensingEyeVisualNoteFiles(limit = maxSensingEyeImageHistory) {
+    async function fetchSensingEyeFilePage({ limit = 5, offset = 0, query = "", filename = "", hints = [] } = {}) {
       const url = new URL("/api/sensing-eye/list", location.href);
-      url.searchParams.set("limit", String(limit));
+      for (const [key, value] of Object.entries({ limit, offset, query, filename })) url.searchParams.set(key, String(value));
+      for (const hint of hints) url.searchParams.append("hint", hint);
       const response = await fetch(url, { cache: "no-store" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
-      return Array.isArray(result.files) ? result.files : [];
+      if (result.lookup_version !== 1) throw new Error("The STS page helper needs a restart for file lookup. No lookup result was used.");
+      return result;
     }
 
     async function saveSensingEyeTextNote({ content, name, source = "operator text", memoryContext = null } = {}) {
@@ -17607,27 +17739,40 @@
       return remarks;
     }
 
-    async function listSensingEyeImages() {
-      let files = [];
-      try {
-        files = await fetchSensingEyeVisualNoteFiles(25);
-      } catch (error) {
-        log(events, `sensing-eye visual note list error: ${error.message}`);
-      }
+    async function sensingEyeLookupItems(selection = {}) {
+      const { query, offset, limit } = Robot790FileLookup.options(selection);
+      const exactId = String(selection.image_id || "");
       const sessionNotes = [
         ...sensingEyeImageHistoryList().map((item) => ({ ...item, location: "session" })),
         ...sensingEyeTextHistoryList().map((item) => ({ ...item, location: "session" }))
       ].sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
         .map((item) => ({ ...item, history_id: item.id, id: item.saved_filename ? `file:${item.saved_filename}` : item.id }));
-      const seenSavedNames = new Set(sessionNotes
-        .map((item) => String(item.saved_filename || "").toLowerCase())
-        .filter(Boolean));
-      const savedRemarks = sensingEyeSavedRemarks();
-      const merged = [
-        ...sessionNotes,
-        ...files
-          .filter((file) => !seenSavedNames.has(String(file.filename || "").toLowerCase()))
-          .map((file) => ({
+      if (exactId) {
+        const local = sessionNotes.find(item => item.id === exactId);
+        if (local) return { images: [local], total: 1, next_offset: null };
+        if (!exactId.startsWith("file:")) return { images: [], total: 0, next_offset: null };
+      }
+      const matches = Robot790FileLookup.matches;
+      const local = exactId ? [] : sessionNotes.filter(item => !item.saved_filename
+        && matches(`${item.name || ""} ${item.reason || ""}`, query));
+      const localPage = local.slice(offset, offset + limit);
+      // Search attributed remarks internally; never reinsert their dialogue into tool output.
+      const hints = new Set();
+      if (query && !exactId) {
+        for (const item of sessionNotes) {
+          if (item.saved_filename && matches(`${item.name || ""} ${item.reason || ""}`, query)) hints.add(item.saved_filename);
+        }
+        for (const [filename, entries] of sensingEyeSavedRemarks()) {
+          if (entries.some(entry => matches(entry.remarks.join(" "), query))) hints.add(filename);
+        }
+      }
+      const result = await fetchSensingEyeFilePage({
+        query, offset: Math.max(0, offset - local.length),
+        limit: Math.max(1, limit - localPage.length),
+        filename: exactId ? exactId.slice(5) : "", hints: [...hints]
+      });
+      const files = localPage.length === limit ? [] : result.files;
+      const images = [...localPage, ...files.map(file => sessionNotes.find(item => item.saved_filename === file.filename) || ({
             id: `file:${file.filename}`,
             name: file.filename,
             kind: file.kind || "image",
@@ -17642,34 +17787,36 @@
             size_bytes: file.size_bytes || 0,
             reason: file.reason || "",
             location: "filesystem"
-          }))
-      ].slice(0, 25).map((item, index) => ({
-        ...item, index: index + 1,
-        remarks_after_open: savedRemarks.get(item.saved_filename) || []
-      }));
+          }))];
+      const total = local.length + result.total;
+      return { images, total, next_offset: offset + images.length < total ? offset + images.length : null };
+    }
+
+    async function listSensingEyeImages(selection = {}) {
+      const options = Robot790FileLookup.options(selection);
+      const result = await sensingEyeLookupItems(options);
       return {
         status: "ok",
         tool: "list_sensing_eye_images",
-        count: merged.length,
-        current: sensingInputActive() ? sensingInputLabel() : "none",
-        meaning: "Metadata only; select by exact id. remarks_after_open attributes Eric's saved remarks to a file-open receipt, not independent visual verification. Inspect the recalled note itself.",
-        images: merged
+        ...options, total: result.total, next_offset: result.next_offset,
+        count: result.images.length,
+        meaning: "File matches only, not visual evidence. Recall an exact id to inspect it.",
+        images: result.images.map(Robot790FileLookup.compactEye)
       };
     }
 
-    async function listSensingEyeNotes() {
-      const result = await listSensingEyeImages();
+    async function listSensingEyeNotes(selection = {}) {
+      const result = await listSensingEyeImages(selection);
       const { images, ...metadata } = result;
       return {
         ...metadata,
         tool: "list_sensing_eye_notes",
-        meaning: "Metadata only. Use an exact id to recall. remarks_after_open are attributed post-open remarks from saved sessions, not verified captions; inspect the recalled note itself.",
         notes: images || []
       };
     }
 
     function sensingEyeNoteQueryScore(item, query) {
-      const needle = String(query || "").toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
+      const needle = String(query || "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ").trim();
       if (!needle) return 0;
       const haystack = [
         item.name,
@@ -17679,7 +17826,7 @@
       if (!haystack.trim()) return 0;
       let score = 0;
       if (haystack.includes(needle)) score += 12 + Math.min(8, needle.length / 8);
-      const words = needle.split(/\s+/).filter((word) => word.length >= 3);
+      const words = needle.split(/\s+/).filter(Boolean);
       for (const word of words) {
         if (haystack.includes(word)) score += 2;
       }
@@ -17718,26 +17865,39 @@
     async function selectSensingEyeImage(selection = {}) {
       const generation = sensingEyeGeneration;
       selection = selection || {};
-      const { index, image_id: imageId = "", query = "" } = selection;
-      const listed = await listSensingEyeImages();
-      requireCurrentSensingEyeLoad(generation);
+      const { index, image_id: imageId = "", query = "", _isCurrent = () => true } = selection;
+      let expectedImage = visionImageUrl;
+      let expectedText = sensingTextContent;
+      const isCurrent = () => _isCurrent() && visionImageUrl === expectedImage && sensingTextContent === expectedText;
+      const requireCurrent = () => {
+        requireCurrentSensingEyeLoad(generation);
+        if (!isCurrent()) throw new Error("Sensing-eye recall was superseded.");
+      };
+      requireCurrent();
+      const listed = await sensingEyeLookupItems({ image_id: imageId, query });
+      requireCurrent();
       if (!listed.images.length) {
-        throw new Error("No recent sensing-eye visual notes are available.");
+        throw new Error("No matching sensing-eye file is available. Nothing in the eye was changed.");
       }
       const listedItem = chooseSensingEyeNote(listed.images, { index, id: imageId, query });
-      if (!listedItem) throw new Error("No unambiguous sensing-eye selection. List the notes and use the exact id; the current eye has not been changed.");
+      if (!listedItem) throw new Error("No unambiguous sensing-eye selection. Find the file by query and use its exact id; the current eye has not been changed.");
 
       let item = listedItem.location === "session" && listedItem.kind === "text"
         ? sensingEyeTextHistory.find((candidate) => candidate.id === (listedItem.history_id || listedItem.id))
         : null;
       if (item?.kind === "text") {
         const textItem = await setSensingTextContent(item.content, item.name || "sensing-eye text", {
+          eyeGeneration: generation,
+          isCurrent,
           source: item.source,
           openUrl: item.openUrl,
           savedFilename: item.savedFilename,
           saveToFilesystem: false,
           transcriptAction: "recalled into eye"
         });
+        expectedImage = "";
+        expectedText = textItem.content;
+        requireCurrent();
         if (item.savedFilename) rememberSensingEyeSessionAsset(item.savedFilename);
         return {
           status: "ok",
@@ -17766,14 +17926,19 @@
           const response = await fetch(imageUrl, { cache: "no-store" });
           if (!response.ok) throw new Error(`Could not read sensing-eye text file: ${response.status} ${response.statusText}`);
           const content = await response.text();
-          requireCurrentSensingEyeLoad(generation);
+          requireCurrent();
           const textItem = await setSensingTextContent(content, listedItem.name || listedItem.saved_filename || "sensing-eye text", {
+            eyeGeneration: generation,
+            isCurrent,
             source: "sensing-eye filesystem",
             openUrl: imageUrl,
             savedFilename: listedItem.saved_filename || listedItem.name || "",
             saveToFilesystem: false,
             transcriptAction: "recalled into eye"
           });
+          expectedImage = "";
+          expectedText = textItem.content;
+          requireCurrent();
           if (listedItem.saved_filename) rememberSensingEyeSessionAsset(listedItem.saved_filename);
           return {
             status: "ok",
@@ -17795,8 +17960,10 @@
         if (!response.ok) throw new Error(`Could not read sensing-eye image file: ${response.status} ${response.statusText}`);
         const dataUrl = await blobToDataUrl(await response.blob());
         const image = await loadImage(dataUrl);
-        requireCurrentSensingEyeLoad(generation);
+        requireCurrent();
         item = await setVisionImageFromDrawable(image, listedItem.name || listedItem.saved_filename || "sensing-eye image", {
+          eyeGeneration: generation,
+          isCurrent,
           source: "sensing-eye filesystem",
           openUrl: imageUrl,
           savedFilename: listedItem.saved_filename || listedItem.name || "",
@@ -17804,9 +17971,12 @@
           autoStage: false,
           transcriptAction: "recalled into eye"
         });
+        // The setter committed this recall; still reject a later replacement before staging.
+        expectedImage = item.dataUrl;
+        expectedText = "";
       }
       if (!item) throw new Error("That sensing-eye visual note could not be reopened.");
-      requireCurrentSensingEyeLoad(generation);
+      requireCurrent();
 
       sensingTextContent = "";
       sensingTextName = "";
@@ -17856,6 +18026,7 @@
       if (Object.prototype.hasOwnProperty.call(selection, "index")) args.index = index;
       if (noteId || imageId) args.image_id = noteId || imageId;
       if (query) args.query = query;
+      if (typeof selection._isCurrent === "function") args._isCurrent = selection._isCurrent;
       const result = await selectSensingEyeImage(args);
       return {
         ...result,
@@ -18019,6 +18190,135 @@
       }
     }
 
+    function esp32Camera() {
+      if (!esp32CameraClient) {
+        esp32CameraClient = Robot790NetworkCamera.create({
+          request: requestEsp32CameraFrame,
+          interval: () => Number(runtimeConfig.esp32_camera?.preview_interval_ms) || 1000,
+          onFrame: (frame) => {
+            const preview = document.querySelector("#esp32CameraPreview");
+            preview.src = frame.toDataURL("image/jpeg", visionJpegQuality);
+            preview.classList.add("ready");
+          },
+          onState: ({ active, busy, error }) => {
+            document.querySelector("#esp32CameraPreviewEnabled").checked = active;
+            document.querySelector("#esp32CameraCapture").disabled = busy || Boolean(esp32CameraCapturePromise);
+            document.querySelector("#esp32CameraHint").textContent = error
+              ? `Unavailable: ${error}` : busy ? "Fetching frame..." : active ? "Live snapshots" : "Preview off";
+            if (error) log(events, `ESP32 camera: ${error}`);
+          }
+        });
+      }
+      return esp32CameraClient;
+    }
+
+    async function requestEsp32CameraFrame(signal) {
+      const abort = new AbortController();
+      const cancel = () => abort.abort();
+      signal.addEventListener("abort", cancel, { once: true });
+      if (signal.aborted) cancel();
+      const timeout = setTimeout(cancel, 10000);
+      let objectUrl = "";
+      try {
+        const response = await fetch(new URL("/api/camera/esp32/frame", location.href), {
+          cache: "no-store", signal: abort.signal
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || `Camera HTTP ${response.status}`);
+        }
+        if (!response.headers.get("content-type")?.startsWith("image/jpeg")) throw new Error("Camera did not return a JPEG.");
+        objectUrl = URL.createObjectURL(await response.blob());
+        const image = await loadImage(objectUrl);
+        if (abort.signal.aborted) throw new Error("Camera request canceled or timed out.");
+        const rotation = Number(response.headers.get("X-Camera-Rotation") || 0);
+        if (![-90, 0, 90, 180].includes(rotation)) throw new Error("Invalid camera rotation.");
+        const canvas = document.createElement("canvas");
+        const sideways = Math.abs(rotation) === 90;
+        canvas.width = sideways ? image.naturalHeight : image.naturalWidth;
+        canvas.height = sideways ? image.naturalWidth : image.naturalHeight;
+        const context = canvas.getContext("2d");
+        context.translate(canvas.width / 2, canvas.height / 2);
+        context.rotate(rotation * Math.PI / 180);
+        context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+        return canvas;
+      } finally {
+        clearTimeout(timeout);
+        signal.removeEventListener("abort", cancel);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      }
+    }
+
+    function stopEsp32Camera() {
+      esp32CameraClient?.stop();
+      const preview = document.querySelector("#esp32CameraPreview");
+      preview.removeAttribute("src");
+      preview.classList.remove("ready");
+    }
+
+    async function captureEsp32Camera({ reason = "", _isCurrent } = {}) {
+      if (esp32CameraCapturePromise) return { status: "error", error: "ESP32 capture already in progress." };
+      const camera = esp32Camera();
+      const generation = camera.generation();
+      const eyeGeneration = sensingEyeGeneration;
+      const session = realtimeSessionGeneration;
+      const isCurrent = () => generation === camera.generation() && session === realtimeSessionGeneration
+        && (!_isCurrent || _isCurrent());
+      const pending = (async () => {
+        try {
+          const frame = await camera.snapshot();
+          const label = `esp32-camera-${Date.now()}.jpg`;
+          const item = await setVisionImageFromDrawable(frame, label, {
+            source: "ESP32 camera", reason: String(reason || "camera snapshot").slice(0, 120),
+            eyeGeneration, isCurrent
+          });
+          document.querySelector("#esp32CameraHint").textContent = "Captured to sensing eye";
+          log(events, `ESP32 camera captured to sensing eye: ${item?.savedFilename || label}`);
+          return { status: "ok", tool: "capture_esp32_camera", camera: "esp32",
+            filename: label, saved_filename: item?.savedFilename || "", saved_url: item?.openUrl || "",
+            staged: visionImageStaged };
+        } catch (error) {
+          if (isCurrent()) document.querySelector("#esp32CameraHint").textContent = `Capture failed: ${error.message}`;
+          return { status: "error", tool: "capture_esp32_camera", error: error.message };
+        }
+      })();
+      esp32CameraCapturePromise = pending;
+      document.querySelector("#esp32CameraCapture").disabled = true;
+      try { return await pending; }
+      finally {
+        esp32CameraCapturePromise = null;
+        document.querySelector("#esp32CameraCapture").disabled = camera.state().busy;
+      }
+    }
+
+    async function setEsp32Camera({ enabled, capture_frame = false, reason = "", _isCurrent } = {}) {
+      const tool = "set_esp32_camera";
+      if (typeof enabled !== "boolean" || typeof capture_frame !== "boolean" || (!enabled && capture_frame)) {
+        return { status: "error", tool, error: "Use enabled true or false; capture_frame is only valid when enabling." };
+      }
+      const camera = esp32Camera();
+      const generation = camera.generation();
+      recordUiEvent("TimerCam control", enabled ? "Eric requested on" : "Eric requested off");
+      try {
+        if (_isCurrent && !_isCurrent()) throw new Error("Camera request was superseded.");
+        if (!enabled) {
+          stopEsp32Camera();
+          return { status: "ok", tool, enabled: false };
+        }
+        camera.start();
+        // Preview and capture share the first in-flight snapshot, not two camera reads.
+        const capture = capture_frame ? await captureEsp32Camera({ reason, _isCurrent })
+          : (await camera.snapshot(), null);
+        if (generation !== camera.generation() || !camera.state().active || (_isCurrent && !_isCurrent())) {
+          throw new Error("Camera start canceled or unavailable.");
+        }
+        return { status: capture?.status === "error" ? "error" : "ok", tool, enabled: true, capture,
+          ...(capture?.status === "error" ? { error: capture.error } : {}) };
+      } catch (error) {
+        return { status: "error", tool, enabled: camera.state().active, error: error.message };
+      }
+    }
+
     function stopVisionCamera({ quiet = false } = {}) {
       visionCameraGeneration += 1;
       visionCameraStartPromise = null;
@@ -18084,6 +18384,7 @@
     async function setSensingTextContent(raw, name = "text", options = {}) {
       const generation = options.eyeGeneration ?? sensingEyeGeneration;
       requireCurrentSensingEyeLoad(generation);
+      if (options.isCurrent && !options.isCurrent()) throw new Error("Sensing-eye text request was superseded.");
       const content = String(raw || "").replace(/\r\n/g, "\n").trim();
       if (!content) throw new Error("Text file is empty.");
       let savedResult = null;
@@ -18103,6 +18404,7 @@
         if (savedResult?.saved_filename) savedFilename = String(savedResult.saved_filename);
       }
       requireCurrentSensingEyeLoad(generation);
+      if (options.isCurrent && !options.isCurrent()) throw new Error("Sensing-eye text request was superseded.");
       visionImageUrl = "";
       visionImageName = "";
       visionImageStaged = false;
@@ -18379,9 +18681,11 @@
       if (name === "get_brain_status") return getBrainStatus(args);
       if (name === "show_web_page") return showWebPage(args);
       if (name === "generate_image") return generateImage(args);
-      if (name === "move_generated_image_to_sensing_eye") return moveGeneratedImageToSensingEye(args);
+      if (name === "move_generated_image_to_sensing_eye") return moveGeneratedImageToSensingEye({ ...args, _usePending: true });
       if (name === "set_live_camera") return setLiveCamera(args);
       if (name === "capture_sensing_eye") return captureSensingEyeFrame(args);
+      if (name === "capture_esp32_camera") return captureEsp32Camera(args);
+      if (name === "set_esp32_camera") return setEsp32Camera(args);
       if (name === "list_sensing_eye_notes") return listSensingEyeNotes(args);
       if (name === "recall_sensing_eye_note") return recallSensingEyeNote(args);
       if (name === "list_sensing_eye_images") return listSensingEyeImages(args);
@@ -18435,6 +18739,8 @@
         pose_and_capture_browser_face: "MIRROR",
         set_live_camera: "CAMERA",
         capture_sensing_eye: "EYE",
+        capture_esp32_camera: "EYE",
+        set_esp32_camera: "EYE",
         list_sensing_eye_notes: "EYE",
         recall_sensing_eye_note: "EYE",
         list_sensing_eye_images: "EYE",
@@ -18759,7 +19065,8 @@
       toolFollowupPromptSources = [...toolFollowupPromptSources, event.name].slice(-8);
       let activityArgs = {};
       let generationStarted = false;
-      const idleGrant = toolContinuationOrigin === "idle" && typeof idleArt !== "undefined" ? idleArt.grant : null;
+      const artTool = ["generate_image", "move_generated_image_to_sensing_eye"].includes(event.name);
+      const idleGrant = artTool && toolContinuationOrigin === "idle" && typeof idleArt !== "undefined" ? idleArt.grant : null;
       const isCurrent = () => activeRealtimeSession(socket, generation)
         && userActivityAt === lastUserTurnActivityAt && !suppressedResponseIds.has(eventResponseId(event))
         && (!idleGrant || (idleArt.grant === idleGrant && idleArt.authorized()));
@@ -18779,8 +19086,10 @@
         toolScopeDenials.delete(`${toolContinuationOrigin}:${event.name}`);
         if (event.name === "generate_image" && toolGenerationUncertain) throw new Error("Previous image-generation outcome is unknown. Inspect existing artifacts; automatic paid retry is disabled for this turn.");
         activityArgs = parseToolArguments(event.arguments);
-        if (["generate_image", "move_generated_image_to_sensing_eye"].includes(event.name)) {
+        if (artTool) {
           activityArgs = { ...activityArgs, _isCurrent: isCurrent, _idleArt: toolContinuationOrigin === "idle" };
+        } else if (["recall_sensing_eye_note", "select_sensing_eye_image", "capture_esp32_camera", "set_esp32_camera"].includes(event.name)) {
+          activityArgs = { ...activityArgs, _isCurrent: isCurrent };
         }
         beginToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", detail: toolDetailFromArgs(event.name, activityArgs) });
         const faceUrl = event.name === "play_face_beat" ? normalizeFaceBaseUrl() : "";
@@ -20223,6 +20532,7 @@
       socket.addEventListener("close", () => {
         if (ws !== socket || realtimeSessionGeneration !== sessionGeneration) return;
         stopVisionCamera({ quiet: true });
+        stopEsp32Camera();
         releaseSessionPreparation();
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = null;
@@ -20925,6 +21235,7 @@
       try {
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
         stopVisionCamera({ quiet: true });
+        stopEsp32Camera();
         if (micStream) {
           await runtimeStep("stop mic", () => stopMic({ reason: "realtime disconnect" }), { timeoutMs: 6000, prefix: "disconnect step" });
         }
@@ -21253,6 +21564,16 @@
       recordUiEvent("camera stop requested", "off", { camera: visionCameraActive() ? "on" : "off" });
       stopVisionCamera();
     });
+    document.querySelector("#esp32CameraPreviewEnabled").addEventListener("change", (event) => {
+      if (event.target.checked) esp32Camera().start();
+      else stopEsp32Camera();
+    });
+    document.querySelector("#esp32CameraCapture").addEventListener("click", () => {
+      recordUiEvent("ESP32 camera capture", "manual shutter");
+      captureEsp32Camera({ reason: "manual shutter" }).then(result => {
+        if (result.status === "error") log(events, `ESP32 camera capture error: ${result.error}`);
+      });
+    });
     generatedImageOpenButton.addEventListener("click", () => {
       recordUiEvent("generated image open", generatedImageName || generatedImageUrl || "image", { url: generatedImageUrl });
       openGeneratedImage();
@@ -21319,9 +21640,12 @@
       deliver: async (result, sameSession) => {
         const eyeGeneration = sensingEyeGeneration;
         const userActivity = lastUserTurnActivityAt;
+        const previousEye = visionImageUrl;
+        const previousText = sensingTextContent;
         const current = () => sameSession() && sensingEyeGeneration === eyeGeneration
-          && lastUserTurnActivityAt === userActivity && idleArtEnabled.checked && llmImageTools.checked;
-        if (!current()) return;
+          && lastUserTurnActivityAt === userActivity && idleArtEnabled.checked && llmImageTools.checked
+          && visionImageUrl === previousEye && sensingTextContent === previousText;
+        if (!current()) throw new Error("Image delivery was superseded.");
         const hydrated = { ...result, url: new URL(result.url, location.href).href };
         showGeneratedImage(hydrated);
         const moved = await moveGeneratedImageToSensingEye({ reason: "operator-enabled idle art",
@@ -21334,6 +21658,7 @@
         appendRuntimeContextToConversation({ reason: "idle art result" });
         noteIdleDiscovery([`art:${result.filename}`], { source: "idle-art", detail: result.filename });
         scheduleIdlePonder();
+        return moved;
       },
       receipt: result => {
         log(events, `idle art ${result.status}: ${JSON.stringify(result)}`);
@@ -21901,6 +22226,7 @@
       closeAllLogPopouts({ quiet: true });
       beaconAllLogSnapshots();
       stopVisionCamera({ quiet: true });
+      stopEsp32Camera();
     });
     navigator.mediaDevices?.addEventListener?.("devicechange", () => {
       refreshMicDevices({ quiet: true }).catch(() => {});

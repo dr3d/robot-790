@@ -89,6 +89,30 @@ def test_model_stats_never_save_text_or_arbitrary_fields():
     assert "SECRET" not in json.dumps(rows)
 
 
+def test_oversized_cache_state_is_distinct_from_eviction_and_has_no_invented_slot():
+    rows = parse_event(runtime(
+        "770 W srv alloc: - prompt state size 8194.865 MiB exceeds cache size limit 8192.000 MiB, skipping"
+    ))
+    assert len(rows) == 1
+    assert rows[0]["kind"] == "cache_save_skipped"
+    assert rows[0]["reason"] == "state_exceeds_limit"
+    assert rows[0]["state_mib"] == 8194.865
+    assert rows[0]["limit_mib"] == 8192
+    assert "slot" not in rows[0] and "task" not in rows[0]
+
+
+def test_cache_restore_diagnostics_do_not_capture_arbitrary_runtime_text():
+    rows = parse_event(runtime(
+        "I slot update_slots: id 1 | task 25 | forcing full prompt re-processing due to lack of cache data "
+        "(engine explanation SECRET)\n"
+        "W slot prompt_load: id 1 | task 25 | failed to load prompt from cache\n"
+        "I slot prompt: id 1 | task 25 | SECRET PROMPT"
+    ))
+    assert [row["kind"] for row in rows] == ["cache_reprocess", "cache_restore_failed"]
+    assert all(row["slot"] == 1 and row["task"] == 25 for row in rows)
+    assert "SECRET" not in json.dumps(rows)
+
+
 def test_ignored_input_and_unrecognized_engine_text():
     for line in (
         "Streaming logs from LM Studio",
@@ -98,6 +122,7 @@ def test_ignored_input_and_unrecognized_engine_text():
         '{"data": []}',
         '{"data": {"type": "llm.prediction.input", "input": "SECRET"}}',
         runtime("I slot prompt: id 0 | task 25 | SECRET PROMPT"),
+        runtime("W srv alloc: - prompt state size .. MiB exceeds cache size limit 8192 MiB, skipping"),
     ):
         assert parse_event(line) == []
 

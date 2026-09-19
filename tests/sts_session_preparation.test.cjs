@@ -53,7 +53,7 @@ test('Connect waits for preparation before creating the realtime socket and rele
   assert.ok(connect.indexOf('await pauseSessionPreparation()') < connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun'));
   assert.ok(connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun') < connect.indexOf('new WebSocket('));
   assert.match(connect, /catch \(error\) \{\s*releaseSessionPreparation\(\)/);
-  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(ws !== socket[^\n]+\n\s*stopVisionCamera\(\{ quiet: true \}\);\s*releaseSessionPreparation/);
+  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(ws !== socket[^\n]+\n\s*stopVisionCamera\(\{ quiet: true \}\);\s*stopEsp32Camera\(\);\s*releaseSessionPreparation/);
 });
 
 test('a parent archived during Connect preflight prevents opening an unsavable session', async () => {

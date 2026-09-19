@@ -542,3 +542,15 @@ def test_text_file_tools_write_python_source_without_execution(tmp_path, monkeyp
     assert written["filename"] == "programs/spirograph.py"
     assert read["content"] == source
     assert (tmp_path / "notes" / "programs" / "spirograph.py").read_text(encoding="utf-8") == source
+
+
+def test_note_lookup_tools_default_to_small_pages(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    for index in range(30):
+        (tmp_path / f"note-{index:02d}.txt").write_text("body", encoding="utf-8")
+    first = realtime_tools._list_text_files()
+    assert len(first["files"]) == 5
+    assert first["next_offset"] == 5
+    assert first["total"] == 30
+    assert realtime_tools._list_text_files({"query": "note 29"})["files"] == ["note-29.txt"]
+    assert realtime_tools._list_text_files({"limit": 50})["status"] == "error"

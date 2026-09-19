@@ -16,6 +16,20 @@ the baseline. Follow the [companion design contract](companion-design-contract.m
 - Back up and verify private history/assets before changes that migrate or move
   them. Git checkpoints alone do not back up ignored notes or runtime data.
 
+## Checkpoint Status
+
+The batches below retain their original implementation and deployment notes.
+For subsequent activation, test counts and live acceptance evidence, use
+[Engineering Status](engineering-status.md). Whole-card admission and idle-art
+handoff repairs are now implemented, and the page helper has been restarted.
+No legacy archive migration or general memory-budget redesign was performed.
+
+One later, explicit operator-requested exception to the initial cadence freeze:
+four existing idle timing values were shortened so ordinary 1x operation offers
+the thinking opportunities previously sought with 10x Lab Speed. Human priority,
+audio ownership, full-context idle and personality prompts remain unchanged.
+Sustained live acceptance of that new timing baseline is still pending.
+
 ## First Batch: Storage Safety
 
 Implemented in source, deployment pending:
@@ -193,7 +207,8 @@ per-inference log stream. No note text or B2-private guidance is put into the
 receipts. Prompt SHA-256 goldens for empty, clipped-card and rich-history/core
 cases match the pre-instrumentation formatter.
 
-**Risk boundary:** whole-card admission is not yet fixed. The 4,500-character
+**Historical risk boundary at the diagnostic checkpoint:** whole-card admission
+was not yet fixed. The 4,500-character
 ordinary-note view, 64,000-character total note budget and eight-pin replacement
 policy remain. Automatically reserving more for cards would change which history
 survives; rejecting oversized loads or increasing the budget also changes the
@@ -201,12 +216,31 @@ experience. Stop here for an explicit admission policy, rather than silently
 making those choices. Further tool-continuation and broad B2 freshness changes
 also need their own bounded design and live acceptance, not another quick rule.
 
+September 19 follow-up preparation: [Complete Setup-Card Admission](setup-card-admission-plan-2026-09-19.md)
+proposes a separate bounded instruction allowance, complete per-brain snapshots
+and explicit rejection instead of clipping/automatic card eviction. It includes
+lifecycle, prefix-stability and regression checks. The operator subsequently
+authorized this and the image handoff as separate repairs, recorded below.
+
 This batch only requires an STS refresh, but earlier Python repairs still await
 the documented server restarts. No active browser/session/server was disturbed.
 Final verification: 847 Python tests and 465 JavaScript tests pass; the existing
 Starlette/httpx warning remains. No real LLM, speech, paid art or hardware trial
 was run. Prompt goldens cover the assembly-preserving diagnostic change, while
 mechanism tests cover the actual unpin and B2 retention repairs.
+
+## Separate Follow-Ups: Cards And Image Handoff
+
+Complete optional-card admission now has a separate eight-card / 32,000-unit
+rendered B1 allowance. Failed loads preserve the old complete snapshots; ordinary
+pin churn cannot evict cards. Rich history retains its existing allowance and
+ordering. Card-free prompts and all card wording are unchanged. See the admission
+record for provider-acknowledgement limits and required live acceptance.
+
+The image handoff repair prevents a rejected render from clearing the preview
+and stranding a completed background image. Automatic delivery and B1's move tool
+share single-owner staging, with truthful job status and late-result protection.
+No new initiative restrictions, rhetoric, quotas or paid retries were introduced.
 
 ## Remaining Sequence
 
@@ -217,10 +251,10 @@ mechanism tests cover the actual unpin and B2 retention repairs.
    and journaled per-session archive recovery are repaired in source. Deployment
    and live disconnected-boundary acceptance remain pending. Legacy partial
    archives require case-by-case inspection rather than an automatic migration.
-3. **Context admission:** assembly inclusion is now inspectable; whole-card
-   admission and eviction/budget policy still need an explicit decision. No new
-   summarization or eviction policy was introduced. Chunked summary preparation
-   remains separate experimental work.
+3. **Context admission:** complete optional-card admission is repaired and needs
+   live acceptance. Ordinary/history limits remain inspectable but unchanged;
+   broader model-context capacity and provider acknowledgement remain separate.
+   Chunked summary preparation remains experimental work.
 4. **Initiative delivery:** busy-period B2 questions are retained; still validate
    all advice against evidence and guidance revisions. Semantic reassessment stays
    with models, not English phrase classifiers. Preserve useful parallel work.

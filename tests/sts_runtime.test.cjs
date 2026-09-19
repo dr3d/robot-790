@@ -1015,6 +1015,7 @@ test('continuity restore replaces stale browser pins with the selected session r
     'setLoadedNoteContextsForContinuity',
     'loadCurrentContinuitySession',
   ], {
+    Robot790NoteBrains: require('../web/sts/note-brains.js'),
     URL,
     location: new URL('http://127.0.0.1:8790/'),
     currentContinuitySessionFilename: '',
@@ -1448,6 +1449,7 @@ function memoryContext() {
     'noteFilenameSet', 'noteFilenameInSet', 'formatLoadedNoteContextsForInstructions', 'loadedNoteAdmissionReport',
     'rememberLoadedNoteContext', 'ericMemoryNoteContexts', 'loadedNoteContextsForCurrentPrompt',
   ], {
+    Robot790NoteBrains: require('../web/sts/note-brains.js'),
     maxLoadedNoteChars: 64000,
     maxLoadedNotes: 8,
     loadedNoteContexts: [],
@@ -1546,7 +1548,7 @@ function sensingContext() {
   const context = loadFunctions([
     'requireCurrentSensingEyeLoad', 'clearSensingEyeState', 'setVisionImageFromDrawable',
     'setSensingTextContent', 'prepareVisionImage', 'prepareSensingText',
-    'applySensingEyeInboxItem', 'pollSensingEyeInbox', 'selectSensingEyeImage',
+    'applySensingEyeInboxItem', 'pollSensingEyeInbox', 'selectSensingEyeImage', 'recallSensingEyeNote',
   ], {
     sensingEyeGeneration: 1, sensingEyeClientId: 'this-browser',
     sensingEyeInboxClearInFlight: false, sensingEyeInboxLastSeq: 0,
@@ -1721,7 +1723,7 @@ test('file reads and explicit memory recall cannot carry old input across a clea
     let finish;
     const deferred = () => new Promise(resolve => { finish = resolve; });
     context.fileToDataUrl = deferred;
-    context.listSensingEyeImages = deferred;
+    context.sensingEyeLookupItems = deferred;
     context.isSensingTextFile = () => true;
     const pending = kind === 'image' ? context.prepareVisionImage({ type: 'image/jpeg', name: 'old.jpg' })
       : kind === 'text' ? context.prepareSensingText({ name: 'old.txt', text: deferred })
@@ -1733,6 +1735,61 @@ test('file reads and explicit memory recall cannot carry old input across a clea
     assert.equal(context.visionImageUrl, '');
     assert.equal(context.sensingTextContent, '');
   }
+});
+
+for (const kind of ['image', 'text']) {
+  for (const supersededBy of ['nothing', 'user/session', 'new eye']) {
+    test(`filesystem ${kind} recall respects freshness after loading: ${supersededBy}`, async () => {
+      const context = sensingContext();
+      const entry = { id: 'file:old', kind, location: 'filesystem', open_url: '/old', saved_filename: 'old', name: 'old' };
+      context.sensingEyeLookupItems = async () => ({ images: [entry] });
+      context.chooseSensingEyeNote = () => entry;
+      const assets = [];
+      context.rememberSensingEyeSessionAsset = name => assets.push(name);
+      let finishRead;
+      const deferred = () => new Promise(resolve => { finishRead = resolve; });
+      context.fetch = async () => ({ ok: true, blob: async () => ({}), text: deferred });
+      context.blobToDataUrl = async () => 'RECALLED IMAGE';
+      context.loadImage = deferred;
+      context.stageVisionImage = () => { context.visionImageStaged = true; };
+      let current = true;
+      const pending = context.recallSensingEyeNote({ note_id: entry.id, _isCurrent: () => current });
+      const checked = supersededBy === 'nothing' ? pending : assert.rejects(pending, /superseded/);
+      await new Promise(setImmediate);
+      if (supersededBy === 'user/session') current = false;
+      if (supersededBy === 'new eye') {
+        await context.setVisionImageFromDrawable({ width: 10, height: 10 }, 'operator.jpg', { saveToFilesystem: false });
+      }
+      finishRead(kind === 'image' ? { width: 10, height: 10 } : 'RECALLED TEXT');
+      const result = await checked;
+      if (supersededBy === 'nothing') {
+        assert.equal(result.status, 'ok');
+        assert.equal(result.selected.staged, true);
+        assert.equal(result.tool, 'recall_sensing_eye_note');
+        assert.deepEqual(assets, ['old']);
+        assert.equal(kind === 'image' ? context.visionImageName : context.sensingTextContent,
+          kind === 'image' ? 'old' : 'RECALLED TEXT');
+      } else {
+        assert.deepEqual(assets, []);
+        assert.equal(context.visionImageName, supersededBy === 'new eye' ? 'operator.jpg' : 'old.jpg');
+        assert.equal(context.sensingTextContent, supersededBy === 'new eye' ? '' : 'OLD TEXT');
+      }
+    });
+  }
+}
+
+test('session-cached recall also checks freshness after its catalogue arrives', async () => {
+  const context = sensingContext();
+  context.chooseSensingEyeNote = entries => entries[0];
+  let finishList;
+  let current = true;
+  context.sensingEyeLookupItems = () => new Promise(resolve => { finishList = resolve; });
+  const pending = context.recallSensingEyeNote({ note_id: 'saved-image', _isCurrent: () => current });
+  const rejected = assert.rejects(pending, /superseded/);
+  current = false;
+  finishList({ images: [{ id: 'saved-image', kind: 'image', location: 'session' }] });
+  await rejected;
+  assert.equal(context.visionImageUrl, 'OLD IMAGE');
 });
 
 test('runtime prompt distinguishes observed browser state, preferences, and unverified devices', () => {

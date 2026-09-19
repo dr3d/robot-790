@@ -52,6 +52,7 @@ test('stable order, unpin and reload invalidate old advice', () => {
 
 test('direct pinning and continuity restoration retain the snapshot', () => {
   const c = vm.createContext({
+    Robot790NoteBrains: router,
     loadedNoteContexts: [], loadEricMemoriesEnabled: () => false,
     noteFilenameIsCurrentContinuitySession: () => false, maxLoadedNotes: 8,
     log: () => {}, events: {}, updateLoadedNoteControls: () => {}, contextPanel: null,

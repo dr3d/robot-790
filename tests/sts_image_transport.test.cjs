@@ -49,13 +49,14 @@ function fixture() {
   const element = () => ({ classList: { add() {}, remove() {} }, removeAttribute() {} });
   const c = vm.createContext({
     URL, location: { href: 'http://127.0.0.1:8790/' }, events: {}, log() {},
+    Robot790FileLookup: require('../web/sts/file-lookup.js'),
     generatedImageStatusState: 'empty', generatedImageRequestGeneration: 0,
     generatedImageStatusLabel: '', generatedImageUrl: '', generatedImageName: '',
     generatedImageHint: {}, generatedImageCard: element(), generatedImagePreview: element(),
     updateGeneratedImageButtons() {}, currentImageModel: () => 'model', currentImageQuality: () => 'low',
     imageSettingLabel: () => 'model / low', visionImageUrl: '', audioRecordingActive: () => false,
     rolloverAudioRecordingForVisualChange() {},
-    idleArt: { busy: false, renderRequested: async (proposal, options) => {
+    idleArt: { busy: false, assertCanRender() {}, renderRequested: async (proposal, options) => {
       renders.push({ proposal, options }); return { status: 'ok', filename: 'idle.png', url: '/idle.png' };
     } },
     fetch: async (url, options) => { requests.push({ url, options }); return {
@@ -123,7 +124,7 @@ test('active idle rendering prevents foreground overlap without an unknown paid 
 test('note lookup always requests a bounded page and carries Unicode filters and pagination', async () => {
   const f = fixture();
   const result = await f.c.listTextFiles();
-  assert.equal(f.requests[0].url.searchParams.get('limit'), '20');
+  assert.equal(f.requests[0].url.searchParams.get('limit'), '5');
   assert.equal(result.next_offset, 20);
   await f.c.listTextFiles({ query: '\u65e5\u8a18', directory: 'core', offset: 20, limit: 5 });
   const params = f.requests[1].url.searchParams;

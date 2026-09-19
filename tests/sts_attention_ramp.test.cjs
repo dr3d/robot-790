@@ -67,6 +67,71 @@ function fixture() {
   return { c, timers, time: value => { now = value; } };
 }
 
+test('configured 1x independent cadence matches the former 10x drift waits without a global clock change', () => {
+  const { c } = fixture();
+  c.runtimeConfig = JSON.parse(fs.readFileSync(`${__dirname}/../config/runtime.json`, 'utf8'));
+  c.lastAcceptedUserTranscriptAt = 0;
+  for (let level = 1; level <= 10; level++) {
+    c.currentIdleDrift = () => level;
+    const previousAt10x = Math.max(8000, Math.max(45, 270 - level * 22.5) * 100);
+    assert.equal(c.idleDelayMs(), previousAt10x, `Drift ${level}`);
+    assert.equal(c.idleGapMs(), 9000);
+  }
+  c.currentIdleDrift = () => 0;
+  assert.equal(c.idleDelayMs(), Infinity);
+  c.currentIdleDrift = () => 11;
+  assert.equal(c.idleGapMs(), 10000);
+  c.currentIdleDrift = () => 12;
+  assert.equal(c.idleGapMs(), 2500);
+});
+
+test('configured active baseline preserves breathing room, busy guards and disconnect', () => {
+  const { c, time } = fixture();
+  c.runtimeConfig = JSON.parse(fs.readFileSync(`${__dirname}/../config/runtime.json`, 'utf8'));
+  assert.equal(c.idleTiming().post_user_quiet_s, 8);
+  assert.equal(c.idleTiming().attention_fade_s, 240);
+  assert.equal(c.idleTiming().idle_art_quiet_s, 90);
+  c.micStream = null;
+  c.conversationPauseUserAt = 0;
+  c.lastAcceptedUserTranscriptAt = 0;
+  time(1007999);
+  assert.equal(c.idleBlockedReason(), 'recent user turn');
+  time(1008000);
+  assert.equal(c.idleBlockedReason(), '');
+  for (const [key, value, expected] of [
+    ['userSpeechActive', true, 'user speaking'],
+    ['responseActive', true, 'assistant busy'],
+    ['outputAudioActive', () => true, 'assistant busy'],
+    ['pendingToolCalls', 1, 'tool followup pending'],
+    ['brain2HeadlinesInFlight', true, 'Brain 2 reading headlines'],
+    ['realtimeConnected', () => false, 'disconnected'],
+  ]) {
+    const previous = c[key];
+    c[key] = value;
+    assert.equal(c.idleBlockedReason(), expected);
+    c[key] = previous;
+  }
+});
+
+test('configured independent 1x opportunities stay scheduled after several completed idle turns', () => {
+  const { c, time } = fixture();
+  c.runtimeConfig = JSON.parse(fs.readFileSync(`${__dirname}/../config/runtime.json`, 'utf8'));
+  c.currentIdleDrift = () => 8;
+  c.lastAcceptedUserTranscriptAt = 0;
+  c.lastUserTurnActivityAt = 0;
+  for (let turn = 0; turn < 5; turn++) {
+    const at = 1000000 + turn * 40000;
+    time(at);
+    c.lastConversationActivityAt = at;
+    c.lastIdlePonderAt = at - 15000;
+    c.scheduleIdlePonder();
+    assert.equal(c.idleTimerFireAt, at + 9000);
+    time(at + 1000);
+    c.scheduleIdlePonder();
+    assert.equal(c.idleTimerFireAt, at + 9000);
+  }
+});
+
 test('announced native reply stays busy after pending-turn timeout at 12x lab speed', () => {
   const { c, time } = fixture();
   c.compressIdleMs = value => value / 12;

@@ -110,13 +110,13 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
-September 16 checkpoint: conversation and idle thinking now share B1 history,
+September 19 checkpoint: conversation and idle thinking share B1 history,
 with stable prompt/tool ordering to preserve prefix reuse. Auto history uses
 source-checked swept sessions; generated summaries remain inspectable but are
 disabled in the default reload policy. Notes can carry shared and brain-specific
 instructions in one editable file; B3/B4 sections are reserved, not running brains.
 Idle-art jobs, optional inference metrics, shared speech-mouth cues and gaze,
-and recursive session-map expansion are included in this checkpoint.
+and recursive session-map expansion are part of the working baseline.
 
 This is not a clean bill of health. The
 [agency/language audit](docs/sts-agency-and-language-audit-2026-09-16.md)
@@ -124,26 +124,45 @@ identified English intent gates, scripted confirmations and controller-selected
 idle subjects. The [first removal pass](docs/agency-boundary-change.md) replaces
 those paths with capability checks, general tool continuation and model-chosen
 idle research. Permissions, receipts, hardware limits and audio ownership remain.
-Mechanism tests are not yet a live conversational comparison.
+Mechanism tests alone are not a live conversational comparison.
 See [Engineering Status](docs/engineering-status.md) for the current boundary
 between implemented work, observations and planned repairs.
 
 The [September 19 stabilization plan](docs/stabilization-plan-2026-09-19.md)
 prioritizes storage, continuity and initiative-delivery repairs before new
 capabilities, while preserving Eric's full-context idle and established behavior.
-The next source repair lets Auto resume fall back to the original transcript
+Auto resume now falls back to the original transcript
 when a prepared form is unavailable, without waiting for an LLM. This is not a
 change to the separate prompt-size limits. Private backup and restore precautions
 are documented in the plan; ignored session data is not protected by Git.
 New archives now require STS to be disconnected and use a copy/verify/cleanup
 journal so interrupted work can resume into the same package. Connect rechecks
-its save-parent under the activity lease. These source repairs still need a
-safe server restart and browser refresh; no existing archives were migrated.
-The latest browser fixes retain busy-period B2 questions for private advisory
+its save-parent under the activity lease. No existing archives were migrated.
+The browser retains busy-period B2 questions for private advisory
 delivery, reject ambiguous note unpins, and show whether pinned notes are fully,
-partly or not included in the assembled B1 note section. Whole-card admission
-and memory-budget policy remain unfinished; no automatic history eviction or
-summary substitution was added.
+partly or not included in the assembled B1 note section. Optional routed cards
+now have whole-card admission with their own bounded allowance; ordinary pins
+cannot silently evict them. Cards remain optional, including on Empty Connect.
+No automatic history eviction or summary substitution was added.
+
+Recent repairs keep file lookup compact and searchable, allow old Eye memories
+to be recalled during ordinary idle, and protect completed idle-art handoffs
+from competing renders. A measured LM Studio cache-state issue was addressed
+by reducing saved rewind checkpoints from 32 to 8 on the lab workstation,
+without reducing the model's context window or two request slots. That serving
+setting is not automatically applied by cloning this repository.
+
+The optional ESP32 TimerCam now supplies snapshot preview and Capture To Eye,
+with equivalent model tools and automatic preview shutdown on Disconnect.
+Its deployed firmware uses automatic exposure for changing room light. The
+normal-speed idle waits are also shorter, so start new pacing trials at Lab
+Speed 1x rather than carrying over 10x-plus settings. These are scheduled
+opportunities to think, not a guarantee of speech or constant GPU activity.
+
+The checkpoint passes 521 JavaScript and 871 Python tests. Live image generation
+and Eye transfer are working, but willingness to join make-believe, inspecting
+images before describing them, and consistently following B2 advice remain
+observed weaknesses. Sustained idle at the new baseline still needs evaluation.
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.
@@ -157,7 +176,7 @@ summary substitution was added.
   working rig may still be reachable at `http://esp32-eyes.local/`.
 - `firmware/esp32-s3-face-brain`: parked ESP32-S3 external-eye experiment.
 - `firmware/esp32-chassis`: tracked chassis controller.
-- `firmware/esp32-cam`: ESP32 camera controller experiments.
+- `firmware/esp32-cam`: TimerCam snapshots for STS and a standalone MJPEG viewer.
 - `firmware/esp32-s3-dualeye-lcd-1.28`: working S3 dual-eye bench firmware
   with animated eyes, blinking, and optional Wi-Fi OTA.
 - `firmware/esp32-c3-dualeye-lcd-0.71`: working C3-hosted tiny dual-eye

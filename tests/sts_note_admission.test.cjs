@@ -30,13 +30,14 @@ const card = { filename: 'setup-cards/companion.txt', content: 'a'.repeat(5000) 
   brain_context: { version: 1, revision: 'v1', shared: 'SHARED', brains: { b2: 'PRIVATE B2' } } };
 const history = { filename: 'sessions/session.txt', content: 'STS Session Note\n[10:00] Robot 790: ' + 'h'.repeat(90000) };
 
-test('admission reports actual per-file clipping, including declared instructions', () => {
+test('admission reports declared instructions as complete in their separate allowance', () => {
   const c = setup([card]);
   const report = c.loadedNoteAdmissionReport();
-  assert.equal(report.notes[0].status, 'partial');
+  assert.equal(report.notes[0].status, 'full');
   assert.equal(report.notes[0].instruction_bearing, true);
-  assert.ok(report.notes[0].reasons.includes('per_file_limit'));
-  assert.equal(report.instruction_warnings, 1);
+  assert.equal(report.notes[0].reasons.length, 0);
+  assert.equal(report.instruction_warnings, 0);
+  assert.equal(report.routed_cards.count, 1);
   assert.equal(report.notes[0].source_characters, card.content.length);
   assert.doesNotMatch(JSON.stringify(report), /PRIVATE B2|IMPORTANT END/);
   assert.equal(report.assembled_characters, c.formatLoadedNoteContextsForInstructions([card]).length);
@@ -65,9 +66,10 @@ test('disabled core memory, whole small notes and empty context report truthfull
 });
 
 test('the memory panel names partial admission without showing private brain guidance', () => {
-  const c = setup([card]);
+  const plain = { ...card, brain_context: undefined };
+  const c = setup([plain]);
   Object.assign(c, {
-    loadMemoryFacts: () => [], loadedNoteContextsForCurrentPrompt: () => [card],
+    loadMemoryFacts: () => [], loadedNoteContextsForCurrentPrompt: () => [plain],
     loadedNoteContextLine: filename => filename, updateLoadedNoteControls: () => {},
     memoryStatus: {}, memoryPreview: {}, location: { origin: 'http://localhost' }, memoryStorageKey: 'test',
   });
@@ -91,15 +93,30 @@ test('existing pin-limit eviction is announced without changing its selection po
   assert.ok(logs.some(line => /pin limit removed.*note7.txt/.test(line)));
 });
 
-// Baseline hashes are captured before instrumentation; prompt wording/order/budgets must not change.
+// Empty is unchanged; routed-card goldens intentionally include the complete instructions.
 const cases = [[], [card], [history, card, { filename: 'core/erics_memories.txt', content: 'CORE' }]];
 const hashes = [
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-  '9f76bc572fa875084f721aeb4ebd55b88904fe4d6d753062fab73aec911c6cd8',
-  'd3df29bbadf0f641d6c75074817a8c8f4505bd8d5502e6a8e62efacd8eb88c59',
+  '4d7fd536d441b1dcd17f74ea2b8208e35d9d11dbb9f7b02341aea9c043d6f933',
+  'fdce27046626b1dd37f65a7dd4eb793bdc295054c99ae6465fa43b35eded2547',
 ];
-cases.forEach((notes, i) => test(`prompt bytes remain unchanged for admission case ${i}`, () => {
+cases.forEach((notes, i) => test(`prompt golden for admission case ${i}`, () => {
   const c = setup(notes);
   const text = c.formatLoadedNoteContextsForInstructions(notes);
   assert.equal(createHash('sha256').update(text).digest('hex'), hashes[i]);
+}));
+
+// Compared byte-for-byte with the pre-repair formatter at 6c3c262.
+const legacyCases = [
+  [{ filename: 'plain.txt', content: 'Ordinary note' }],
+  [{ filename: 'session.txt', content: 'STS Session Note\n[10:00] Robot 790: ' + 'h'.repeat(90000) },
+    { filename: 'core/erics_memories.txt', content: 'CORE' }, { filename: 'last.txt', content: 'last' }],
+];
+const legacyHashes = [
+  '2c179fbd9c25e93b1e0bc22a295be1af31e6bcead75354e6af4cb5206643748b',
+  '3288b46975d8d74fef6249c7f0571d7598c010bd10254ec7511683a51c856ff1',
+];
+legacyCases.forEach((notes, i) => test(`unmarked-note prompt remains identical to the baseline ${i}`, () => {
+  const text = setup(notes).formatLoadedNoteContextsForInstructions(notes);
+  assert.equal(createHash('sha256').update(text).digest('hex'), legacyHashes[i]);
 }));

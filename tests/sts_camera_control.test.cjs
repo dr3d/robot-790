@@ -24,6 +24,7 @@ function setup(getMedia = async () => stream()) {
     visionCameraPreview: { srcObject: null, play: async () => {}, pause() {}, removeAttribute() {} },
     navigator: { mediaDevices: { getUserMedia: getMedia } },
     updateSessionTools() {}, events: {}, log() {}, recordUiEvent() {},
+    stopEsp32Camera() {},
     captures: 0, parseToolArguments: JSON.parse,
     enabledToolList: () => [{ name: 'set_live_camera' }],
   });

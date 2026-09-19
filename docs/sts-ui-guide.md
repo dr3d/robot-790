@@ -258,6 +258,25 @@ resize it, Shift makes larger steps, and Home/End select the minimum/maximum.
 **Mirror Face** stages a one-shot capture of Browser Face so Eric can inspect
 his rendered appearance.
 
+**ESP32 Camera**, directly below Browser Live Camera, is the separate network
+camera at `esp32-cam.local`. **Preview** fetches successive stills without
+saving them or adding them to Eric's context. **Capture To Eye** fetches a fresh
+still, saves it through the normal image-memory path, and stages it for Eric.
+Capture works with preview off. Ask "Look through the ESP32 camera" to use
+`capture_esp32_camera`; this never opens the browser webcam or moves the chassis.
+Eric can also use `set_esp32_camera` with `enabled` true/false to start or stop
+preview, and `capture_frame` true to start and look in one call, matching the
+browser camera controls. "TimerCam" and "ESP32 camera" name the same device.
+Turning it off stops STS requests, not power to the physical camera.
+Disconnect stops preview and cancels pending captures. Saved stills remain.
+
+The camera's current firmware blocks other requests while a live MJPEG viewer
+is connected: close its standalone live-view page or turn off the chassis
+page's camera before using STS. An unavailable camera reports an error without
+clearing the existing Sensing Eye image. Preview is off on page load and does
+not automatically retry errors. Address, image rotation (currently -90 degrees),
+and snapshot interval live in `config/runtime.json` under `esp32_camera`.
+
 ### Generated Images
 
 ![Imagined Image](assets/sts-ui/2026-09-10/07-imagined-image.png)
@@ -433,18 +452,24 @@ Some protections and external-work cooldowns intentionally use real time even
 at high lab speed. A Brain 2 hard brake can still pause idle speech.
 
 For ordinary conversation at Drift 1-10, pauses now start with a shorter idle
-interval: roughly 12 seconds after a short reply finishes playing, gradually
-stretching toward the normal Drift interval over three minutes without new
+interval: roughly 8 seconds after a short reply finishes playing, gradually
+easing toward the normal Drift interval over four minutes without new
 operator input, measured after his direct reply finishes. Early thoughts invite
-continued shared activity. One automatic conversational beat is allowed per
-operator turn; afterward Eric leaves room for an answer until the attention
-window fades. A new utterance immediately opens that opportunity again. These
-beats use the latest exchange, not the independent-idle research scaffold.
+continued shared activity. Successive opportunities can develop the exchange;
+there is no one-beat quota requiring another user utterance. Ordinary idle
+uses the full active conversation, with temporary attention guidance.
 Autonomous idle speech does not renew that attention. The old separate
 check-in timer is not used in this mode. A silent connection still uses normal
 idle timing, and Drift 0 remains off. Use **Lab Speed 1x** to feel the transition;
 there is no additional switch to enable it. Specialized lab modes and Drift
 11/12 keep their existing behavior.
+
+As of September 19, ordinary 1x independent-idle base waits are approximately
+8-25 seconds depending on Drift (9 seconds at Drift 8), rather than minutes.
+The base minimum gap is 9 seconds. These are scheduling opportunities, not a
+promise of speech at exact intervals: playback, tools and user activity still
+take priority. Start with Lab Speed 1x; 10x would accelerate this already-active
+baseline again. B2 and external-work cooldowns were not changed by this tuning.
 
 Timing experiments live in `config/runtime.json` under `idle_timing`, not extra
 UI dials. The [attention timing reference](context-engineering-architecture.md#conversational-attention-ramp)

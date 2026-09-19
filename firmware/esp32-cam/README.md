@@ -76,6 +76,20 @@ The chassis browser pad can show this stream behind the joystick when its Camera
 http://esp32-cam.local:81/stream
 ```
 
+## STS Integration
+
+STS has an ESP32 Camera section below Browser Live Camera. Preview polls still
+frames through the local page helper; Capture To Eye saves and stages one for
+Eric. Preview alone does not supply model context. The matching tools are
+`set_esp32_camera` and `capture_esp32_camera`; Disconnect stops STS requests,
+not power to the camera.
+
+Configure the camera origin, rotation and polling interval in `esp32_camera`
+inside the repository's `config/runtime.json`. The helper uses `/jpg`, not the
+MJPEG stream. Close the standalone live viewer or chassis camera view first:
+the firmware's blocking stream loop can prevent snapshots and status requests
+from being served while another viewer holds the stream open.
+
 ## OTA Updates
 
 After the OTA-enabled firmware has been flashed once over USB, future updates can be sent over Wi-Fi:
@@ -94,7 +108,22 @@ OTA stops the HTTP and stream servers while the update is in progress.
 
 ## Camera Tuning
 
-Camera tuning defaults enable the OV3660 raw gamma correction path, lens correction, fixed exposure, and a mild `+1` brightness lift. `/status` reports the active brightness, contrast, `raw_gma`, and `lenc` values.
+Camera tuning defaults enable the OV3660 raw gamma correction path, lens correction,
+automatic exposure and gain, and a mild `+1` brightness lift. Automatic exposure
+replaces the former fixed value of 220 so the camera can adapt to a dim room;
+longer exposure can trade motion sharpness for visibility. QVGA, JPEG quality,
+gain ceiling, image orientation and the secondary AEC setting are unchanged.
+`/status` reports brightness, contrast, `raw_gma`, `lenc`, `aec`, `aec2`, and `agc`.
+`aec=1` confirms automatic exposure is enabled; `aec2=0` does not disable the
+primary exposure controller.
+
+September 19, 2026: this auto-exposure build was flashed successfully over OTA to
+the lab TimerCam. Its post-reboot `/status` reports `aec=1`, `aec2=0`, `agc=1`,
+and both direct `/jpg` and STS snapshot capture were verified. The local rollback
+source and pre-change build are kept in
+`logs/maintenance/20260919-timercam-auto-exposure/` at the repository root.
+Close standalone MJPEG viewers before attempting OTA; they block the firmware's
+main loop. No STS restart is needed for an exposure-only firmware change.
 
 ## ESP32-S3 Touch LCD Camera Notes
 
