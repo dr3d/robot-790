@@ -33,6 +33,13 @@ The page is static, but it loads `catalog.json` with browser `fetch()`. That
 works on GitHub Pages and from a local HTTP file server. It may not work when
 opened directly as a `file://` URL.
 
+September 19 checkpoint: the homepage now reflects shared conversation/idle
+history, the measured cache-state repair, compact file lookup, optional complete
+B1/B2 cards, image-handoff repairs and TimerCam snapshots. The Memory Jar report
+and its edited video remain the latest featured report; this update adds no new
+article. [Engineering Status](engineering-status.md) is the maintained source
+for test results, observed weaknesses and remaining live acceptance work.
+
 The catalog gives articles, media, and curated logs a canonical artifact time
 and renders each public shelf newest first. It does not use an incidental later
 file edit as the public chronology. A timestamped filename is preferred; use a
@@ -105,6 +112,12 @@ filename whose current artifact needs an explicit time.
 
 ## Updating
 
+The browser homepage is `index.html`, not `index.md`. Update both when changing
+the project checkpoint, and keep the featured article pointed at the newest
+published report. Keep dated articles as historical observations; do not silently
+rewrite them to imply their tests cover later code. Changing homepage prose alone
+does not require a new article.
+
 After adding articles, logs, images, audio, or video, rebuild the catalog:
 
 ```powershell
@@ -128,6 +141,11 @@ such as `docs/media/raw-video/`, `docs/media/rejected/`, or the root `logs/`
 tree until they are curated and compressed. Public media should be aggressively
 compressed before it lands in `docs/media/images/`, `docs/media/videos/`, or
 `docs/media/audio/`.
+
+The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
+is the larger video shelf. Keep its link visible on the homepage; there is no
+requirement to copy every YouTube upload into this repository or its catalog.
+The local media shelf is intentionally a curated subset.
 
 The article reader uses a pinned, locally vendored Markdown parser, including
 tables, links, lists, and code fences. Write image/link paths relative to the

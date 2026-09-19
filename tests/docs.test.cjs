@@ -110,13 +110,21 @@ test('media metadata preserves the current recording time when a filename is reu
   assert.equal(listeningCompanion.title, 'Time And Space, Both Live: A Listening Companion');
 });
 
-test('public page sorts every shelf using canonical publication time', () => {
+test('public page sorts every shelf and features the newest published article', () => {
   const page = fs.readFileSync(path.join(root, 'docs/assets/site.js'), 'utf8');
   assert.match(page, /function newestFirst\(items\)/);
   assert.match(page, /const orderedArticles = newestFirst\(articles\)/);
   assert.match(page, /const orderedMediaItems = newestFirst\(mediaItems\)/);
   assert.match(page, /const orderedLogs = newestFirst\(logs\)/);
   assert.match(page, /function publicationLabel\(item\)/);
+  const html = fs.readFileSync(path.join(root, 'docs/index.html'), 'utf8');
+  const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
+  const featured = html.match(/<a\b[^>]*id="featured-article-link"[^>]*data-feature-source="([^"]+)"/);
+  assert.ok(featured, 'The homepage must identify its featured article.');
+  assert.equal(featured[1], catalog.articles[0].source);
+  for (const [, source] of html.matchAll(/data-feature-source="([^"]+)"/g)) {
+    assert.ok(catalog.articles.some(article => article.source === source), `Uncatalogued homepage article: ${source}`);
+  }
 });
 
 test('project overview and listening companion cross-link without publishing the raw audio', () => {

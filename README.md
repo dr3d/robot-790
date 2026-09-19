@@ -47,6 +47,9 @@ and contention with conversation still matter. Some tools use external services.
 Start with the public story, receipts, and open questions:
 
 - [Eric Robot 790 public page](docs/index.md)
+- [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8):
+  the larger video collection; the repository keeps selected recordings rather
+  than duplicating every upload.
 - [Memory Jar Lab Report](docs/articles/2026-09-17-eric-memory-jar-lab-report.md):
   a sustained B1/B2 collaboration, with timestamped evidence and a repeat-test
   protocol. [Watch the edited session (6:32)](https://dr3d.github.io/robot-790/?media=media/videos/The%20Memory%20Jar.mp4#media).

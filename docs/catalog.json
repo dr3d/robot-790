@@ -1,14 +1,14 @@
 {
-    "generated":  "2026-09-17 14:10:06",
+    "generated":  "2026-09-19 14:21:06",
     "articles":  [
                      {
                          "title":  "Twenty-Two Minutes With a Memory Jar: Eric\u0027s Active-Mind Benchmark",
                          "excerpt":  "An impossible invention became a sustained exploration of attention, memory, and grief. This Robot 790 lab report follows the conversation and private advice that made the development visible.",
                          "source":  "articles/2026-09-17-eric-memory-jar-lab-report.md",
                          "bytes":  11472,
-                         "published":  "2026-09-17 00:00",
-                         "published_sort":  "20260917000000",
-                         "published_source":  "filename",
+                         "published":  "2026-09-17 14:10",
+                         "published_sort":  "20260917141016",
+                         "published_source":  "git-added",
                          "modified":  "2026-09-17 14:05"
                      },
                      {
@@ -297,9 +297,9 @@
                      "title":  "2026 09 17 memory jar benchmark",
                      "source":  "logs/2026-09-17-memory-jar-benchmark.md",
                      "bytes":  10819,
-                     "published":  "2026-09-17 00:00",
-                     "published_sort":  "20260917000000",
-                     "published_source":  "filename",
+                     "published":  "2026-09-17 14:10",
+                     "published_sort":  "20260917141016",
+                     "published_source":  "git-added",
                      "modified":  "2026-09-17 14:09"
                  },
                  {

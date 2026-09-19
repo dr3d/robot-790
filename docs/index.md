@@ -39,12 +39,17 @@ summaries remain experimental. See [Engineering Status](engineering-status.md)
 for test evidence, live observations, and the remaining gaps between successful
 tool execution and consistently thoughtful behavior.
 
+The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
+has the larger video collection. This site's media shelf is a curated selection,
+not a complete mirror; larger recordings can stay on YouTube without adding
+their files to the repository.
+
 Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 
 <!-- generated-articles:start -->
 Articles are listed newest first by their published artifact time.
 
-- [Twenty-Two Minutes With a Memory Jar: Eric's Active-Mind Benchmark](articles/2026-09-17-eric-memory-jar-lab-report.md) - 2026-09-17 00:00
+- [Twenty-Two Minutes With a Memory Jar: Eric's Active-Mind Benchmark](articles/2026-09-17-eric-memory-jar-lab-report.md) - 2026-09-17 14:10
 - [Robot 790: Learning to Stay With You](articles/2026-09-14-robot-790-learning-to-stay-with-you.md) - 2026-09-14 09:43
 - [Robot 790: A Local Robot Built for Conversation and Continuity](articles/2026-09-10-022329-robot-790-project-overview.md) - 2026-09-10 02:23
 - [One Body, Many Faces](articles/2026-09-09-one-body-many-faces.md) - 2026-09-09 12:32
