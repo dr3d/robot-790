@@ -11887,16 +11887,13 @@
         const noteGuidanceKey = result.observed_evidence?.note_guidance
           ? JSON.stringify(result.observed_evidence.note_guidance) : null;
         if (question) {
-          if (brain2UserPresentButBusy()) {
-            bumpBrain2Counter("held");
-            logBrain2("question held", question);
-            rememberBrain2Output("question held", question);
-          } else {
-            brain2QuestionCandidates = [...brain2QuestionCandidates, { text: question, at: Date.now(), noteGuidanceKey }].slice(-12);
-            logBrain2("question candidate", question);
-            rememberBrain2Output("question", question);
-            brain2AdvisoryChanged = true;
-          }
+          const deferred = brain2UserPresentButBusy();
+          // Busy public audio defers delivery; it does not discard private work.
+          brain2QuestionCandidates = [...brain2QuestionCandidates, { text: question, at: Date.now(), noteGuidanceKey }].slice(-12);
+          if (deferred) bumpBrain2Counter("held");
+          logBrain2(deferred ? "question deferred" : "question candidate", question);
+          rememberBrain2Output("question", question);
+          brain2AdvisoryChanged = true;
         }
         const b1OutputId = result.observed_evidence?.last_assistant_output_id || "";
         const steering = result.steering?.status === "ok" && result.steering.evidence_id === b1OutputId

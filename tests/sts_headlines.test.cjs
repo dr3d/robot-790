@@ -118,6 +118,49 @@ test('a completely silent connection and person-focus zero can still read headli
   assert.equal(c.brain2InFlight, false);
 });
 
+for (const busy of [true, false]) {
+  test(`B2 keeps a valid question for the existing advisory boundary, busy=${busy}`, async () => {
+    const { context: c, logs } = setup({
+      brain2QuestionCandidates: [], brain2NoteCandidates: [], brain2RevisionCandidates: [],
+      brain2UserPresentButBusy: () => busy, brain2LoopGuardText: () => false,
+      rememberBrain2Output: () => {},
+      surfaceBrain2MouthText: () => assert.fail('question must not speak directly'),
+      appendBrain2AdvisoryToConversation: () => assert.fail('no new boundary during playback'),
+    }, ['formatBrain2AdvisoryContent']);
+    c.brain2BlockedReason = () => '';
+    c.requestBrain2Mull = async () => ({
+      status: 'ok', question: 'Could those two observations be related?',
+      observed_evidence: { note_guidance: [] },
+    });
+    await c.triggerBrain2Mull({ manual: true });
+    assert.equal(c.brain2QuestionCandidates.length, 1);
+    assert.match(c.formatBrain2AdvisoryContent(), /Could those two observations be related/);
+    if (busy) assert.ok(logs.some(([kind]) => kind === 'question deferred'));
+    c.loadedNoteContexts = [{ filename: 'new-card.txt', content: '', brain_context: {
+      version: 1, revision: 'new', brains: { b2: 'A different activity' },
+    } }];
+    assert.equal(c.formatBrain2AdvisoryContent(), '', 'changed guidance still invalidates the suggestion');
+  });
+}
+
+test('B2 does not retain stale questions and the private queue remains bounded', async () => {
+  const { context: c } = setup({
+    brain2QuestionCandidates: [], brain2NoteCandidates: [], brain2RevisionCandidates: [],
+    brain2UserPresentButBusy: () => true, brain2LoopGuardText: () => false,
+    rememberBrain2Output: () => {},
+  });
+  c.brain2BlockedReason = () => '';
+  c.requestBrain2Mull = async () => ({ status: 'stale', question: 'Old question' });
+  await c.triggerBrain2Mull({ manual: true });
+  assert.equal(c.brain2QuestionCandidates.length, 0);
+  for (let i = 0; i < 15; i++) {
+    c.requestBrain2Mull = async () => ({ status: 'ok', question: `Candidate ${i}` });
+    await c.triggerBrain2Mull({ manual: true });
+  }
+  assert.equal(c.brain2QuestionCandidates.length, 12);
+  assert.equal(c.brain2QuestionCandidates[0].text, 'Candidate 3');
+});
+
 test('unchanged headlines do not cause another model call, including after a quiet pass', async () => {
   const { context: c, calls, time, logs } = setup();
   await c.triggerBrain2Mull();

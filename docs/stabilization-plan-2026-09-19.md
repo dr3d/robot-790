@@ -169,6 +169,15 @@ first reproduced removal of an unrelated/ambiguous pin; all 454 JavaScript tests
 pass after the fix. This matches the earlier backend lookup safety rule without
 changing memory budgets or note contents. Refresh STS to load it.
 
+Another contained follow-up retains valid B2 questions in the existing bounded
+private advisory queue during busy periods, instead of logging and discarding
+them. Existing turn-boundary delivery, stale-result checks, guidance-revision
+invalidation, B1 discretion and public-mouth ownership are unchanged. No new
+speech request, idle wakeup, cadence adjustment or prompt wording was added.
+All 457 JavaScript tests pass, including busy/quiet retention, stale rejection,
+guidance changes and the existing 12-candidate bound. Other B2 evidence-freshness
+and delivery cases remain open; this is not a wholesale B2 repair.
+
 1. **Baseline and recovery:** private-data backup is verified locally; still
    record the working dependency/model/firmware versions and make model-launch errors
    fail explicitly. Preserve a representative rich session for comparisons.
