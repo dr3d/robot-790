@@ -1445,7 +1445,7 @@ for (const [prefix, routineName, minimum] of [
 
 function memoryContext() {
   return loadFunctions([
-    'noteFilenameSet', 'noteFilenameInSet', 'formatLoadedNoteContextsForInstructions',
+    'noteFilenameSet', 'noteFilenameInSet', 'formatLoadedNoteContextsForInstructions', 'loadedNoteAdmissionReport',
     'rememberLoadedNoteContext', 'ericMemoryNoteContexts', 'loadedNoteContextsForCurrentPrompt',
   ], {
     maxLoadedNoteChars: 64000,

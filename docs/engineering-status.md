@@ -6,6 +6,32 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Contained Browser Repairs
+
+September 19 follow-ups: browser unpin lookup now preserves Unicode letters and
+combining marks, rejects ambiguous/punctuation-only matches and respects folders.
+Valid B2 questions formed while the public lane is busy now remain in the bounded
+private advisory queue for existing turn-boundary delivery. No direct speech,
+new idle cadence or prompt wording was introduced; existing stale-result and
+guidance-revision checks remain. Broader B2 freshness work is still open.
+
+Pinned-note views and receipts distinguish full, partial, omitted and disabled
+B1 admission, including per-file/aggregate clipping and declared instruction
+warnings. The formatter's output is unchanged, checked against pre-change prompt
+hashes. Pin-limit removals are logged. This measures assembled browser text, not
+provider transmission, KV usage or B2 admission. No private guidance/body content
+is copied into the diagnostic receipts.
+
+Whole-card admission is **not yet repaired**: the existing per-file/aggregate
+budgets and pin replacement rules remain. Changing those requires choosing how
+to trade instructions against history, reject loads or expand capacity. Work
+stops at that policy boundary. These browser repairs need refresh; earlier
+Python batches still await safe server restarts. No running session was changed.
+Verification: 847 Python tests and 465 JavaScript tests pass, with the existing
+Starlette/httpx warning. A live companion continuation is still needed to assess
+the practical benefit of retained B2 questions; no improvement is inferred from
+unit tests alone.
+
 ### Archive Safety Stabilization
 
 September 19, third batch (source only, deployment pending): single-session

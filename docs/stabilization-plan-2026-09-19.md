@@ -160,7 +160,7 @@ fixtures. No prompts, summary policy, model settings, idle cadence or hardware
 were changed. Deploy with a page-server restart and STS refresh at a disconnected
 boundary; the earlier storage fixes also need a realtime restart if still pending.
 
-## Remaining Sequence
+## Fourth Batch: Contained Follow-ups
 
 September 19 contained follow-up: browser-side unpin lookup now preserves Unicode
 letters/marks, rejects empty punctuation matches and ambiguous normalized names,
@@ -178,6 +178,38 @@ All 457 JavaScript tests pass, including busy/quiet retention, stale rejection,
 guidance changes and the existing 12-candidate bound. Other B2 evidence-freshness
 and delivery cases remain open; this is not a wholesale B2 repair.
 
+The final contained change instruments the existing B1 note formatter without
+changing its text, order or budgets. Each pin now reports full/partial/omitted/
+disabled admission in the memory/context views, runtime estimate and
+`list_pinned_notes` receipt. Per-file versus aggregate clipping is distinguished;
+ordinary pin-limit removals are logged. Declared `## STS NOTE 1` instructions
+receive an explicit warning count if partial or omitted. Legacy untagged notes
+still report their admission status but are not semantically classified.
+
+These are character counts of the browser-assembled B1 note section, including
+its wrappers/notices, not proof of provider transmission, exact token usage, KV
+occupancy or B2 guidance admission. They are computed on inspection, not a new
+per-inference log stream. No note text or B2-private guidance is put into the
+receipts. Prompt SHA-256 goldens for empty, clipped-card and rich-history/core
+cases match the pre-instrumentation formatter.
+
+**Risk boundary:** whole-card admission is not yet fixed. The 4,500-character
+ordinary-note view, 64,000-character total note budget and eight-pin replacement
+policy remain. Automatically reserving more for cards would change which history
+survives; rejecting oversized loads or increasing the budget also changes the
+experience. Stop here for an explicit admission policy, rather than silently
+making those choices. Further tool-continuation and broad B2 freshness changes
+also need their own bounded design and live acceptance, not another quick rule.
+
+This batch only requires an STS refresh, but earlier Python repairs still await
+the documented server restarts. No active browser/session/server was disturbed.
+Final verification: 847 Python tests and 465 JavaScript tests pass; the existing
+Starlette/httpx warning remains. No real LLM, speech, paid art or hardware trial
+was run. Prompt goldens cover the assembly-preserving diagnostic change, while
+mechanism tests cover the actual unpin and B2 retention repairs.
+
+## Remaining Sequence
+
 1. **Baseline and recovery:** private-data backup is verified locally; still
    record the working dependency/model/firmware versions and make model-launch errors
    fail explicitly. Preserve a representative rich session for comparisons.
@@ -185,11 +217,12 @@ and delivery cases remain open; this is not a wholesale B2 repair.
    and journaled per-session archive recovery are repaired in source. Deployment
    and live disconnected-boundary acceptance remain pending. Legacy partial
    archives require case-by-case inspection rather than an automatic migration.
-3. **Context admission:** admit instruction-bearing cards whole; report actual
-   note/history inclusion and context pressure. No silent summarization or
-   eviction. Chunked summary preparation remains separate experimental work.
-4. **Initiative delivery:** retain B2 questions through busy periods; validate
-   advice against evidence and guidance revisions. Semantic reassessment stays
+3. **Context admission:** assembly inclusion is now inspectable; whole-card
+   admission and eviction/budget policy still need an explicit decision. No new
+   summarization or eviction policy was introduced. Chunked summary preparation
+   remains separate experimental work.
+4. **Initiative delivery:** busy-period B2 questions are retained; still validate
+   all advice against evidence and guidance revisions. Semantic reassessment stays
    with models, not English phrase classifiers. Preserve useful parallel work.
 5. **Tool recovery:** deliver denied-action receipts for bounded model-chosen
    recovery without terminating unrelated permitted work. Preserve scope checks,

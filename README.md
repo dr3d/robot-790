@@ -139,6 +139,11 @@ New archives now require STS to be disconnected and use a copy/verify/cleanup
 journal so interrupted work can resume into the same package. Connect rechecks
 its save-parent under the activity lease. These source repairs still need a
 safe server restart and browser refresh; no existing archives were migrated.
+The latest browser fixes retain busy-period B2 questions for private advisory
+delivery, reject ambiguous note unpins, and show whether pinned notes are fully,
+partly or not included in the assembled B1 note section. Whole-card admission
+and memory-budget policy remain unfinished; no automatic history eviction or
+summary substitution was added.
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.

@@ -5741,7 +5741,10 @@
         return ordinaryCount++ < maxLoadedNotes - reservedCount;
       });
       loadedNoteContextDirty = true;
-      log(events, `loaded note pinned: ${filename}`);
+      const removed = updatedContexts.filter(item => !loadedNoteContexts.includes(item)).map(item => item.filename);
+      log(events, loadedNoteContexts.some(item => item.filename === filename)
+        ? `loaded note pinned: ${filename}` : `loaded note not pinned (pin limit): ${filename}`);
+      if (removed.length) log(events, `note pin limit removed from active pins: ${removed.join(", ")}`);
       updateLoadedNoteControls();
       if (contextPanel?.open) renderContextMap();
     }
@@ -5838,7 +5841,7 @@
     }
 
     function listPinnedNotes() {
-
+      const admission = new Map(loadedNoteAdmissionReport().notes.map(item => [item.filename, item]));
       const notes = loadedNoteContexts.map((item) => ({
         filename: item.filename,
         loaded_at: item.loadedAt ? new Date(item.loadedAt).toISOString() : null,
@@ -5847,14 +5850,19 @@
           recipients: Object.keys(item.brain_context.brains || {}),
           shared: Boolean(item.brain_context.shared)
         } : null,
-        characters: String(item.content || "").length
+        characters: String(item.content || "").length,
+        b1_admission: {
+          status: admission.get(item.filename)?.status || "unknown",
+          assembled_block_characters: admission.get(item.filename)?.assembled_block_characters || 0,
+          reasons: admission.get(item.filename)?.reasons || []
+        }
       }));
       return {
         status: "ok",
         tool: "list_pinned_notes",
         files: notes.map((item) => item.filename),
         notes,
-        meaning: "Pinned notes are currently fed into future STS context. They are not the full notes folder."
+        meaning: "Pinned notes are eligible for future STS context, not guaranteed to be included in full. B1 admission describes the browser-assembled note section, not a provider receipt or B2 guidance. They are not the full notes folder."
       };
     }
 
@@ -6877,7 +6885,22 @@
       return formatLoadedNoteContextsForInstructions(loadedNoteContexts);
     }
 
+    function loadedNoteAdmissionReport() {
+      const notes = [];
+      const text = formatLoadedNoteContextsForInstructions(loadedNoteContexts, { admission: notes });
+      return {
+        basis: "Browser-assembled B1 note section, not proof of transmission, provider token usage or B2 admission.",
+        limit_characters: maxLoadedNoteChars,
+        assembled_characters: text.length,
+        partial_notes: notes.filter(item => item.status === "partial").length,
+        omitted_notes: notes.filter(item => item.status === "omitted").length,
+        instruction_warnings: notes.filter(item => item.instruction_bearing && ["partial", "omitted"].includes(item.status)).length,
+        notes
+      };
+    }
+
     function formatLoadedNoteContextsForInstructions(noteContexts, {
+      admission = null,
       heading = "Loaded note contents for this browser session:",
       description = [
         "These are notes the user asked you to read. Treat them as working context until the session resets.",
@@ -6894,18 +6917,29 @@
         heading,
         ...description
       ];
-      const blocks = contexts.filter((item) => (
-        loadEricMemoriesEnabled() || !noteFilenameInSet(item.filename, baseStartupNoteFilenames)
-      )).map((item) => {
+      const blocks = contexts.map((item) => {
+        const core = noteFilenameInSet(item.filename, baseStartupNoteFilenames);
+        const enabled = loadEricMemoriesEnabled() || !core;
+        const receipt = {
+          filename: item.filename, source_characters: String(item.content || "").length,
+          instruction_bearing: item.brain_context?.version === 1,
+          status: enabled ? "omitted" : "disabled", reasons: enabled ? [] : ["core_memory_disabled"],
+          desired_body_characters: 0, assembled_block_characters: 0
+        };
+        if (admission) admission.push(receipt);
+        if (!enabled) return null;
         const header = `\n[${item.filename}]`;
         const envelope = loadedNoteRestoreEnvelope(item);
-        const body = clippedLoadedNotePromptContent(item, loadedNotePromptContent(item));
+        const fullBody = loadedNotePromptContent(item);
+        const body = clippedLoadedNotePromptContent(item, fullBody);
+        receipt.desired_body_characters = fullBody.length;
+        if (body !== fullBody) receipt.reasons.push("per_file_limit");
         return {
           header,
           text: `${header}\n${[envelope, body].filter(Boolean).join("\n")}`,
-          core: noteFilenameInSet(item.filename, baseStartupNoteFilenames)
+          core, receipt
         };
-      });
+      }).filter(Boolean);
       if (!blocks.length) return "";
       // Reserve core memory without changing the operator's loaded-note order.
       const introLength = lines.join("\n").length + blocks.length + 1;
@@ -6914,13 +6948,19 @@
         .reduce((total, block) => total + block.text.length, 0));
       let remaining = noteBudget - coreRemaining;
       const clippingNotice = "\n[Loaded-note context clipped. Read the note again if exact detail is needed.]";
-      for (const { header, text: block, core } of blocks) {
+      for (const { header, text: block, core, receipt } of blocks) {
         const available = core ? coreRemaining : remaining;
-        if (available <= header.length + (core ? 0 : 200)) continue;
+        if (available <= header.length + (core ? 0 : 200)) {
+          receipt.reasons.push("aggregate_budget");
+          continue;
+        }
+        if (block.length > available) receipt.reasons.push("aggregate_budget");
         const clippedBlock = block.length > available
           ? `${block.slice(0, Math.max(0, available - clippingNotice.length))}${clippingNotice}`
           : block;
         lines.push(clippedBlock);
+        receipt.assembled_block_characters = clippedBlock.length;
+        receipt.status = receipt.reasons.length ? "partial" : "full";
         if (core) coreRemaining -= clippedBlock.length;
         else remaining -= clippedBlock.length;
       }
@@ -9255,13 +9295,16 @@
 
     function renderMemory() {
       const facts = loadMemoryFacts();
-
+      const admission = loadedNoteAdmissionReport();
+      const noteStates = new Map(admission.notes.map(item => [item.filename, item.status]));
       const activeLoadedNotes = loadedNoteContextsForCurrentPrompt().map((item) => item.filename);
       memoryStatus.textContent = [
         `${facts.length} browser fact${facts.length === 1 ? "" : "s"}`,
         `${activeLoadedNotes.length} loaded note${activeLoadedNotes.length === 1 ? "" : "s"}`,
+        admission.partial_notes || admission.omitted_notes
+          ? `B1: ${admission.partial_notes} partial, ${admission.omitted_notes} omitted` : "",
         `${location.origin} localStorage:${memoryStorageKey}`
-      ].join(" / ");
+      ].filter(Boolean).join(" / ");
       const lines = [];
       lines.push("Browser memory facts");
       lines.push("--------------------");
@@ -9274,7 +9317,7 @@
       lines.push("Loaded note context");
       lines.push("-------------------");
       if (activeLoadedNotes.length) {
-        activeLoadedNotes.forEach((filename) => lines.push(loadedNoteContextLine(filename)));
+        activeLoadedNotes.forEach(filename => lines.push(`${loadedNoteContextLine(filename)} [B1 ${noteStates.get(filename) || "unknown"}]`));
       } else {
         lines.push("No notes loaded in this browser session yet.");
       }
@@ -9286,6 +9329,7 @@
       if (!loadedNoteSelect || !loadedNoteUnpinButton) return;
       const previous = loadedNoteSelect.value;
       const filenames = loadedNoteContexts.map((item) => String(item.filename || "").trim()).filter(Boolean);
+      const noteStates = new Map(loadedNoteAdmissionReport().notes.map(item => [item.filename, item.status]));
       loadedNoteSelect.replaceChildren();
       if (!filenames.length) {
         const option = document.createElement("option");
@@ -9300,7 +9344,7 @@
         const option = document.createElement("option");
         option.value = filename;
         option.textContent = loadedNoteDisplayName(filename);
-        option.title = filename;
+        option.title = `${filename} / B1 ${noteStates.get(filename) || "unknown"}`;
         loadedNoteSelect.appendChild(option);
       });
       if (filenames.includes(previous)) {
@@ -15742,6 +15786,8 @@
     function estimateBrowserContextUse() {
 
       const activeLoadedNoteContexts = loadedNoteContextsForCurrentPrompt();
+      const noteAdmission = loadedNoteAdmissionReport();
+      const noteStates = new Map(noteAdmission.notes.map(item => [item.filename, item]));
       const loadedNotesText = formatLoadedNotesForInstructions();
       const sensingText = formatSensingTextForInstructions();
       const searchReceiptsText = formatRecentSearchContextForInstructions();
@@ -15754,6 +15800,11 @@
         context_mode: currentPromptContextModeKey(),
         injected: true,
         loaded_notes: estimateTextContext(loadedNotesText),
+        loaded_note_admission: {
+          basis: noteAdmission.basis,
+          partial_notes: noteAdmission.partial_notes, omitted_notes: noteAdmission.omitted_notes,
+          instruction_warnings: noteAdmission.instruction_warnings
+        },
         sensing_eye_text: estimateTextContext(sensingText),
         search_receipts: estimateTextContext(searchReceiptsText),
         alone_state: estimateTextContext(aloneStateText),
@@ -15763,7 +15814,9 @@
         loaded_note_files: activeLoadedNoteContexts.map((item) => ({
           filename: item.filename,
           content_chars: item.content.length,
-          approximate_tokens: approximateTextTokens(item.content)
+          approximate_tokens: approximateTextTokens(item.content),
+          b1_status: noteStates.get(item.filename)?.status || "unknown",
+          b1_assembled_block_chars: noteStates.get(item.filename)?.assembled_block_characters || 0
         }))
       };
     }
@@ -15818,6 +15871,7 @@
       const facts = safeLoadMemoryFacts();
       const enabledTools = enabledToolList();
       const activeLoadedNoteContexts = loadedNoteContextsForCurrentPrompt();
+      const noteAdmission = loadedNoteAdmissionReport();
 
       const loadedNotesText = formatLoadedNotesForInstructions();
       const sensingText = formatSensingTextForInstructions();
@@ -15964,16 +16018,16 @@
         },
         {
           name: "Loaded Notes",
-          role: "Pinned into conversation and optionally idle",
+          role: "B1 note section (assembled)",
           text: loadedNotesText,
           details: [
             `Loaded files: ${loadedNoteContexts.length}`,
             `Conversation note cap: ${maxLoadedNoteChars} chars`,
-            `Idle note cap now: ${idleLoadedNoteCharLimit()} chars`,
+            `B1 assembly: ${noteAdmission.assembled_characters} chars / ${noteAdmission.partial_notes} partial / ${noteAdmission.omitted_notes} omitted`,
+            `Declared instruction warnings: ${noteAdmission.instruction_warnings}`,
+            "Assembly only; not provider token usage or B2 admission.",
             "",
-            ...(activeLoadedNoteContexts.length ? activeLoadedNoteContexts.slice(0, 6).map((item) => (
-              `${item.filename}: ${item.content.length} chars, about ${approximateTextTokens(item.content)} tokens`
-            )) : [])
+            ...noteAdmission.notes.map(item => `${item.filename}: ${item.status}; ${item.assembled_block_characters} assembled block chars${item.reasons.length ? ` (${item.reasons.join(", ")})` : ""}`)
           ].filter(Boolean)
         },
         {
