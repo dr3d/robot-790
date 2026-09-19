@@ -162,6 +162,13 @@ boundary; the earlier storage fixes also need a realtime restart if still pendin
 
 ## Remaining Sequence
 
+September 19 contained follow-up: browser-side unpin lookup now preserves Unicode
+letters/marks, rejects empty punctuation matches and ambiguous normalized names,
+and honors folder-qualified requests. Exact filenames still win. Three regressions
+first reproduced removal of an unrelated/ambiguous pin; all 454 JavaScript tests
+pass after the fix. This matches the earlier backend lookup safety rule without
+changing memory budgets or note contents. Refresh STS to load it.
+
 1. **Baseline and recovery:** private-data backup is verified locally; still
    record the working dependency/model/firmware versions and make model-launch errors
    fail explicitly. Preserve a representative rich session for comparisons.

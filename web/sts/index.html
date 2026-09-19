@@ -5811,27 +5811,30 @@
     }
 
     function noteLookupKey(value) {
-      return String(value || "")
-        .trim()
-        .replace(/\\/g, "/")
-        .replace(/\.(txt|md)$/i, "")
-        .replace(/[^a-z0-9/]+/gi, "_")
-        .replace(/_+/g, "_")
-        .replace(/^_+|_+$/g, "")
-        .toLowerCase();
+      const parts = String(value || "").trim().replace(/\\/g, "/").replace(/\.(txt|md)$/i, "")
+        .split("/").map(part => part.replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+          .toLowerCase().normalize("NFC").replace(/['\u2019]/g, "")
+          .replace(/[^\p{L}\p{N}\p{M}]+/gu, "_").replace(/^_+|_+$/g, ""));
+      return parts.some(part => !part) ? "" : parts.join("/");
     }
 
     function resolveLoadedNoteFilename(filename) {
-      const wanted = String(filename || "").trim();
+      const wanted = String(filename || "").trim().replace(/\\/g, "/");
       if (!wanted) return "";
       const wantedLower = wanted.toLowerCase();
       const exact = loadedNoteContexts.find((item) => String(item.filename || "").toLowerCase() === wantedLower);
       if (exact) return exact.filename;
       const wantedKey = noteLookupKey(wanted);
-      const keyed = loadedNoteContexts.find((item) => noteLookupKey(item.filename) === wantedKey);
-      if (keyed) return keyed.filename;
-      const baseKeyed = loadedNoteContexts.find((item) => noteLookupKey(String(item.filename || "").split(/[\\/]/).pop()) === wantedKey);
-      return baseKeyed?.filename || "";
+      if (!wantedKey) return "";
+      let matches = loadedNoteContexts.filter(item => noteLookupKey(item.filename) === wantedKey);
+      if (!matches.length && !wanted.includes("/")) {
+        matches = loadedNoteContexts.filter(item => noteLookupKey(String(item.filename || "").split(/[\\/]/).pop()) === wantedKey);
+      }
+      if (matches.length > 1) {
+        const choices = matches.slice(0, 8).map(item => item.filename).join(", ");
+        throw new Error(`Multiple pinned notes match '${wanted}': ${choices}${matches.length > 8 ? `, and ${matches.length - 8} more` : ""}. Use an exact filename including its folder.`);
+      }
+      return matches[0]?.filename || "";
     }
 
     function listPinnedNotes() {
@@ -5865,7 +5868,12 @@
           pinned_notes: loadedNoteContexts.map((item) => item.filename)
         };
       }
-      const filename = resolveLoadedNoteFilename(requested);
+      let filename;
+      try {
+        filename = resolveLoadedNoteFilename(requested);
+      } catch (error) {
+        return { status: "error", tool: "unpin_note", requested, error: error.message };
+      }
       if (!filename) {
         return {
           status: "error",
