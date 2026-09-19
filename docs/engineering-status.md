@@ -6,6 +6,31 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### History Resume Stabilization
+
+September 19, second batch (source only, deployment pending): Auto history uses
+the authoritative original when its requested derivative is missing, stale,
+unreadable or not validly prepared. Connect no longer queues or waits for LLM
+preparation. Ready source-checked sweeps and explicitly enabled summaries retain
+their precedence. Inventory receipts identify requested/actual forms, source
+hash, sizes and fallback reason. Explicit Prepare forms and post-session
+preparation remain unchanged. Missing authoritative sources still fail visibly.
+
+A private copy of notes, logs (including images/audio), configuration and present
+environment files was verified by SHA-256: 2,894 files, 961,704,388 bytes. The
+repeatable PowerShell backup utility refuses merging and records hashes in a
+private manifest. This is same-disk recovery protection, not an off-device backup
+or a transactionally consistent snapshot of active servers. See the
+[stabilization plan](stabilization-plan-2026-09-19.md) for location and recovery.
+
+Lossless refers to the history API's fallback content, not guaranteed admission
+of every character into the model. Browser per-note/aggregate limits are still
+present; full context admission and archive recovery remain separate work.
+No prompt, summary policy, model settings, idle cadence or live servers changed.
+Verification: 835 Python tests and 450 JavaScript tests pass; changed Python
+files pass Ruff. The existing upstream Starlette/httpx warning remains. No live
+LLM generation, history migration or hardware trial was needed.
+
 ### Storage Safety Stabilization
 
 September 19: the [stabilization plan](stabilization-plan-2026-09-19.md) starts with
@@ -21,8 +46,9 @@ receipts, concurrent mock generation, collisions, and disk-failure cleanup.
 No existing notes/images, prompts, idle timing, model settings or firmware were
 changed. No live generation or server restart was performed. Deployment requires
 page/realtime server restarts at a safe disconnected boundary, not just refresh.
-Long-session resume, archive recovery, context admission and B2 delivery repairs
-remain open; this batch does not claim to fix them.
+This first batch did not address long-session resume, archive recovery, context
+admission or B2 delivery; the subsequent history batch above addresses only
+preparation blocking resume.
 
 Verification: 824 Python tests and 450 JavaScript tests pass. The Python run has
 the existing upstream Starlette/httpx deprecation warning. Changed Python files
@@ -515,7 +541,8 @@ replacing the system prompt. Recent short performance runs sustained roughly
 Those are local observations, not a general benchmark; first replies still took
 about twelve seconds, and no cache-hit rate was measured in those runs.
 
-Auto history currently loads source-checked swept sessions, not older summaries.
+Auto history prefers source-checked swept sessions, not older summaries, and
+falls back to original transcripts when requested forms are unavailable.
 The configurable recent-swept/older-summary policy exists, but
 `context_history.use_summaries` is false while summary quality is evaluated.
 Source manifests determine membership; derivatives do not introduce new pins.

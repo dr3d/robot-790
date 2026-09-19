@@ -14,7 +14,7 @@ from robot_790d.continuity import (
     continuity_session_variant_records,
 )
 from robot_790d.note_files import read_note_file
-from robot_790d.session_preparation import SWEEP_VERSION, digest, prepared_variant
+from robot_790d.session_preparation import digest, prepared_variant
 
 
 def history_config(value: Any) -> dict[str, int | bool]:
@@ -78,47 +78,54 @@ def context_history_plan(
     ordered.extend(
         note for note, _ in sorted(sessions.values(), key=lambda pair: str(pair[1]["created"]), reverse=True)
     )
-    loaded, required, inventory = [], [], []
+    loaded, inventory = [], []
     for index, source in enumerate(ordered):
         form = "summary" if use_summaries and index >= recent else "scrubbed"
-        record = next(
-            r for r in continuity_session_variant_records(source.filename, instance_path) if r["key"] == form
-        )
-        ready = prepared_variant(record, instance_path)
-        raw_fallback = (form == "scrubbed" and record["status"] == "available" and not ready
-                        and any(marker in read_note_file(instance_path, record["filename"]).content
-                                for marker in (SWEEP_VERSION, "Conservative semantic sweep v2")))
-        if raw_fallback:
+        requested_form = form
+        source_sha256 = digest(source.content)
+        derivative = None
+        fallback_status = ""
+        # Derivatives are optional. Never wait for model work to recover readable
+        # history, and never substitute an unrelated or stale prepared form.
+        try:
+            record = next(
+                r for r in continuity_session_variant_records(source.filename, instance_path) if r["key"] == form
+            )
+            if prepared_variant(record, instance_path):
+                candidate = read_note_file(instance_path, record["filename"])
+                metadata = continuity_session_variant_metadata(candidate.content)
+                if metadata and metadata["source_sha256"] == source_sha256:
+                    derivative = candidate
+                else:
+                    fallback_status = "stale"
+            else:
+                fallback_status = "unprepared" if record["status"] == "available" else record["status"]
+        except (OSError, ValueError):
+            fallback_status = "unreadable"
+        note = derivative or source
+        if derivative is None:
             form = "raw"
         inventory.append(
             {
                 "session_filename": source.filename,
+                "source_sha256": source_sha256,
+                "requested_form": requested_form,
                 "resume_form": form,
-                "load_filename": source.filename if raw_fallback else record["filename"],
+                "load_filename": note.filename,
                 "raw_characters": len(source.content),
-                "characters": len(source.content) if raw_fallback else record["characters"],
-                **({"fallback_reason": "Generated sweep omitted protected turns; using full transcript."}
-                   if raw_fallback else {}),
+                "characters": len(note.content),
+                **({"fallback_status": fallback_status,
+                    "fallback_reason": f"Requested {requested_form} is {fallback_status}; using full transcript."}
+                   if derivative is None else {}),
             }
         )
-        if raw_fallback:
-            loaded.append({"status": "ok", "filename": source.filename, "load_filename": source.filename,
-                           "resume_form": "raw", "content": source.content})
-            continue
-        if not ready:
-            required.append(source.filename)
-            continue
-        derivative = read_note_file(instance_path, record["filename"])
-        metadata = continuity_session_variant_metadata(derivative.content)
-        if not metadata or metadata["source_sha256"] != digest(source.content):
-            raise ValueError(f"Source changed while assembling history: {source.filename}. Retry Connect.")
         loaded.append(
             {
                 "status": "ok",
                 "filename": source.filename,
-                "load_filename": derivative.filename,
+                "load_filename": note.filename,
                 "resume_form": form,
-                "content": derivative.content,
+                "content": note.content,
             }
         )
     loaded.extend(
@@ -127,16 +134,15 @@ def context_history_plan(
     )
     return {
         **selection,
-        "status": "preparing" if required else "ok",
+        "status": "ok",
         "resume_form": "auto",
-        "resume_form_label": (f"Auto: {recent} recent swept, older summaries" if use_summaries
-                              else "Auto: swept with full fallback"
-                              if any(r["resume_form"] == "raw" for r in inventory)
-                              else "Auto: all retained sessions swept"),
+        "resume_form_label": ((f"Auto: {recent} recent swept, older summaries" if use_summaries
+                               else "Auto: all retained sessions swept")
+                              + (" with full fallback" if any(r["resume_form"] == "raw" for r in inventory) else "")),
         "load_filename": inventory[0]["load_filename"],
         "history_policy": policy,
         "history_inventory": inventory,
-        "history_notes": [] if required else loaded,
-        "preparation_required": required,
+        "history_notes": loaded,
+        "preparation_required": [],
         "skipped_notes": skipped,
     }

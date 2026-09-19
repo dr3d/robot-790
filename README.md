@@ -131,6 +131,10 @@ between implemented work, observations and planned repairs.
 The [September 19 stabilization plan](docs/stabilization-plan-2026-09-19.md)
 prioritizes storage, continuity and initiative-delivery repairs before new
 capabilities, while preserving Eric's full-context idle and established behavior.
+The next source repair lets Auto resume fall back to the original transcript
+when a prepared form is unavailable, without waiting for an LLM. This is not a
+change to the separate prompt-size limits. Private backup and restore precautions
+are documented in the plan; ignored session data is not protected by Git.
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.
@@ -445,7 +449,9 @@ The browser page is the main live control surface. It includes:
 - Realtime server connection and model restart controls.
 - Connect latest, previous, empty, or a selected session, with a standalone
   session map for inspecting branches. Auto history currently loads all retained
-  saved sessions as conservative swept transcripts. Summaries remain drafts;
+  saved sessions as conservative swept transcripts when available, otherwise
+  original transcripts with an explicit fallback receipt. Connect does not wait
+  for preparation. Summaries remain drafts;
   automatic summary loading is disabled pending quality improvements. The mixed
   recent-swept/older-summary policy is opt-in; Full `.txt`, Scrubbed,
   and Summary remain explicit alternatives. Derivatives are source-hash checked,

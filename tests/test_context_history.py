@@ -67,13 +67,14 @@ def test_sweeps_only_default_has_no_age_cutoff(root, recent):
     assert plan["resume_form_label"] == "Auto: all retained sessions swept"
 
 
-def test_missing_older_sweep_requires_preparation_even_when_summary_exists(root):
+def test_missing_older_sweep_uses_original_not_available_summary(root):
     sessions = make_thread(root)
     save_continuity_session_variant("Legacy sweep", sessions[0], "scrubbed", root, reviewed=False)
     plan = context_history_plan(select_continuity_session(sessions[-1], root), instance_path=root)
-    assert plan["preparation_required"] == [sessions[0]]
-    assert plan["history_notes"] == []
-    assert plan["history_inventory"][-1]["resume_form"] == "scrubbed"
+    assert plan["preparation_required"] == []
+    assert plan["status"] == "ok"
+    assert plan["history_notes"][-2]["content"] == read_note_file(root, sessions[0]).content
+    assert plan["history_inventory"][-1]["resume_form"] == "raw"
 
 
 def test_history_config_defaults_to_sweeps():
@@ -87,14 +88,15 @@ def test_invalid_summary_switch_is_explicit(value):
         history_config({"use_summaries": value})
 
 
-def test_missing_or_stale_derivatives_never_fall_back_to_full(root):
+def test_stale_derivative_uses_current_original(root):
     sessions = make_thread(root)
     source = read_note_file(root, sessions[-1])
     write_note_file(root, source.filename, source.content + "\nchanged")
     plan = context_history_plan(select_continuity_session(sessions[-1], root), instance_path=root)
-    assert plan["status"] == "preparing"
-    assert plan["preparation_required"] == [sessions[-1]]
-    assert plan["history_notes"] == []
+    assert plan["status"] == "ok"
+    assert plan["preparation_required"] == []
+    assert plan["history_notes"][0]["content"] == source.content + "\nchanged"
+    assert plan["history_inventory"][0]["fallback_status"] == "stale"
 
 
 def test_unpinned_history_is_not_resurrected_and_archived_pins_are_skipped(root):
@@ -123,7 +125,9 @@ def test_old_generated_sweep_is_not_misrepresented_as_new(root):
     sessions = make_thread(root)
     save_continuity_session_variant("Conservative sweep v1", sessions[-1], "scrubbed", root, reviewed=False)
     plan = context_history_plan(select_continuity_session(sessions[-1], root), instance_path=root)
-    assert plan["preparation_required"] == [sessions[-1]]
+    assert plan["preparation_required"] == []
+    assert plan["history_inventory"][0]["resume_form"] == "raw"
+    assert plan["history_notes"][0]["content"] == read_note_file(root, sessions[-1]).content
 
 
 def test_unsafe_semantic_sweep_falls_back_to_raw_without_model_or_source_edits(root):
@@ -137,9 +141,23 @@ def test_unsafe_semantic_sweep_falls_back_to_raw_without_model_or_source_edits(r
     assert plan["status"] == "ok"
     assert plan["preparation_required"] == []
     assert plan["history_inventory"][0]["resume_form"] == "raw"
-    assert "protected turns" in plan["history_inventory"][0]["fallback_reason"]
+    assert plan["history_inventory"][0]["fallback_status"] == "unprepared"
     assert plan["history_notes"][0]["content"] == original
     assert read_note_file(root, filename).content == original
+
+
+def test_valid_generated_sweep_remains_preferred(root):
+    from robot_790d import session_preparation as prep
+
+    filename = make_thread(root, count=1)[0]
+    source = read_note_file(root, filename).content
+    swept, _ = prep.semantic_sweep(prep.session_transcript(source), [])
+    save_continuity_session_variant(swept, filename, "scrubbed", root, reviewed=False)
+    plan = context_history_plan(select_continuity_session(filename, root), instance_path=root)
+    assert plan["history_inventory"][0]["resume_form"] == "scrubbed"
+    assert "fallback_reason" not in plan["history_inventory"][0]
+    assert prep.SWEEP_VERSION in plan["history_notes"][0]["content"]
+    assert "Source created:" in plan["history_notes"][0]["content"]
 
 
 @pytest.mark.parametrize("value", [-1, 21, True, "2", 2.1])
@@ -152,24 +170,18 @@ def test_no_saved_sessions_need_no_preparation():
     assert context_history_plan({"status": "unavailable"}) == {"status": "unavailable"}
 
 
-def test_history_endpoint_prepares_before_returning_complete_plan(root, monkeypatch):
-    import time
-
+@pytest.mark.parametrize("prepare,preview", [(True, False), (False, False), (False, True)])
+def test_history_endpoint_returns_original_without_enqueuing(root, monkeypatch, prepare, preview):
     from robot_790d import session_preparation as prep
     from robot_790d import sts_page_server as server
 
     filename = make_thread(root)[0]
     save_continuity_session_variant("Legacy generated sweep", filename, "scrubbed", root, reviewed=False)
 
-    async def provider(text):
-        swept, dropped = prep.semantic_sweep(text, [])
-        return prep.SUMMARY_VERSION + "\nAn original fact.", {
-            "title": "Original fact discussion",
-            "swept_body": swept,
-            "dropped_turn_ids": dropped,
-        }
-
-    worker = prep.SessionPreparer(root, provider=provider)
+    worker = prep.SessionPreparer(root)
+    def unexpected_enqueue(*args, **kwargs):
+        pytest.fail("Connect must not enqueue model preparation")
+    monkeypatch.setattr(worker, "enqueue", unexpected_enqueue)
     monkeypatch.setattr(server, "session_preparer", worker)
     monkeypatch.setattr(server, "select_continuity_session", lambda name: select_continuity_session(name, root))
     original_plan = server.context_history_plan
@@ -177,51 +189,72 @@ def test_history_endpoint_prepares_before_returning_complete_plan(root, monkeypa
         server, "context_history_plan", lambda selected, **kw: original_plan(selected, instance_path=root, **kw)
     )
     handler = object.__new__(server.StsPageHandler)
-    payload = {"session_filename": filename, "prepare": True}
+    payload = {"session_filename": filename, "prepare": prepare, "preview": preview}
     replies = []
     handler._read_json_body = lambda: payload
     handler._send_json = lambda code, data: replies.append((code, data))
     try:
         handler._handle_context_history()
-        assert replies[-1][0] == 202
-        assert replies[-1][1]["history_notes"] == []
-        deadline = time.monotonic() + 5
-        while worker.status(filename)["state"] != "ready" and time.monotonic() < deadline:
-            time.sleep(0.02)
-        payload["prepare"] = False
-        handler._handle_context_history()
         assert replies[-1][0] == 200
         plan = replies[-1][1]
         assert plan["history_notes"][0]["filename"] == filename
-        assert prep.SWEEP_VERSION in plan["history_notes"][0]["content"]
-        assert "Source created:" in plan["history_notes"][0]["content"]
+        assert plan["history_notes"][0]["content"] == read_note_file(root, filename).content
+        assert plan["preparation"] == []
+        assert not worker.queue
     finally:
         worker.close()
 
 
-def test_history_endpoint_names_unprepared_source_in_error(root, monkeypatch):
+def test_oversized_failed_preparation_does_not_block_resume(root):
     from robot_790d import session_preparation as prep
-    from robot_790d import sts_page_server as server
 
-    filename = make_thread(root)[0]
-    save_continuity_session_variant("Legacy sweep", filename, "scrubbed", root, reviewed=False)
-    worker = prep.SessionPreparer(root)
-    monkeypatch.setattr(server, "session_preparer", worker)
-    monkeypatch.setattr(server, "select_continuity_session", lambda name: select_continuity_session(name, root))
-    original_plan = server.context_history_plan
-    monkeypatch.setattr(
-        server, "context_history_plan", lambda selected, **kw: original_plan(selected, instance_path=root, **kw)
+    transcript = "[10:00] You: Beginning.\n" + "[10:01] Eric: A thought.\n" * 4500 + "[11:00] You: Ending."
+    with pytest.raises(ValueError, match="96,000"):
+        prep.summary_request(transcript)
+    filename = save_continuity_session("Transcript\n----------\n" + transcript, [], root)["session_filename"]
+    source = read_note_file(root, filename).content
+    plan = context_history_plan(select_continuity_session(filename, root), instance_path=root)
+    assert plan["status"] == "ok"
+    assert plan["preparation_required"] == []
+    assert plan["history_notes"][0]["content"] == source
+    assert plan["history_inventory"][0]["source_sha256"] == prep.digest(source)
+    assert plan["history_inventory"][0]["fallback_status"] == "missing"
+    assert read_note_file(root, filename).content == source
+
+
+def test_unavailable_explicit_summary_falls_back_with_truthful_receipt(root):
+    filename = make_thread(root, count=1)[0]
+    save_continuity_session_variant("Legacy summary", filename, "summary", root, reviewed=False)
+    plan = context_history_plan(
+        select_continuity_session(filename, root), instance_path=root, use_summaries=True, recent_swept_sessions=0,
     )
-    handler = object.__new__(server.StsPageHandler)
-    replies = []
-    handler._read_json_body = lambda: {"session_filename": filename}
-    handler._send_json = lambda code, data: replies.append((code, data))
-    handler._handle_context_history()
-    assert replies[-1][0] == 400
-    assert filename in replies[-1][1]["error"]
-    assert "Retry Connect" in replies[-1][1]["error"]
-    handler._read_json_body = lambda: {"session_filename": filename, "preview": True}
-    handler._handle_context_history()
-    assert replies[-1][0] == 202
-    assert replies[-1][1]["preparation_required"] == [filename]
-    assert not worker.queue
+    item = plan["history_inventory"][0]
+    assert item["requested_form"] == "summary"
+    assert item["resume_form"] == "raw"
+    assert plan["history_notes"][0]["content"] == read_note_file(root, filename).content
+    assert "full fallback" in plan["resume_form_label"]
+
+
+def test_unreadable_derivative_falls_back_but_unreadable_source_does_not(root, monkeypatch):
+    from robot_790d import context_history as history
+
+    filename = make_thread(root, count=1)[0]
+    selection = select_continuity_session(filename, root)
+    original = history.read_note_file
+
+    def fail_derivative(instance, name):
+        if name.endswith(".scrubbed.txt"):
+            raise OSError("Derivative unavailable")
+        return original(instance, name)
+
+    monkeypatch.setattr(history, "read_note_file", fail_derivative)
+    plan = history.context_history_plan(selection, instance_path=root)
+    assert plan["history_notes"][0]["content"] == original(root, filename).content
+    assert plan["history_inventory"][0]["fallback_status"] == "unreadable"
+
+    def fail_source(*args):
+        raise OSError("Source unavailable")
+
+    monkeypatch.setattr(history, "read_note_file", fail_source)
+    with pytest.raises(OSError, match="Source unavailable"):
+        history.context_history_plan(selection, instance_path=root)
