@@ -17,8 +17,8 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
-from robot_790d.runtime_model import local_runtime_model
 
+from robot_790d.archive_transaction import load_transaction
 from robot_790d.continuity import (
     archive_continuity_branch,
     archive_continuity_session,
@@ -31,6 +31,7 @@ from robot_790d.continuity import (
     validate_continuity_session_title,
 )
 from robot_790d.note_files import read_note_file, resolve_note_path, write_note_file
+from robot_790d.runtime_model import local_runtime_model
 
 SUMMARY_PROMPT = (
     "Summarize this recorded session for future continuity. "
@@ -434,6 +435,8 @@ class SessionPreparer:
 
     def _source(self, filename: str) -> Any:
         note = read_note_file(self.instance_path, filename)
+        if load_transaction(self.instance_path, note.filename) is not None:
+            raise ValueError("Session has an archive transaction; recover the archive before preparing forms.")
         parts = Path(note.filename).parts
         if len(parts) != 2 or parts[0] != "sessions" or not continuity_session_metadata(note.content):
             raise ValueError("Prepare requires an unarchived source session in sessions/.")
@@ -451,7 +454,8 @@ class SessionPreparer:
             if all(job.get(key) == value for key, value in fields.items()):
                 return
             job.update(fields, updated_at=datetime.now().astimezone().isoformat(timespec="seconds"))
-            if resolve_note_path(filename, self.instance_path).is_file():
+            if (resolve_note_path(filename, self.instance_path).is_file()
+                    and load_transaction(self.instance_path, filename) is None):
                 try:
                     write_note_file(self.instance_path, self._status_filename(filename), json.dumps(job, indent=2))
                 except OSError:
@@ -518,11 +522,14 @@ class SessionPreparer:
             if not self.activity(client_id, True):
                 raise ValueError("Summary is still stopping; retry Archive shortly.")
             with self.lock:
-                source = self._source(filename)
-                result = archive_continuity_session(source.filename, self.instance_path)
-                self.queue = deque(name for name in self.queue if name != source.filename)
-                if source.filename in self.jobs:
-                    self.jobs[source.filename]["state"] = "archived"
+                self._busy()
+                if any(key != client_id for key in self.leases):
+                    raise ValueError("Disconnect STS before archiving a session.")
+                result = archive_continuity_session(filename, self.instance_path)
+                source_filename = result["session_filename"]
+                self.queue = deque(name for name in self.queue if name != source_filename)
+                if source_filename in self.jobs:
+                    self.jobs[source_filename]["state"] = "archived"
                 return result
         finally:
             self.activity(client_id, False)
@@ -534,7 +541,7 @@ class SessionPreparer:
                 raise ValueError("Preparation is still stopping; retry Archive Branch shortly.")
             with self.lock:
                 self._busy()  # Expire abandoned browser leases before checking.
-                if any(key != client_id and not key.startswith("archive_") for key in self.leases):
+                if any(key != client_id for key in self.leases):
                     raise ValueError("Disconnect STS before archiving a branch.")
                 result = archive_continuity_branch(filename, fingerprint, self.instance_path)
                 archived = {item["session_filename"] for item in result["archived_sessions"]}

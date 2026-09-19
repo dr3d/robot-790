@@ -105,14 +105,70 @@ paths. Review configuration/environment differences before restoring them.
 Do not restore over live servers or bulk-replace current history without checking
 what was created since the backup. No automatic restore/migration was attempted.
 
+## Third Batch: Archive Safety
+
+Implemented in source, deployment pending:
+
+- Single-session Archive now follows Archive Branch's disconnect requirement,
+  enforced by the page server's existing browser activity leases. Connect also
+  revalidates its selected save-parent after acquiring that lease, before opening
+  the realtime socket. An archive during history preflight fails Connect clearly
+  instead of starting a conversation whose parent is already gone.
+- New archives journal their source, destination, SHA-256 file inventory and
+  phase in private `logs/archive-transactions/`. All session text, existing
+  variants/receipts and available unchanged eye assets/sidecars are copied and
+  verified before any original is removed. Copies use flushed temporary files
+  and non-replacing publication. The source session is removed last.
+- Retry uses the same journal/package, including after a process restart or an
+  interrupted final completion receipt. It verifies both copies and surviving
+  originals again, preserves new active references to shared assets, refuses
+  modified/colliding files, and still protects the last active session.
+- Preparation cannot write new derivatives or update its on-disk receipt while
+  an archive transaction exists. This prevents a late failed job from changing
+  a receipt that recovery expects to match.
+- Existing missing/changed asset warnings are retained. I/O failures now stop
+  the archive instead of reporting success while part of the move failed.
+
+Recovery is explicit, not a startup mutation. Inspect
+`GET /api/continuity/archive-recovery` for pending/invalid journals. With STS
+disconnected, retry Archive for the same source filename, or send that filename
+as `session_filename` to the existing `POST /api/continuity/archive` endpoint.
+This works even if the final source removal succeeded before the completion
+receipt was saved. Investigate invalid journals or hash mismatches against the
+private backup; do not delete the journal to force a new archive. For a partially
+completed branch, recover its pending session first, then preview/confirm the
+remaining branch again. No full-branch rollback or automatic recovery is claimed.
+
+Boundaries: old archive packages have no transaction journal and are not
+retroactively repaired or migrated. Activity leases are cooperative browser
+heartbeats, not proof of every process's liveness; avoid archiving during a page
+server restart or failed heartbeat. Manual/external edits during an archive can
+stop recovery for review. This is per-session crash recovery, not an atomic
+whole-branch operation or protection from disk failure. Originals or verified
+copies remain at interruption points; the earlier backup is the safety net.
+
+Verification: 847 Python tests and 451 JavaScript tests pass. The existing
+Starlette/httpx deprecation warning remains. New archive code, continuity and
+regression tests pass Ruff; pre-existing style findings remain in the larger
+page-server/preparation modules. Failure injection covers copy/cleanup/receipt
+interruptions, partial writes, changed files, invalid paths, shared references,
+preparation interference, active-browser refusal, the last active session and
+the Connect preflight race.
+
+No real session was archived/moved during implementation. Tests use temporary
+fixtures. No prompts, summary policy, model settings, idle cadence or hardware
+were changed. Deploy with a page-server restart and STS refresh at a disconnected
+boundary; the earlier storage fixes also need a realtime restart if still pending.
+
 ## Remaining Sequence
 
 1. **Baseline and recovery:** private-data backup is verified locally; still
    record the working dependency/model/firmware versions and make model-launch errors
    fail explicitly. Preserve a representative rich session for comparisons.
-2. **History reliability:** preparation-blocking resume is repaired in source.
-   Still protect the live save-parent during archiving and add interrupted-archive
-   recovery. These archive issues remain open.
+2. **History reliability:** preparation-blocking resume, connected archive guards
+   and journaled per-session archive recovery are repaired in source. Deployment
+   and live disconnected-boundary acceptance remain pending. Legacy partial
+   archives require case-by-case inspection rather than an automatic migration.
 3. **Context admission:** admit instruction-bearing cards whole; report actual
    note/history inclusion and context pressure. No silent summarization or
    eviction. Chunked summary preparation remains separate experimental work.

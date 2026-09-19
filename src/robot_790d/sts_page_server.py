@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 import httpx
 
+from robot_790d.archive_transaction import pending_archives
 from robot_790d.brain_status import get_brain_status, get_gpu_status
 from robot_790d.context_history import context_history_plan, history_config
 from robot_790d.continuity import (
@@ -151,6 +152,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/continuity/sessions":
             self._handle_continuity_sessions()
+            return
+        if parsed.path == "/api/continuity/archive-recovery":
+            self._send_json(200, {"status": "ok", "pending_archives": pending_archives()})
             return
         super().do_GET()
 

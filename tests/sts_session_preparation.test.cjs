@@ -50,8 +50,37 @@ test('Connect waits for preparation before creating the realtime socket and rele
   const connect = page.slice(start, end);
   assert.ok(connect.indexOf('await pauseSessionPreparation()') < connect.indexOf('new WebSocket('));
   assert.ok(connect.indexOf('await loadFreshContinuityContext(') < connect.indexOf('await pauseSessionPreparation()'));
+  assert.ok(connect.indexOf('await pauseSessionPreparation()') < connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun'));
+  assert.ok(connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun') < connect.indexOf('new WebSocket('));
   assert.match(connect, /catch \(error\) \{\s*releaseSessionPreparation\(\)/);
   assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(ws !== socket[^\n]+\n\s*stopVisionCamera\(\{ quiet: true \}\);\s*releaseSessionPreparation/);
+});
+
+test('a parent archived during Connect preflight prevents opening an unsavable session', async () => {
+  const calls = [];
+  const noop = () => {};
+  const c = load(['connect'], {
+    realtimeStopRequested: false, ws: null, continuityParentForCurrentRun: '',
+    currentContinuitySessionFilename: 'sessions/parent.txt',
+    saveFaceControllerPreference: noop, setConnectionButtonsDisabled: noop,
+    setState: state => calls.push(state), ensureRuntimeConfigLoaded: async () => {},
+    pauseSessionPreparation: async () => calls.push('lease acquired'),
+    continuitySessionContext: () => ({ content: 'saved parent' }),
+    fetchContinuitySessionMetadata: async (name, form) => {
+      assert.equal(calls.at(-1), 'lease acquired');
+      assert.equal(name, 'sessions/parent.txt');
+      assert.equal(form, 'raw');
+      throw new Error('Parent was archived');
+    },
+    releaseSessionPreparation: () => calls.push('lease released'),
+    ensurePlayback: () => assert.fail('must fail before playback or socket creation'),
+    WebSocket: () => assert.fail('must not create a socket'),
+    events: {}, log: (_pane, text) => calls.push(text),
+  });
+  await c.connect({ continuityAlreadyLoaded: true, openFace: false });
+  assert.ok(calls.includes('lease released'));
+  assert.ok(calls.includes('Connect failed'));
+  assert.match(calls.at(-1), /Parent was archived/);
 });
 
 test('automatic history polls preparation without changing the selected branch', async () => {

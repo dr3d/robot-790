@@ -6,6 +6,34 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Archive Safety Stabilization
+
+September 19, third batch (source only, deployment pending): single-session
+Archive now rejects connected-browser activity, matching the branch route.
+Connect rechecks its save-parent after acquiring its activity lease and before
+opening the socket, closing the archive-during-preflight race.
+
+New per-session archives journal a fixed package and hash inventory, copy and
+verify all available files before removals, and remove the original session last.
+Retry resumes the same package after copy/cleanup/completion-receipt failures,
+including across process restarts. Shared asset references and the last active
+session are rechecked. Preparation is barred from changing files/receipts under
+an archive transaction. Missing/changed asset warnings remain explicit; disk
+failures stop archival instead of being counted as successful moves.
+
+The read-only `/api/continuity/archive-recovery` endpoint lists pending work;
+the existing Archive POST retries the same source after disconnection. No
+automatic startup recovery, whole-branch rollback or legacy-package migration
+was added. Cooperative activity leases have heartbeat/restart limitations.
+See the [plan and recovery procedure](stabilization-plan-2026-09-19.md).
+
+Verification: 847 Python tests and 451 JavaScript tests pass, with the existing
+Starlette/httpx warning. New archive code and tests pass Ruff; older style
+findings in the larger page/preparation modules remain outside this batch.
+No actual private history/assets were moved, servers restarted, or prompts and
+idle behavior changed. Deployment needs a page-server restart and STS refresh;
+the preceding storage batch also needs its still-pending realtime restart.
+
 ### History Resume Stabilization
 
 September 19, second batch (source only, deployment pending): Auto history uses
@@ -25,7 +53,8 @@ or a transactionally consistent snapshot of active servers. See the
 
 Lossless refers to the history API's fallback content, not guaranteed admission
 of every character into the model. Browser per-note/aggregate limits are still
-present; full context admission and archive recovery remain separate work.
+present; full context admission remains separate work. Archive recovery was
+addressed in the subsequent batch above, not in this resume repair.
 No prompt, summary policy, model settings, idle cadence or live servers changed.
 Verification: 835 Python tests and 450 JavaScript tests pass; changed Python
 files pass Ruff. The existing upstream Starlette/httpx warning remains. No live

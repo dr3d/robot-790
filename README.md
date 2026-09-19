@@ -135,6 +135,10 @@ The next source repair lets Auto resume fall back to the original transcript
 when a prepared form is unavailable, without waiting for an LLM. This is not a
 change to the separate prompt-size limits. Private backup and restore precautions
 are documented in the plan; ignored session data is not protected by Git.
+New archives now require STS to be disconnected and use a copy/verify/cleanup
+journal so interrupted work can resume into the same package. Connect rechecks
+its save-parent under the activity lease. These source repairs still need a
+safe server restart and browser refresh; no existing archives were migrated.
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.

@@ -20074,6 +20074,11 @@
           currentContinuitySessionFilename
           && Boolean(continuitySessionContext())
         ) ? currentContinuitySessionFilename : "";
+        // History can be archived between preflight and acquiring the activity
+        // lease. Recheck its save-parent while archive requests are now blocked.
+        if (continuityParentForCurrentRun) {
+          await fetchContinuitySessionMetadata(continuityParentForCurrentRun, "raw");
+        }
         await ensurePlayback();
         socket = new WebSocket(serverUrl.value.trim());
         idleArt.reset();

@@ -263,7 +263,11 @@ def test_archive_waiting_job_moves_receipt_and_does_not_resurrect_variants(root)
         worker.activity("browser", True)
         worker.enqueue(filename)
         wait_until(lambda: worker.status(filename)["state"] == "waiting")
-        result = worker.archive(filename)
+        with pytest.raises(ValueError, match="Disconnect STS"):
+            worker.archive(filename)
+        with worker.lock:
+            worker.activity("browser", False)
+            result = worker.archive(filename)
         assert any(name.endswith(".preparation.json") for name in result["archived_variant_filenames"])
         assert not resolve_note_path(filename, root).exists()
         worker.activity("browser", False)

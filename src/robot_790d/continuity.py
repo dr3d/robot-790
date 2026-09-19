@@ -3,14 +3,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from robot_790d import archive_transaction
 from robot_790d.note_files import (
-    delete_note_file,
     find_existing_note_path,
     list_note_files,
     notes_root_for_instance,
@@ -383,9 +382,30 @@ def archive_continuity_session(
     session_filename: str,
     instance_path: str | Path | None = None,
 ) -> dict[str, object]:
+    with archive_transaction.ARCHIVE_LOCK:
+        return _archive_continuity_session(session_filename, instance_path)
+
+
+def _archive_continuity_session(
+    session_filename: str, instance_path: str | Path | None,
+) -> dict[str, object]:
+    requested = str(session_filename or "").replace("\\", "/").strip()
+    job = archive_transaction.load_transaction(instance_path, requested)
+    if job:
+        if (resolve_note_path(job["session_filename"], instance_path).exists()
+                and len(list_continuity_sessions(instance_path)["sessions"]) <= 1):
+            raise ValueError("Cannot archive the only active session note. Save a new thread before recovery.")
+        names = {a["filename"] for a in job["result"]["archived_sensing_eye_assets"]}
+        shared = _shared_sensing_eye_assets(instance_path, job["session_filename"], names)
+        result = archive_transaction.finish_transaction(instance_path, job, shared)
+        refreshed = list_continuity_sessions(instance_path)
+        return {**result, "current_session_filename": refreshed["current_session_filename"],
+                "sessions": refreshed["sessions"]}
     filename = _normalize_session_filename(instance_path, session_filename)
     if not filename:
         raise ValueError("No session note filename was provided.")
+    if filename != requested:
+        return _archive_continuity_session(filename, instance_path)
 
     sessions = list_continuity_sessions(instance_path)["sessions"]
     active_filenames = {str(session["filename"]).lower() for session in sessions}
@@ -402,34 +422,43 @@ def archive_continuity_session(
     variants_to_archive = _existing_continuity_session_variant_notes(instance_path, note.filename)
     sensing_eye_assets = _parse_sensing_eye_asset_receipts(note.content)
     archived_filename = _unique_archived_session_filename(instance_path, note.filename)
-    archived = write_note_file(instance_path, archived_filename, note.content)
+    files = [{"kind": "note", "source": note.filename, "target": archived_filename,
+              "sha256": _file_sha256(note.path)}]
     archived_variants: list[str] = []
     for variant_note in variants_to_archive:
-        variant_filename = _archived_session_variant_filename(archived.filename, variant_note.filename)
-        archived_variant = write_note_file(instance_path, variant_filename, variant_note.content)
-        delete_note_file(instance_path, variant_note.filename)
-        archived_variants.append(archived_variant.filename)
-    archived_assets = _archive_sensing_eye_assets(
+        variant_filename = _archived_session_variant_filename(archived_filename, variant_note.filename)
+        files.append({"kind": "note", "source": variant_note.filename, "target": variant_filename,
+                      "sha256": _file_sha256(variant_note.path)})
+        archived_variants.append(variant_filename)
+    archived_assets = _plan_archive_sensing_eye_assets(
         instance_path,
         sensing_eye_assets,
         source_session_filename=note.filename,
-        archived_session_filename=archived.filename,
+        archived_session_filename=archived_filename,
     )
-    delete_note_file(instance_path, note.filename)
-    refreshed = list_continuity_sessions(instance_path)
-    return {
+    result = {
         "status": "ok",
         "tool": "archive_continuity_session",
         "session_filename": note.filename,
-        "archived_session_filename": archived.filename,
+        "archived_session_filename": archived_filename,
         "archived_variant_filenames": archived_variants,
         "archived_sensing_eye_assets": archived_assets["assets"],
         "archived_sensing_eye_asset_count": archived_assets["archived_count"],
         "missing_sensing_eye_asset_count": archived_assets["missing_count"],
         "sensing_eye_asset_archive": archived_assets["archive_directory"],
-        "current_session_filename": refreshed["current_session_filename"],
-        "sessions": refreshed["sessions"],
     }
+    job = {
+        "schema": 1, "state": "copying", "session_filename": note.filename,
+        "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "archived_session_filename": archived_filename, "result": result,
+        "files": files + archived_assets["files"],
+    }
+    archive_transaction.start_transaction(instance_path, job)
+    shared = _shared_sensing_eye_assets(instance_path, note.filename, {r.filename for r in sensing_eye_assets})
+    result = archive_transaction.finish_transaction(instance_path, job, shared)
+    refreshed = list_continuity_sessions(instance_path)
+    return {**result, "current_session_filename": refreshed["current_session_filename"],
+            "sessions": refreshed["sessions"]}
 
 
 def save_continuity_session(
@@ -877,20 +906,10 @@ def _parse_pinned_note_receipts(content: str) -> list[PinnedNoteReceipt]:
     return receipts
 
 
-def _archive_sensing_eye_assets(
-    instance_path: str | Path | None,
-    receipts: list[SensingEyeAssetReceipt],
-    *,
-    source_session_filename: str,
-    archived_session_filename: str,
-) -> dict[str, object]:
-    root = _sensing_eye_asset_root(instance_path)
-    package_dir = _archived_session_package_path(instance_path, archived_session_filename)
-    archive_relative = f"{Path(archived_session_filename).parent.as_posix()}/sensing-eye"
-    archive_dir = package_dir / "sensing-eye"
-    archived: list[dict[str, object]] = []
+def _shared_sensing_eye_assets(
+    instance_path: str | Path | None, source_session_filename: str, names: set[str],
+) -> set[str]:
     shared: set[str] = set()
-    names = {receipt.filename for receipt in receipts}
     for filename in list_note_files(instance_path):
         if filename == source_session_filename or not _looks_like_continuity_session_filename(filename):
             continue
@@ -901,6 +920,21 @@ def _archive_sensing_eye_assets(
             continue
         shared.update(receipt.filename for receipt in _parse_sensing_eye_asset_receipts(content))
         shared.update(name for name in names if f"file logs/sensing-eye/{name} " in content)
+    return shared
+
+
+def _plan_archive_sensing_eye_assets(
+    instance_path: str | Path | None,
+    receipts: list[SensingEyeAssetReceipt],
+    *,
+    source_session_filename: str,
+    archived_session_filename: str,
+) -> dict[str, Any]:
+    root = _sensing_eye_asset_root(instance_path)
+    archive_relative = f"{Path(archived_session_filename).parent.as_posix()}/sensing-eye"
+    shared = _shared_sensing_eye_assets(instance_path, source_session_filename, {r.filename for r in receipts})
+    archived: list[dict[str, object]] = []
+    files = []
 
     for receipt in receipts:
         source = root / receipt.filename
@@ -910,55 +944,27 @@ def _archive_sensing_eye_assets(
             record["archive_status"] = "missing"
             archived.append(record)
             continue
-        try:
-            current_digest = _file_sha256(source)
-        except OSError as exc:
-            record["archive_status"] = "error"
-            record["error"] = str(exc)
-            archived.append(record)
-            continue
+        current_digest = _file_sha256(source)
         if receipt.sha256 and current_digest != receipt.sha256:
             record["archive_status"] = "changed"
             archived.append(record)
             continue
 
-        target = archive_dir / receipt.filename
-        if target.exists():
-            record["archive_status"] = "collision"
-            archived.append(record)
-            continue
-        try:
-            archive_dir.mkdir(parents=True, exist_ok=True)
-            transfer = shutil.copy2 if receipt.filename in shared else shutil.move
-            transfer(str(source), str(target))
-            record["archive_status"] = "archived"
-            record["retained_for_active_session"] = receipt.filename in shared
-            sidecar = _sensing_eye_sidecar_path(source)
-            if sidecar.is_file():
-                try:
-                    transfer(str(sidecar), str(_sensing_eye_sidecar_path(target)))
-                    record["metadata_status"] = "archived"
-                except OSError as exc:
-                    record["metadata_status"] = "error"
-                    record["metadata_error"] = str(exc)
-            else:
-                record["metadata_status"] = "missing"
-        except OSError as exc:
-            record["archive_status"] = "error"
-            record["error"] = str(exc)
+        files.append({"kind": "eye", "source": receipt.filename,
+                      "target": f"{archive_relative}/{receipt.filename}", "sha256": current_digest})
+        record["archive_status"] = "archived"
+        record["retained_for_active_session"] = receipt.filename in shared
+        sidecar = _sensing_eye_sidecar_path(source)
+        if sidecar.is_file():
+            files.append({"kind": "eye", "source": sidecar.name,
+                          "target": f"{archive_relative}/{sidecar.name}", "sha256": _file_sha256(sidecar)})
+            record["metadata_status"] = "archived"
+        else:
+            record["metadata_status"] = "missing"
         archived.append(record)
 
-    if archived:
-        archive_dir.mkdir(parents=True, exist_ok=True)
-        manifest = {
-            "source_session_filename": source_session_filename,
-            "archived_session_filename": archived_session_filename,
-            "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-            "assets": archived,
-        }
-        (package_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-
     return {
+        "files": files,
         "assets": archived,
         "archived_count": sum(item.get("archive_status") == "archived" for item in archived),
         "missing_count": sum(item.get("archive_status") == "missing" for item in archived),
@@ -996,13 +1002,6 @@ def _sensing_eye_asset_receipt_payload(receipt: SensingEyeAssetReceipt) -> dict[
 
 def _sensing_eye_asset_root(instance_path: str | Path | None) -> Path:
     return notes_root_for_instance(instance_path).resolve().parent / "logs" / "sensing-eye"
-
-
-def _archived_session_package_path(
-    instance_path: str | Path | None,
-    archived_session_filename: str,
-) -> Path:
-    return resolve_note_path(archived_session_filename, instance_path).parent
 
 
 def _sensing_eye_asset_kind(filename: str) -> str:
