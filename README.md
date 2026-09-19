@@ -128,6 +128,10 @@ Mechanism tests are not yet a live conversational comparison.
 See [Engineering Status](docs/engineering-status.md) for the current boundary
 between implemented work, observations and planned repairs.
 
+The [September 19 stabilization plan](docs/stabilization-plan-2026-09-19.md)
+prioritizes storage, continuity and initiative-delivery repairs before new
+capabilities, while preserving Eric's full-context idle and established behavior.
+
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.
 - `src/robot_790d`: Python helpers, local page APIs, realtime entrypoint

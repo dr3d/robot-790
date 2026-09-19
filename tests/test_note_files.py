@@ -5,12 +5,18 @@ from pathlib import Path
 import pytest
 
 from robot_790d.note_files import (
+    delete_note_file,
     list_note_files,
     list_note_files_page,
     read_note_file,
     resolve_note_path,
     write_note_file,
 )
+
+
+@pytest.fixture(autouse=True)
+def isolated_notes(monkeypatch):
+    monkeypatch.delenv("ROBOT_790_NOTES_PATH", raising=False)
 
 
 def test_paginated_note_lookup_is_bounded_searchable_and_keeps_the_full_shelf(tmp_path):
@@ -79,7 +85,8 @@ def test_note_directory_matching_preserves_boundaries_and_returns_ambiguity(tmp_
 def test_spoken_path_lookup_preserves_non_ascii_names(tmp_path):
     filename = "\u65e5\u8a18-\u30ab\u30fc\u30c9/\u4eca\u65e5_\u306e\u8a71.txt"
     write_note_file(tmp_path, filename, "note")
-    assert list_note_files_page(tmp_path, query="\u65e5\u8a18 \u30ab\u30fc\u30c9 \u4eca\u65e5 \u306e\u8a71")["files"] == [filename]
+    query = "\u65e5\u8a18 \u30ab\u30fc\u30c9 \u4eca\u65e5 \u306e\u8a71"
+    assert list_note_files_page(tmp_path, query=query)["files"] == [filename]
     assert list_note_files_page(tmp_path, directory="\u65e5\u8a18 \u30ab\u30fc\u30c9")["files"] == [filename]
 
 
@@ -136,6 +143,55 @@ def test_note_files_reject_ambiguous_title_from_subfolders(tmp_path: Path) -> No
 
     with pytest.raises(ValueError, match="Multiple note files match"):
         read_note_file(tmp_path, "Robot Build")
+
+
+@pytest.mark.parametrize("operation", [read_note_file, delete_note_file])
+@pytest.mark.parametrize("folder", ["", "core/"])
+def test_approximate_lookup_rejects_colliding_names_without_changing_files(tmp_path, operation, folder):
+    filenames = [f"{folder}robot-build.txt", f"{folder}robot_build.txt"]
+    for filename in filenames:
+        write_note_file(tmp_path, filename, filename)
+
+    with pytest.raises(ValueError, match="Multiple note files match") as error:
+        operation(tmp_path, f"{folder}Robot Build")
+    for filename in filenames:
+        assert filename in str(error.value)
+        assert read_note_file(tmp_path, filename).content == filename
+
+
+def test_exact_lookup_still_wins_over_approximate_aliases(tmp_path):
+    write_note_file(tmp_path, "robot-build.txt", "hyphen")
+    write_note_file(tmp_path, "robot_build.txt", "underscore")
+    assert read_note_file(tmp_path, "robot-build.txt").content == "hyphen"
+    assert delete_note_file(tmp_path, "robot_build.txt") == "robot_build.txt"
+    assert read_note_file(tmp_path, "robot-build.txt").content == "hyphen"
+
+
+@pytest.mark.parametrize("operation", [read_note_file, delete_note_file])
+def test_non_latin_lookup_does_not_substitute_an_unrelated_note(tmp_path, operation):
+    for filename in ["\u732b.txt", "\u72ac.txt"]:
+        write_note_file(tmp_path, filename, filename)
+    with pytest.raises(FileNotFoundError):
+        operation(tmp_path, "\u89b3\u6e2c.txt")
+    assert len(list_note_files(tmp_path)) == 2
+
+
+@pytest.mark.parametrize("stored,requested", [
+    ("\u65e5\u8a18/\u4eca\u65e5_\u306e\u8a71.txt", "\u65e5\u8a18/\u4eca\u65e5 \u306e\u8a71"),
+    ("caf\u00e9_notes.txt", "Cafe\u0301 Notes"),
+    ("\u0915\u093f_notes.txt", "\u0915\u093f Notes"),
+])
+def test_approximate_lookup_preserves_unicode_letters_and_marks(tmp_path, stored, requested):
+    write_note_file(tmp_path, stored, "intended note")
+    write_note_file(tmp_path, "\u0915_notes.txt", "different vowel")
+    assert read_note_file(tmp_path, requested).filename == stored
+
+
+def test_punctuation_only_names_require_an_exact_path(tmp_path):
+    write_note_file(tmp_path, "---.txt", "punctuation")
+    with pytest.raises(FileNotFoundError):
+        read_note_file(tmp_path, "___.txt")
+    assert read_note_file(tmp_path, "---.txt").content == "punctuation"
 
 
 def test_note_files_allow_named_markdown(tmp_path: Path) -> None:

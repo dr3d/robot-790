@@ -4,6 +4,7 @@ import os
 import re
 import tempfile
 import threading
+import unicodedata
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -110,7 +111,13 @@ def note_lookup_key(path: Path) -> tuple[str, ...]:
 def _slug_text(value: str) -> str:
     split_camel = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", value)
     without_apostrophes = split_camel.casefold().replace("'", "").replace("’", "")
-    return re.sub(r"[^a-z0-9]+", "_", without_apostrophes).strip("_")
+    normalized = unicodedata.normalize("NFC", without_apostrophes)
+    # Combining marks can distinguish words; folding them away can select another note.
+    separated = "".join(
+        char if char.isalnum() or unicodedata.category(char).startswith("M") else "_"
+        for char in normalized
+    )
+    return re.sub(r"_+", "_", separated).strip("_")
 
 
 def find_existing_note_path(filename: str, instance_path: str | Path | None = None) -> Path:
@@ -120,7 +127,12 @@ def find_existing_note_path(filename: str, instance_path: str | Path | None = No
 
     root = notes_root_for_instance(instance_path).resolve()
     requested_relative = requested.relative_to(root)
+    if not _slug_text(requested_relative.stem) or any(
+        not _slug_text(part) for part in requested_relative.parts[:-1]
+    ):
+        return requested
     requested_key = note_lookup_key(requested_relative)
+    path_matches: list[Path] = []
     basename_matches: list[Path] = []
     requested_basename_key = note_lookup_key(Path(requested_relative.name))
     for candidate in root.rglob("*"):
@@ -129,17 +141,22 @@ def find_existing_note_path(filename: str, instance_path: str | Path | None = No
         candidate_resolved = candidate.resolve()
         candidate_relative = candidate_resolved.relative_to(root)
         if note_lookup_key(candidate_relative) == requested_key:
-            return candidate_resolved
+            path_matches.append(candidate_resolved)
         if (
             len(requested_relative.parts) == 1
             and note_lookup_key(Path(candidate_relative.name)) == requested_basename_key
         ):
             basename_matches.append(candidate_resolved)
-    if len(basename_matches) == 1:
-        return basename_matches[0]
-    if len(basename_matches) > 1:
-        names = ", ".join(relative_note_name(path, instance_path) for path in basename_matches)
-        raise ValueError(f"Multiple note files match {filename!r}: {names}. Include the folder name.")
+    matches = sorted(set(path_matches or basename_matches))
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        names = ", ".join(relative_note_name(path, instance_path) for path in matches[:8])
+        if len(matches) > 8:
+            names += f", and {len(matches) - 8} more"
+        raise ValueError(
+            f"Multiple note files match {filename!r}: {names}. Use an exact filename including its folder."
+        )
     return requested
 
 

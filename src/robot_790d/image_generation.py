@@ -5,9 +5,11 @@ import html
 import json
 import os
 import re
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 DEFAULT_IMAGE_PROVIDER = "openai"
 DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-1-mini"
@@ -280,7 +282,7 @@ def _write_image_bytes(
     output_dir.mkdir(parents=True, exist_ok=True)
     filename = _generated_filename(prompt=prompt, title=title, provider=provider, ext=ext)
     path = output_dir / filename
-    path.write_bytes(content)
+    _write_new_artifact(path, content)
     return filename
 
 
@@ -291,13 +293,33 @@ def _write_metadata(filename: str, metadata: dict[str, Any], *, repo_root: Path 
         "filename": filename,
         **metadata,
     }
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    _write_new_artifact(path, (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8"))
+
+
+def _write_new_artifact(path: Path, content: bytes) -> None:
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=path.parent, prefix=".artifact-", suffix=".tmp", delete=False
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(content)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        # Windows rename refuses an existing destination; POSIX rename would overwrite it.
+        if os.name == "nt":
+            temporary_path.rename(path)
+        else:
+            os.link(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _generated_filename(*, prompt: str, title: str, provider: str, ext: str) -> str:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     slug = _slug(title or prompt) or "vision"
-    return f"{stamp}-{provider}-{slug[:48]}.{ext.lower()}"
+    return f"{stamp}-{provider}-{slug[:48]}-{uuid4().hex}.{ext.lower()}"
 
 
 def _provider_name(provider: str | None, *, repo_root: Path | None = None) -> str:

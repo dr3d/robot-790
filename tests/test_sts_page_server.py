@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urlencode
 
 import pytest
 
@@ -104,6 +105,34 @@ def test_note_read_still_rejects_paths_outside_notes(tmp_path, monkeypatch) -> N
     assert replies[0][0] == 400
     assert "inside the notes folder" in replies[0][1]["error"]
     assert "note_not_found" not in replies[0][1].values()
+
+
+def test_note_read_reports_ambiguity_without_returning_a_guessed_body(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    for name in ("robot-build.txt", "robot_build.txt"):
+        (tmp_path / name).write_text(name, encoding="utf-8")
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+    handler._handle_note_read(urlencode({"filename": "Robot Build"}))
+    status, payload = replies[-1]
+    assert status == 400
+    assert "Multiple note files match" in payload["error"]
+    assert "content" not in payload
+    handler._handle_note_read(urlencode({"filename": "robot_build.txt"}))
+    assert replies[-1][0] == 200
+    assert replies[-1][1]["content"] == "robot_build.txt"
+
+
+def test_note_read_reports_a_missing_unicode_name_without_substitution(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    (tmp_path / "\u732b.txt").write_text("unrelated note", encoding="utf-8")
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+    handler._handle_note_read(urlencode({"filename": "\u89b3\u6e2c.txt"}))
+    assert replies[-1][0] == 404
+    assert replies[-1][1]["code"] == "note_not_found"
 
 
 def test_runtime_config_exposes_idle_timing_from_file(tmp_path) -> None:
@@ -642,6 +671,7 @@ def brain2_completion(monkeypatch):
 
 def test_brain2_art_proposal_requires_live_grant(brain2_completion, monkeypatch, tmp_path):
     import uuid
+
     from robot_790d.idle_art import IdleArtService
 
     service = IdleArtService(tmp_path)

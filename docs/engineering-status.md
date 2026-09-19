@@ -1,10 +1,33 @@
 # Engineering Status
 
-Reviewed September 18, 2026. This is the maintained engineering view; session
+Reviewed September 19, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
+
+### Storage Safety Stabilization
+
+September 19: the [stabilization plan](stabilization-plan-2026-09-19.md) starts with
+two storage repairs, not behavioral tuning. Approximate note lookup preserves
+Unicode and rejects ambiguous normalized paths for both read and delete. Exact
+paths and existing title/separator conveniences remain supported. Generated
+images now have UUID-suffixed names; image bytes and metadata are each published
+atomically without overwriting existing files. Legacy names remain readable.
+
+Regression cases first reproduced the wrong-note selection/deletion and
+same-second image overwrite. Tests cover Unicode marks, ambiguity, handler
+receipts, concurrent mock generation, collisions, and disk-failure cleanup.
+No existing notes/images, prompts, idle timing, model settings or firmware were
+changed. No live generation or server restart was performed. Deployment requires
+page/realtime server restarts at a safe disconnected boundary, not just refresh.
+Long-session resume, archive recovery, context admission and B2 delivery repairs
+remain open; this batch does not claim to fix them.
+
+Verification: 824 Python tests and 450 JavaScript tests pass. The Python run has
+the existing upstream Starlette/httpx deprecation warning. Changed Python files
+pass Ruff. Tests use temporary storage and mocked image generation; these results
+are not a new live companion or hardware trial.
 
 ### Pending Replies And Context Accounting
 
