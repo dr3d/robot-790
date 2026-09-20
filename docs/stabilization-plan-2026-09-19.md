@@ -282,7 +282,10 @@ No new initiative restrictions, rhetoric, quotas or paid retries were introduced
    September 20: the [ownership map and first composed replays](sts-lifecycle-ownership-plan.md)
    are in place. Seven new tests cover tool/image/audio/session-guard handoffs;
    durable save, full UI reconnect and B2/idle integration remain outside that
-   harness. Production extraction has not started; audio ownership is first.
+   harness. The audio-playback owner has now been extracted without changing its
+   settings or conversational policy; 558 JavaScript tests, 129 page-server tests
+   and a real Web Audio browser check pass. Refresh while disconnected, then
+   validate live speech/interrupt/tool/idle/reconnect before the next extraction.
 
 ## Acceptance
 

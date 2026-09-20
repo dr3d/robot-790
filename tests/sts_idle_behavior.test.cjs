@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const { test } = require('node:test');
+const { installAudioPlayback } = require('./helpers/sts_audio_harness.cjs');
 const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 const noop = () => {};
 const empty = () => '';
@@ -348,10 +349,11 @@ test('audio already awaiting playback setup cannot start after Disconnect', asyn
   let finish;
   const c = load(['playPcm16Bytes'], {
     realtimeSessionGeneration: 1, realtimeStopRequested: false,
-    audioPlaybackGeneration: 0, pendingAudioPlaybacks: new Set(), assistantFinishPending: false,
+    assistantFinishPending: false,
     ensurePlayback: () => new Promise(resolve => { finish = resolve; }),
     pcm16ToFloat32: () => assert.fail('stopped audio must not reach the output graph'),
   });
+  installAudioPlayback(c);
   const pending = c.playPcm16Bytes(new Uint8Array());
   c.realtimeStopRequested = true;
   finish();

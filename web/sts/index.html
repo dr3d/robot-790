@@ -3002,6 +3002,7 @@
   <script src="file-lookup.js"></script>
   <script src="network-camera.js"></script>
   <script src="idle-art.js"></script>
+  <script src="audio-playback.js"></script>
   <script>
     const serverUrl = document.querySelector("#serverUrl");
     const faceUrl = document.querySelector("#faceUrl");
@@ -3268,20 +3269,23 @@
     let intentionalExitCleanupInProgress = false;
     let realtimeStopRequested = false;
     let quickRecordConversationBusy = false;
-    let playbackTime = 0;
-    const audioFlushMs = 120;
-    const minPlaybackBytes = 9600;
     const minAudioRecordChunkMs = 30000;
-    let audioChunks = [];
-    let audioChunkBytes = 0;
-    let audioFlushTimer;
-    let activeAudioSources = new Set();
-    const pendingAudioPlaybacks = new Set();
-    let audioPlaybackGeneration = 0;
+    const audioPlayback = Robot790AudioPlayback.create({
+      getContext: () => audioContext,
+      ensurePlayback: () => ensurePlayback(),
+      getPlaybackDestination: () => ensureEricPlaybackGain(),
+      getRecordingDestination: () => recordingDestination,
+      getSessionGeneration: () => realtimeSessionGeneration,
+      isStopped: () => realtimeStopRequested,
+      decodePcm16: bytes => pcm16ToFloat32(bytes),
+      onSettled: () => { if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished(); },
+      onError: error => log(events, `audio playback error: ${error.message}`),
+      setTimer: (callback, ms) => setTimeout(callback, ms),
+      clearTimer: timer => clearTimeout(timer)
+    });
     let lastBargeInAt = 0;
     let micInterruptActiveMs = 0;
     let micInterruptGapMs = 0;
-    const audioPlaybackWindows = new WeakMap();
     let continuityRestoreAt = Date.now();
     let imageToolProtectionUntil = 0;
     let imageToolProtectionTimer;
@@ -19351,10 +19355,7 @@
     }
 
     function clearAudioQueue() {
-      if (audioFlushTimer) clearTimeout(audioFlushTimer);
-      audioFlushTimer = null;
-      audioChunks = [];
-      audioChunkBytes = 0;
+      audioPlayback.clearQueue();
     }
 
     function audioRecordingSupported() {
@@ -19883,35 +19884,12 @@
     }
 
     function outputAudioActive() {
-      // Recover missed onended callbacks only after the audio clock passes the source.
-      // A suspended context or a long answer is not stale playback.
-      if (audioContext) {
-        for (const source of activeAudioSources) {
-          const window = audioPlaybackWindows.get(source);
-          if (window && audioContext.currentTime >= window.end) activeAudioSources.delete(source);
-        }
-        if (!activeAudioSources.size) playbackTime = audioContext.currentTime;
-      }
-      return Boolean(
-        audioChunkBytes > 0 || pendingAudioPlaybacks.size ||
-        activeAudioSources.size
-      );
+      return audioPlayback.isActive();
     }
 
     function stopPlaybackNow() {
-      audioPlaybackGeneration += 1;
-      pendingAudioPlaybacks.clear();
       resetMicInterruptCandidate();
-      clearAudioQueue();
-      for (const source of activeAudioSources) {
-        try {
-          source.stop();
-        } catch {
-          // Already stopped.
-        }
-      }
-      activeAudioSources.clear();
-      if (audioContext) playbackTime = audioContext.currentTime;
+      audioPlayback.stop();
       stopSpeechMouthCue();
     }
 
@@ -19925,12 +19903,7 @@
     }
 
     function outputAudioPlaying() {
-      if (!audioContext || audioContext.state !== "running") return false;
-      const now = audioContext.currentTime;
-      return [...activeAudioSources].some((source) => {
-        const window = audioPlaybackWindows.get(source);
-        return window && now >= window.start && now < window.end;
-      });
+      return audioPlayback.isPlaying();
     }
 
     function maybeBargeInFromMicFrame(peak, rms, durationMs) {
@@ -19965,68 +19938,16 @@
       log(events, `barge-in: sustained audio ${activeMs}ms, peak ${peak.toFixed(2)}, rms ${rms.toFixed(3)}, threshold ${threshold.toFixed(2)}, sensitivity ${interruptSensitivityValue.textContent}, playback playing`);
     }
 
-    function joinAudioChunks() {
-      const bytes = new Uint8Array(audioChunkBytes);
-      let offset = 0;
-      for (const chunk of audioChunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.length;
-      }
-      audioChunks = [];
-      audioChunkBytes = 0;
-      return bytes;
-    }
-
     async function playPcm16Bytes(bytes) {
-      const generation = realtimeSessionGeneration;
-      const playbackGeneration = audioPlaybackGeneration;
-      const pending = {};
-      pendingAudioPlaybacks.add(pending);
-      try {
-        await ensurePlayback();
-        if (realtimeStopRequested || generation !== realtimeSessionGeneration || playbackGeneration !== audioPlaybackGeneration) return;
-        const samples = pcm16ToFloat32(bytes);
-        const buffer = audioContext.createBuffer(1, samples.length, 16000);
-        buffer.copyToChannel(samples, 0);
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ensureEricPlaybackGain() || audioContext.destination);
-        if (recordingDestination) source.connect(recordingDestination);
-        source.onended = () => {
-          activeAudioSources.delete(source);
-          if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished();
-        };
-        const start = Math.max(playbackTime, audioContext.currentTime + 0.03);
-        audioPlaybackWindows.set(source, { start, end: start + buffer.duration });
-        source.start(start);
-        activeAudioSources.add(source);
-        playbackTime = start + buffer.duration;
-      } finally {
-        pendingAudioPlaybacks.delete(pending);
-        if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished();
-      }
+      await audioPlayback.play(bytes);
     }
 
     async function flushAudioQueue() {
-      if (!audioChunkBytes) return;
-      if (audioFlushTimer) clearTimeout(audioFlushTimer);
-      audioFlushTimer = null;
-      await playPcm16Bytes(joinAudioChunks());
+      await audioPlayback.flush();
     }
 
     function queueAudioDelta(b64) {
-      const bytes = b64ToBytes(b64);
-      audioChunks.push(bytes);
-      audioChunkBytes += bytes.length;
-      if (audioChunkBytes >= minPlaybackBytes) {
-        flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
-        return;
-      }
-      if (!audioFlushTimer) {
-        audioFlushTimer = setTimeout(() => {
-          flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
-        }, audioFlushMs);
-      }
+      audioPlayback.enqueue(b64ToBytes(b64));
     }
 
     function handleEvent(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {

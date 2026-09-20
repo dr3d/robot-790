@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { fixture, loadFunctions } = require('./helpers/sts_tool_harness.cjs');
 const { fixture: imageFixture } = require('./helpers/sts_image_harness.cjs');
+const { installAudioPlayback } = require('./helpers/sts_audio_harness.cjs');
 
 function deferred() {
   let resolve;
@@ -30,9 +31,6 @@ function replay() {
     assistantFinishPending: false, assistantFinishTimer: null,
     assistantFinishWasIdle: false, assistantFinishArmedAt: 0,
     noteConversationActivity() {},
-    audioFlushTimer: null, audioChunks: [], audioChunkBytes: 0,
-    activeAudioSources: new Set(), pendingAudioPlaybacks: new Set(),
-    audioPlaybackWindows: new WeakMap(), audioPlaybackGeneration: 0, playbackTime: 0,
     recordingDestination: null, ensurePlayback: async () => {}, ensureEricPlaybackGain: () => null,
     pcm16ToFloat32: bytes => new Float32Array(bytes.length / 2),
     resetMicInterruptCandidate() {}, stopSpeechMouthCue() {},
@@ -57,6 +55,7 @@ function replay() {
     'resetSessionContextForConnection', 'clearAssistantFinishTimer',
     'armAssistantUtteranceFinished', 'checkAssistantUtteranceFinished',
     'clearAudioQueue', 'outputAudioActive', 'stopPlaybackNow', 'playPcm16Bytes', 'flushAudioQueue']);
+  installAudioPlayback(c);
   c.executeTool = async (name, args) => {
     f.calls.push({ name, args });
     if (name === 'generate_image') return c.generateImage(args);

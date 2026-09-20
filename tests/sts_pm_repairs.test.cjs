@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const { test } = require('node:test');
+const { installAudioPlayback } = require('./helpers/sts_audio_harness.cjs');
 const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 
 function load(names, globals = {}) {
@@ -15,7 +16,7 @@ function load(names, globals = {}) {
   return c;
 }
 
-function audio() {
+async function audio() {
   const sends = [], logs = [];
   let now = 100000;
   class Clock extends Date { static now() { return now; } }
@@ -23,19 +24,26 @@ function audio() {
     'maybeBargeInFromMicFrame', 'interruptPeakThreshold'], {
     Date: Clock, runtimeConfig: {}, micInterruptActiveMs: 0, micInterruptGapMs: 0,
     lastBargeInAt: 0, bargeInCooldownMs: 900, currentInterruptSensitivity: () => 5,
-    interruptSensitivityValue: { textContent: '5/10' }, audioContext: { currentTime: 1, state: 'running' },
-    audioPlaybackWindows: new WeakMap(), activeAudioSources: new Set(),
+    interruptSensitivityValue: { textContent: '5/10' },
+    audioContext: {
+      currentTime: 0, state: 'running', destination: {},
+      createBuffer: (_, size, rate) => ({ duration: size / rate, copyToChannel() {} }),
+      createBufferSource: () => ({ connect() {}, start() {}, stop() {} }),
+    },
+    realtimeSessionGeneration: 1, realtimeStopRequested: false, assistantFinishPending: false,
+    ensurePlayback: async () => {}, ensureEricPlaybackGain: () => null, recordingDestination: null,
+    pcm16ToFloat32: bytes => new Float32Array(bytes.length / 2),
     ws: { readyState: 1 }, WebSocket: { OPEN: 1 }, send: value => sends.push(value),
     stopPlaybackNow: () => sends.push('stop'), cueFaceMode: () => {}, events: {}, log: (_, text) => logs.push(text),
   });
-  const source = {};
-  c.activeAudioSources.add(source);
-  c.audioPlaybackWindows.set(source, { start: 0, end: 10 });
-  return { c, sends, logs, source, tick: ms => { now += ms; } };
+  const playback = installAudioPlayback(c);
+  await playback.play(new Uint8Array(320000));
+  c.audioContext.currentTime = 1;
+  return { c, sends, logs, tick: ms => { now += ms; } };
 }
 
-test('one high microphone frame, low-RMS spikes, and separated bursts do not cancel speech', () => {
-  const { c, sends } = audio();
+test('one high microphone frame, low-RMS spikes, and separated bursts do not cancel speech', async () => {
+  const { c, sends } = await audio();
   c.maybeBargeInFromMicFrame(0.61, 0.15, 43);
   for (let i = 0; i < 10; i++) c.maybeBargeInFromMicFrame(0.9, 0.003, 43);
   c.maybeBargeInFromMicFrame(0.61, 0.15, 43);
@@ -43,8 +51,8 @@ test('one high microphone frame, low-RMS spikes, and separated bursts do not can
   assert.equal(c.micInterruptActiveMs, 43);
 });
 
-test('sustained deliberate audio interrupts once and logs evidence, not a claim of recognized speech', () => {
-  const { c, sends, logs } = audio();
+test('sustained deliberate audio interrupts once and logs evidence, not a claim of recognized speech', async () => {
+  const { c, sends, logs } = await audio();
   for (let i = 0; i < 4; i++) c.maybeBargeInFromMicFrame(0.7, 0.12, 43);
   assert.equal(sends.length, 0);
   c.maybeBargeInFromMicFrame(0.7, 0.12, 43);
@@ -55,10 +63,10 @@ test('sustained deliberate audio interrupts once and logs evidence, not a claim 
   assert.equal(sends.length, 2);
 });
 
-test('queued future audio, suspended playback, interrupt-off, and invalid frames cannot barge in', () => {
+test('queued future audio, suspended playback, interrupt-off, and invalid frames cannot barge in', async () => {
   for (const mode of ['queued', 'suspended', 'off', 'invalid']) {
-    const { c, sends, source } = audio();
-    if (mode === 'queued') c.audioPlaybackWindows.set(source, { start: 2, end: 10 });
+    const { c, sends } = await audio();
+    if (mode === 'queued') c.audioContext.currentTime = 0;
     if (mode === 'suspended') c.audioContext.state = 'suspended';
     if (mode === 'off') c.currentInterruptSensitivity = () => 0;
     for (let i = 0; i < 20; i++) c.maybeBargeInFromMicFrame(0.7, mode === 'invalid' ? NaN : 0.12, 43);
@@ -66,8 +74,8 @@ test('queued future audio, suspended playback, interrupt-off, and invalid frames
   }
 });
 
-test('audio gate knobs come from runtime configuration and a finished source is not still speaking', () => {
-  const { c, sends } = audio();
+test('audio gate knobs come from runtime configuration and a finished source is not still speaking', async () => {
+  const { c, sends } = await audio();
   c.runtimeConfig.audio_interrupt = { minimum_active_ms: 300 };
   for (let i = 0; i < 6; i++) c.maybeBargeInFromMicFrame(0.7, 0.12, 43);
   assert.equal(sends.length, 0);

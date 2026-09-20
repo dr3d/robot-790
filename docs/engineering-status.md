@@ -6,6 +6,33 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Audio Playback Owner Extracted
+
+September 20: `web/sts/audio-playback.js` now owns queued PCM, flush timers,
+pending browser setup, scheduled sources, playback generation and audio-clock
+busy/playing checks. The page keeps its existing entry points as adapters, with
+one owner and no mirrored playback state. Microphone policy, gain/recording
+setup, mouth cues and conversation scheduling remain with the page.
+
+Preserved: 16 kHz mono PCM, 9,600-byte immediate flush threshold, 120 ms tail
+timer, 30 ms scheduling lead, sequential playback, recording tap, stop and stale
+connection guards. No prompt, output filter, sentence limit, voice setting,
+context assembly, B2 or idle policy changes. No server or live session restarted.
+
+558 JavaScript tests and 129 focused page-server Python tests pass. Existing
+audio, microphone and composed lifecycle regressions now use the exported owner
+through the actual page wiring. Eleven added tests cover batching, PCM order,
+gain/recording connections, playing versus queued state, errors and late callbacks.
+A headless Edge check used real Web Audio clocks and signal sampling to verify
+serialization, suspension, stop/restart and a live recording tap behind muted
+playback gain. The actual STS page loaded the new module on desktop/mobile with
+no JavaScript errors. No model, mic, camera, paid art or live websocket was used.
+
+Refresh STS while disconnected to activate. **Live acceptance remains pending:**
+long speech, an interruption, draw/show, idle, return and disconnect/reconnect.
+Do not extract the next owner until delivery and initiative still feel right.
+See the [ownership plan](sts-lifecycle-ownership-plan.md) for the remaining scope.
+
 ### Lifecycle Groundwork
 
 The stable checkpoint is published as `2472bbd`. The separate
@@ -15,7 +42,7 @@ audio playback ownership. Seven new composed replay tests exercise real page
 functions across tools, retained images, audio drain, cancellation, stop and
 reconnect guards. External services, hardware and durable saving are mocked;
 these are not complete end-to-end session tests. No production behavior or
-prompts changed in this groundwork. The JavaScript suite now has 547 tests.
+prompts changed in this groundwork. That checkpoint passed 547 JavaScript tests.
 
 ### September 20 Checkpoint
 
@@ -1196,6 +1223,20 @@ rendering and local source/catalog links. Launcher tests inspect forwarding
 without launching a model; shutdown tests use fake processes.
 These checks do not operate hardware or prove microphone/camera operation on a
 second device. Builds and media publication still need their appropriate review.
+
+Optional real-browser audio check, with STS already serving on port 8790 and
+Playwright plus Edge installed:
+
+```powershell
+node tests/sts_audio_playback.browser.cjs
+```
+
+If Playwright is installed outside Node's normal module path, set
+`ROBOT_790_PLAYWRIGHT_MODULE` to that installed module's path for this command.
+The check uses an isolated headless browser, muted synthetic tones, and a
+read-only disconnected STS page. Screenshots and results go to the ignored
+`logs/maintenance/audio-owner-browser/` directory. It is not an audible voice
+quality, full recording teardown or live conversation acceptance test.
 
 September 12 commit review: 499 Python tests and 331 Node tests passed; Ruff,
 face-contract generation checks, docs/catalog checks, and launcher/shutdown

@@ -25,7 +25,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Stop, save, reconnect | `quiesceRealtimeForSave`, `haltRealtimeActivity`, `disconnectRealtime`, `resetSessionContextForConnection`, `clearHotConversationState` | Cleanup is spread across functions; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `handleFunctionCall`, `maybeCreateToolFollowup`, pending count, done flag, drain timer, user activity timestamp, round budget | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
-| Audible output | `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow`, playback generation, pending setups, active sources, audio clock | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
+| Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
 | Turn completion | `armAssistantUtteranceFinished`, `checkAssistantUtteranceFinished`, `noteConversationActivity` | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
 | Generated-image presentation | `generateImage`, `showGeneratedImage`, `moveGeneratedImageToSensingEye`, preview/eye generations | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
@@ -68,12 +68,14 @@ Network responses, DOM/image decoding, audio hardware, eye saving, idle-art
 permission checks, B2 scheduling and durable conversation saving are mocked.
 Reconnect invokes the real reset/guards, but not the full Connect/Disconnect UI
 or save pipeline. No live model, paid image service or device is invoked.
-Function extraction follows existing tests and depends on page formatting; a
-future module should be tested through its exports instead.
+Page-function extraction follows existing tests and depends on page formatting.
+The audio owner is now imported through its module export; fixtures also load
+the actual page initializer to exercise the production callback wiring.
 
 ## First Production Extraction: Audio Playback Owner
 
-Recommended next implementation, **not performed in this checkpoint**:
+**Implemented September 20; live acceptance pending.** The steps below were
+the extraction boundary; the final live check remains open:
 
 1. Move playback queue, source scheduling, pending setup tokens, playback
    generation and stop/drain checks into one small module. Preserve sample rate,
@@ -90,21 +92,42 @@ Do not simultaneously move prompts, B2 reasoning, persistence or idle policy.
 The following candidate is the tool-continuation owner, but its session/audio
 contracts need to be stable first. A wholesale backend migration is not required.
 
+`audio-playback.js` exports `create` in the same browser/CommonJS pattern as the
+existing STS modules. Its API is `enqueue`, `flush`, `play`, `clearQueue`, `stop`,
+`isActive` and `isPlaying`. `onSettled` reports a source or setup completion;
+it is not a whole-conversation completion event. The page still checks its
+assistant-finish flag and the owner's busy state before releasing scheduling.
+No private playback sets or queue counters are mirrored in the page.
+
+All 558 JavaScript tests pass, including the original seven composed replays and
+20 focused audio tests. All 129 page-server Python tests pass. Real Web Audio in
+headless Edge verified sequential starts, nonzero recording-tap signal despite
+muted gain, a frozen suspended clock remaining busy, and Stop removing a queued
+six-second schedule before a fresh 30 ms start. The real disconnected page loaded
+the module successfully on desktop/mobile. The browser check is reproducible via
+`tests/sts_audio_playback.browser.cjs`; it never connects to Eric or opens devices.
+
+Activation is a disconnected page refresh, not a backend/model restart. Prompts,
+permissions, sentence batching, flush thresholds, voice and idle cadence are
+unchanged. Keep the autonomous-art run as a live behavioral comparison; this
+structural change should not be perceptible as a different Eric.
+
 ## Still Missing
 
 - Full stop/save/reconnect and failed-save retry replay with the actual durable
   save pipeline, including final transcription and session-map transitions.
 - B2 advisory revision/freshness, private-to-public delivery and idle arbitration
   in the composed replay, including normal and accelerated idle.
-- Page unload, suspended browser audio, real socket closure and recording teardown
-  in a browser-backed transition suite. Existing isolated audio tests cover
-  suspended audio but do not replace browser acceptance.
+- Page unload, real socket closure and recording teardown in a browser-backed
+  transition suite. Suspended Web Audio is now checked in Edge, but this does
+  not replace real conversation and device acceptance.
 - Clearer retained-artifact preview behavior; current exact retrieval into the
   eye is functional but can leave the Imagined Image preview empty.
 
 The first replay batch found no new production defect. It does not establish that
-these untested boundaries are sound. No runtime, prompt, cooldown, permission,
-context assembly or model setting changed in this groundwork.
+these untested boundaries are sound. The subsequent audio extraction changes
+ownership, not the intended playback behavior, prompts, cooldowns, permissions,
+context assembly or model settings.
 
 ## Release Gate
 
