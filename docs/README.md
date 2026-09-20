@@ -33,9 +33,11 @@ The page is static, but it loads `catalog.json` with browser `fetch()`. That
 works on GitHub Pages and from a local HTTP file server. It may not work when
 opened directly as a `file://` URL.
 
-September 19 checkpoint: the homepage now reflects shared conversation/idle
+September 20 checkpoint: the homepage now reflects shared conversation/idle
 history, the measured cache-state repair, compact file lookup, optional complete
-B1/B2 cards, image-handoff repairs and TimerCam snapshots. The Memory Jar report
+B1/B2 cards, retained-image retrieval, idle note writing and TimerCam snapshots.
+The extra deep-think experiment is disabled; lifecycle mapping and transition
+tests precede browser restructuring. The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source
 for test results, observed weaknesses and remaining live acceptance work.

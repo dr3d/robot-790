@@ -113,7 +113,7 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
-September 19 checkpoint: conversation and idle thinking share B1 history,
+September 20 checkpoint: conversation and idle thinking share B1 history,
 with stable prompt/tool ordering to preserve prefix reuse. Auto history uses
 source-checked swept sessions; generated summaries remain inspectable but are
 disabled in the default reload policy. Notes can carry shared and brain-specific
@@ -162,10 +162,23 @@ normal-speed idle waits are also shorter, so start new pacing trials at Lab
 Speed 1x rather than carrying over 10x-plus settings. These are scheduled
 opportunities to think, not a guarantee of speech or constant GPU activity.
 
-The checkpoint passes 521 JavaScript and 871 Python tests. Live image generation
+Recent follow-ups allow bounded model-chosen recovery after a denied tool and
+ordinary idle note writing under the existing file permissions. Generated images
+retained after interruption can be retrieved by exact filename without another
+render; two such recoveries succeeded in the latest live trial. Their Imagined
+Image preview can still remain empty, and an extra render was observed. The
+experimental extra deep-think call is disabled, including its routing prompt;
+ordinary conversation, B2 and idle thinking are unchanged. Gold startup now
+stops explicitly if model unloading or loading fails. The sidebar maximum is
+930px on wide screens, still bounded by 48% of the viewport.
+
+The checkpoint passes 540 JavaScript and 871 Python tests. Live image generation
 and Eye transfer are working, but willingness to join make-believe, inspecting
 images before describing them, and consistently following B2 advice remain
 observed weaknesses. Sustained idle at the new baseline still needs evaluation.
+The next stabilization focus is browser lifecycle ownership: first map the
+existing state and test interrupted tools, playback, stale results and reconnect
+before extracting runtime code. File splitting alone is not the solution.
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.

@@ -30,7 +30,7 @@ to be readable without digging through live private logs.
 
 ## Articles
 
-September 19 checkpoint: conversation and idle thinking share retained history,
+September 20 checkpoint: conversation and idle thinking share retained history,
 with measured cache-reuse repairs, compact memory lookup, and more reliable
 image handoffs. Optional setup notes can guide both speaking and advisory
 brains; they are not required for companionship. A small TimerCam can now put
@@ -38,6 +38,11 @@ the physical room into Eric's Sensing Eye. Session sweeps remain the default;
 summaries remain experimental. See [Engineering Status](engineering-status.md)
 for test evidence, live observations, and the remaining gaps between successful
 tool execution and consistently thoughtful behavior.
+
+Interrupted image results can now be retrieved by filename without another
+render; ordinary idle can save notes using existing file permissions. The extra
+deep-think experiment is disabled. Next is lifecycle mapping and transition
+coverage before browser restructuring, preserving the current companion behavior.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
 has the larger video collection. This site's media shelf is a curated selection,

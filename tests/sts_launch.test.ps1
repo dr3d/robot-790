@@ -32,3 +32,54 @@ foreach ($enabled in @($false, $true)) {
     if ([bool]$result.CaptureLlmWire -ne $enabled) { throw 'Capture switch was not forwarded correctly.' }
     Write-Output "PASS: gold launcher forwards named settings (capture=$enabled)."
 }
+
+# Run the real preload/forwarding statements with inert substitutes for every
+# external action. A nonzero native exit is not a terminating PowerShell error.
+$preload = @($gold.EndBlock.Statements | Where-Object {
+    $_ -is [System.Management.Automation.Language.TryStatementAst]
+})
+if ($preload.Count -ne 1) { throw 'Expected one model-preload try/catch block.' }
+$start = [scriptblock]::Create($preload[0].Extent.Text + "`n" + ($forwarding.Extent.Text -join "`n"))
+$Launcher = [scriptblock]::Create($target.ParamBlock.Extent.Text + "`n `$script:preloadCalls.Add('launch')")
+$ContextLength = 131072
+$Parallel = 2
+$CaptureLlmWire = $false
+$previousExitCode = $global:LASTEXITCODE
+
+function lms {
+    $operation = $args[0]
+    $script:preloadCalls.Add($operation)
+    if ($script:preloadCase.MissingCli) { throw 'Fixture: lms command not found.' }
+    $global:LASTEXITCODE = if ($operation -eq 'unload') { $script:preloadCase.Unload } else { $script:preloadCase.Load }
+}
+function Stop-StaleQwen27Backend { $script:preloadCalls.Add('cleanup') }
+
+try {
+    foreach ($case in @(
+        @{ Name = 'unload failure'; Unload = 7; Load = 0; Calls = 'unload'; Error = 'unload.*7' },
+        @{ Name = 'load failure'; Unload = 0; Load = 9; Calls = 'unload,cleanup,load'; Error = 'load.*9' },
+        @{ Name = 'missing CLI'; MissingCli = $true; Calls = 'unload'; Error = 'command not found' },
+        @{ Name = 'successful preload'; Unload = 0; Load = 0; Calls = 'unload,cleanup,load,cleanup,launch'; Error = '' }
+    )) {
+        $script:preloadCase = $case
+        $script:preloadCalls = [System.Collections.Generic.List[string]]::new()
+        $global:LASTEXITCODE = 31
+        $failure = ''
+        try { & $start } catch { $failure = $_.Exception.Message }
+        if (($script:preloadCalls -join ',') -ne $case.Calls) {
+            throw "Unexpected startup actions for $($case.Name): $($script:preloadCalls -join ',')"
+        }
+        if ($case.Error) {
+            if ($failure -notmatch $case.Error -or $failure -notmatch 'Could not preload LM Studio') {
+                throw "Missing explicit preload failure for $($case.Name): $failure"
+            }
+        } elseif ($failure) {
+            throw "Successful preload unexpectedly failed: $failure"
+        }
+        Write-Output "PASS: gold startup handles $($case.Name) without live model or server operations."
+    }
+} finally {
+    $global:LASTEXITCODE = $previousExitCode
+    Remove-Item Function:\lms
+    Remove-Item Function:\Stop-StaleQwen27Backend
+}

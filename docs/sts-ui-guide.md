@@ -83,7 +83,7 @@ Map has its own dividers.
 | SESSION | The displayed session timer, not a model-performance measurement. |
 | LANES / TOOLS | Backend work and tool activity. Useful while waiting for an answer. |
 | RECORD | Actual recording status, distinct from the Auto record preference. |
-| THINK | A requested deliberate pass and its outcome. Requested policy and actual model setting can differ. |
+| THINK | OFF: the experimental extra deliberation pass is disabled. Normal conversation, B2 and idle thinking are unaffected. |
 | NERVES | GPU load, VRAM, and CTX percentage. CTX is the latest completed B1 conversation request's input tokens divided by the configured context limit, not cache reuse or VRAM occupancy. It shows `--` until measured; isolated tool/idle calls do not replace it. Hover for token counts. High GPU load alone does not tell you which job is progressing. |
 
 **Copy** copies a pane. **Pop Out** opens a separate text view. **A- / A+**
@@ -290,6 +290,13 @@ Generating a picture and seeing that picture are separate steps. **Clear**
 clears the displayed generated-image state, not an instruction to delete every
 saved copy.
 
+If generation finishes after an interruption, its receipt can report that the
+image was retained on disk without being displayed. Eric's move-to-eye tool can
+now retrieve that saved image using the exact filename from the receipt; it does
+not need to draw it again. This also works after refreshing when the filename is
+still in context. Without a filename, the tool uses the current preview or
+pending idle image. The manual **Move To Eye** button still uses the preview.
+
 ## Type, Think, Or Say
 
 ![Typed Input](assets/sts-ui/2026-09-10/09-typed-input.png)
@@ -297,17 +304,14 @@ saved copy.
 | Button | What the typed text means |
 | --- | --- |
 | Send | A normal user message to Eric, without needing the mic. |
-| Think | An ask with one bounded private deliberate pass at the selected Low, Medium, or Hard policy. |
+| Think | Disabled experimental extra reasoning call. Use Send for normal conversation. |
 | Say | Text to speak through Eric's current voice, without adding a normal user question. Useful for pronunciation/delivery tests. |
 
-The Think policies are requests, not a claim that every model has three
-different internal reasoning levels. The controller maps them to supported
-settings and the pill reports the actual result. The current MTP configuration
-has binary thinking support. A deliberate pass does **not** require restarting
-STS or permanently changing Eric's normal conversational setting.
-
-You can also ask Eric conversationally to take a harder look. The tool is
-available to him; the button is a lab shortcut, not the only way to request it.
+The experimental Think button, depth selector and `deliberate_once` model tool
+are disabled in STS as of September 20. The underlying implementation is retained
+for future experiments. Asking Eric to reconsider now stays in ordinary
+conversation; no prompt rule directs him into a separate deliberation call.
+This does not disable B2, normal model responses or full-context idle thinking.
 
 ## Record And Finish A Run
 
@@ -733,6 +737,17 @@ chassis, voice, UI, memory, web search, web pages, cast media, local files, imag
 generation, and smart home. A checked box permits the capability; it does not
 prove the target server, credentials, device, or network are available. Tool
 results in Events are the receipt for what actually happened.
+
+With local-file tools enabled, ordinary idle can write notes as well as read
+them. You do not need to return or speak again for a requested research note
+to be saved. The same notes-folder sandbox and append/overwrite behavior apply
+as during conversation; disabling local-file tools blocks both paths.
+
+A denied tool does not automatically end all work: Eric receives the denial
+and may continue with permitted tools under the existing eight-round default
+continuation budget. The denied capability stays unavailable. At the budget
+boundary he gets a final tool-disabled response; a new user turn or scheduled
+idle opportunity has its own budget. STS does not prescribe what he should say.
 
 Disabling a tool family is different from deleting a memory or changing the
 creature prompt. Be especially deliberate with physical motion, smart-home

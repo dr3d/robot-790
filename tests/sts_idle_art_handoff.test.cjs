@@ -73,6 +73,16 @@ test('model move claims the ready artifact once even while its own tool blocks a
   assert.deepEqual(f.shown, ['completed.png']);
 });
 
+test('explicit filename uses pending-image ownership and never substitutes a different ready image', async () => {
+  const f = await fixture();
+  await assert.rejects(f.c.moveGeneratedImageToSensingEye({ filename: 'different.png', _usePending: true }), /changed/);
+  assert.equal(f.controller.ready.result.filename, 'completed.png');
+  const moved = await f.c.moveGeneratedImageToSensingEye({ filename: 'completed.png', _usePending: true });
+  assert.equal(moved.source_image, 'completed.png');
+  assert.equal(f.controller.ready, null);
+  assert.deepEqual(f.shown, ['completed.png']);
+});
+
 test('superseded ready artifacts are retained, not shown or left misleadingly complete', async () => {
   for (const field of ['userKey', 'eyeKey', 'mediaKey']) {
     const f = await fixture();

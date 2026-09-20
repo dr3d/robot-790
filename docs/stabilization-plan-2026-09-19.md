@@ -245,8 +245,10 @@ No new initiative restrictions, rhetoric, quotas or paid retries were introduced
 ## Remaining Sequence
 
 1. **Baseline and recovery:** private-data backup is verified locally; still
-   record the working dependency/model/firmware versions and make model-launch errors
-   fail explicitly. Preserve a representative rich session for comparisons.
+   record the working dependency/model/firmware versions. Gold startup now checks
+   both model unload/load exit codes and stops explicitly on failure; isolated
+   regression tests cover failure and success without disturbing the live model.
+   Preserve a representative rich session for comparisons.
 2. **History reliability:** preparation-blocking resume, connected archive guards
    and journaled per-session archive recovery are repaired in source. Deployment
    and live disconnected-boundary acceptance remain pending. Legacy partial
@@ -258,9 +260,19 @@ No new initiative restrictions, rhetoric, quotas or paid retries were introduced
 4. **Initiative delivery:** busy-period B2 questions are retained; still validate
    all advice against evidence and guidance revisions. Semantic reassessment stays
    with models, not English phrase classifiers. Preserve useful parallel work.
-5. **Tool recovery:** deliver denied-action receipts for bounded model-chosen
-   recovery without terminating unrelated permitted work. Preserve scope checks,
-   interruption ownership and protection against duplicate paid operations.
+5. **Tool recovery:** denied-action receipts now permit bounded model-chosen
+   recovery without terminating unrelated permitted work. Scope checks,
+   interruption ownership and unknown-paid-outcome protection are preserved;
+   budget exhaustion is enforced before execution as well as through tool choice.
+   Offline tests pass; refreshed live acceptance remains pending. September 20:
+   exact-filename retrieval of generated images retained after interruption is
+   now implemented and regression-tested, using the existing image-file route
+   and eye staging without another render. The subsequent live run retrieved
+   both retained images successfully; preview clarity and an extra render remain
+   separate workflow issues.
+   September 20: the operator also removed the idle-only note-writing ban;
+   `write_text_file` now uses the existing enabled-file permissions during idle.
+   No new create-only or overwrite policy was introduced.
 6. **Boundaries:** remove remaining English intent gates and canned mouth
    dialogue; harden consequential APIs after inventorying browser/device callers;
    pin inference dependencies and test private upstream API compatibility.

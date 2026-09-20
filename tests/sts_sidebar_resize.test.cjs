@@ -37,5 +37,16 @@ test('sidebar preserves wider saved sizes and clamps persisted resize requests',
   assert.equal(ui.styles['--control-sidebar-width'], '450px');
   assert.equal(ui.context.setControlSidebarWidth(100, {persist: true}), 225);
   assert.equal(ui.saved(), '225');
-  assert.equal(ui.context.setControlSidebarWidth(999), 620);
+  assert.equal(ui.context.setControlSidebarWidth(999), 691);
+});
+
+test('wide screens permit a 50 percent larger cap while narrower screens retain their proportional limit', () => {
+  for (const [viewport, maximum] of [[390, 320], [980, 470], [1200, 576], [1440, 691], [1920, 922], [2560, 930]]) {
+    const ui = setup('930', viewport);
+    assert.equal(ui.context.setControlSidebarWidth(2000, {persist: true}), maximum);
+    assert.equal(ui.attributes['aria-valuemax'], String(maximum));
+    assert.equal(ui.saved(), String(maximum));
+  }
+  assert.equal(setup('850', 2560).styles['--control-sidebar-width'], '850px');
+  assert.equal(setup(null, 2560).styles['--control-sidebar-width'], '360px');
 });

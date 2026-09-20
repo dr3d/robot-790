@@ -2279,9 +2279,9 @@
             <span class="dot tool-dot" aria-hidden="true"></span>
             <span id="toolIndicatorLabel">TOOLS IDLE</span>
           </span>
-          <span id="deliberateIndicator" class="deliberate-indicator status-pill" data-state="off" title="One-pass deliberate thinking is ready" aria-live="polite">
+          <span id="deliberateIndicator" class="deliberate-indicator status-pill" data-state="off" title="Experimental deep thinking is disabled" aria-live="polite">
             <span class="dot deliberate-dot" aria-hidden="true"></span>
-            <span id="deliberateIndicatorLabel">THINK READY</span>
+            <span id="deliberateIndicatorLabel">THINK OFF</span>
           </span>
         </div>
       </div>
@@ -2574,7 +2574,7 @@
                 <button id="typedSend" type="button" disabled>Send</button>
                 <div class="think-action-row">
                   <button id="typedThink" type="button" disabled>Think</button>
-                  <select id="typedThinkEffort" aria-label="Think depth">
+                  <select id="typedThinkEffort" aria-label="Think depth" disabled>
                     <option value="low">Low</option>
                     <option value="medium" selected>Medium</option>
                     <option value="xhigh">Hard</option>
@@ -3375,6 +3375,7 @@
     const faceControllerStorageKey = "robot790.faceController.v1";
     let connectionButtonsLocked = false;
     let responseActive = false;
+    const deliberateThinkingEnabled = false;
     let deliberateTurnInFlight = false;
     const suppressedResponseIds = new Set();
     let unidentifiedOutputSuppressed = false;
@@ -3731,6 +3732,7 @@
       "get_current_time",
       "get_brain_status",
       "read_text_file",
+      "write_text_file",
       "list_text_files",
       "list_sensing_eye_notes",
       "recall_sensing_eye_note",
@@ -5009,12 +5011,19 @@
         type: "function",
         name: "move_generated_image_to_sensing_eye",
         description: (
-          "Move the latest generated/imagined image into Robot 790's sensing eye as the current staged image context. " +
+          "Move a generated/imagined image into Robot 790's sensing eye as the current staged image context. " +
+          "Supply the exact filename from a generation receipt to retrieve a saved image, including one retained on disk after interruption. " +
+          "Without filename, move the current preview or pending idle image. Retrieval does not generate a new image. " +
           "Use when the operator asks to put the generated image, imagined image, drawing, render, or picture into the sensing eye, eye, visual context, or current image."
         ),
         parameters: {
           type: "object",
           properties: {
+            filename: {
+              type: "string",
+              maxLength: 160,
+              description: "Optional exact generated-image filename from its receipt, not a path or URL."
+            },
             reason: {
               type: "string",
               maxLength: 120,
@@ -5404,7 +5413,6 @@
       "Never say you moved, switched, or changed embodiment unless set_embodiment succeeded.",
       "Use set_voice only when the user explicitly asks you to change your voice, speaker, accent, tone, mood, or delivery.",
       "Never say you changed your voice unless set_voice succeeded.",
-      "When the operator explicitly asks you to think harder, think carefully, take a second pass, reconsider, reason through a specific question, or go deep, call deliberate_once before answering. You may also choose it once when a question clearly needs a careful multi-step diagnosis, tradeoff, plan, or technical assessment. Do not use it for ordinary conversation, a simple fact, quick status, simple command, automatic rumination, or repeated attempts. If the operator says just answer, fast, or do not overthink, answer directly. Use low for a brief thought, medium for a careful pass, and xhigh only for an explicitly deep request or an unusually complex, consequential question. It is one private bounded pass, never a routine, loop, or substitute for clarification. After it succeeds, answer from its conclusion naturally without mentioning the tool, model, private reasoning, or chain of thought.",
       "Use get_ui_controls when the user asks what the current mic interrupt sensitivity or Eric speaker volume is.",
       "Use set_ui_control only when the user explicitly asks you to change mic interrupt sensitivity or Eric speaker volume. Treat Eric speaker volume 0 as mute.",
       "Never say you changed mic sensitivity or Eric speaker volume unless set_ui_control succeeded.",
@@ -8819,7 +8827,7 @@
       const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1200;
       return {
         min: 225,
-        max: Math.max(320, Math.min(620, Math.round(viewportWidth * 0.48)))
+        max: Math.max(320, Math.min(930, Math.round(viewportWidth * 0.48)))
       };
     }
 
@@ -9302,19 +9310,34 @@
       log(events, opened ? `generated image opened: ${generatedImageUrl}` : "generated image popup blocked");
     }
 
-    async function moveGeneratedImageToSensingEye({ reason = "", _expectedFilename = "", _isCurrent = () => true, _usePending = false } = {}) {
+    async function moveGeneratedImageToSensingEye({ filename = "", reason = "", _expectedFilename = "", _isCurrent = () => true, _usePending = false } = {}) {
       const generation = sensingEyeGeneration;
       if (!_isCurrent()) throw new Error("Image request was superseded.");
+      const requestedName = String(filename || "").trim();
+      if (requestedName && (!/^[a-zA-Z0-9._-]{1,160}$/.test(requestedName) || !/\.(png|jpe?g|webp|svg)$/i.test(requestedName))) {
+        throw new Error("Use an exact generated-image filename, not a path or URL.");
+      }
+      if (requestedName && _expectedFilename && requestedName !== _expectedFilename) {
+        throw new Error("The generated image changed; the requested artifact was not staged.");
+      }
       if (_usePending && typeof idleArt !== "undefined" && idleArt.busy) {
         throw new Error("An idle-art generation or delivery is already in progress.");
       }
       if (_usePending && typeof idleArt !== "undefined" && idleArt.ready) {
-        return idleArt.stageReady({ isCurrent: _isCurrent, expectedFilename: _expectedFilename });
+        return idleArt.stageReady({ isCurrent: _isCurrent, expectedFilename: requestedName || _expectedFilename });
       }
-      if (!generatedImageUrl) throw new Error("No generated image is available.");
-      const imageUrl = generatedImageUrl;
-      const imageName = generatedImageName || filenameFromPath(imageUrl) || "generated-image.jpg";
+      if (!requestedName && !generatedImageUrl) throw new Error("No generated image is in the preview. A saved image can be retrieved with its exact filename from the generation receipt.");
+      const imageUrl = requestedName
+        ? new URL(`/generated-images/${encodeURIComponent(requestedName)}`, location.href).href
+        : generatedImageUrl;
+      const imageName = requestedName || generatedImageName || filenameFromPath(imageUrl) || "generated-image.jpg";
       if (_expectedFilename && imageName !== _expectedFilename) throw new Error("The generated image changed; the requested artifact was not staged.");
+      const previewGeneration = generatedImageRequestGeneration;
+      const eyeUrl = visionImageUrl, eyeText = sensingTextContent;
+      // Exact retrieval is a new request, but cannot overwrite newer activity while loading/saving.
+      const current = () => _isCurrent() && generation === sensingEyeGeneration
+        && previewGeneration === generatedImageRequestGeneration
+        && eyeUrl === visionImageUrl && eyeText === sensingTextContent;
       let imageDataUrl = imageUrl;
       if (!/^data:image\//i.test(imageUrl)) {
         const response = await fetch(imageUrl, { cache: "no-store" });
@@ -9322,17 +9345,17 @@
         imageDataUrl = await blobToDataUrl(await response.blob());
       }
       const image = await loadImage(imageDataUrl);
-      if (!_isCurrent() || imageUrl !== generatedImageUrl) throw new Error("Image request was superseded before staging.");
+      if (!current()) throw new Error("Image request was superseded before staging.");
       const historyItem = await setVisionImageFromDrawable(image, imageName, {
         eyeGeneration: generation,
-        isCurrent: _isCurrent,
+        isCurrent: current,
         source: "generated image",
         reason: String(reason || "generated image moved to sensing eye").slice(0, 120),
         openUrl: imageUrl,
         transcriptAction: "generated image moved into eye"
       });
       if (!historyItem || !visionImageStaged || visionImageName !== imageName) throw new Error("Generated image staging was not completed.");
-      generatedImageHint.textContent = `${generatedImageName || imageName} - moved to sensing eye`;
+      if (generatedImageName === imageName) generatedImageHint.textContent = `${imageName} - moved to sensing eye`;
       updateGeneratedImageButtons();
       return {
         status: "ok",
@@ -13272,11 +13295,11 @@
     }
 
     function deliberateIdleLabel() {
-      return "THINK READY";
+      return deliberateThinkingEnabled ? "THINK READY" : "THINK OFF";
     }
 
     function deliberateIdleTitle() {
-      return "One-pass deliberate thinking is ready.";
+      return deliberateThinkingEnabled ? "One-pass deliberate thinking is ready." : "Experimental deep thinking is disabled.";
     }
 
     function setDeliberateIndicator(state = "off", label = deliberateIdleLabel(), title = deliberateIdleTitle()) {
@@ -13341,6 +13364,7 @@
     }
 
     async function requestDeliberateOnce(snapshot) {
+      if (!deliberateThinkingEnabled) throw new Error("Experimental deep thinking is disabled.");
       const response = await fetch("/api/deliberate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -13354,6 +13378,7 @@
     }
 
     async function deliberateOnceForEric(args = {}) {
+      if (!deliberateThinkingEnabled) return { status: "error", tool: "deliberate_once", code: "disabled", error: "Experimental deep thinking is disabled." };
       const question = String(args?.question || "").trim();
       if (!question) {
         return { status: "error", tool: "deliberate_once", error: "A focused question is required." };
@@ -13434,7 +13459,8 @@
       const connected = realtimeConnected();
       const disabled = !connected || !typedInputText() || deliberateTurnInFlight;
       typedSendButton.disabled = disabled;
-      typedThinkButton.disabled = disabled;
+      typedThinkButton.disabled = disabled || !deliberateThinkingEnabled;
+      typedThinkEffort.disabled = !deliberateThinkingEnabled;
       typedSayButton.disabled = disabled;
       typedStatus.textContent = !connected
         ? "Connect first"
@@ -13489,6 +13515,10 @@
     }
 
     async function sendTypedDeliberateTurn(text) {
+      if (!deliberateThinkingEnabled) {
+        typedStatus.textContent = "Deep thinking disabled";
+        return;
+      }
       if (deliberateTurnInFlight) return;
       if (responseActive || outputAudioActive()) {
         typedStatus.textContent = "Wait for Eric";
@@ -16514,7 +16544,8 @@
           updateGeneratedImageButtons();
         }
         log(events, `image retained on disk after superseded request: ${hydrated.filename}`);
-        return { ...hydrated, displayed: false };
+        return { ...hydrated, displayed: false, staged: false, retained: true,
+          retrieval: { tool: "move_generated_image_to_sensing_eye", arguments: { filename: hydrated.filename } } };
       }
       showGeneratedImage(hydrated);
       log(events, `image generated: ${hydrated.filename || absoluteUrl}`);
@@ -19071,13 +19102,22 @@
         && userActivityAt === lastUserTurnActivityAt && !suppressedResponseIds.has(eventResponseId(event))
         && (!idleGrant || (idleArt.grant === idleGrant && idleArt.authorized()));
       try {
+        // Enforce the final speech-only boundary even if a provider emits a tool anyway.
+        if (toolFollowupTerminal) {
+          const receipt = { status: "error", tool: event.name, code: "continuation_budget_exhausted",
+            retryable: false, scope: toolContinuationOrigin,
+            error: "No further tool calls are available in this automatic continuation." };
+          log(events, `tool ${event.name} denied: ${JSON.stringify(receipt)}`);
+          send({ type: "conversation.item.create", item: { type: "function_call_output",
+            call_id: event.call_id, output: JSON.stringify(receipt) } }, { socket, generation });
+          return;
+        }
         const permitted = toolContinuationOrigin === "idle" ? idleEnabledToolList() : enabledToolList();
         if (!permitted.some(tool => tool.name === event.name)) {
           const receipt = { status: "error", tool: event.name, code: "scope_denied", retryable: false,
             scope: toolContinuationOrigin, allowed_tools: permitted.map(tool => tool.name),
             error: "Tool is not enabled for this execution scope." };
           toolScopeDenials.set(`${toolContinuationOrigin}:${event.name}`, { tool: event.name, scope: toolContinuationOrigin, code: receipt.code });
-          toolFollowupTerminal = true;
           log(events, `tool ${event.name} denied: ${JSON.stringify(receipt)}`);
           send({ type: "conversation.item.create", item: { type: "function_call_output",
             call_id: event.call_id, output: JSON.stringify(receipt) } }, { socket, generation });
@@ -19178,6 +19218,7 @@
       const limit = Math.max(1, Math.min(32, Number(runtimeConfig.tool_continuation?.max_rounds) || 8));
       const exhausted = toolContinuationRounds >= limit;
       toolContinuationRounds += 1;
+      toolFollowupTerminal = exhausted;
       // Keep the full catalogue stable; scope is enforced at execution, not by a private planner.
       const tools = enabledToolList();
       const permitted = toolContinuationOrigin === "idle" ? idleEnabledToolList() : tools;
@@ -19273,7 +19314,7 @@
     function enabledToolList() {
       if (firstContactModeEnabled()) return [];
       return [
-        ...deliberationTools,
+        ...(deliberateThinkingEnabled ? deliberationTools : []),
         ...(llmVoiceTools?.checked ? voiceTools : []),
         ...(llmUiControlTools?.checked ? uiControlTools : []),
         ...runtimeWatchTools,
@@ -20900,7 +20941,8 @@
       typedInput: "Typed fallback input; useful for controlled tests or pronunciation.",
       typedSend: "Send typed text as a user turn.",
       typedThink: "Run this typed ask through one bounded local deliberate pass, then have Eric answer from its compact conclusion.",
-      typedThinkEffort: "Choose Low, Medium, or Hard for the next one-pass Think request. This does not change Eric's normal realtime thinking mode.",
+      typedThink: "Experimental deep thinking is disabled. Normal conversation remains available through Send.",
+      typedThinkEffort: "Experimental deep thinking is disabled; this does not change normal conversation, B2 or idle thought.",
       typedSay: "Speak typed text through Eric's current voice without adding a user turn.",
       autoAudioRecord: "Automatically start recording when the microphone starts. Turn off for non-recorded test runs.",
       startAudioRecord: "Start recording the current STS session audio/video artifact.",

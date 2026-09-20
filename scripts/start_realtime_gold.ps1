@@ -23,8 +23,10 @@ function Stop-StaleQwen27Backend {
 
 try {
     & lms unload --all | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "LM Studio unload failed (exit code $LASTEXITCODE)." }
     Stop-StaleQwen27Backend
     & lms load $Model --parallel $Parallel --context-length $ContextLength --gpu max --identifier $Model -y | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "LM Studio model load failed (exit code $LASTEXITCODE)." }
     Stop-StaleQwen27Backend
 } catch {
     throw "Could not preload LM Studio with only $($Model): $($_.Exception.Message)"

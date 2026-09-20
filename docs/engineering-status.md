@@ -1,10 +1,140 @@
 # Engineering Status
 
-Reviewed September 19, 2026. This is the maintained engineering view; session
+Reviewed September 20, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
+
+### September 20 Checkpoint
+
+The public overview now includes bounded denied-tool recovery, idle note writing,
+retained-image retrieval, startup failure checks and disabled experimental deep
+thinking. Sidebar resizing now permits up to 930px (previously 620px), still
+bounded by 48% of the viewport; the default and 225px minimum are unchanged.
+Browser drag tests covered 2560, 1440, 980 and 390px widths without page overflow
+or JavaScript errors. Existing successful behavior remains the baseline for the
+next lifecycle ownership/transition-testing work, not a mandate for a rewrite.
+
+### Experimental Deep Thinking Disabled
+
+September 20, after the context-and-mirror run: STS no longer advertises
+`deliberate_once`. The browser gates both manual Think and model entry points,
+including the shared request boundary, before any network or conversation
+mutation. Think/depth controls are disabled and the status pill reads THINK OFF.
+The experimental implementation and backend endpoint remain available in source,
+but normal STS cannot invoke them. No model, B2, idle or sampling change.
+
+Prompt change disclosed: removed the paragraph directing "think harder" and
+similar requests into `deliberate_once`, from both the served base prompt and
+browser fallback. There is no replacement behavioral script. Prior prompt
+snapshots are historical and were not regenerated.
+
+Refresh STS while disconnected, then Connect to resume. The page and base prompt
+are read from disk by the running page server; no server or LM Studio restart is
+required. Tests cover absent tool advertisement, blocked direct/manual requests,
+disabled controls and unchanged normal Send/Say availability.
+
+### Retained Generated-Image Retrieval
+
+September 20: the September 19 Valles Marineris failure was a retrieval gap,
+not a lost image. Generation completed after an interruption and correctly kept
+the artifact on disk without replacing the current display. The move tool only
+consulted the preview or pending idle delivery, so it could not use that receipt.
+
+`move_generated_image_to_sensing_eye` now accepts an optional exact `filename`.
+It reads that artifact through the existing bounded `/generated-images/` route
+and uses normal eye saving/staging. It needs no in-memory artifact list, works
+after a refresh when the filename is known, and makes no generation request.
+Without a filename, the existing preview/pending-image behavior remains. A
+missing or invalid filename does not fall back to a different picture. Pending
+idle delivery retains single-owner staging and exact-identity checks.
+
+Late generation receipts now explicitly report `retained: true`,
+`displayed: false`, `staged: false`, and the exact retrieval tool arguments.
+Retrieval cannot overwrite newer user/session, eye or preview activity during
+loading or eye saving. An unrelated preview is left alone. This changes the
+move tool's schema/description and artifact receipts, not personality prompts,
+idle timing, permissions, B2 scheduling or model-chosen task order.
+
+All 537 JavaScript tests pass. New regressions first reproduced the gap, then
+covered interrupted generation to exact retrieval, refresh-independent lookup,
+missing/unsafe names, unchanged preview moves, asynchronous freshness and pending
+idle ownership. A read-only request for the actual failed-run image returned
+HTTP 200 with 1,450,847 bytes of PNG data. No paid generation, private-note write,
+server restart or active-session change was made. The subsequent September 20
+live run retrieved two retained generated images by exact filename and staged
+both successfully. The Imagined Image preview remained empty and an extra render
+was initiated during the first completion; those are separate remaining workflow
+issues. No additional diagnostic run was needed to implement the repair.
+
+### Note Writing During Idle
+
+September 20: ordinary full-context idle now permits `write_text_file` when
+the operator's local-file tools are enabled. The September 19 Tool Recovery
+Probe established the unwanted restriction: research succeeded, the idle write
+was denied, and saving only succeeded after Scott returned. That scope-only
+ban is removed; a new user utterance is no longer required to allow the write.
+
+This uses the same notes-root sandbox, supported extensions, size limits and
+atomic writer as conversation. Existing append/overwrite semantics are unchanged;
+this is not a new create-only policy or protection for individual note folders.
+The separate remember/forget tools, physical effects and other excluded idle
+capabilities are not newly enabled. File tools off still means no file writes.
+First Contact's existing tool exclusion remains. No English consent detector,
+new checkbox, tool-description change, personality edit or extra model call.
+
+All 528 JavaScript tests and 52 focused Python note-storage tests pass. The new
+fixture first reproduced the denied research-to-note path, then exercised the
+normal writer with intercepted I/O and continuation. No private note was written
+by these tests. Refresh STS while disconnected to activate, then resume the same
+thread; no server restart needed. Live model acceptance remains pending.
+
+### Denied-Tool Recovery
+
+September 19 follow-up: a scope denial now returns its structured, non-retryable
+receipt through the existing general continuation instead of terminating the
+whole batch. Successful sibling receipts remain available before that response.
+Eric can choose permitted work, a reply or silence; STS does not choose an
+alternative tool or supply a spoken line. Disabled effects remain blocked.
+
+Recovery consumes the existing `tool_continuation.max_rounds` allowance (8 by
+default). Exhaustion permits the existing final tool-disabled response; any
+provider-emitted tool beyond that boundary receives a budget receipt without
+execution or another automatic response. A new user turn or ordinary scheduled
+idle opportunity resets its own budget as before. No new cooldown or permanent
+quiet state is introduced.
+
+All 526 JavaScript tests pass. Regressions cover denial plus successful siblings,
+permitted recovery, repeated denials, duplicate call IDs, playback drain, new
+user activity, disconnect, and a provider ignoring the final tool-disabled
+boundary. Unknown paid-generation outcomes still prohibit automatic paid retry,
+including after a denial. The old terminal behavior was reproduced first.
+Personality and general follow-up prompts, tool catalogue, permissions, B2
+scheduling, model settings and idle timing are unchanged.
+
+Browser-only repair: refresh while disconnected, then resume the existing
+thread. No server restart or active-session change was performed. Live
+acceptance remains pending. This is distinct from the latest interrupted-image
+retention/retrieval gap and B2's tool-continuation scheduling exclusion; neither
+is claimed fixed by this change.
+
+### Explicit Startup Failures
+
+September 19 follow-up: the normal gold launcher now checks native exit codes
+after both `lms unload` and `lms load`, matching the existing restart path's
+fail-fast policy. A failed unload prevents cleanup/load/server launch; a failed
+load prevents subsequent cleanup/server launch. The error identifies the failed
+phase and exit code. Model choice, context size, parallel slots and successful
+startup arguments are unchanged.
+
+The regression fixture first reproduced an unload failure falling through to
+server launch. All six launcher checks now pass: two argument-forwarding cases,
+unload failure, load failure, missing CLI and successful preload. Tests execute
+the real script statements with inert model/process/server substitutes; no live
+model was unloaded and no service restarted. This verifies exit-code handling,
+not model readiness or recovery after a failed load. Dependency/version capture
+and broader startup health checks remain separate work.
 
 ### September 19 Checkpoint
 

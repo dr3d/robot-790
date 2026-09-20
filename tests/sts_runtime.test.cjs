@@ -349,24 +349,22 @@ test('local file tools can write source without granting execution', () => {
   assert.match(page, /Do not say you cannot write a file while write_text_file is available/);
 });
 
-test('bounded adaptive deliberation is an Eric action, with Typed Think retained as a lab shortcut', () => {
+test('experimental deliberation stays implemented but is disabled in the tool catalogue, prompts and UI', () => {
   const prompt = fs.readFileSync(path.join(__dirname, '../prompts/robot-790-realtime-system.md'), 'utf8');
   assert.match(page, /const deliberationTools = \[/);
   assert.match(page, /name: "deliberate_once"/);
   assert.match(page, /async function deliberateOnceForEric\(args = \{\}\)/);
-  assert.match(page, /\.\.\.deliberationTools/);
+  assert.match(page, /const deliberateThinkingEnabled = false/);
+  assert.match(page, /deliberateThinkingEnabled \? deliberationTools : \[\]/);
   assert.match(page, /Tool results are available in this conversation/);
-  assert.match(prompt, /When the operator explicitly asks you to think harder[\s\S]*call deliberate_once before answering/);
-  assert.match(prompt, /careful multi-step diagnosis, tradeoff, plan, or technical assessment/);
-  assert.match(prompt, /If the operator says just answer, fast, or do not overthink, answer directly/);
-  assert.match(prompt, /controller maps it to the active brain's actual capability/);
-  assert.match(prompt, /It is one private bounded pass, never a routine, loop, or substitute for clarification/);
+  assert.doesNotMatch(prompt, /deliberate_once/);
+  assert.doesNotMatch(page, /call deliberate_once before answering/);
   assert.match(page, /id="typedThink"[^>]*>Think<\/button>/);
   assert.match(page, /id="typedThinkEffort"[^>]*aria-label="Think depth"/);
   assert.match(page, /option value="low">Low<\/option>/);
   assert.match(page, /option value="medium" selected>Medium<\/option>/);
   assert.match(page, /option value="xhigh">Hard<\/option>/);
-  assert.match(page, /id="deliberateIndicator"[\s\S]*?THINK READY/);
+  assert.match(page, /id="deliberateIndicator"[\s\S]*?THINK OFF/);
   assert.match(page, /async function sendTypedDeliberateTurn\(text\)/);
   assert.match(page, /fetch\("\/api\/deliberate"/);
   assert.match(page, /THINKING \$\{effortLabel\}/);
@@ -377,6 +375,36 @@ test('bounded adaptive deliberation is an Eric action, with Typed Think retained
   assert.match(page, /thinking: currentTypedThinkEffort\(\)/);
   assert.match(page, /tool_choice: "none"/);
   assert.match(page, /Do not mention a worker, model, hidden reasoning, prompt, private note, or chain of thought/);
+});
+
+test('disabled deliberation does no I/O or conversation mutation and leaves Send and Say enabled', async () => {
+  const context = loadFunctions(['requestDeliberateOnce', 'deliberateOnceForEric',
+    'sendTypedDeliberateTurn', 'updateTypedInputButtons', 'deliberateIdleLabel'], {
+    deliberateThinkingEnabled: false, deliberateTurnInFlight: false,
+    fetch: () => { throw new Error('unexpected network call'); },
+    realtimeConnected: () => true, typedInputText: () => 'Think about this',
+    typedSendButton: {}, typedThinkButton: {}, typedSayButton: {}, typedThinkEffort: {}, typedStatus: {},
+  });
+  await assert.rejects(context.requestDeliberateOnce({}), /disabled/);
+  assert.equal((await context.deliberateOnceForEric({ question: 'Think harder' })).code, 'disabled');
+  await context.sendTypedDeliberateTurn('Think harder');
+  assert.equal(context.typedStatus.textContent, 'Deep thinking disabled');
+  context.updateTypedInputButtons();
+  assert.equal(context.typedThinkButton.disabled, true);
+  assert.equal(context.typedThinkEffort.disabled, true);
+  assert.equal(context.typedSendButton.disabled, false);
+  assert.equal(context.typedSayButton.disabled, false);
+  assert.equal(context.deliberateIdleLabel(), 'THINK OFF');
+});
+
+test('normal and idle catalogues omit deep-think without removing other enabled tools', () => {
+  const context = connectionContext();
+  const names = context.enabledToolList().map(tool => tool.name);
+  assert.ok(!names.includes('deliberationTools'));
+  assert.ok(names.includes('imageTools'));
+  assert.ok(names.includes('searchTools'));
+  assert.ok(names.includes('noteFileTools'));
+  assert.ok(!context.idleEnabledToolList().some(tool => tool.name === 'deliberationTools'));
 });
 
 test('PM prompt ledgers retain receipts without copying prompt or loaded-note bodies', () => {
@@ -1522,6 +1550,7 @@ function connectionContext() {
     arrayTail: (items, size) => items.slice(-size), recordingSnapshotPaneText: () => '',
     sessionClock: {}, laneIndicatorLabel: {}, recordingIndicatorLabel: {}, toolIndicatorLabel: {},
     maxSearchContextResults: 4, brain2Counters: {}, pendingToolCalls: 0, toolFollowupNeeded: false,
+    deliberateThinkingEnabled: false,
     brain2HeadlineLastAttemptAt: 0,
   });
   for (const name of ['llmVoiceTools', 'llmUiControlTools', 'llmBodySensorTools', 'llmTools',
