@@ -1,43 +1,9 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
 const vm = require('node:vm');
 const { test } = require('node:test');
-const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
+const { page } = require('./helpers/sts_tool_harness.cjs');
+const { fixture } = require('./helpers/sts_image_harness.cjs');
 
-function fixture() {
-  const requests = [], staged = [];
-  const element = () => ({ classList: { add() {}, remove() {} }, removeAttribute() {} });
-  const c = vm.createContext({
-    URL, location: { href: 'http://127.0.0.1:8790/' }, events: {}, log() {},
-    generatedImageStatusState: 'empty', generatedImageStatusLabel: '', generatedImageRequestGeneration: 0,
-    generatedImageUrl: '', generatedImageName: '', generatedImageHint: {},
-    generatedImageCard: element(), generatedImagePreview: element(), updateGeneratedImageButtons() {},
-    currentImageModel: () => 'test', currentImageQuality: () => 'low', imageSettingLabel: () => 'test',
-    audioRecordingActive: () => false, rolloverAudioRecordingForVisualChange() {},
-    sensingEyeGeneration: 1, visionImageUrl: '/operator.jpg', sensingTextContent: '', visionImageStaged: false,
-    blobToDataUrl: async () => 'data:image/png;base64,test', loadImage: async () => ({}),
-    filenameFromPath: value => value.split('/').at(-1),
-    fetch: async (url, options) => {
-      requests.push({ url: String(url), options });
-      return { ok: true, blob: async () => ({}), json: async () => ({
-        status: 'ok', filename: 'retained.png', url: '/generated-images/retained.png',
-      }) };
-    },
-    setVisionImageFromDrawable: async (_image, name, options) => {
-      assert.equal(options.isCurrent(), true);
-      assert.equal(options.eyeGeneration, c.sensingEyeGeneration);
-      staged.push({ name, options });
-      c.visionImageUrl = '/eye.jpg'; c.visionImageName = name; c.visionImageStaged = true;
-      return { savedFilename: 'eye.jpg', openUrl: '/sensing-eye/eye.jpg' };
-    },
-  });
-  for (const name of ['generateImage', 'showGeneratedImage', 'clearGeneratedImage', 'moveGeneratedImageToSensingEye']) {
-    const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
-    assert.ok(start >= 0, name);
-    vm.runInContext(page.slice(start, page.indexOf('\n    }\n', start) + 6), c);
-  }
-  return { c, requests, staged };
-}
 
 test('interrupted generation stays off screen and can be retrieved from its receipt without another render', async () => {
   const { c, requests, staged } = fixture();

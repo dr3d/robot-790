@@ -279,6 +279,10 @@ No new initiative restrictions, rhetoric, quotas or paid retries were introduced
 7. **Lifecycle consolidation:** extract focused ownership modules only after
    behavior is covered; add whole-session event replays for long playback,
    delayed inference, interruption, tools, idle, stale results and reconnect.
+   September 20: the [ownership map and first composed replays](sts-lifecycle-ownership-plan.md)
+   are in place. Seven new tests cover tool/image/audio/session-guard handoffs;
+   durable save, full UI reconnect and B2/idle integration remain outside that
+   harness. Production extraction has not started; audio ownership is first.
 
 ## Acceptance
 

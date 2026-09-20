@@ -6,6 +6,17 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Lifecycle Groundwork
+
+The stable checkpoint is published as `2472bbd`. The separate
+[lifecycle ownership map](sts-lifecycle-ownership-plan.md) identifies current
+owners, preservation rules, coverage gaps and the first proposed extraction:
+audio playback ownership. Seven new composed replay tests exercise real page
+functions across tools, retained images, audio drain, cancellation, stop and
+reconnect guards. External services, hardware and durable saving are mocked;
+these are not complete end-to-end session tests. No production behavior or
+prompts changed in this groundwork. The JavaScript suite now has 547 tests.
+
 ### September 20 Checkpoint
 
 The public overview now includes bounded denied-tool recovery, idle note writing,
