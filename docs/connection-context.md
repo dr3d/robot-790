@@ -4,6 +4,19 @@ STS now reserves room for a session **before connecting**. It does not shorten
 the ongoing conversation, restart Eric automatically, or change his idle pace.
 Refresh STS while disconnected, then use Connect normally.
 
+### Storage Is Separate From Admission
+
+Session source transcripts and their variants can be archived losslessly up to
+16 million characters. Ordinary tool-written notes and model tool reads retain
+their 200,000-character limit; an oversized tool read fails without returning a
+partial transcript. This larger archive allowance fixes long-session Disconnect saves; it
+does not enlarge the model window or force the full archive into a prompt.
+Reading, session-map indexing, preparation and archiving accept those larger
+session files. Summary generation and context admission retain their own bounds.
+After a rejected save, keep the browser open, activate the updated page server,
+and retry Disconnect before refreshing. Do not solve a save error by clipping
+away the transcript's ending.
+
 ## What Happens
 
 1. Load the selected branch and current pinned notes as usual.
@@ -26,8 +39,42 @@ model identifier and selection request; changed sources require new preparation.
 
 Original notes, pins, timestamps, images and lineage are not rewritten. Core
 notes and setup cards are not compacted by this mechanism. Existing card
-admission and ordinary-note per-file limits still apply. Session history admitted
-by the token budget bypasses the older transcript/aggregate character clipping.
+admission and ordinary-note file-service limits still apply. Ordinary pinned
+notes are now assembled whole, without the old 4,500-character head cutoff or
+64K aggregate clipping. Their complete contents are included in Connect's token
+measurement. Session history admitted by the token budget also bypasses the
+older transcript character clipping.
+
+## Live Note Updates
+
+The initial loaded-note section is frozen for each websocket connection. Note
+loads, rereads and unpins append private revision notices at the existing safe
+runtime/tool boundary instead of rewriting that early system-message section.
+An ordinary model tool read already supplies the full note as its tool result;
+the revision notice refers to that receipt instead of duplicating its body.
+Operator-loaded notes are appended in full. Identical content is not repeatedly
+appended. Unpinning deactivates the note's guidance but does not erase history.
+Reconnect rebuilds the initial section from freshly loaded notes as before.
+
+Optional routed-card guidance still uses the established per-brain routing:
+only shared/B1 guidance goes to B1, while B2 sees the current active card set.
+These are context-transport updates, not new engagement or idle instructions.
+
+A live note read is tokenized before activation/delivery against the most recent
+B1 input usage and loaded model window, retaining the existing output/B2/margin
+headroom. The measured receipt includes a conservative voice/template overhead;
+this is an estimate, not full live-history accounting or overflow recovery.
+Concurrent work can still grow context. A read that fails measurement or does
+not fit returns an explicit error before changing pins; it does not truncate
+the note, reset the session or stop idle activity. Disconnected save/reload does
+not depend on this live check or on a loaded model.
+
+September 21 acceptance: the ordinary 9,243-character Mars trail, including its
+frame-ten ending, is retained in formatter tests; the live loaded-model tokenizer
+measured its complete tool receipt at 3,505 tokens in 0.86 seconds without
+generation. Lifecycle tests cover stable prefix, deferred updates, no duplicate
+tool bodies, unpin, reconnect, and private B2 guidance exclusion. Real-session
+cache acceptance still requires a refreshed browser run.
 
 ## Which Sessions
 
@@ -45,6 +92,12 @@ sessions. Indices apply to the retained history being loaded; archived/missing
 sessions are not resurrected. Source excerpts that are larger are not installed.
 
 ## Configuration
+
+Ordinary pinned notes have no file-count cap. Adding or reloading a note replaces
+only the same filename; saving a new session does not evict older pins. Context
+admission still measures token fit, and live note reads retain their existing
+token-admission check. Routed setup-card validation is separate and unchanged.
+This replaces the old eight-note eviction policy as of September 21, 2026.
 
 `config/runtime.json`, under `connection_context`:
 

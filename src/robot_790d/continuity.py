@@ -10,6 +10,7 @@ from typing import Any
 
 from robot_790d import archive_transaction
 from robot_790d.note_files import (
+    MAX_SESSION_ARCHIVE_CHARS,
     find_existing_note_path,
     list_note_files,
     notes_root_for_instance,
@@ -157,7 +158,7 @@ def save_continuity_session_variant(
         reviewed=reviewed,
         source_created_label=str(continuity_session_metadata(source.content)["created"]),
     )
-    note = write_note_file(instance_path, filename, content)
+    note = write_note_file(instance_path, filename, content, max_chars=MAX_SESSION_ARCHIVE_CHARS)
     return {
         "status": "ok",
         "tool": "save_continuity_session_variant",
@@ -502,7 +503,7 @@ def save_continuity_session(
         pinned_notes=receipts,
         sensing_eye_assets=sensing_eye_assets,
     )
-    session = write_note_file(instance_path, session_filename, content)
+    session = write_note_file(instance_path, session_filename, content, max_chars=MAX_SESSION_ARCHIVE_CHARS)
     context = _normalize_saved_context(context_at_save)
     context_warning = ""
     if context:

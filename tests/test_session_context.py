@@ -70,10 +70,10 @@ def test_ctx_receipt_archives_with_its_session_without_dangling_file(tmp_path):
 
 def test_receipt_write_failure_does_not_make_saved_transcript_look_unsaved(tmp_path, monkeypatch):
     original = c.write_note_file
-    def write(instance, filename, content):
+    def write(instance, filename, content, **kwargs):
         if filename.endswith(".context.json"):
             raise OSError("receipt disk error")
-        return original(instance, filename, content)
+        return original(instance, filename, content, **kwargs)
     monkeypatch.setattr(c, "write_note_file", write)
     result = c.save_continuity_session("Conversation.", [], tmp_path, context_at_save=SNAPSHOT)
     assert result["status"] == "ok"

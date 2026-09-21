@@ -241,7 +241,7 @@ test('session prompts lead with identity and creature vocabulary before mode or 
 test('fresh and resumed sessions share privacy rules without a startup persona', () => {
   const context = loadFunctions([
     'brain2AdvisoryProtocolInstructions', 'formatBrain2ForInstructions',
-    'buildSessionInstructions', 'runtimeContextProtocolInstructions',
+    'buildSessionInstructions', 'sessionNotesForInstructions', 'runtimeContextProtocolInstructions',
   ], {
     firstContactModeEnabled: () => false,
     performanceModeEnabled: () => false,
@@ -249,6 +249,7 @@ test('fresh and resumed sessions share privacy rules without a startup persona',
     formatCreatureForInstructions: () => 'CREATURE',
     formatMemoryForInstructions: () => 'OLD BROWSER FACTS',
     formatLoadedNotesForInstructions: () => 'CORE MEMORY',
+    ws: null,
     formatSensingTextForInstructions: () => 'OLD SENSING',
     formatRecentSearchContextForInstructions: () => 'OLD SEARCH',
     formatAloneStateForInstructions: () => 'OLD ALONE STATE',
@@ -1479,7 +1480,6 @@ function memoryContext() {
   ], {
     Robot790NoteBrains: require('../web/sts/note-brains.js'),
     maxLoadedNoteChars: 64000,
-    maxLoadedNotes: 8,
     loadedNoteContexts: [],
     loadedNoteContextDirty: false,
     log: () => {},
@@ -2001,6 +2001,7 @@ test('successful note reads preserve optional pinning', async () => {
   const pinned = [];
   const context = loadFunctions(['readTextFile'], {
     URL, location: { href: 'http://localhost:8790/' },
+    realtimeConnected: () => false,
     fetch: async () => ({ ok: true, json: async () => note }),
     log: () => {}, events: {}, rememberLoadedNoteContext: item => pinned.push(item),
   });
@@ -2019,8 +2020,8 @@ test('long continuity notes cannot displace enabled core memory or reorder the n
   ]);
   assert.ok(result.includes('CORE_MEMORY_SENTINEL'));
   assert.ok(result.indexOf('[sessions/continuity-session-20260907-160000.txt]') < result.indexOf('[core/erics_memories.txt]'));
-  assert.ok(result.includes('context clipped'));
-  assert.ok(result.length < 65000);
+  assert.ok(!result.includes('context clipped'));
+  assert.ok(result.includes('x'.repeat(66000)));
 });
 
 test('ordinary notes and small core memory retain their contents and order', () => {
@@ -2049,7 +2050,7 @@ test('unchecked core memory is not injected from a stale loaded-note entry', () 
   assert.ok(!result.includes('CORE_MEMORY_SENTINEL'));
 });
 
-test('loading more than eight notes cannot evict enabled core memory', () => {
+test('loading more than eight notes preserves ordinary notes and enabled core memory', () => {
   const context = memoryContext();
   context.rememberLoadedNoteContext({
     status: 'ok', filename: 'core/erics_memories.txt', content: 'CORE_MEMORY_SENTINEL',
@@ -2058,7 +2059,8 @@ test('loading more than eight notes cannot evict enabled core memory', () => {
     context.rememberLoadedNoteContext({ status: 'ok', filename: `${index}.txt`, content: `note ${index}` });
   }
   assert.deepEqual(Array.from(context.loadedNoteContexts, note => note.filename), [
-    '11.txt', '10.txt', '9.txt', '8.txt', '7.txt', '6.txt', '5.txt', 'core/erics_memories.txt',
+    '11.txt', '10.txt', '9.txt', '8.txt', '7.txt', '6.txt', '5.txt',
+    '4.txt', '3.txt', '2.txt', '1.txt', '0.txt', 'core/erics_memories.txt',
   ]);
   assert.equal(context.loadedNoteContextDirty, true);
   const result = context.formatLoadedNoteContextsForInstructions(context.loadedNoteContextsForCurrentPrompt());
@@ -2106,13 +2108,13 @@ test('session saves include the entire current transcript', () => {
   });
 });
 
-test('disabled core memory does not reserve a loaded-note slot', () => {
+test('ordinary pins remain uncapped with core memory disabled', () => {
   const context = memoryContext();
   context.loadEricMemoriesEnabled = () => false;
   for (let index = 0; index < 10; index++) {
     context.rememberLoadedNoteContext({ status: 'ok', filename: `${index}.txt`, content: 'note' });
   }
-  assert.equal(context.loadedNoteContexts.length, 8);
+  assert.equal(context.loadedNoteContexts.length, 10);
 });
 
 for (const name of ['postFaceTo', 'getFaceJson', 'requestChassis']) {

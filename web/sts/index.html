@@ -2999,6 +2999,7 @@
 
   <script src="llm-overview.js"></script>
   <script src="note-brains.js"></script>
+  <script src="live-notes.js"></script>
   <script src="file-lookup.js"></script>
   <script src="network-camera.js"></script>
   <script src="idle-art.js"></script>
@@ -3319,6 +3320,7 @@
     let pendingToolCalls = 0;
     let realtimeSessionGeneration = 0;
     let lastSessionUpdateSocket = null;
+    const liveNotes = new Robot790LiveNotes.LiveNotes();
     let lastSessionUpdateFingerprint = "";
     let lastBrain2AdvisorySocket = null;
     let lastBrain2AdvisoryText = "";
@@ -3770,9 +3772,6 @@
     const standingRoutineMaxCadenceSeconds = 900;
     const standingRoutineDefaultDurationSeconds = 600;
     const standingRoutineMaxDurationSeconds = 3600;
-    const maxLoadedNotes = 8;
-    const maxLoadedNoteChars = 64000;
-    const maxLoadedNoteCharsPerFile = 4500;
     const maxTranscriptNoteChars = 64000;
     const maxIdleOutputLog = 240;
     const maxSessionNoteChars = 180000;
@@ -5841,24 +5840,9 @@
         ...loadedNoteContexts.filter((item) => item.filename !== filename)
       ];
       Robot790NoteBrains.admit(updatedContexts, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards);
-      const reservedCount = updatedContexts.filter(item => item.brain_context?.version !== 1).filter((item) => (
-        (loadEricMemoriesEnabled() && noteFilenameInSet(item.filename, baseStartupNoteFilenames))
-        || noteFilenameIsCurrentContinuitySession(item.filename)
-      )).length;
-      let ordinaryCount = 0;
-      loadedNoteContexts = updatedContexts.filter((item) => {
-        if (item.brain_context?.version === 1) return true;
-        if (
-          (loadEricMemoriesEnabled() && noteFilenameInSet(item.filename, baseStartupNoteFilenames))
-          || noteFilenameIsCurrentContinuitySession(item.filename)
-        ) return true;
-        return ordinaryCount++ < maxLoadedNotes - reservedCount;
-      });
+      loadedNoteContexts = updatedContexts;
       loadedNoteContextDirty = true;
-      const removed = updatedContexts.filter(item => !loadedNoteContexts.includes(item)).map(item => item.filename);
-      log(events, loadedNoteContexts.some(item => item.filename === filename)
-        ? `loaded note pinned: ${filename}` : `loaded note not pinned (pin limit): ${filename}`);
-      if (removed.length) log(events, `note pin limit removed from active pins: ${removed.join(", ")}`);
+      log(events, `loaded note pinned: ${filename}`);
       updateLoadedNoteControls();
       if (contextPanel?.open) renderContextMap();
     }
@@ -6907,8 +6891,8 @@
     }
 
     function clippedLoadedNoteContent(content) {
-      if (content.length <= maxLoadedNoteCharsPerFile) return content;
-      return `${content.slice(0, maxLoadedNoteCharsPerFile)}\n[Note clipped in session context after ${maxLoadedNoteCharsPerFile} characters. Read it again for more.]`;
+      // Ordinary notes are admitted whole by the connection's token budget.
+      return content;
     }
 
     function clippedTranscriptContextContent(content) {
@@ -7004,7 +6988,7 @@
       const cards = Robot790NoteBrains.admit(loadedNoteContexts, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards);
       return {
         basis: "Browser-assembled B1 note section, not proof of transmission, provider token usage or B2 admission.",
-        limit_characters: loadedNoteContexts.some(item => item.connection_history === true) ? null : maxLoadedNoteChars,
+        limit_characters: null,
         connection_budget: typeof connectionContextReceipt === "undefined" ? null : connectionContextReceipt,
         routed_cards: { limit_characters: cards.limit, assembled_characters: cards.characters, count: cards.cards.length, units: cards.units },
         assembled_characters: text.length,
@@ -7066,31 +7050,11 @@
         };
       }).filter(Boolean);
       if (!blocks.length) return cards?.text || "";
-      // Reserve core memory without changing the operator's loaded-note order.
-      const introLength = lines.join("\n").length + blocks.length + 1;
-      const connectionBudgeted = contexts.some(item => item.connection_history === true);
-      const noteBudget = connectionBudgeted
-        ? blocks.reduce((sum, block) => sum + block.text.length, 0)
-        : Math.max(0, maxLoadedNoteChars - introLength);
-      let coreRemaining = Math.min(noteBudget, blocks.filter((block) => block.core)
-        .reduce((total, block) => total + block.text.length, 0));
-      let remaining = noteBudget - coreRemaining;
-      const clippingNotice = "\n[Loaded-note context clipped. Read the note again if exact detail is needed.]";
-      for (const { header, text: block, core, receipt } of blocks) {
-        const available = core ? coreRemaining : remaining;
-        if (!connectionBudgeted && available <= header.length + (core ? 0 : 200)) {
-          receipt.reasons.push("aggregate_budget");
-          continue;
-        }
-        if (block.length > available) receipt.reasons.push("aggregate_budget");
-        const clippedBlock = block.length > available
-          ? `${block.slice(0, Math.max(0, available - clippingNotice.length))}${clippingNotice}`
-          : block;
-        lines.push(clippedBlock);
-        receipt.assembled_block_characters = clippedBlock.length;
+      // No second character budget may silently undo token-based admission.
+      for (const { text: block, receipt } of blocks) {
+        lines.push(block);
+        receipt.assembled_block_characters = block.length;
         receipt.status = receipt.reasons.length ? "partial" : "full";
-        if (core) coreRemaining -= clippedBlock.length;
-        else remaining -= clippedBlock.length;
       }
       return [lines.join("\n"), cards?.text].filter(Boolean).join("\n\n");
     }
@@ -7681,11 +7645,27 @@
       };
     }
 
+    function liveNoteEntries() {
+      if (performanceModeEnabled()) return [];
+      return loadedNoteContexts.filter(note => loadEricMemoriesEnabled()
+        || !noteFilenameInSet(note.filename, baseStartupNoteFilenames)).map(note => [note.filename,
+          note.brain_context?.version === 1 ? Robot790NoteBrains.b1Content(note)
+            : [loadedNoteRestoreEnvelope(note), clippedLoadedNotePromptContent(note, loadedNotePromptContent(note))].filter(Boolean).join("\n")]);
+    }
+
+    function sessionNotesForInstructions(noteContexts) {
+      if (noteContexts !== undefined) return formatLoadedNotesForInstructions(noteContexts);
+      return ws && liveNotes.socket === ws && ws.readyState === WebSocket.OPEN
+        ? liveNotes.prefix : formatLoadedNotesForInstructions();
+    }
+
     function appendRuntimeContextToConversation({ reason = "runtime update", toolBoundary = false } = {}) {
       if (!realtimeConnected() || realtimeStopRequested || firstContactModeEnabled()) return false;
       // Never insert context between an unfinished tool call and its receipt.
       if (pendingToolCalls > 0 || (!toolBoundary && (responseActive || toolFollowupNeeded))) return false;
       const sections = buildRuntimeContextSections();
+      const notePlan = liveNotes.socket === ws ? liveNotes.plan(liveNoteEntries()) : null;
+      for (const change of notePlan?.changes || []) sections[`pinned_note ${JSON.stringify(change.filename)}`] = change.text;
       const previous = lastRuntimeContextSocket === ws ? lastRuntimeContextSections : {};
       const changed = Object.keys(sections).filter(key => previous[key] !== sections[key]);
       if (!changed.length) return false;
@@ -7701,6 +7681,7 @@
       });
       lastRuntimeContextSocket = ws;
       lastRuntimeContextSections = sections;
+      if (notePlan) liveNotes.commit(notePlan);
       rememberPromptLedger({
         kind: "conversation.item.create", source: "STS runtime update",
         instructions: "[stable B1 instructions; changed runtime sections appended to current conversation]",
@@ -7726,7 +7707,7 @@
         runtimeContextProtocolInstructions(),
         performancePrivacy ? performancePrivacyInstructions() : "",
         performancePrivacy ? "" : formatMemoryForInstructions(),
-        performancePrivacy ? "" : formatLoadedNotesForInstructions(noteContexts),
+        performancePrivacy ? "" : sessionNotesForInstructions(noteContexts),
         formatEmbodimentForInstructions()
       ]
         .filter(Boolean)
@@ -16235,7 +16216,7 @@
           text: loadedNotesText,
           details: [
             `Loaded files: ${loadedNoteContexts.length}`,
-            `Conversation note cap: ${maxLoadedNoteChars} chars`,
+            "Pinned notes: complete ordinary notes; connection tokenizer budget applies",
             `Routed-card B1 allowance: ${noteAdmission.routed_cards.assembled_characters}/${noteAdmission.routed_cards.limit_characters} UTF-16 units`,
             `B1 assembly: ${noteAdmission.assembled_characters} chars / ${noteAdmission.partial_notes} partial / ${noteAdmission.omitted_notes} omitted`,
             `Declared instruction warnings: ${noteAdmission.instruction_warnings}`,
@@ -17434,12 +17415,44 @@
     }
 
 
-    async function readTextFile({ filename, path, name: noteName, pin = true } = {}) {
+    async function admitLiveNoteRead(result) {
+      if (!realtimeConnected() || realtimeStopRequested) return;
+      const socket = ws, generation = realtimeSessionGeneration;
+      // Count the complete B1 receipt, not B2-private guidance. This tokenizes only;
+      // it neither generates a reply nor resubmits the conversation for prefill.
+      const response = await fetch(new URL("/api/context/measure", location.href), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructions: JSON.stringify(Robot790NoteBrains.b1Result(result)), tools: [] }),
+        signal: AbortSignal.timeout(30000)
+      });
+      const measured = await response.json().catch(() => ({}));
+      if (!activeRealtimeSession(socket, generation) || realtimeStopRequested) {
+        throw new Error("Connection changed during note admission; nothing pinned or delivered.");
+      }
+      if (!response.ok || measured.status !== "ok") {
+        throw new Error(`Could not measure the complete note; nothing pinned or delivered. ${measured.error || response.status}`);
+      }
+      const used = lastConversationInputTokens || connectionContextReceipt?.prompt_tokens;
+      const ceiling = measured.live_input_ceiling_tokens;
+      if (!Number.isSafeInteger(used) || !Number.isSafeInteger(ceiling) || !Number.isSafeInteger(measured.prompt_tokens)
+          || (connectionContextReceipt?.model && measured.model !== connectionContextReceipt.model)) {
+        throw new Error("Current model/context accounting unavailable; nothing pinned or delivered.");
+      }
+      if (used + measured.prompt_tokens > ceiling) {
+        throw new Error(`Complete note needs about ${measured.prompt_tokens.toLocaleString()} additional tokens; `
+          + `${Math.max(0, ceiling - used).toLocaleString()} remain before reserved headroom. `
+          + "Nothing clipped or pinned. Save and reconnect with room for this note.");
+      }
+      log(events, `complete note admission: ${result.filename}; ${measured.prompt_tokens} estimated added tokens / ${ceiling - used} available`);
+    }
+
+    async function readTextFile({ filename, path, name: noteName, pin = true } = {}, { toolRead = false } = {}) {
       const name = String(filename || path || noteName || "").trim();
       if (!name) throw new Error("Missing filename");
       const url = new URL("/api/notes/read", location.href);
       url.searchParams.set("filename", name);
       url.searchParams.set("brain_context", "1");
+      if (toolRead) url.searchParams.set("tool_read", "1");
       const response = await fetch(url, { cache: "no-store" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status === "error") {
@@ -17449,6 +17462,7 @@
         throw error;
       }
       log(events, `note file read: ${result.filename}`);
+      if ((pin || toolRead) && realtimeConnected() && !realtimeStopRequested) await admitLiveNoteRead(result);
       if (pin) {
         try {
           rememberLoadedNoteContext(result);
@@ -18795,7 +18809,7 @@
       if (name === "cast_media") return castMedia(args);
       if (name === "set_smart_home_device") return setSmartHomeDevice(args);
       if (name === "write_text_file") return writeTextFile(args);
-      if (name === "read_text_file") return Robot790NoteBrains.b1Result(await readTextFile(args));
+      if (name === "read_text_file") return Robot790NoteBrains.b1Result(await readTextFile(args, { toolRead: true }));
       if (name === "list_text_files") return listTextFiles(args);
       if (name === "list_session_map") return listSessionMap(args);
       if (name === "enter_session") return requestEnterSession(args);
@@ -19226,6 +19240,10 @@
         endToolActivity(event.name, { lane: idleInFlight ? "IDLE" : "B1", status: result?.status === "error" ? "fail" : "ok", detail: toolDetailFromArgs(event.name, activityArgs) });
         send({ type: "conversation.item.create", item: { type: "function_call_output",
           call_id: event.call_id, output: JSON.stringify(result) } }, { socket, generation });
+        if (event.name === "read_text_file" && result.status === "ok" && liveNotes.socket === socket) {
+          const entry = liveNoteEntries().find(([filename]) => filename === result.filename);
+          if (entry) liveNotes.received(...entry);
+        }
         if (["remember_fact", "forget_fact", "search_web", "unpin_note"].includes(event.name) || loadedNoteContextDirty) {
           loadedNoteContextDirty = false;
           updateSessionTools({ quiet: event.name === "search_web" });
@@ -19342,6 +19360,7 @@
       saveToolPrefs();
       if (contextPanel?.open) renderContextMap();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      liveNotes.bind(ws, formatLoadedNotesForInstructions(), liveNoteEntries());
       const enabledTools = enabledToolList();
       const instructions = buildSessionInstructions();
       const toolChoice = enabledTools.length ? "auto" : "none";

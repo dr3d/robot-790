@@ -1,10 +1,52 @@
 # Engineering Status
 
-Reviewed September 20, 2026. This is the maintained engineering view; session
+Reviewed September 21, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
+
+### Full Notes And Stable Live Context
+
+September 21 checkpoint: ordinary notes no longer suffer a second silent
+4,500-character per-file clip, 64K aggregate clip, or eight-file pin eviction
+after context admission. Connection-time tokenizer budgeting remains in force;
+live note reads measure the full B1 receipt before activation. Routed setup-card
+admission remains separate. Long saved transcripts and variants have a distinct
+storage allowance; ordinary note tools retain their existing storage limit.
+
+The loaded-note system prefix stays fixed for a connected socket. Explicitly
+loaded revisions and unpins are appended at safe conversation boundaries rather
+than rebuilding the system prefix. A completed read receipt is reused instead
+of duplicating its full body. Reconnect assembles current pinned content anew.
+Writing a file does not itself activate a new pinned revision.
+
+Repeated resumes of the same rich parent showed normal conversation and warm
+subsequent requests after initial connection prefill. Complete outgoing-body
+audits verified all expected notes in the measured requests. These are delivery
+and cache receipts, not guarantees of model recall. One earlier run spoke answer
+drafting aloud; later trials did not reproduce it. Its cause remains unresolved.
+The final trial also exposed a usability gap: reading a note pins it, but there
+is no explicit pin tool and its read description does not explain that side
+effect. That repair is deferred, not claimed complete in this checkpoint.
+
+Temporary engine streaming, request-shape receipts, note-delivery checks and
+private response samples were disabled after the trials. Diagnostic code remains
+opt-in for a future recurrence. Normal usage/context reporting and GPU/TTS display
+remain enabled. No personality, idle cadence, or model setting changed for this
+checkpoint. See [Connection Context](connection-context.md) and
+[Metrics Capture](llm-metrics-capture.md) for boundaries and rearming procedures.
+
+The local cleanup archived 58 sessions, retaining 27 recent/dependency sessions.
+All retained ancestry/pin references and 173 distinct eye assets verified; no
+archive transactions remain pending. Older snapshots and diagnostic bundles moved
+to the adjacent private archive with checksums and recovery manifests. This did
+not publish session contents or modify core notes.
+
+Checkpoint verification: 969 Python tests and 599 JavaScript tests pass, including
+documentation-link checks. The Python suite reports one existing Starlette/httpx
+deprecation warning. New diagnostic/storage test modules pass the undefined-name
+and unused-import checks. Detailed capture is confirmed stopped and disarmed.
 
 ### Save-Time Context In Session Map
 

@@ -222,5 +222,5 @@ test('token-budgeted history is not silently truncated by legacy character caps'
   assert.ok(text.includes(content));
   assert.ok(text.includes('A small fact.'));
   assert.ok(!text.includes('clipped'));
-  assert.ok(c.clippedLoadedNotePromptContent(note('ordinary', content, false), content).includes('clipped'));
+  assert.equal(c.clippedLoadedNotePromptContent(note('ordinary', content, false), content), content);
 });

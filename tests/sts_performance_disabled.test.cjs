@@ -52,9 +52,10 @@ test('even stale stage flags preserve pinned history and the normal attention ra
     formatCreatureForInstructions: () => 'CREATURE', formatRuntimeBehaviorRulesForInstructions: () => '',
     wonderSearchPolicyText: () => '', brain2AdvisoryProtocolInstructions: () => '', runtimeContextProtocolInstructions: () => '',
     formatMemoryForInstructions: () => 'PINNED FACTS', formatLoadedNotesForInstructions: () => 'PAST SESSIONS',
+    ws: null,
     formatEmbodimentForInstructions: () => 'BODY MANUAL'
   });
-  load(c, ['buildSessionInstructions', 'conversationAttentionEnabled']);
+  load(c, ['buildSessionInstructions', 'sessionNotesForInstructions', 'conversationAttentionEnabled']);
   const before = c.buildSessionInstructions();
   c.noteUserText('Comedy act coming up');
   assert.equal(c.buildSessionInstructions(), before);

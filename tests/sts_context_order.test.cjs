@@ -15,6 +15,11 @@ function fixture() {
     responseActive: false, toolFollowupNeeded: false, pendingToolCalls: 0,
     lastRuntimeContextSocket: null, lastRuntimeContextSections: {},
     lastSessionUpdateSocket: null, lastSessionUpdateFingerprint: '',
+    liveNotes: new (require('../web/sts/live-notes.js').LiveNotes)(),
+    loadedNoteContexts: [], loadEricMemoriesEnabled: () => true, baseStartupNoteFilenames: [],
+    noteFilenameInSet: () => false, loadedNoteRestoreEnvelope: () => '',
+    loadedNotePromptContent: note => note.content, clippedLoadedNotePromptContent: (_note, content) => content,
+    Robot790NoteBrains: require('../web/sts/note-brains.js'),
     realtimeConnected: () => true, firstContactModeEnabled: () => false, performanceModeEnabled: () => false,
     baseSessionInstructionSections: () => ({ identity: 'ERIC', operating: 'OPERATING RULES' }),
     formatCreatureForInstructions: () => 'CREATURE', formatRuntimeBehaviorRulesForInstructions: () => 'BEHAVIOR',
@@ -32,7 +37,7 @@ function fixture() {
     currentInterruptSensitivity: () => 6,
     events: {}, log: (_target, text) => logs.push(text), rememberSessionPromptSnapshot() {},
   });
-  for (const name of ['runtimeContextProtocolInstructions', 'buildSessionInstructions', 'buildRuntimeContextSections',
+  for (const name of ['runtimeContextProtocolInstructions', 'liveNoteEntries', 'sessionNotesForInstructions', 'buildSessionInstructions', 'buildRuntimeContextSections',
     'formatAloneStateForInstructions', 'formatRecentSearchContextForInstructions', 'appendRuntimeContextToConversation',
     'realtimeInterruptEnabled', 'sessionUpdateFingerprint', 'contextDiagnosticsEnabled', 'sessionPromptChange', 'updateSessionTools']) {
     const start = page.search(new RegExp(`^    function ${name}\\(`, 'm'));
@@ -159,4 +164,52 @@ test('search receipts use fixed timestamps in live history; relative ages remain
   clock(120000);
   assert.equal(c.buildRuntimeContextSections().search_receipts, initial);
   assert.match(c.formatRecentSearchContextForInstructions(), /2m ago/);
+});
+
+test('live note load, revision and unpin leave the initial system prefix unchanged', () => {
+  const { c, sent } = fixture();
+  c.loadedNoteContexts = [{ filename: 'trail.txt', content: 'Frame ten: home safe' }];
+  c.formatLoadedNotesForInstructions = notes => (notes || c.loadedNoteContexts).map(n => n.content).join('\n');
+  c.updateSessionTools();
+  const initial = sent[0].session.instructions;
+  c.loadedNoteContexts.push({ filename: 'manifest.txt', content: 'Full manifest END' });
+  c.updateSessionTools();
+  assert.equal(c.buildSessionInstructions(), initial);
+  assert.equal(sent.filter(e => e.type === 'session.update').length, 1);
+  assert.match(sent.at(-1).item.content[0].text, /Full manifest END/);
+  const count = sent.length;
+  c.updateSessionTools();
+  assert.equal(sent.length, count);
+  c.loadedNoteContexts[1] = { filename: 'manifest.txt', content: 'Revised manifest END' };
+  c.pendingToolCalls = 1;
+  c.updateSessionTools();
+  assert.equal(sent.length, count);
+  c.pendingToolCalls = 0;
+  c.appendRuntimeContextToConversation({ toolBoundary: true });
+  assert.match(sent.at(-1).item.content[0].text, /Revised manifest END/);
+  c.loadedNoteContexts = c.loadedNoteContexts.slice(0, 1);
+  c.updateSessionTools();
+  assert.match(sent.at(-1).item.content[0].text, /manifest.txt.*no longer pinned/);
+  assert.equal(c.buildSessionInstructions(), initial);
+  assert.equal(sent.filter(e => e.type === 'session.update').length, 1);
+  c.loadedNoteContexts[0] = { filename: 'trail.txt', content: 'New disk revision on reconnect' };
+  c.ws = { readyState: 1 };
+  c.updateSessionTools();
+  assert.match(sent.filter(e => e.type === 'session.update').at(-1).session.instructions, /New disk revision/);
+});
+
+test('tool-read receipt is not echoed; routed B2 guidance stays out of B1 changes', () => {
+  const { c, sent } = fixture();
+  c.updateSessionTools();
+  c.loadedNoteContexts = [{ filename: 'card.txt', content: 'B1 body', brain_context: {
+    version: 1, revision: 'new', shared: 'SHARED', brains: { b1: 'B1 guidance', b2: 'PRIVATE SECRET' }
+  } }];
+  c.updateSessionTools();
+  assert.match(sent.at(-1).item.content[0].text, /B1 guidance/);
+  assert.doesNotMatch(JSON.stringify(sent), /PRIVATE SECRET/);
+  c.loadedNoteContexts = [{ filename: 'note.txt', content: 'ALREADY DELIVERED IN TOOL RECEIPT' }];
+  c.liveNotes.received(...c.liveNoteEntries()[0]);
+  c.appendRuntimeContextToConversation({ toolBoundary: true });
+  assert.match(sent.at(-1).item.content[0].text, /preceding read_text_file result/);
+  assert.doesNotMatch(sent.at(-1).item.content[0].text, /ALREADY DELIVERED/);
 });

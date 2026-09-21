@@ -38,7 +38,7 @@ test('B1 file result does not leak other brains or metadata', () => {
   assert.match(result.content, /shared purpose/);
   assert.match(result.content, /speak/);
   assert.doesNotMatch(result.content, /notice|secret/);
-  assert.match(page, /Robot790NoteBrains.b1Result\(await readTextFile\(args\)\)/);
+  assert.match(page, /Robot790NoteBrains.b1Result\(await readTextFile\(args, \{ toolRead: true \}\)\)/);
 });
 
 test('stable order, unpin and reload invalidate old advice', () => {
@@ -54,7 +54,7 @@ test('direct pinning and continuity restoration retain the snapshot', () => {
   const c = vm.createContext({
     Robot790NoteBrains: router,
     loadedNoteContexts: [], loadEricMemoriesEnabled: () => false,
-    noteFilenameIsCurrentContinuitySession: () => false, maxLoadedNotes: 8,
+    noteFilenameIsCurrentContinuitySession: () => false,
     log: () => {}, events: {}, updateLoadedNoteControls: () => {}, contextPanel: null,
     ericMemoryNoteContexts: () => [], loadedNoteContextDirty: false,
   });

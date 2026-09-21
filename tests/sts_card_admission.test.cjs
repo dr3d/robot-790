@@ -10,7 +10,7 @@ const card = (name = 'card', size = 5000) => ({ status: 'ok', filename: `${name}
 function fixture(notes = []) {
   const c = vm.createContext({
     loadedNoteContexts: notes, maxLoadedNoteChars: 64000, maxLoadedNoteCharsPerFile: 4500,
-    maxTranscriptNoteChars: 64000, maxLoadedNotes: 8, runtimeConfig: {},
+    maxTranscriptNoteChars: 64000, runtimeConfig: {},
     baseStartupNoteFilenames: [], loadEricMemoriesEnabled: () => true, ericMemoryNoteContexts: () => [],
     Robot790NoteBrains: router, textTail: (text, length) => text.slice(-length), loadedNoteRestoreEnvelope: () => '',
     noteFilenameIsCurrentContinuitySession: () => false, log() {}, events: {},
@@ -66,13 +66,13 @@ test('history cannot crowd out cards and cards do not reduce the admitted histor
   assert.equal(report.assembled_characters, withCard.length);
 });
 
-test('ordinary pin churn cannot evict cards or reduce the ordinary-note allowance', () => {
+test('ordinary pin additions preserve cards and all ordinary notes', () => {
   const note = card();
   const c = fixture([note, ...Array.from({ length: 8 }, (_, i) => ({ filename: `plain${i}`, content: 'ordinary' }))]);
   c.rememberLoadedNoteContext({ status: 'ok', filename: 'new', content: 'ordinary' });
-  assert.equal(c.loadedNoteContexts.length, 9);
+  assert.equal(c.loadedNoteContexts.length, 10);
   assert.ok(c.loadedNoteContexts.includes(note));
-  assert.equal(c.loadedNoteContexts.some(item => item.filename === 'plain7'), false);
+  assert.equal(c.loadedNoteContexts.some(item => item.filename === 'plain7'), true);
 });
 
 test('failed direct and restored card sets preserve the previous snapshots and B2 packet', () => {

@@ -6,6 +6,21 @@ import pytest
 from robot_790d import sts_page_server
 
 
+def test_large_archive_read_is_available_to_resume_not_tool_receipts(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    content = "STS Session Note\n" + "x" * 200001
+    (tmp_path / "session-long.txt").write_text(content, encoding="utf-8")
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+    handler._handle_note_read("filename=session-long.txt&brain_context=1")
+    assert replies[-1][0] == 200
+    assert replies[-1][1]["content"] == content
+    handler._handle_note_read("filename=session-long.txt&brain_context=1&tool_read=1")
+    assert replies[-1][0] == 400
+    assert "content" not in replies[-1][1]
+
+
 def test_note_list_keeps_operator_shelf_complete_and_tool_pages_bounded(tmp_path, monkeypatch):
     monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
     for index in range(55):

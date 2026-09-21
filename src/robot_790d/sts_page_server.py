@@ -21,13 +21,14 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlsplit
+from uuid import uuid4
 
 import httpx
 
 from robot_790d.archive_transaction import pending_archives
 from robot_790d.brain_status import get_brain_status, get_gpu_status
-from robot_790d.context_history import context_history_plan, history_config
 from robot_790d.connection_context import PREPARE_LOCK, budget_config, measure_connection, prepare_excerpt
+from robot_790d.context_history import context_history_plan, history_config
 from robot_790d.continuity import (
     current_continuity_session,
     list_continuity_sessions,
@@ -37,14 +38,21 @@ from robot_790d.continuity import (
     select_continuity_session,
 )
 from robot_790d.headlines import read_headlines
-from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.idle_art import IdleArtService, validate_proposal
+from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.network_camera import camera_config, capture_frame
-from robot_790d.note_files import list_note_files, list_note_files_page, read_note_file, write_note_file
-from robot_790d.note_brains import parse_note_brains, format_brain_guidance
-from robot_790d.session_preparation import session_preparer
+from robot_790d.note_brains import format_brain_guidance, parse_note_brains
+from robot_790d.note_files import (
+    MAX_NOTE_CHARS,
+    list_note_files,
+    list_note_files_page,
+    read_note_file,
+    write_note_file,
+)
+from robot_790d.request_diagnostics import begin_request, finish_request
 from robot_790d.runtime_model import local_runtime_model
+from robot_790d.session_preparation import session_preparer
 from robot_790d.smart_home import control_smart_home_device
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
@@ -352,7 +360,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         params = parse_qs(query_string)
         filename = _first_param(params, "filename") or _first_param(params, "name") or ""
         try:
-            note = read_note_file(None, filename)
+            note = read_note_file(None, filename, max_chars=(
+                MAX_NOTE_CHARS if _first_param(params, "tool_read") == "1" else None
+            ))
         except FileNotFoundError:
             self._send_json(404, {
                 "status": "error",
@@ -2148,12 +2158,18 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         },
     }
 
+    diagnostic = begin_request(
+        uuid4().hex, family="B2-headlines" if headline_mode else "B2", owner="page",
+        model=str(request.get("model", "")), messages=request["messages"],
+        options={key: value for key, value in request.items() if key != "messages"},
+    )
     try:
         with httpx.Client(timeout=45) as client:
             response = client.post(f"{base_url}/chat/completions", headers=headers, json=request)
             response.raise_for_status()
             data = response.json()
     except Exception as exc:
+        finish_request(diagnostic, outcome=type(exc).__name__)
         return {
             "status": "error",
             "tool": "mull_second_brain",
@@ -2161,6 +2177,9 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "prompt_debug": prompt_debug,
         }
 
+    usage = data.get("usage") or {}
+    finish_request(diagnostic, outcome="completed", input_tokens=usage.get("prompt_tokens"),
+                   output_tokens=usage.get("completion_tokens"))
     raw_text = _chat_completion_text(data)
     parsed = _parse_second_brain_json(raw_text)
     proposed_beat = parsed.get("body_beat", "")

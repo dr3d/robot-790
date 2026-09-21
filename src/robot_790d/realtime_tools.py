@@ -15,7 +15,7 @@ from robot_790d.devices.esp32_face import DEFAULT_FACE_URL, Esp32FaceClient, Fac
 from robot_790d.image_generation import generate_image
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.memory import forget_fact, remember_fact
-from robot_790d.note_files import list_note_files_page, read_note_file, write_note_file
+from robot_790d.note_files import MAX_NOTE_CHARS, list_note_files_page, read_note_file, write_note_file
 from robot_790d.smart_home import control_smart_home_device
 from robot_790d.state import Affect, RobotMode
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
@@ -1119,7 +1119,7 @@ def _read_text_file(arguments: dict[str, object]) -> dict[str, object]:
         return {"status": "error", "error": "Missing required argument: filename"}
 
     try:
-        note = read_note_file(os.getenv("ROBOT_790_INSTANCE_PATH"), filename)
+        note = read_note_file(os.getenv("ROBOT_790_INSTANCE_PATH"), filename, max_chars=MAX_NOTE_CHARS)
     except FileNotFoundError:
         return {
             "status": "error",

@@ -43,15 +43,15 @@ test('admission reports declared instructions as complete in their separate allo
   assert.equal(report.assembled_characters, c.formatLoadedNoteContextsForInstructions([card]).length);
 });
 
-test('aggregate omissions are not reported as admitted pins', () => {
+test('complete ordinary pins are not omitted by the old aggregate character cap', () => {
   const c = setup([history, { filename: 'short.txt', content: 'WAS OMITTED' }]);
   const report = c.loadedNoteAdmissionReport();
   assert.equal(report.notes[0].status, 'partial');
-  assert.equal(report.notes[1].status, 'omitted');
-  assert.equal(report.notes[1].assembled_block_characters, 0);
-  assert.equal(report.omitted_notes, 1);
+  assert.equal(report.notes[1].status, 'full');
+  assert.ok(report.notes[1].assembled_block_characters > 0);
+  assert.equal(report.omitted_notes, 0);
   const pins = c.listPinnedNotes();
-  assert.equal(pins.notes[1].b1_admission.status, 'omitted');
+  assert.equal(pins.notes[1].b1_admission.status, 'full');
   assert.match(pins.meaning, /not guaranteed/);
 });
 
@@ -65,7 +65,7 @@ test('disabled core memory, whole small notes and empty context report truthfull
   assert.equal(setup([]).loadedNoteAdmissionReport().assembled_characters, 0);
 });
 
-test('the memory panel names partial admission without showing private brain guidance', () => {
+test('ordinary note tails are complete, without leaking private brain guidance', () => {
   const plain = { ...card, brain_context: undefined };
   const c = setup([plain]);
   Object.assign(c, {
@@ -74,23 +74,44 @@ test('the memory panel names partial admission without showing private brain gui
     memoryStatus: {}, memoryPreview: {}, location: { origin: 'http://localhost' }, memoryStorageKey: 'test',
   });
   c.renderMemory();
-  assert.match(c.memoryStatus.textContent, /1 partial/);
-  assert.match(c.memoryPreview.value, /companion.txt \[B1 partial\]/);
+  assert.doesNotMatch(c.memoryStatus.textContent, /1 partial/);
+  assert.doesNotMatch(c.memoryPreview.value, /companion.txt \[B1 partial\]/);
+  assert.match(c.formatLoadedNoteContextsForInstructions([plain]), /IMPORTANT END/);
   assert.doesNotMatch(c.memoryPreview.value, /PRIVATE B2/);
 });
 
-test('existing pin-limit eviction is announced without changing its selection policy', () => {
+test('adding an ordinary note preserves every existing pin beyond eight files', () => {
   const notes = Array.from({ length: 8 }, (_, i) => ({ filename: `note${i}.txt`, content: `Note ${i}` }));
   const c = setup(notes);
   const logs = [];
   Object.assign(c, {
-    maxLoadedNotes: 8, noteFilenameIsCurrentContinuitySession: () => false,
     events: {}, log: (_pane, text) => logs.push(text), contextPanel: null, updateLoadedNoteControls: () => {},
   });
   c.rememberLoadedNoteContext({ status: 'ok', filename: 'new.txt', content: 'New note' });
-  assert.equal(c.loadedNoteContexts.length, 8);
-  assert.equal(c.loadedNoteContexts.at(-1).filename, 'note6.txt');
-  assert.ok(logs.some(line => /pin limit removed.*note7.txt/.test(line)));
+  assert.equal(c.loadedNoteContexts.length, 9);
+  assert.deepEqual(Array.from(c.loadedNoteContexts.slice(1)), notes);
+  assert.deepEqual(logs, ['loaded note pinned: new.txt']);
+});
+
+test('saved session reload preserves restored history, manifest, comparison and core pins', () => {
+  const notes = [
+    ...Array.from({ length: 6 }, (_, i) => ({ filename: `sessions/session${i}.txt`, content: `History ${i}` })),
+    { filename: 'one-year-trip-manifest.txt', content: 'YEAR MANIFEST' },
+    { filename: 'next-trip-comparison.txt', content: 'TRIP COMPARISON' },
+    { filename: 'core/erics_memories.txt', content: 'CORE' },
+  ];
+  const c = setup(notes);
+  Object.assign(c, { events: {}, log() {}, contextPanel: null, updateLoadedNoteControls() {} });
+  c.rememberLoadedNoteContext({ status: 'ok', filename: 'sessions/new.txt', content: 'New session' });
+  assert.equal(c.loadedNoteContexts.length, 10);
+  assert.deepEqual(Array.from(c.loadedNoteContexts.slice(1)), notes);
+  assert.match(c.formatLoadedNoteContextsForInstructions(c.loadedNoteContexts), /YEAR MANIFEST/);
+  assert.match(c.formatLoadedNoteContextsForInstructions(c.loadedNoteContexts), /TRIP COMPARISON/);
+  c.rememberLoadedNoteContext({ status: 'ok', filename: 'one-year-trip-manifest.txt', content: 'UPDATED MANIFEST' });
+  assert.equal(c.loadedNoteContexts.length, 10);
+  assert.equal(c.loadedNoteContexts[0].content, 'UPDATED MANIFEST');
+  assert.equal(c.loadedNoteContexts.filter(note => note.filename === 'one-year-trip-manifest.txt').length, 1);
+  assert.ok(c.loadedNoteContexts.some(note => note.filename === 'sessions/new.txt'));
 });
 
 // Empty is unchanged; routed-card goldens intentionally include the complete instructions.
@@ -98,7 +119,7 @@ const cases = [[], [card], [history, card, { filename: 'core/erics_memories.txt'
 const hashes = [
   'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
   '4d7fd536d441b1dcd17f74ea2b8208e35d9d11dbb9f7b02341aea9c043d6f933',
-  'fdce27046626b1dd37f65a7dd4eb793bdc295054c99ae6465fa43b35eded2547',
+  '13ce8b200785af65c62b5eb650d7a9445d920d9d54df301bc84a478e17550bf4',
 ];
 cases.forEach((notes, i) => test(`prompt golden for admission case ${i}`, () => {
   const c = setup(notes);
@@ -106,7 +127,7 @@ cases.forEach((notes, i) => test(`prompt golden for admission case ${i}`, () => 
   assert.equal(createHash('sha256').update(text).digest('hex'), hashes[i]);
 }));
 
-// Compared byte-for-byte with the pre-repair formatter at 6c3c262.
+// Small ordinary notes are unchanged; aggregate clipping is intentionally gone.
 const legacyCases = [
   [{ filename: 'plain.txt', content: 'Ordinary note' }],
   [{ filename: 'session.txt', content: 'STS Session Note\n[10:00] Robot 790: ' + 'h'.repeat(90000) },
@@ -114,9 +135,18 @@ const legacyCases = [
 ];
 const legacyHashes = [
   '2c179fbd9c25e93b1e0bc22a295be1af31e6bcead75354e6af4cb5206643748b',
-  '3288b46975d8d74fef6249c7f0571d7598c010bd10254ec7511683a51c856ff1',
+  '2f16aafacd117d03022343a690f5e91787fa9e56ea353d73fbfa71a65186cc22',
 ];
-legacyCases.forEach((notes, i) => test(`unmarked-note prompt remains identical to the baseline ${i}`, () => {
+legacyCases.forEach((notes, i) => test(`unmarked-note prompt complete-admission golden ${i}`, () => {
   const text = setup(notes).formatLoadedNoteContextsForInstructions(notes);
   assert.equal(createHash('sha256').update(text).digest('hex'), legacyHashes[i]);
 }));
+
+test('frame ten survives ordinary note assembly and connection measurement', () => {
+  const trail = { filename: 'mars-return-trail.txt', content: 'Frame five\n' + 'x'.repeat(8000) + '\nFRAME TEN HOME SAFE' };
+  const c = setup([trail]);
+  const text = c.formatLoadedNoteContextsForInstructions([trail]);
+  assert.ok(text.includes(trail.content));
+  assert.doesNotMatch(text, /Note clipped/);
+  assert.equal(c.loadedNoteAdmissionReport().notes[0].status, 'full');
+});

@@ -60,6 +60,35 @@ Counts labelled input tokens in ordinary STS logs include cached input: they are
 not counts of newly evaluated tokens. Engine resident-token counts are not cache
 hits either. Hybrid recurrent attention may require some prefix reevaluation.
 
+## Request-Shape Receipts (2026-09-21)
+
+Updated realtime and page servers also emit `requests-<pid>.jsonl` while this
+collector's status is recording, its heartbeat is fresh, and its deadline has
+not expired. This needs one server restart to install, but later capture
+start/stop operations need no restart. Each process rotates at 5 MiB with two
+backups (15 MiB per process). Old process files can be archived with their run.
+
+Receipts contain B1/B2/headline role, request ID, model, message count, image-part
+count, text character count, serialized byte count, hashes of messages/system/
+tools/options, and common leading-message count versus that connection's previous
+request. They never persist prompts, image data, tool arguments, or responses.
+B1 IDs match the ordinary `B1 request usage` log. End receipts include elapsed
+provider-stream time, outcome and usage where available; a cancelled-before-send
+request can have only a start receipt. Elapsed time is not exclusively prefill.
+
+Compare request receipts with engine metrics when a reported 128K prompt becomes
+69K: did the submitted message count/content change, did only the current image
+or options change, or did the engine report fewer tokens for still-growing input?
+These distinguish hypotheses; hash equality is NOT a KV-cache hit percentage.
+Engine `new prompt` and `context shift` messages now preserve recognized numeric
+capacity/discard fields when emitted. Unknown log text remains excluded.
+
+Diagnostics fail open on I/O failure and stop producing new request receipts
+after the collector stops/expires or its heartbeat is more than 30 seconds old.
+They do not change context handling, send additional inference requests, restart
+the model, or reset STT. `ROBOT_790_METRICS_DIR` can select a different receipt/
+status directory for isolated tests; normal use shares `logs/live/llm-metrics`.
+
 ## Trial
 
 Continue the loaded thread, converse, let it idle, then speak again. Leave the
@@ -128,3 +157,101 @@ This validates the change for this run, not every future workload. A separate
 idle-art delivery defect and one filtered-output retry were not cache failures.
 Evidence and reproducible numeric analysis:
 `logs/runs/20260919-105831-boston-idle-art-handoff/`.
+
+## Outgoing Note Delivery Audit (2026-09-21)
+
+Checkpoint status: the September 21 trial collector was stopped, provider output
+sampling disarmed, and the live delivery-audit expectation file moved into the
+private run evidence. These checks are off during normal operation. Request-shape
+hashing and delivery scans return before doing prompt work when the collector is
+inactive; provider sampling likewise requires an active request ticket. The
+ordinary context meter, request usage and GPU/TTS graph do not depend on these
+temporary diagnostics. The hooks remain available for deliberate rearming.
+
+For the resumed-memory investigation, prepare explicit expectations from a saved
+session without changing the selected session or its notes:
+
+```powershell
+.\.venv\Scripts\python.exe -m robot_790d.delivery_audit sessions/session-20260921-102635-049.txt --hours 2
+```
+
+This writes a bounded local `logs/live/llm-metrics/delivery-audit.json` containing
+copies of the expected ordinary notes/history. It contains private note text;
+keep it with local diagnostics, not in Git. Routed setup cards are rejected
+because their per-brain projections need a different comparison. Preparation
+uses the current history policy but does not run inference or session preparation.
+
+While the passive collector is active and the expectation file has not expired,
+each B1 `request_start` includes `delivery_audit`: target index, expected text
+SHA-256, character count, presence, and message/part/character location. Results
+never include the note text or filenames. This compares complete expected bodies,
+not just a filename or search word. It normalizes line endings and trims expected
+trailing whitespace, matching the note wrapper's formatting. Offsets are Unicode
+character positions in normalized message parts, not token depths. A tool receipt
+match is distinguished from a system-message match.
+
+The hook inspects the actual serialized message list handed to the B1 provider
+adapter. It does not alter prompts, schedule calls, change history order, or verify
+the model's attention. The subsequent successful request receipt establishes that
+the request completed, not that the provider internally retained every token.
+Do not label a later tool-result match as proof the note was present at Connect.
+An absent body means a mismatch to this expected snapshot; check legitimate note
+edits, selected session, admission excerpts and settings before calling it a fault.
+
+Limits: 20 targets, 1 MiB expectation file, four reported locations per target,
+two-hour default expiry, and existing rotated request-log limits. Missing/expired
+expectations disable the check; malformed expectations report `unavailable` and
+never block generation. Delete the expectation file to disable early. The realtime
+process must be restarted once to load the new diagnostic code; no model reload,
+browser refresh, or full wire capture is required.
+
+## Temporary Provider Output Samples (2026-09-21)
+
+For the intermittent spoken-planning defect, explicitly arm a private response
+capture after starting passive metrics:
+
+```powershell
+.\scripts\start_llm_metrics.ps1 -Hours 2
+.\.venv\Scripts\python.exe -m robot_790d.provider_output_capture --hours 2
+```
+
+The realtime process needs one restart to install this hook; subsequent arming
+or stopping needs no restart. It does not reload the LLM or modify requests.
+`--stop` disables capture for new requests. Both an active metrics receipt and
+an unexpired `logs/live/llm-metrics/provider-output-capture.json` are required.
+
+`provider-output-<pid>.jsonl` links to existing request receipts by request ID.
+It samples the first choice's `content`, `reasoning_content`, `reasoning`, and
+`refusal` text before normalization and private-output filtering. Chunk sequence
+and original field boundaries preserve split think tags and an orphan closing
+tag. Fields inside one chunk are simultaneous for this purpose; their JSON key
+order does not establish temporal order. Non-streamed responses use the same
+field allowlist. Finish reason and explicit reasoning options are recorded.
+This observes SDK-parsed provider output, not raw HTTP packets or model internals.
+
+Unlike ordinary metrics, these files contain private generated text, potentially
+including recalled personal information. Keep them local; do not publish them.
+No prompt, image bytes, tool arguments or arbitrary response metadata are copied.
+Limits are 24 responses per arm per realtime process, 16,384 total captured text
+characters and 2,048 sampled chunks per response, two-hour default expiry, and
+1 MiB log rotation with two backups. Truncation is labeled and affects capture
+only, never speech or model output. A process restart resets the per-process
+counter; the absolute expiry still applies. Re-arming also resets the counter.
+
+Logging occurs once at response termination, including cancellation; a process
+kill may lose an in-flight sample. Capture failures do not block generation.
+The normal cancellation owner still closes the original provider stream.
+Write exceptions now produce a content-free warning in the realtime log.
+
+Verify actual records with
+`python -m robot_790d.provider_output_capture --status`. This reads and parses
+the files and reports counts without exposing generated text. Do not infer an
+empty capture from Windows directory-listing size metadata on an open file:
+the September 21 trial-2 capture was initially reported as zero bytes there,
+but the preserved copy already contained all 18 records. That was an inspection
+error, not a failed writer. Persistence tests now use the real disk sink.
+
+Suggested comparison: select the same saved 10:26 parent for each short trial,
+say hello, then ask for the year-long-trip plan without opening files. Keep
+successful and failed trials. Do not continue from a test session or change
+personality, idle cadence, context order, or provider options between trials.

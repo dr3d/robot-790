@@ -137,3 +137,15 @@ def test_duplicate_capture_lock(tmp_path):
     next_lock = acquire_lock(tmp_path / "lock")
     assert next_lock is not None
     next_lock.close()
+
+
+def test_prompt_capacity_and_context_shift_are_numeric_only():
+    rows = parse_event(runtime(
+        "I slot update_slots: id 1 | task 42 | new prompt, n_ctx_slot = 131072, n_keep = 0, task.n_tokens = 128500\n"
+        "I slot update_slots: id 1 | task 42 | context shift, n_keep = 8, n_left = 131000, n_discard = 65500 SECRET\n"
+        "I slot update_slots: id 1 | task 42 | context shift, SECRET"
+    ))
+    assert [r["kind"] for r in rows] == ["prompt_start", "context_shift"]
+    assert rows[0]["n_ctx_slot"] == 131072 and rows[0]["n_tokens"] == 128500
+    assert rows[1]["n_discard"] == 65500
+    assert "SECRET" not in json.dumps(rows)

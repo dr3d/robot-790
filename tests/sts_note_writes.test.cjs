@@ -34,6 +34,24 @@ function fixture(allowed = true) {
   return { c, writes };
 }
 
+test('tool note reads preserve the ordinary limit without limiting session resume reads', async () => {
+  const urls = [];
+  const c = vm.createContext({
+    URL, location: { href: 'http://localhost/' }, log() {}, events: {},
+    realtimeConnected: () => false,
+    fetch: async url => {
+      urls.push(new URL(url));
+      return { ok: true, json: async () => ({ status: 'ok', filename: 'session-long.txt', content: 'body' }) };
+    },
+  });
+  vm.runInContext(source('readTextFile'), c);
+  await c.readTextFile({ filename: 'session-long.txt', pin: false });
+  await c.readTextFile({ filename: 'session-long.txt', pin: false }, { toolRead: true });
+  assert.equal(urls[0].searchParams.has('tool_read'), false);
+  assert.equal(urls[1].searchParams.get('tool_read'), '1');
+  assert.match(page, /readTextFile\(args, \{ toolRead: true \}\)/);
+});
+
 test('authored note content is written unchanged, without transcript substitution', async () => {
   const { c, writes } = fixture();
   const content = 'Gulu Gulu: paid questions, projected Salem art, and a teetering Plexiglas puppet.\nMusic could punctuate the act.';

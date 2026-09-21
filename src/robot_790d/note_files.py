@@ -25,6 +25,7 @@ ALLOWED_EXTENSIONS = {
     ".yml",
 }
 MAX_NOTE_CHARS = 200000
+MAX_SESSION_ARCHIVE_CHARS = 16_000_000
 NOTES_DIRNAME = "notes"
 _NOTE_WRITE_LOCK = threading.Lock()
 
@@ -165,13 +166,15 @@ def write_note_file(
     filename: str,
     content: str,
     mode: str = "overwrite",
+    *,
+    max_chars: int = MAX_NOTE_CHARS,
 ) -> NoteFile:
     if mode not in {"overwrite", "append"}:
         raise ValueError("Mode must be overwrite or append.")
 
     normalized_content = str(content)
-    if len(normalized_content) > MAX_NOTE_CHARS:
-        raise ValueError(f"Content is too long. Limit is {MAX_NOTE_CHARS} characters.")
+    if len(normalized_content) > max_chars:
+        raise ValueError(f"Content is too long. Limit is {max_chars} characters.")
 
     path = resolve_note_path(filename, instance_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -180,8 +183,8 @@ def write_note_file(
             existing = path.read_text(encoding="utf-8") if path.exists() else ""
             separator = "" if not existing or existing.endswith("\n") else "\n"
             normalized_content = f"{existing}{separator}{normalized_content}"
-            if len(normalized_content) > MAX_NOTE_CHARS:
-                raise ValueError(f"Combined note is too long. Limit is {MAX_NOTE_CHARS} characters.")
+            if len(normalized_content) > max_chars:
+                raise ValueError(f"Combined note is too long. Limit is {max_chars} characters.")
 
         tmp_path: Path | None = None
         try:
@@ -200,11 +203,24 @@ def write_note_file(
     return NoteFile(filename=relative_note_name(path, instance_path), path=path, content=normalized_content)
 
 
-def read_note_file(instance_path: str | Path | None, filename: str) -> NoteFile:
+def read_note_file(
+    instance_path: str | Path | None, filename: str, *, max_chars: int | None = None,
+) -> NoteFile:
     path = find_existing_note_path(filename, instance_path)
     content = path.read_text(encoding="utf-8")
-    if len(content) > MAX_NOTE_CHARS:
-        raise ValueError(f"Note is too long to read. Limit is {MAX_NOTE_CHARS} characters.")
+    # Archives are storage, not prompt budgets. Ordinary tool writes retain their
+    # smaller limit; session/variant writers explicitly opt into archive capacity.
+    session_header = content.split("\n", 1)[0].rstrip("\r") in {
+        "STS Session Note", "STS Session Variant", "Robot 790 Session Note", "Robot 790 Continuity Session",
+    }
+    session_name = path.name.startswith("session-") or (
+        path.name == "session.txt" and path.parent.name.startswith("session-")
+    )
+    limit = MAX_SESSION_ARCHIVE_CHARS if session_name and session_header else MAX_NOTE_CHARS
+    if max_chars is not None:
+        limit = min(limit, max_chars)
+    if len(content) > limit:
+        raise ValueError(f"Note is too long to read. Limit is {limit} characters.")
     return NoteFile(filename=relative_note_name(path, instance_path), path=path, content=content)
 
 

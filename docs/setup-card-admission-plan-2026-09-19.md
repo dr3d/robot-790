@@ -76,6 +76,8 @@ behavioral classifiers, reduced initiative, or new rhetoric for Eric.
 - Direct pinning applies an eight-note replacement policy, with reservations
   for core/current-session notes. Continuity restoration bypasses that count
   and may restore more notes. Both routes need the same declared-card policy.
+  Update September 21: the ordinary-note count eviction has been removed;
+  adding a session preserves the other pins. Token admission remains in place.
 - Current admission diagnostics accurately expose partial/omitted B1 assembly;
   they do not prevent it or prove transmission to the inference provider.
 

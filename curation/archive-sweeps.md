@@ -4,6 +4,40 @@ This file records intentional moves from the active repo tree into the adjacent
 `robot-790-archive` folder. These are not deletions; they are index/search
 relief sweeps for bulky or high-count runtime artifacts.
 
+## 2026-09-21 Session And Diagnostic Cleanup
+
+- Archived 58 of 85 active sessions through the existing STS archive API.
+  Kept September 19-21 and two September 18 ancestors needed by recent threads:
+  27 sessions remain active. Today's 10:26 anchor and diagnostic continuations
+  remain available; no new note was pinned or edited.
+- Session transcripts, variants, title/context metadata and eye assets remain
+  in application archive packages under `notes/sessions/archived/`. Exact
+  SHA-256-verified copies also live in
+  `D:\_PROJECTS\robot-790-archive\20260921-session-cleanup`: 536 package files,
+  8,632,437 bytes. Shared assets needed by retained sessions remain in place.
+- Final verification: every package file matches in both locations; all 27
+  retained session hashes are unchanged, their parent/pinned references resolve,
+  and all 173 distinct retained eye assets match their receipts. No asset
+  warnings or pending archive transactions remain. Old archived texts retain
+  their original lineage names; restoring a cold thread requires its dependencies.
+- A Windows sharing conflict interrupted the maintenance log once, after the
+  corresponding application archive had completed. Verified resume recovered
+  that unlogged package and completed the sweep without overwriting originals.
+  The archive contains `plan.json`, `results.jsonl`, `verification.json`,
+  `final-integrity.json`, and a recovery README.
+- Moved 238 old unreferenced dated live snapshots (16,219,564 bytes) to
+  `../robot-790-archive/20260921-cold-live-snapshots/`. Kept September 19 onward,
+  recent modifications, rolling snapshots and referenced material; checked
+  2,194 reference files. All moved snapshots verify by SHA-256.
+- Archived 38 diagnostic files from seven older run bundles (9,993,570 bytes)
+  under `../robot-790-archive/20260921-cold-run-bundles/`. Five referenced files
+  remain shared locally, five Markdown paths have forwarding notes, and 28
+  evidence files moved out. Every archived file verifies by SHA-256.
+- No servers restarted, no prompts/model settings changed, and no tracked
+  source files or public media moved. No commit or push performed. Maintenance
+  scripts are in `logs/maintenance/archive-*-20260921.ps1`. As always, this
+  same-drive sidecar is preservation/organization, not an independent backup.
+
 ## 2026-09-20 Cold Run Bundles
 
 - Archived 29 completed September 14-17 run bundles under

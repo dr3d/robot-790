@@ -21,6 +21,7 @@ function fixture() {
     toolContinuationRounds: 0, toolContinuationOrigin: 'conversation',
     toolGenerationUncertain: false,
     pendingSessionMapMove: null, imageTaskReceipt: null, loadedNoteContextDirty: false,
+    liveNotes: { socket: null },
     idleInFlight: false, responseActive: false,
     enabledToolList: () => names.map(name => ({ type: 'function', name })),
     idleEnabledToolList: () => [{ name: 'search_web' }, { name: 'read_text_file' }],

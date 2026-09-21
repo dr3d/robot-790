@@ -113,6 +113,12 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 21 note-context repair: ordinary pinned notes are included whole in
+the connection budget instead of being silently cut at 4,500 characters. Live
+note reads/pins append revisions without rewriting the established conversation
+prefix; explicit live-read headroom checks replace silent truncation. Personality
+and idle scheduling are unchanged. See [Connection-Time Context Budget](docs/connection-context.md).
+
 September 20 evening checkpoint: Connect now measures startup context against
 the loaded LM Studio model, reserves configurable growth room, and can condense
 middle sessions into source-linked excerpts only when required. Opening and

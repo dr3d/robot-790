@@ -95,6 +95,14 @@ def parse_event(line: str) -> list[dict]:
             records.append(record)
         elif body.startswith("processing task,"):
             records.append({**context, "kind": "task_start"})
+        elif body.startswith("new prompt,") or body.startswith("context shift,"):
+            record = {**context, "kind": "context_shift" if body.startswith("context shift,") else "prompt_start"}
+            for name in ("n_ctx_slot", "n_keep", "n_left", "n_discard", "n_tokens"):
+                match = re.search(rf"\b(?:task\.)?{name}\s*=\s*(\d+)", body)
+                if match:
+                    record[name] = int(match[1])
+            if len(record) > len(context) + 1:
+                records.append(record)
         elif body.startswith("forcing full prompt re-processing due to lack of cache data"):
             records.append({**context, "kind": "cache_reprocess", "reason": "missing_cache_data"})
         elif body.strip() == "failed to load prompt from cache":

@@ -15,6 +15,9 @@ from typing import Any
 from urllib.parse import urlparse
 from uuid import uuid4
 
+from robot_790d.request_diagnostics import begin_request, finish_request
+from robot_790d.provider_output_capture import begin_output_capture
+
 _VOICE_SHAPE_PREFIX = "[voice-shape:"
 _LLM_WIRE_CAPTURE_LOCK = Lock()
 _LLM_WIRE_CAPTURE_SEQUENCE = 0
@@ -206,12 +209,18 @@ def apply_interruptible_chat_generation_patch() -> None:
         public_text_seen = False
         original_tool_mode = False
 
-        def admitted_events(response: Any, request_id: str) -> Iterator[Any]:
+        def admitted_events(response: Any, request_id: str, ticket: dict | None) -> Iterator[Any]:
             nonlocal public_text_seen
-            events = iterate(response)
+            capture = begin_output_capture(request_id, ticket=ticket,
+                                           stream=bool(getattr(self, "stream", False)),
+                                           extra_body=getattr(self, "_extra_body", None))
+            events = iterate(capture.wrap(response) if capture else response)
+            usage = None
+            outcome = "completed"
             try:
                 for event in events:
                     if isinstance(event, Usage) and not cancelled():
+                        usage = event
                         logger.info("B1 request usage: %s", json.dumps({
                             "request_id": request_id,
                             "turn_id": turn.turn_id,
@@ -227,7 +236,15 @@ def apply_interruptible_chat_generation_patch() -> None:
                     if isinstance(event, TextDelta) and event.text.strip():
                         public_text_seen = True
                     yield event
+            except BaseException as exc:
+                outcome = "closed" if isinstance(exc, GeneratorExit) else type(exc).__name__
+                raise
             finally:
+                if capture:
+                    capture.finish("cancelled" if cancelled() else outcome)
+                finish_request(ticket, outcome="cancelled" if cancelled() else outcome,
+                               input_tokens=getattr(usage, "input_tokens", None),
+                               output_tokens=getattr(usage, "output_tokens", None))
                 close = getattr(events, "close", None)
                 if callable(close):
                     close()
@@ -243,9 +260,21 @@ def apply_interruptible_chat_generation_patch() -> None:
                 # LM Studio omits schemas with choice=none, changing the history's prefix.
                 # Keep the rendered catalogue; admission above still forbids every tool.
                 wire_options["tool_choice"] = "auto"
+            ticket = begin_request(
+                request_id, family="B1", owner=str(id(original_chat)), model=str(getattr(self, "model_name", "")),
+                messages=api_input, options={**wire_options, "extra_body": getattr(self, "_extra_body", None)},
+            )
+
+            def send_request() -> Any:
+                try:
+                    return request(api_input, wire_options)
+                except Exception as exc:
+                    finish_request(ticket, outcome=type(exc).__name__)
+                    raise
+
             return CancellableProviderEvents(
-                lambda: request(api_input, wire_options),
-                lambda response: admitted_events(response, request_id), cancelled,
+                send_request,
+                lambda response: admitted_events(response, request_id, ticket), cancelled,
             )
 
         provisional_id = kwargs.get("transactional_user_message_id")
