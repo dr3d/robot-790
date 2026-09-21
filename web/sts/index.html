@@ -3003,6 +3003,7 @@
   <script src="network-camera.js"></script>
   <script src="idle-art.js"></script>
   <script src="audio-playback.js"></script>
+  <script src="connection-context.js"></script>
   <script>
     const serverUrl = document.querySelector("#serverUrl");
     const faceUrl = document.querySelector("#faceUrl");
@@ -3292,6 +3293,7 @@
     let imageToolProtectionEnabled = false;
     let conversationLines = [];
     let conversationLineMetadata = [];
+    let brain2AuditEntries = [];
     let conversationProsodyByIndex = {};
     let eventLogLines = [];
     let inputDraft = "";
@@ -3479,6 +3481,7 @@
     let latestBrainStatus = null;
     let llmRunOverview = null;
     let lastConversationInputTokens = null;
+    let lastConversationContextUsage = null;
     let contextLimitRefreshAt = 0;
     let gpuStatusPollTimer = null;
     const gpuHistoryLimit = 90;
@@ -6868,6 +6871,7 @@
       responseCreateLedgerCredits = 0;
       uiControlLog = [];
       brain2Log.textContent = "";
+      brain2AuditEntries = [];
       loadedNoteContextDirty = true;
       clearBrain2Timer();
       clearBrain2SurfaceTimer();
@@ -6915,6 +6919,7 @@
     }
 
     function clippedLoadedNotePromptContent(item, content) {
+      if (item?.connection_history === true) return content;
       return loadedNoteLooksLikeTranscript(item?.filename, item?.content)
         ? clippedTranscriptContextContent(content)
         : clippedLoadedNoteContent(content);
@@ -6989,8 +6994,8 @@
       return content;
     }
 
-    function formatLoadedNotesForInstructions() {
-      return formatLoadedNoteContextsForInstructions(loadedNoteContexts);
+    function formatLoadedNotesForInstructions(noteContexts = loadedNoteContexts) {
+      return formatLoadedNoteContextsForInstructions(noteContexts);
     }
 
     function loadedNoteAdmissionReport() {
@@ -6999,7 +7004,8 @@
       const cards = Robot790NoteBrains.admit(loadedNoteContexts, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards);
       return {
         basis: "Browser-assembled B1 note section, not proof of transmission, provider token usage or B2 admission.",
-        limit_characters: maxLoadedNoteChars,
+        limit_characters: loadedNoteContexts.some(item => item.connection_history === true) ? null : maxLoadedNoteChars,
+        connection_budget: typeof connectionContextReceipt === "undefined" ? null : connectionContextReceipt,
         routed_cards: { limit_characters: cards.limit, assembled_characters: cards.characters, count: cards.cards.length, units: cards.units },
         assembled_characters: text.length,
         partial_notes: notes.filter(item => item.status === "partial").length,
@@ -7062,14 +7068,17 @@
       if (!blocks.length) return cards?.text || "";
       // Reserve core memory without changing the operator's loaded-note order.
       const introLength = lines.join("\n").length + blocks.length + 1;
-      const noteBudget = Math.max(0, maxLoadedNoteChars - introLength);
+      const connectionBudgeted = contexts.some(item => item.connection_history === true);
+      const noteBudget = connectionBudgeted
+        ? blocks.reduce((sum, block) => sum + block.text.length, 0)
+        : Math.max(0, maxLoadedNoteChars - introLength);
       let coreRemaining = Math.min(noteBudget, blocks.filter((block) => block.core)
         .reduce((total, block) => total + block.text.length, 0));
       let remaining = noteBudget - coreRemaining;
       const clippingNotice = "\n[Loaded-note context clipped. Read the note again if exact detail is needed.]";
       for (const { header, text: block, core, receipt } of blocks) {
         const available = core ? coreRemaining : remaining;
-        if (available <= header.length + (core ? 0 : 200)) {
+        if (!connectionBudgeted && available <= header.length + (core ? 0 : 200)) {
           receipt.reasons.push("aggregate_budget");
           continue;
         }
@@ -7367,6 +7376,7 @@
           idle_level12_cooldown_s: Number(result.idle_level12_cooldown_s) || 12,
           idle_timing: result.idle_timing && typeof result.idle_timing === "object" ? result.idle_timing : {},
           image_continuation: result.image_continuation || {},
+          connection_context: result.connection_context || null,
           esp32_camera: result.esp32_camera || {},
           audio_interrupt: result.audio_interrupt && typeof result.audio_interrupt === "object" ? result.audio_interrupt : {},
           creature: result.creature && typeof result.creature === "object" ? result.creature : null,
@@ -7699,7 +7709,7 @@
       return true;
     }
 
-    function buildSessionInstructions() {
+    function buildSessionInstructions(noteContexts) {
       if (firstContactModeEnabled()) {
         return firstContactSessionInstructions();
       }
@@ -7716,7 +7726,7 @@
         runtimeContextProtocolInstructions(),
         performancePrivacy ? performancePrivacyInstructions() : "",
         performancePrivacy ? "" : formatMemoryForInstructions(),
-        performancePrivacy ? "" : formatLoadedNotesForInstructions(),
+        performancePrivacy ? "" : formatLoadedNotesForInstructions(noteContexts),
         formatEmbodimentForInstructions()
       ]
         .filter(Boolean)
@@ -9854,6 +9864,7 @@
     function logBrain2(kind, text = "") {
       const detail = String(text || "").trim();
       const line = detail ? `${kind}: ${detail}` : kind;
+      brain2AuditEntries.push({ at: new Date().toISOString(), kind, text: detail });
       if (brain2Log) log(brain2Log, line);
       log(events, `brain2 ${line}`);
       updateBrain2Status();
@@ -10392,6 +10403,7 @@
     }
 
     function recordingSnapshotPaneText(source) {
+      if (source === "companion_audit") return companionAuditText();
       if (source === "conversation") return conversationDisplayText().trimEnd() || "[empty]";
       if (source === "events") return eventLogLines.join("\n").trimEnd() || "[empty]";
       if (source === "brain2_mulling") {
@@ -10404,6 +10416,29 @@
         return eventText || "[empty]";
       }
       return "[empty]";
+    }
+
+    function companionAuditText() {
+      // Diagnostic export only: never add the monitor lane to conversational memory.
+      const entries = conversationLines.map((text, index) => ({
+        at: conversationLineMetadata[index]?.iso || "",
+        label: `Conversation / ${conversationLineMetadata[index]?.channel || "dialogue"}`,
+        text
+      }));
+      entries.push(...brain2AuditEntries.map(entry => ({
+        at: entry.at, label: `B2 / ${entry.kind}`, text: entry.text
+      })));
+      entries.sort((a, b) => a.at.localeCompare(b.at));
+      return [
+        "Companion audit: conversation + private B2 timeline",
+        "Times are UTC; transcript text retains its local clock. Equal timestamps retain source order.",
+        "Conversation entries are the current transcript, not proof that audio was heard.",
+        "B2 notes are private advice; mouth is a display dispatch; voice/voice test is speech queued.",
+        "Voice started/ended are browser callbacks, not evidence of audible room output.",
+        "This audit is not loaded into either brain's conversational memory.",
+        "",
+        ...entries.map(entry => `[${entry.at || "time unavailable"}] [${entry.label}] ${entry.text}`)
+      ].join("\n");
     }
 
     function interestingLines(text, pattern, limit = 40) {
@@ -10505,6 +10540,7 @@
         `Conversation: ${conversationLines.length} tracked lines, saved separately as a conversation snapshot.`,
         `Brain2: ${countPaneLines(brain2Log)} visible lines, saved separately as a Brain2 snapshot.`,
         `Events: ${eventLogLines.length} tracked lines, saved separately as an events snapshot.`,
+        "Companion audit: combined conversation and private B2 timeline, saved separately.",
         "Pane bodies are intentionally not duplicated in this stop report."
       ];
       return sections.join("\n");
@@ -10515,6 +10551,7 @@
         ["conversation", recordingSnapshotPaneText("conversation")],
         ["brain2_mulling", recordingSnapshotPaneText("brain2_mulling")],
         ["events", recordingSnapshotPaneText("events")],
+        ["companion_audit", recordingSnapshotPaneText("companion_audit")],
         ["recording_stop_report", recordingStopReportText({ recordingResult, finalResult, recordingName })]
       ];
       const saved = [];
@@ -10553,8 +10590,8 @@
     }
 
     async function autosaveLogPane(target, source) {
-      const text = source === "conversation" ? conversationDisplayText().trimEnd() : source === "brain2_mulling"
-        ? recordingSnapshotPaneText("brain2_mulling")
+      const text = source === "conversation" ? conversationDisplayText().trimEnd() : ["brain2_mulling", "companion_audit"].includes(source)
+        ? recordingSnapshotPaneText(source)
         : target.textContent.trimEnd();
       if (!text || lastAutosavedLogText.get(source) === text) return;
       const result = await recordLogSnapshot(source, text);
@@ -10566,13 +10603,15 @@
       autosaveLogPane(conversation, "conversation").catch((error) => log(events, `${reason} conversation error: ${error.message}`));
       autosaveLogPane(events, "events").catch((error) => log(events, `${reason} events error: ${error.message}`));
       autosaveLogPane(brain2Log, "brain2_mulling").catch((error) => log(events, `${reason} brain2_mulling error: ${error.message}`));
+      autosaveLogPane(null, "companion_audit").catch((error) => log(events, `${reason} companion_audit error: ${error.message}`));
     }
 
     async function recordThreePaneSnapshots(reason = "manual") {
       const snapshots = [
         ["conversation", recordingSnapshotPaneText("conversation")],
         ["events", recordingSnapshotPaneText("events")],
-        ["brain2_mulling", recordingSnapshotPaneText("brain2_mulling")]
+        ["brain2_mulling", recordingSnapshotPaneText("brain2_mulling")],
+        ["companion_audit", recordingSnapshotPaneText("companion_audit")]
       ];
       const saved = [];
       for (const [source, content] of snapshots) {
@@ -10612,8 +10651,8 @@
     }
 
     function beaconLogSnapshot(target, source) {
-      const text = source === "conversation" ? conversationDisplayText().trimEnd() : source === "brain2_mulling"
-        ? recordingSnapshotPaneText("brain2_mulling")
+      const text = source === "conversation" ? conversationDisplayText().trimEnd() : ["brain2_mulling", "companion_audit"].includes(source)
+        ? recordingSnapshotPaneText(source)
         : target.textContent.trimEnd();
       if (!text || lastAutosavedLogText.get(source) === text) return;
       const body = JSON.stringify({ source, content: text });
@@ -10624,6 +10663,7 @@
       beaconLogSnapshot(conversation, "conversation");
       beaconLogSnapshot(events, "events");
       beaconLogSnapshot(brain2Log, "brain2_mulling");
+      beaconLogSnapshot(null, "companion_audit");
     }
 
     function recordingUnloadWarningActive() {
@@ -11682,11 +11722,13 @@
         }
         brain2MonitorAudioActive = true;
         brain2MonitorAudioUntil = Date.now() + Math.max(1800, value.length * 70);
+        logBrain2("voice started", value);
       };
       utterance.onend = () => {
         if (voiceGeneration !== brain2VoiceGeneration) return;
         brain2MonitorAudioActive = false;
         brain2MonitorAudioUntil = Date.now() + 500;
+        logBrain2("voice ended", value);
       };
       utterance.onerror = () => {
         if (voiceGeneration !== brain2VoiceGeneration) return;
@@ -11863,6 +11905,7 @@
       }, { source: "idle-headline" });
       noteAloneActivity("idle_headline", headline.title, { source: "brain2" });
       logBrain2("headline selected", `${headline.title} <${headline.url}> / ${brain2HeadlineSeed.note} / ${brain2HeadlineSeed.question}`);
+      if (result.note_delivery) logBrain2("advice delivery", JSON.stringify(result.note_delivery));
       log(events, `idle headline seed ready: ${headline.title}`);
       updateSessionTools({ quiet: true });
       scheduleIdlePonder();
@@ -12050,6 +12093,9 @@
         if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) return;
         const mouthText = String(result.mouth_text || "").trim();
         const noteForEric = String(result.note_for_eric || "").trim();
+        if (result.note_delivery && (noteForEric || result.note_delivery.truncated)) {
+          logBrain2("advice delivery", JSON.stringify(result.note_delivery));
+        }
         const question = String(result.question || "").trim();
         const revisionCandidate = String(result.revision_candidate || "").trim();
         const shouldSurface = result.should_surface !== false;
@@ -12965,6 +13011,7 @@
       brain2HeadlinesInFlight = false;
       conversationLines = [];
       conversationLineMetadata = [];
+      brain2AuditEntries = [];
       conversationProsodyByIndex = {};
       clearInputDraft();
       if (clearEvents) {
@@ -15195,6 +15242,9 @@
           (knownLimit ? ` / ${limit.toLocaleString("en-US")} context limit.` : "; context limit unavailable.") +
           " Provider request size, not accumulated response totals, VRAM or cache reuse. Excludes isolated responses."
         : "Context usage appears after a conversation response.";
+      if (typeof connectionContextWarned !== "undefined" && connectionContextWarned) {
+        contextUsage.title += " Reserved growth room nearly used. Save and reconnect when convenient; history is not rewritten live.";
+      }
     }
 
     function refreshContextLimit(force = false) {
@@ -15212,8 +15262,22 @@
       const tokens = event.input_tokens;
       if (!Number.isFinite(tokens) || tokens <= 0) return;
       lastConversationInputTokens = tokens;
+      const connection = typeof connectionContextReceipt === "undefined" ? null : connectionContextReceipt;
+      const limit = connection?.context_window_tokens ?? latestBrainStatus?.context?.context_window_tokens;
+      lastConversationContextUsage = {
+        input_tokens: tokens,
+        context_window_tokens: Number.isSafeInteger(limit) && limit > 0 ? limit : null,
+        observed_at: new Date().toISOString(),
+        model: String(event.model || connection?.model || latestBrainStatus?.model?.lm_studio?.active_model?.identifier || "")
+      };
       renderContextUsage();
+      if (typeof observeConnectionBudget === "function") observeConnectionBudget(tokens);
       refreshContextLimit();
+    }
+
+    function contextUsageForSessionSave() {
+      return typeof lastConversationContextUsage === "undefined" || !lastConversationContextUsage
+        ? null : { ...lastConversationContextUsage };
     }
 
     function updateGpuStatus(payload) {
@@ -17046,13 +17110,15 @@
           body: String(body || ""),
           pinned_filenames: Array.isArray(pinnedFilenames) ? pinnedFilenames : [],
           parent_session_filename: String(parentSessionFilename || ""),
-          sensing_eye_filenames: Array.isArray(sensingEyeFilenames) ? sensingEyeFilenames : []
+          sensing_eye_filenames: Array.isArray(sensingEyeFilenames) ? sensingEyeFilenames : [],
+          context_at_save: contextUsageForSessionSave()
         })
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status !== "ok") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
+      if (result.context_at_save_warning) log(events, result.context_at_save_warning);
       return result;
     }
 
@@ -20379,6 +20445,73 @@
         .catch((error) => log(events, `preparation release: ${error.message}`));
     }
 
+    let connectionContextReceipt = null;
+    let connectionContextWarned = false;
+
+    async function prepareConnectionContext() {
+      connectionContextReceipt = null;
+      connectionContextWarned = false;
+      if (contextUsage) contextUsage.style.color = "";
+      if (runtimeConfig.connection_context?.enabled === false) return;
+      if (runtimeConfig.connection_context?.enabled !== true) {
+        throw new Error("Connection budget config unavailable; restart the STS page server and refresh.");
+      }
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        throw new Error("Context budgeting is only allowed before connection.");
+      }
+      const original = loadedNoteContexts;
+      const signature = () => JSON.stringify([loadedNoteContexts, buildSessionInstructions(), enabledToolList()]);
+      const initialSignature = signature();
+      const tools = enabledToolList();
+      const sections = buildRuntimeContextSections();
+      const runtime = ["[STS runtime]",
+        "Private controller update, not spoken dialogue. Changed sections supersede earlier versions; other sections remain unchanged.",
+        ...Object.entries(sections).map(([key, value]) => `${key}:\n${value}`), "[End STS runtime]"].join("\n\n");
+      const post = async (path, payload) => {
+        const response = await fetch(new URL(path, location.href), {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(path.endsWith("/excerpt") ? 180000 : 30000)
+        });
+        const result = await response.json();
+        if (!response.ok || result.status !== "ok") throw new Error(result.error || "Context preparation failed.");
+        return result;
+      };
+      setState("Checking context", "warn");
+      const plan = await Robot790ConnectionContext.prepare({
+        notes: original.map(note => ({ ...note, connection_history: /^sessions\/[^/]+\.txt$/i.test(note.filename)
+          && loadedNoteLooksLikeSessionNote(note.content) && note.brain_context?.version !== 1 })),
+        measure: notes => post("/api/context/measure", { instructions: buildSessionInstructions(notes), tools, runtime }),
+        compact: filename => post("/api/context/excerpt", { filename }),
+        progress: filename => { setState("Preparing history", "warn"); log(events, `Preparing connection excerpts: ${filename}`); }
+      });
+      if (loadedNoteContexts !== original || signature() !== initialSignature) {
+        throw new Error("Notes or controls changed during context preparation; retry Connect. Nothing installed.");
+      }
+      loadedNoteContexts = plan.notes;
+      loadedNoteContextDirty = true;
+      connectionContextReceipt = plan.receipt;
+      updateLoadedNoteControls();
+      const r = plan.receipt;
+      log(events, `Connect context: ${r.prompt_tokens.toLocaleString()} startup / ${r.growth_available_tokens.toLocaleString()} growth room / ${r.context_window_tokens.toLocaleString()} window; ${r.attempts.filter(item => item.accepted).length} sessions excerpted`);
+      if (r.history_selection?.last_condensed_index != null) {
+        const h = r.history_selection;
+        log(events, `Connection history: considered sessions ${h.start_index}-${h.last_condensed_index} (oldest is 0); ${h.recent_sessions_intact} newest sessions left intact`);
+      }
+      recordUiEvent("connection context admitted", currentContinuitySessionFilename || "empty", r);
+      setState("Connecting", "warn");
+    }
+
+    function observeConnectionBudget(tokens) {
+      if (typeof connectionContextReceipt === "undefined" || !connectionContextReceipt || connectionContextWarned) return;
+      const remaining = connectionContextReceipt.live_input_ceiling_tokens - tokens;
+      if (remaining > connectionContextReceipt.policy.warning_tokens) return;
+      connectionContextWarned = true;
+      const message = `Context growth room nearly used (${Math.max(0, remaining).toLocaleString()} tokens before reserved headroom). Save and reconnect when convenient. No history was rewritten.`;
+      log(events, message);
+      if (contextUsage) { contextUsage.title += ` ${message}`; contextUsage.style.color = "#efc169"; }
+      recordUiEvent("connection context warning", "save and reconnect", { input_tokens: tokens, remaining_tokens: remaining });
+    }
+
     async function connect({ coreNotesOnly = false, restoredPrevious = false, continuityAlreadyLoaded = false, openFace = true } = {}) {
       if (realtimeStopRequested && !continuitySaveHalted && conversationLines.length) {
         log(events, "connect blocked: stopped session is not saved; retry Disconnect or Save + Halt first");
@@ -20409,6 +20542,7 @@
         if (continuityParentForCurrentRun) {
           await fetchContinuitySessionMetadata(continuityParentForCurrentRun, "raw");
         }
+        await prepareConnectionContext();
         await ensurePlayback();
         socket = new WebSocket(serverUrl.value.trim());
         idleArt.reset();
@@ -21130,6 +21264,7 @@
 
     function beginLlmOverview() {
       lastConversationInputTokens = null;
+      lastConversationContextUsage = null;
       renderContextUsage();
       refreshContextLimit(true);
       llmRunOverview = null;

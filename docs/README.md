@@ -77,6 +77,8 @@ filename whose current artifact needs an explicit time.
 - `media/`: compressed public images, audio, and video.
 - `context-engineering-architecture.md`: session-note, pinned-note, latest, and
   runtime-truth architecture, including the standalone session-map chooser.
+- [connection-context.md](connection-context.md): startup token budgeting,
+  growth reserves and source-linked excerpts, without mid-session rewriting.
 - [brain2-setup-cards.md](brain2-setup-cards.md): shared and B1/B2 instructions
   in ordinary notes, with reserved B3/B4 sections and backwards compatibility.
 - [idle-art.md](idle-art.md): permission, queue, durable job identity and

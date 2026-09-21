@@ -13,6 +13,16 @@
     "use_summaries": false,
     "recent_swept_sessions": 2
   },
+  "connection_context": {
+    "enabled": true,
+    "history_start_index": 1,
+    "history_min_recent_sessions": 1,
+    "growth_tokens": 32768,
+    "b2_tokens": 6144,
+    "output_tokens": 2048,
+    "margin_tokens": 1024,
+    "warning_tokens": 4096
+  },
   "note_cards": {
     "max_cards": 8,
     "b1_characters": 32000

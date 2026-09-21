@@ -59,6 +59,32 @@ published sessions and the then-live run were retained. The subsequent
 snapshots; the latest PM/run, server logs, and referenced assets remain here. See
 `curation/archive-sweeps.md` for the inventory and policy used.
 
+The combined conversation/B2 audit is `logs/live/latest-companion_audit.txt`,
+with dated snapshots alongside the original separate logs. It is private lab
+evidence, not a continuity note or model input. Old, unreferenced dated snapshots
+join the same next-door cold-storage sweeps; rolling `latest-*`, recent runs,
+referenced evidence and runtime image/session assets stay put. Archiving is an
+explicit maintenance operation, not an automatic background deletion policy.
+
+`src/robot_790d/context_overflow_lab.py` and `context_wire_lab.py` are offline
+artifact consumers, not live context owners. Their source-bound memory drafts, model receipts and recall
+checks belong under private `logs/`, never directly in `notes/` or public docs.
+`context_compaction.py` contains the lab's pure, closed-tool-boundary folding of
+superseded controller snapshots. No live request or history owner invokes it.
+See [Context Overflow Rehearsal](context-overflow-rehearsal.md).
+
+`src/robot_790d/connection_context.py` and `web/sts/connection-context.js` own the
+pre-socket context budget and candidate preparation. `context_excerpts.py` shares
+source-ID selection/rendering with the offline labs. Cached source-bound excerpts
+belong in private `logs/connection-context/`, never back in original session files.
+See [Connection-Time Context Budget](connection-context.md). There is no live
+history rewriting or automatic rollover.
+
+Save-time CTX receipts live with session derivatives as
+`notes/sessions/variants/<session>.context.json`. They are source-hashed UI
+metadata, not automatically loaded memory, and archive with the associated
+session. Missing historical receipts remain unknown rather than estimated.
+
 ## Editorial And Publication Paths
 
 There are three different postmortem destinations. They are deliberately not

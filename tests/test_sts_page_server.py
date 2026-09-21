@@ -488,6 +488,32 @@ def test_brain2_advice_is_not_rewritten_by_english_behavior_filters(brain2_compl
     assert result["note_for_eric"] == advice
 
 
+@pytest.mark.parametrize("length", [280, 281, 999, 1000, 1001, 1600])
+@pytest.mark.parametrize("mode", ["mull", "headlines"])
+def test_brain2_private_advice_has_shared_1000_character_delivery_receipt(brain2_completion, length, mode):
+    advice = "x" * length
+    story = {"title": "A discovery", "url": "https://example.com/story", "source": "BBC",
+             "published_at": "2026-09-20T10:00:00Z", "retrieved_at": "2026-09-20T11:00:00Z"}
+    result = brain2_completion(json.dumps({
+        "mouth_text": "m" * 120, "note_for_eric": advice, "should_surface": False,
+        "headline_url": story["url"],
+    }), mode=mode, headlines=[story])
+    assert result["status"] == "ok"
+    assert result["note_for_eric"] == advice[:1000]
+    assert result["note_delivery"] == {
+        "original_chars": length, "delivered_chars": min(length, 1000),
+        "limit": 1000, "truncated": length > 1000,
+    }
+    assert result["mouth_text"] == ("" if mode == "headlines" else "m" * 96)
+
+
+def test_brain2_advice_receipt_counts_normalized_characters_not_bytes():
+    result = sts_page_server._brain2_advice_delivery("  note_for_eric: " + "\u597d " * 400)
+    assert result["note_for_eric"] == ("\u597d " * 400).strip()
+    assert result["note_delivery"]["original_chars"] == 799
+    assert result["note_delivery"]["truncated"] is False
+
+
 @pytest.mark.parametrize("change", [
     {"evidence_id": "invented"}, {"loop": "true"}, {"unsupported_claim": 1},
     {"next": "move_motors"}, {"next": []}, {"topic": ""},
@@ -977,6 +1003,14 @@ def test_record_log_snapshot_accepts_brain2_mulling_source(tmp_path) -> None:
 
     assert result["source"] == "brain2_mulling"
     assert (tmp_path / result["latest"]).name == "latest-brain2_mulling.txt"
+
+
+def test_record_log_snapshot_accepts_separate_companion_audit(tmp_path) -> None:
+    result = sts_page_server.record_log_snapshot("companion_audit", "B2 / note for Eric: private", repo_root=tmp_path)
+    assert result["source"] == "companion_audit"
+    assert (tmp_path / result["latest"]).name == "latest-companion_audit.txt"
+    assert "private" in (tmp_path / result["filename"]).read_text(encoding="utf-8")
+    assert not (tmp_path / "logs/live/latest-conversation.txt").exists()
 
 
 def test_record_log_snapshot_accepts_recording_stop_report_source(tmp_path) -> None:

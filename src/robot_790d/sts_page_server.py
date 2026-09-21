@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import base64
 import json
 import math
@@ -26,6 +27,7 @@ import httpx
 from robot_790d.archive_transaction import pending_archives
 from robot_790d.brain_status import get_brain_status, get_gpu_status
 from robot_790d.context_history import context_history_plan, history_config
+from robot_790d.connection_context import PREPARE_LOCK, budget_config, measure_connection, prepare_excerpt
 from robot_790d.continuity import (
     current_continuity_session,
     list_continuity_sessions,
@@ -165,6 +167,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlsplit(self.path)
+        if parsed.path in {"/api/context/measure", "/api/context/excerpt"}:
+            self._handle_connection_context(parsed.path)
+            return
         if parsed.path == "/api/notes/write":
             self._handle_note_write()
             return
@@ -446,6 +451,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 [str(filename) for filename in pinned],
                 parent_session_filename=str(payload.get("parent_session_filename") or ""),
                 sensing_eye_filenames=[str(filename) for filename in sensing_eye_filenames],
+                context_at_save=payload.get("context_at_save"),
             )
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})
@@ -465,6 +471,27 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         self._send_json(202, {"status": "ok", "preparation": result})
+
+    def _handle_connection_context(self, path: str) -> None:
+        acquired = False
+        try:
+            payload = self._read_json_body(max_bytes=2_000_000)
+            if path == "/api/context/measure":
+                result = measure_connection(payload, runtime_config()["connection_context"])
+            else:
+                acquired = PREPARE_LOCK.acquire(blocking=False)
+                if not acquired:
+                    raise ValueError("Another history preparation is running; retry Connect shortly.")
+                async def bounded_preparation() -> dict[str, Any]:
+                    return await asyncio.wait_for(prepare_excerpt(str(payload.get("filename") or "")), timeout=150)
+                result = asyncio.run(bounded_preparation())
+        except Exception as exc:
+            self._send_json(400, {"status": "error", "error": f"Connection context: {exc}"})
+            return
+        finally:
+            if acquired:
+                PREPARE_LOCK.release()
+        self._send_json(200, result)
 
     def _handle_context_history(self) -> None:
         try:
@@ -1064,6 +1091,7 @@ def runtime_config(repo_root: Path | None = None) -> dict[str, object]:
         "audio_interrupt": _runtime_audio_interrupt(payload.get("audio_interrupt")),
         "image_continuation": _runtime_image_continuation(payload.get("image_continuation")),
         "context_history": history_config(payload.get("context_history")),
+        "connection_context": budget_config(payload.get("connection_context")),
         "note_cards": _runtime_note_cards(payload.get("note_cards")),
         "esp32_camera": esp32_camera,
         "runtime_revision": "20260911-history-policy",
@@ -1694,6 +1722,7 @@ def _safe_log_source(source: str) -> str:
         "events",
         "session",
         "brain2_mulling",
+        "companion_audit",
         "recording_stop_report",
         "first_contact_report",
         "first_contact_direct_probe",
@@ -2153,8 +2182,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             }
         return {
             "status": "ok", "tool": "mull_second_brain", "mode": "headlines", "headline_url": url,
-            "note_for_eric": _clean_second_brain_text(parsed.get("note_for_eric"), 280)
-            if url and isinstance(parsed.get("note_for_eric"), str) else "",
+            **_brain2_advice_delivery(parsed.get("note_for_eric", "") if url else ""),
             "question": _clean_second_brain_text(parsed.get("question"), 140)
             if url and isinstance(parsed.get("question"), str) else "",
             "mouth_text": "", "revision_candidate": "", "should_surface": False,
@@ -2182,7 +2210,8 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         mouth_text = ""
     question = _clean_second_brain_text(parsed.get("question") or "", 140)
     revision_candidate = _clean_second_brain_text(parsed.get("revision_candidate") or "", 240)
-    note_for_eric = _clean_second_brain_text(parsed.get("note_for_eric") or "", 280)
+    advice_delivery = _brain2_advice_delivery(parsed.get("note_for_eric") or "")
+    note_for_eric = advice_delivery["note_for_eric"]
     reason = _clean_second_brain_text(parsed.get("reason") or "", 220)
     art_proposal = validate_proposal({"prompt": parsed.get("art_prompt"), "title": parsed.get("art_title")}) if idle_art else None
     if not any((mouth_text, question, revision_candidate, note_for_eric, body_beat, art_proposal)) and parsed["should_surface"]:
@@ -2203,7 +2232,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "mouth_text": mouth_text,
         "question": question,
         "revision_candidate": revision_candidate,
-        "note_for_eric": note_for_eric,
+        **advice_delivery,
         "body_beat": body_beat,
         "body_choice": body_choice,
         "steering": _validated_brain2_steering(parsed.get("steering"), evidence),
@@ -2212,6 +2241,23 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "reason": reason,
         "raw_text": raw_text[:1000],
         "prompt_debug": prompt_debug,
+    }
+
+
+MAX_BRAIN2_ADVICE_CHARS = 1000
+
+
+def _brain2_advice_delivery(value: str) -> dict[str, Any]:
+    normalized = _clean_second_brain_text(value, len(value))
+    delivered = normalized[:MAX_BRAIN2_ADVICE_CHARS].rstrip()
+    return {
+        "note_for_eric": delivered,
+        "note_delivery": {
+            "original_chars": len(normalized),
+            "delivered_chars": len(delivered),
+            "limit": MAX_BRAIN2_ADVICE_CHARS,
+            "truncated": len(normalized) > MAX_BRAIN2_ADVICE_CHARS,
+        },
     }
 
 

@@ -578,6 +578,14 @@ Open **Map** from Connect Select. The left pane is the session list, the middle
 is lineage, and the right is the selected note and available representations.
 Selecting a row or node previews it; that alone does not replace Eric's context.
 
+Session rows and lineage nodes show **CTX at save**, such as `CTX 73%`. This is
+the latest measured B1 request before the session was saved, using the window
+size recorded with that measurement. Hover for provenance; the selected pane
+shows exact input tokens, original window size and measurement time. It is not
+peak usage, combined B1/B2 occupancy, or the cost of resuming that branch.
+Older sessions without a receipt show `CTX --`; no percentage is invented from
+transcript length. New receipts do not require detailed diagnostic logging.
+
 The tree grows upward: older ancestors are toward the bottom and newer
 descendants above them. Use the **+ / -** junction controls to expand or
 collapse branches. Drag the two dividers to give the pane you are reading more

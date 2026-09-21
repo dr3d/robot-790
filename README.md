@@ -113,6 +113,18 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 20 evening checkpoint: Connect now measures startup context against
+the loaded LM Studio model, reserves configurable growth room, and can condense
+middle sessions into source-linked excerpts only when required. Opening and
+newest history are protected by default; nothing is rewritten mid-conversation.
+The refreshed 128K homecoming run admitted three prior sessions without
+condensation, and its save-time CTX receipt is available in the session map.
+Live condensation and overflow recovery remain unvalidated. B2 private advice
+now allows 1,000 characters with clipping receipts, and a separate combined
+conversation/B2 audit supports review. The checkpoint passes 941 Python and
+590 JavaScript tests. See [Connection-Time Context Budget](docs/connection-context.md)
+and [Engineering Status](docs/engineering-status.md) for scope and open issues.
+
 September 20 checkpoint: conversation and idle thinking share B1 history,
 with stable prompt/tool ordering to preserve prefix reuse. Auto history uses
 source-checked swept sessions; generated summaries remain inspectable but are

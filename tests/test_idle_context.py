@@ -113,6 +113,23 @@ def test_idle_media_is_appended_after_history_and_never_persists(runtime):
     assert runtime.handler._serialize(runtime.chat) == before
 
 
+def test_provider_context_errors_do_not_compact_or_halve_shared_history(runtime):
+    """An overflow receipt alone cannot establish successful memory compaction."""
+    before = runtime.handler._serialize(runtime.chat)
+    attempts = []
+
+    def fail_request(items, options):
+        attempts.append(items)
+        raise RuntimeError("Context size has been exceeded.")
+
+    runtime.handler._request = fail_request
+    for _ in range(3):
+        output = run(runtime, idle_response(conversation="auto"))
+        assert any("Context size" in (item.error or "") for item in output if isinstance(item, EndOfResponse))
+        assert runtime.handler._serialize(runtime.chat) == before
+    assert all(items[:-2] == before for items in attempts)
+
+
 def test_idle_without_extra_input_still_reads_all_history(runtime):
     before = runtime.handler._serialize(runtime.chat)
     run(runtime, idle_response(input=None))

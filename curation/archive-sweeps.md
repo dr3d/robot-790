@@ -4,6 +4,37 @@ This file records intentional moves from the active repo tree into the adjacent
 `robot-790-archive` folder. These are not deletions; they are index/search
 relief sweeps for bulky or high-count runtime artifacts.
 
+## 2026-09-20 Cold Run Bundles
+
+- Archived 29 completed September 14-17 run bundles under
+  `D:\_PROJECTS\robot-790-archive\20260920-cold-run-bundles`, preserving original
+  repository-relative paths: 244 files, 28,128,981 bytes (26.83 MiB).
+- Every archived copy was SHA-256 verified before source removal and again after
+  the sweep. Four directly referenced files remain locally as shared copies;
+  24 Markdown report paths now contain forwarding notes. The other 216 files
+  were removed locally only after verification. Nothing was discarded.
+- Checked 1,271 retained source, test, documentation, note and run text files
+  for direct artifact references. September 18-20 bundles, previous forwarding
+  notes, tracked files, session history, canonical images, original recordings,
+  live logs and running services were left alone.
+- Recovery: archive `README.md`, `manifest.json`, and `moves.jsonl`; the local
+  maintenance script is `logs/maintenance/archive-runs-20260920.ps1`. Verify hashes
+  before restoring specific paths; do not overwrite newer work. The same-drive
+  archive is organizational cold storage, not an independent backup.
+
+## 2026-09-20 Cold Live Snapshots
+
+- Moved 826 old, unreferenced live-log snapshots (32,695,348 bytes) into
+  `D:\_PROJECTS\robot-790-archive\20260920-cold-live-snapshots`.
+- Kept September 18 onward, recently modified files, all rolling `latest-*`
+  files, tracked files and snapshots referenced by retained material. Checked
+  1,452 text files across notes, source/tests, docs, curation and PM bundles.
+- Only dated text snapshots directly in `logs/live/` moved. No session notes,
+  images, recordings, PM bundles, server logs or running services changed.
+- All moves were SHA-256 verified. `plan.json`, `moves.jsonl`, `manifest.json`
+  and the archive README preserve paths and recovery information. This is
+  working-tree relief, not deletion or an independent backup.
+
 ## 2026-09-16 Cold Diagnostics
 
 - Archive: `D:\_PROJECTS\robot-790-archive\20260916-cold-diagnostics`

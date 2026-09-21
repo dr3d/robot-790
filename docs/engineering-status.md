@@ -6,6 +6,131 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Save-Time Context In Session Map
+
+September 20: new session saves carry the latest measured B1 input-token count,
+its original context-window size, model identifier when known, and observation
+time. The list and lineage nodes display `CTX n%`; selected details expose the
+original counts/time. Switching model windows later does not recalculate history.
+This is the last measured request, not a peak, B2 occupancy, or resume estimate.
+Older/missing/invalid receipts stay unknown, without transcript-length guesses.
+
+The optional source-hashed receipt lives beside session variants as
+`<session>.context.json`, not in the transcript or automatic memory load. It
+archives with its session. Receipt-write failure reports a warning without
+turning an authoritative transcript save into a failed Disconnect. No additional
+model request, prompting, context rewrite or detailed logging is required.
+
+Verification: 941 Python tests and 590 JavaScript tests pass. Headless Edge
+verified known/unknown values, original 65K versus 128K windows,
+selection details, and desktop/mobile layouts with no JavaScript errors or new
+text clipping. Tests cover persistence, archival, stale hashes, optional telemetry
+failure, reconnect reset and exclusion of isolated/aggregated usage. The existing
+continuity module's mypy errors remain; the changed measurement helpers add none.
+September 20 evening live acceptance: the refreshed 21:34-21:45 Mars homecoming
+run saved 80,849 / 131,072 tokens in the source-bound sidecar, and the live session
+list API returns that receipt (CTX 62% with the map's rounding). This verifies
+live capture/save/readback; the map rendering itself was previously checked in QA.
+
+### Connection-Time Context Budget
+
+September 20: Connect now checks a complete startup estimate with LM Studio's
+loaded-model tokenizer and native tool template. It reserves 32K tokens for new
+conversation plus explicit B2/output/margin allowances. When needed, it tries
+cached, source-linked excerpts of the middle sessions before opening the socket.
+Session indices run oldest-first: `N` defaults to 1, protecting the opening
+session. Condensation stops as soon as the budget fits, leaving the largest newest
+tail (`M`) intact, with at least one recent session protected by default. Both
+boundaries are explicit configuration. It does not install live folding,
+automatically reconnect, change idle
+pace, or rewrite source sessions, pins or personality instructions.
+
+An isolated browser check admitted the rich branch unchanged at the currently
+loaded 128K window, with about 62.4K growth room after headroom. Simulated smaller
+windows exercised actual excerpt preparation and rejection: 96K fits after
+excerpting session 1 only, leaving session 0 and the newest three intact. With
+both ends protected, 65K does not fit this branch with an 8K/16K/32K reserve. Empty
+Connect fits at 65K with the default reserve. No model settings or live session
+were changed for these checks. Live acceptance of condensation remains pending.
+
+Verification: 927 Python tests and 583 JavaScript tests pass. Isolated headless
+Edge loaded the page without JavaScript errors; checks exercised raw admission,
+middle-only excerpts, impossible budgets, unchanged-source failures, and cached
+preparation without a live websocket, TTS, microphone, camera or image generation.
+
+Activation and unchanged-history live admission are now verified. The page server
+restarted September 20 at 15:12, and the refreshed 21:34 connection admitted three
+prior sessions: 54,989 startup tokens, 66,867 growth room, 131,072 window, zero
+sessions excerpted. The first measured request was 55,583 tokens. Live middle-
+session condensation and overflow recovery remain unvalidated. An earlier run
+without admission/save receipts appears to have used an unrefreshed browser tab.
+
+See [Connection-Time Context Budget](connection-context.md) for settings,
+activation, source-preservation rules and measured limits. This replaces the
+previous immediate plan for automatic mid-session rollover; overflow recovery
+itself remains unfinished.
+
+### Offline Context Overflow Rehearsal
+
+September 20: `context_overflow_lab.py` prepares source-bound candidate memories
+from saved PM artifacts using the existing chunked summarizer. It preserves
+operator/System evidence, recent exchanges, and compact tool outcomes; it never
+installs a live replacement. Tests also reproduce B2's stale-request exposure
+when completion leaves its bounded transcript/receipt windows, and verify that
+a provider context error does not itself compact shared idle history.
+
+Live overflow management remains unfinished. The transcript-only rehearsal cannot
+establish full-request savings or explain a usage drop without request captures. See
+[Context Overflow Rehearsal](context-overflow-rehearsal.md) for scope and the
+remaining deployment gates. Raw trial outputs remain private under `logs/`.
+
+The follow-on `context_wire_lab.py` automates full-request comparison with
+verified image artifacts and source-linked recall checks. Its first candidate
+was rejected for insufficient shared-65K headroom. The initial bundled recall
+scores were also weak, but clearer individual probes subsequently recovered all
+12 baseline answers; those earlier scores did not establish memory loss.
+Answer accuracy and literal quote support are now reported separately.
+
+`context_compaction.py` can fold superseded controller runtime/alone-state
+snapshots at a closed tool boundary. It preserves dialogue, receipts, image
+records, other controller sections and the latest state. This is a pure offline
+primitive, not a per-request filter or installed rollover. The lab also protects
+older reply starts and marks excerpt gaps. Native tool schemas are included in
+size measurements; recall probes disable tools and do not validate live task
+execution. See the rehearsal report for measured candidates and deployment gates.
+
+### B2 Advice And Combined Audit
+
+September 20: private `note_for_eric` now allows 1,000 characters instead of
+280 on both ordinary and headline mulls. The compact one-sentence advice prompt,
+generation token budgets, 96-character mouth/monitor aside, and B1 admission
+rules are unchanged. Each returned note carries original/delivered character
+counts and an explicit truncation flag, recorded alongside B2 activity.
+
+`logs/live/latest-companion_audit.txt` adds a chronological view of the current
+conversation transcript and private B2 events. It uses full UTC timestamps to
+order across midnight and keeps the transcript's local clocks and speaker names.
+Existing conversation, B2 and event logs remain separate and unchanged in purpose.
+The audit is included in automatic, manual, recording-stop and disconnect
+snapshots, with best-effort unload saving. It requires no audio recording.
+
+Private advice, mouth dispatch, queued monitor speech, and browser speech
+start/end callbacks have distinct labels. None proves that sound reached the
+room. Transcript replacements appear in their final form, not as a token-stream
+replay. The combined audit never enters B1 or B2 memory; it cannot retroactively
+add missing playback receipts to old runs. Oversize advice still has a safety
+cap, now observable rather than silently assumed intact.
+
+Restart the page server and refresh STS while disconnected to activate both
+halves. No realtime/model restart or prompt change is required.
+
+Verification: 565 JavaScript tests and 885 Python tests pass (one existing
+Starlette/httpx deprecation warning). An isolated headless Edge check loaded
+the served page with no JavaScript errors and confirmed full-length advice in
+the audit, absent from the ordinary transcript. No model generation or live
+conversation was used. The page server was restarted; operator refresh and
+live acceptance remain pending.
+
 ### Audio Playback Owner Extracted
 
 September 20: `web/sts/audio-playback.js` now owns queued PCM, flush timers,

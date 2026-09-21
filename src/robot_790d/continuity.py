@@ -214,6 +214,7 @@ def list_continuity_sessions(
                 "created": metadata["created"],
                 "parent_session_filename": metadata["parent_session_filename"],
                 "characters": len(note.content),
+                "context_at_save": _continuity_context_at_save(instance_path, note),
                 "sensing_eye_asset_count": len(metadata["sensing_eye_assets"]),
                 "variants": _continuity_session_variant_records(instance_path, note),
                 "current": False,
@@ -303,6 +304,7 @@ def _continuity_session_selection(
         "sensing_eye_assets": [_sensing_eye_asset_receipt_payload(receipt) for receipt in sensing_eye_assets],
         "sensing_eye_asset_count": len(sensing_eye_assets),
         "created": metadata["created"],
+        "context_at_save": _continuity_context_at_save(instance_path, note),
     }
 
 
@@ -472,6 +474,7 @@ def save_continuity_session(
     created_label: str = "",
     filename_timestamp: str = "",
     sensing_eye_filenames: list[str] | tuple[str, ...] = (),
+    context_at_save: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     text = str(body or "").strip()
     if not text:
@@ -500,6 +503,18 @@ def save_continuity_session(
         sensing_eye_assets=sensing_eye_assets,
     )
     session = write_note_file(instance_path, session_filename, content)
+    context = _normalize_saved_context(context_at_save)
+    context_warning = ""
+    if context:
+        try:
+            write_note_file(instance_path, continuity_session_context_filename(session.filename), json.dumps({
+                "version": 1, "source_sha256": hashlib.sha256(session.content.encode("utf-8")).hexdigest(),
+                "context_at_save": context,
+            }, indent=2))
+        except OSError as exc:
+            # Telemetry must not make an already-saved conversation look unsaved.
+            context_warning = f"Session saved, but CTX receipt could not be written: {exc}"
+            context = None
     return {
         "status": "ok",
         "tool": "save_continuity_session",
@@ -510,6 +525,8 @@ def save_continuity_session(
         "sensing_eye_assets": [_sensing_eye_asset_receipt_payload(receipt) for receipt in sensing_eye_assets],
         "sensing_eye_asset_count": len(sensing_eye_assets),
         "characters": len(session.content),
+        "context_at_save": context,
+        **({"context_at_save_warning": context_warning} if context_warning else {}),
     }
 
 
@@ -644,6 +661,47 @@ def continuity_session_title_filename(session_filename: str, instance_path: str 
     )
 
 
+def continuity_session_context_filename(session_filename: str) -> str:
+    return (
+        _continuity_session_variant_filename_for_source(session_filename, "summary").removesuffix(".summary.txt")
+        + ".context.json"
+    )
+
+
+def _normalize_saved_context(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    tokens, window = value.get("input_tokens"), value.get("context_window_tokens")
+    if type(tokens) is not int or not 0 < tokens <= 2**53 - 1:
+        return None
+    if type(window) is not int or not 0 < window <= 2**53 - 1:
+        window = None
+    observed = value.get("observed_at")
+    try:
+        stamp = datetime.fromisoformat(observed) if isinstance(observed, str) else None
+        observed = stamp.isoformat() if stamp and stamp.tzinfo else None
+    except ValueError:
+        observed = None
+    return {
+        "input_tokens": tokens, "context_window_tokens": window, "observed_at": observed,
+        "model": value.get("model", "")[:512] if isinstance(value.get("model", ""), str) else "",
+        "basis": "Latest measured B1 request before saving; not peak usage or a resume estimate. Excludes B2.",
+    }
+
+
+def _continuity_context_at_save(instance_path: str | Path | None, source: Any) -> dict[str, Any] | None:
+    try:
+        filename = continuity_session_context_filename(source.filename)
+        metadata = json.loads(read_note_file(instance_path, filename).content)
+        if not isinstance(metadata, dict) or metadata.get("version") != 1:
+            return None
+        if metadata.get("source_sha256") != hashlib.sha256(source.content.encode("utf-8")).hexdigest():
+            return None
+        return _normalize_saved_context(metadata.get("context_at_save"))
+    except (OSError, ValueError):
+        return None
+
+
 def validate_continuity_session_title(title: Any) -> str:
     if not isinstance(title, str) or not title.strip() or len(title.strip()) > 100:
         raise ValueError("Session title must be 1-100 characters.")
@@ -715,6 +773,9 @@ def _existing_continuity_session_variant_notes(
     title = continuity_session_title_filename(source_filename, instance_path)
     if resolve_note_path(title, instance_path).exists():
         notes.append(read_note_file(instance_path, title))
+    context = continuity_session_context_filename(source_filename)
+    if resolve_note_path(context, instance_path).exists():
+        notes.append(read_note_file(instance_path, context))
     return notes
 
 

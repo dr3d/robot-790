@@ -244,6 +244,11 @@
       font-size: 12px;
       overflow-wrap: anywhere;
     }
+    .context-at-save {
+      display: block;
+      margin-top: 3px;
+      font-variant-numeric: tabular-nums;
+    }
     .tree {
       display: grid;
       gap: 8px;
@@ -810,6 +815,25 @@
       }).format(date);
     }
 
+    function sessionContextAtSave(item) {
+      const saved = item?.context_at_save;
+      const tokens = saved?.input_tokens;
+      const windowTokens = saved?.context_window_tokens;
+      if (!Number.isSafeInteger(tokens) || tokens <= 0) {
+        return { label: "CTX --", detail: "Not recorded", title: "No save-time CTX measurement recorded." };
+      }
+      const knownWindow = Number.isSafeInteger(windowTokens) && windowTokens > 0;
+      const label = knownWindow ? `CTX ${Math.round(tokens / windowTokens * 100)}%` : "CTX --";
+      const detail = `${tokens.toLocaleString()} input tokens` + (knownWindow
+        ? ` / ${windowTokens.toLocaleString()} window (${Math.round(tokens / windowTokens * 100)}%)`
+        : "; window not recorded");
+      const title = ["Latest measured B1 request before saving:", detail,
+        saved.observed_at ? `Measured ${formatSessionDate(saved.observed_at)}.` : "",
+        saved.model ? `Model: ${saved.model}.` : "",
+        "Not peak usage or a resume estimate. Excludes B2."].filter(Boolean).join(" ");
+      return { label, detail, title };
+    }
+
     function normalizeResumeForm(value) {
       const form = String(value || "auto").trim().toLowerCase().replace(/-/g, "_");
       if (form === "cleaned_raw") return "scrubbed";
@@ -957,7 +981,9 @@
         title.textContent = `${item.filename === currentFilename ? "* " : ""}${sessionTitle(item.filename, item.title)}`;
         const meta = document.createElement("span");
         meta.className = "session-meta";
-        meta.textContent = `${formatSessionDate(item.created, "undated")} / ${Number(item.characters || 0).toLocaleString()} chars`;
+        const context = sessionContextAtSave(item);
+        meta.textContent = `${formatSessionDate(item.created, "undated")} / ${Number(item.characters || 0).toLocaleString()} chars / ${context.label}`;
+        meta.title = context.title;
         button.append(title, meta);
         listEl.append(button);
       }
@@ -1065,7 +1091,12 @@
       const title = document.createElement("div");
       title.className = "session-title";
       title.textContent = sessionTitle(item.filename, item.title);
-      node.append(title);
+      const context = sessionContextAtSave(item);
+      const contextLabel = document.createElement("span");
+      contextLabel.className = "session-meta context-at-save";
+      contextLabel.textContent = context.label;
+      contextLabel.title = context.title;
+      node.append(title, contextLabel);
       row.append(node);
       return row;
     }
@@ -1169,6 +1200,8 @@
         ["Load file", resumeForm === "auto" ? "Automatic history" : sessionPathDisplay(loadFilename)],
         ["Parent", item.parent_session_filename ? sessionPathDisplay(item.parent_session_filename) : "none"],
         ["Created", formatSessionDate(item.created)],
+        ["CTX at save", sessionContextAtSave(item).detail],
+        ["CTX measured", formatSessionDate(item.context_at_save?.observed_at, "not recorded")],
         ["Eye captures", `${Number(item.sensing_eye_asset_count || 0).toLocaleString()} session-scoped`],
         ["Form size", resumeForm === "auto" ? "History plan" : `${Number(formRecord.characters || item.characters || 0).toLocaleString()} chars`],
         ["Review", resumeForm === "raw" ? "Original transcript" : (formRecord.review || "unspecified")],
