@@ -20,15 +20,21 @@ async function exitFixture() {
       return { ok: true, json: async () => ({ status: 'ok', pid: 999, preset: 'fixture-model' }) };
     },
   });
-  loadFunctions(c, ['restartRealtimeServer', 'haltRealtimeServer', 'unloadRealtimeServer']);
-  const fireStatusTimer = kind => {
+  c.Robot790BackendControlFeedback = require('../../web/sts/backend-control-feedback.js');
+  const initializer = page.match(/    const backendControlFeedback = Robot790BackendControlFeedback\.create\(\{[\s\S]*?\n    \}\);/);
+  if (!initializer) throw new Error('Missing backend-feedback initializer');
+  vm.runInContext(initializer[0], c);
+  loadFunctions(c, ['beginBackendControlFeedback', 'restartRealtimeServer', 'haltRealtimeServer', 'unloadRealtimeServer']);
+  const takeStatusTimer = kind => {
     const phrase = kind === 'restart' ? 'realtime restart launched' : 'realtime backend stopped';
-    const entry = [...f.timers].find(([, timer]) => String(timer.callback).includes(phrase));
+    const entry = [...f.timers].find(([, timer]) => String(timer.callback).includes(phrase)
+      || String(timer.callback).includes('complete(update)'));
     if (!entry) throw new Error(`Missing ${kind} completion timer`);
     f.timers.delete(entry[0]);
-    entry[1].callback();
+    return entry[1].callback;
   };
-  return { ...f, backendRequests, fireStatusTimer };
+  const fireStatusTimer = kind => takeStatusTimer(kind)();
+  return { ...f, backendRequests, takeStatusTimer, fireStatusTimer };
 }
 
 function pageExitFixture() {

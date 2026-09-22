@@ -214,6 +214,21 @@ async function main() {
       assert.equal(memoryToggleFits, true, `${name} memory-loading toggle fits`);
       await notes.screenshot({ path: path.join(artifacts, `pinned-notes-${name}.png`) });
     }
+    results.backendFeedback = await ui.evaluate(() => {
+      let staleUpdates = 0;
+      const restart = backendControlFeedback.begin({ kind: 'restart', isCurrent: () => true });
+      const haltAvailable = haltRuntimeButtons.every(button => !button.disabled);
+      const halt = backendControlFeedback.begin({ kind: 'halt', isCurrent: () => true });
+      restart.complete(() => { staleUpdates++; });
+      const lockedForHalt = restartServerButton.disabled && unloadServerButton.disabled
+        && haltRuntimeButtons.every(button => button.disabled);
+      halt.complete();
+      return { haltAvailable, lockedForHalt, staleUpdates,
+        released: !restartServerButton.disabled && !unloadServerButton.disabled
+          && haltRuntimeButtons.every(button => !button.disabled) };
+    });
+    assert.deepEqual(results.backendFeedback,
+      { haltAvailable: true, lockedForHalt: true, staleUpdates: 0, released: true });
     results.imagePreview = await require('./helpers/sts_image_preview_browser.cjs').checkImagePreview(ui, artifacts);
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);

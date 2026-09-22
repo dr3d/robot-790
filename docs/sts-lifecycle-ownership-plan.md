@@ -24,6 +24,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
 | Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Backend controls remain separate; unused explicit-reset controls are retired. |
 | Current-socket closure | `realtime-connection.js` owns the idempotent close promise and stopped state; `handleRealtimeClose` / `cleanupClosedRealtime` adapt page resources and recovery UI | Reconnect cannot race pending close cleanup. The stopped unsaved transcript must survive until Disconnect/save succeeds. Explicit backend controls and page exit are not a crash-save protocol. |
+| Backend-control feedback | `backend-control-feedback.js` owns latest feedback identity, status timer and button release; page adapters retain request/cleanup logic | Old replies/timers must not overwrite a newer connection or command. Feedback invalidation does not cancel an already submitted backend command. |
 | Stop, save, reconnect work | `saveAndDisconnectRealtime`, `saveEricContinuitySnapshot`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Snapshot preparation owns one bounded final-transcript wait and the empty/save decision; frozen retries do not wait again. Device cleanup and save orchestration remain page-owned. Final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
@@ -806,6 +807,23 @@ PM: `logs/runs/20260922-1909-genius-recall-and-save/postmortem.md`.
 
 ### Remaining Coverage
 
+- Backend-control feedback is extracted and isolated race tests pass (735 total
+  JavaScript tests). Eight assertions failed on the prior implementation. The
+  owner cancels superseded timers, rejects captured callbacks and late HTTP
+  completions, scopes connection-status changes, and keeps emergency Halt
+  available during Restart/Unload. Endpoint semantics and cleanup ordering are
+  unchanged. Evidence: `logs/maintenance/lifecycle-review/backend-feedback-*.log`.
+  Python full rerun passes 990 tests; an initial concurrent-append Windows
+  permission failure passed targeted recheck and remains recorded separately
+  in Engineering Status rather than attributed to this JavaScript extraction.
+  The 19:39-19:44 live smoke run preserved normal conversation, render/eye
+  handoff, B2 delivery and exact continuity save; Scott reports a good result.
+  No backend controls were exercised, so race coverage remains offline.
+  PM: `logs/runs/20260922-1944-glass-submarine-acceptance/postmortem.md`.
+- Backend command dispatch and awaited device cleanup still need separate
+  ownership work. In particular, suppressing an old status callback does not stop
+  its backend request or make late cleanup incapable of touching newer resources.
+  Do not declare those races resolved by the feedback extraction.
 - Save HTTP/disk failure recovery is now covered above; real browser/socket/
   device teardown, full selected-session transitions and live acceptance remain.
 - B2 advisory revision/freshness, private-to-public delivery and idle arbitration

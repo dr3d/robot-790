@@ -6,6 +6,65 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Backend-Control Feedback Ownership
+
+September 22: `04a8aa8` checkpoints the single transcript-wait repair and the
+19:04-19:09 normal-path acceptance notes, including the unexercised pending-STT
+caveat. The accepted bounded extraction is `backend-control-feedback.js`: one owner
+for Halt/Restart/Unload button release and delayed status callbacks.
+
+Previously, a late Restart/Unload reply or completion timer could relabel a newer
+connection as Disconnected/Unloaded, or release controls belonging to a newer
+backend action. Eight new regression cases reproduced those failures before
+repair. Each feedback operation now has its own identity; a newer backend action
+cancels the old timer, and captured callbacks/late failures cannot complete the
+new action. Connection-specific updates also check socket, generation, normal
+transition and intentional-cleanup identity. An expired connection's final
+backend operation still releases its own controls without changing the new
+connection's status. Halt remains available during Restart/Unload; Restart and
+Unload are disabled while Halt is pending.
+
+Scope is deliberately feedback only. Existing backend endpoints, payloads,
+cleanup ordering, recording/device waits and four/five-second status delays are
+unchanged. This does not cancel a backend request already sent, serialize all
+backend commands, or make the remaining cleanup races safe. Page exit remains
+best effort. No prompts, context, idle/B2 policy or speech behavior changed.
+
+All 735 JavaScript tests pass, including preserved endpoint/no-auto-save/no-auto-
+reconnect contracts, late HTTP success/failure, superseded timers, pending
+connection preparation and mic-control protection after a stale Halt receipt.
+Isolated Edge loads the actual module and verifies its button wiring, including
+emergency Halt availability, alongside the existing audio/thumbnail/network-loss
+suite. No live server-control endpoint, model or device was exercised. Evidence:
+`logs/maintenance/lifecycle-review/backend-feedback-*.log`.
+
+Python verification: the first full run had 989 passes and one `WinError 5`
+failure replacing a temporary note in the multiprocess concurrent-append test.
+Both threaded/process cases passed on immediate targeted recheck; the full rerun
+passed all 990 tests (the existing Starlette/httpx warning remains). The initial
+failure log is retained, not overwritten. No Python/storage code changed here;
+the intermittent note-replacement failure remains an observation to investigate
+if it recurs, not a resolved storage defect.
+
+Refresh while disconnected and use ordinary Connect/conversation/Disconnect for
+a page smoke check. There is no need to press unused server controls against a
+valuable session; deliberate race coverage is offline. The next separate step
+is Restart command/device cleanup ownership, not further dialogue tuning.
+Scott uses Restart to reboot STS, but does not use Halt or Unload. Further work
+on those two controls is parked until actual use exposes a need; retain their
+existing behavior and tests without expanding that workstream.
+
+September 22, 19:39-19:44: Scott reports a funny, good normal-path run. Twenty
+prior sessions loaded; multi-part replies, one render/preview/eye transfer and
+three unclipped B2 notes worked. Two B2 monitor asides have timing consistent
+with separation from B1 speech. The final note matches its journal, all 22 prior
+pin receipts are `ok`, and the eye hash matches. Disconnect saved and closed
+within the same displayed second; final context was 69.6%. No backend controls
+were used, so this is normal-path acceptance, not live race or unique build-
+activation proof. Startup latency and one factual-content wobble are recorded
+separately; no runtime repair follows. Evidence:
+`logs/runs/20260922-1944-glass-submarine-acceptance/postmortem.md`.
+
 ### One Final-Transcript Wait
 
 September 22: `cd3a281` checkpoints the accepted thumbnail repair, retired

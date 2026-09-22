@@ -2973,6 +2973,7 @@
   <script src="idle-art.js"></script>
   <script src="audio-playback.js"></script>
   <script src="realtime-connection.js"></script>
+  <script src="backend-control-feedback.js"></script>
   <script src="tool-continuation.js"></script>
   <script src="connection-context.js"></script>
   <script>
@@ -3181,6 +3182,15 @@
     const settingsPanel = document.querySelector("#settingsPanel");
 
     const realtimeConnection = Robot790RealtimeConnection.create();
+    const backendControlFeedback = Robot790BackendControlFeedback.create({
+      setTimer: (callback, ms) => setTimeout(callback, ms),
+      clearTimer: timer => clearTimeout(timer),
+      onPending: kind => {
+        restartServerButton.disabled = Boolean(kind);
+        unloadServerButton.disabled = Boolean(kind);
+        haltRuntimeButtons.forEach(button => { button.disabled = kind === "halt"; });
+      }
+    });
     let audioContext;
     let ericPlaybackGain;
     let micContext;
@@ -20500,11 +20510,20 @@
       ]);
     }
 
+    function beginBackendControlFeedback(kind, cleanupGeneration) {
+      const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
+      const transition = realtimeConnection.transition;
+      return backendControlFeedback.begin({ kind, isCurrent: () =>
+        socket === realtimeConnection.socket && generation === realtimeConnection.generation
+        && transition === realtimeConnection.transition
+        && cleanupGeneration === intentionalExitCleanupGeneration
+      });
+    }
+
     async function restartRealtimeServer() {
-      restartServerButton.disabled = true;
-      unloadServerButton.disabled = true;
       log(events, "realtime restart requested");
       const cleanupGeneration = beginIntentionalExitCleanup();
+      const feedback = beginBackendControlFeedback("restart", cleanupGeneration);
       try {
         if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
           const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime restart" }), { timeoutMs: 18000, prefix: "restart step" });
@@ -20518,9 +20537,11 @@
       if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) realtimeConnection.socket.close();
       clearAudioQueue();
       endIntentionalExitCleanupSoon(cleanupGeneration);
-      setState("Restarting realtime", "warn");
-      setConnectionButtonsDisabled(true);
-      disconnectButton.disabled = true;
+      feedback.update(() => {
+        setState("Restarting realtime", "warn");
+        setConnectionButtonsDisabled(true);
+        disconnectButton.disabled = true;
+      });
 
       try {
         const response = await fetch(new URL("/api/realtime/restart", location.href), {
@@ -20534,28 +20555,24 @@
           throw new Error(result.error || `${response.status} ${response.statusText}`);
         }
         log(events, `realtime restart started: ${result.preset || currentModelPreset()} pid ${result.pid || "unknown"}`);
-        setTimeout(() => {
-          restartServerButton.disabled = false;
-          unloadServerButton.disabled = false;
+        feedback.defer(() => {
           setConnectionButtonsDisabled(false);
           setState("Disconnected");
           log(events, "realtime restart launched; reconnect when ready");
         }, 5000);
       } catch (error) {
-        restartServerButton.disabled = false;
-        unloadServerButton.disabled = false;
-        setConnectionButtonsDisabled(false);
-        setState("Restart failed");
+        feedback.complete(() => {
+          setConnectionButtonsDisabled(false);
+          setState("Restart failed");
+        });
         log(events, `realtime restart error: ${error.message}`);
       }
     }
 
     async function haltRealtimeServer() {
-      haltRuntimeButtons.forEach((button) => {
-        button.disabled = true;
-      });
       log(events, "realtime halt requested");
       const cleanupGeneration = beginIntentionalExitCleanup();
+      const feedback = beginBackendControlFeedback("halt", cleanupGeneration);
       try {
         const closingSocket = realtimeConnection.socket && realtimeConnection.socket.readyState !== WebSocket.CLOSED ? realtimeConnection.socket : null;
         haltRealtimeActivity("realtime halt");
@@ -20579,31 +20596,30 @@
           throw new Error(result.error || response.statusText || "Realtime halt failed.");
         }
         log(events, `realtime halt started: pid ${result.pid || "unknown"}`);
-        setState("Disconnected");
-        setConnectionButtonsDisabled(false);
-        disconnectButton.disabled = true;
-        startMicButton.disabled = true;
-        stopMicButton.disabled = true;
-        resetMicButton.disabled = true;
-        updateMicMuteButton();
-        updateTypedInputButtons();
-        updateVisionButtons();
-        syncServerPanelToConnection();
+        feedback.complete(() => {
+          setState("Disconnected");
+          setConnectionButtonsDisabled(false);
+          disconnectButton.disabled = true;
+          startMicButton.disabled = true;
+          stopMicButton.disabled = true;
+          resetMicButton.disabled = true;
+          updateMicMuteButton();
+          updateTypedInputButtons();
+          updateVisionButtons();
+          syncServerPanelToConnection();
+        });
       } catch (error) {
         log(events, `realtime halt error: ${error.message}`);
       } finally {
         endIntentionalExitCleanupSoon(cleanupGeneration);
-        haltRuntimeButtons.forEach((button) => {
-          button.disabled = false;
-        });
+        feedback.complete();
       }
     }
 
     async function unloadRealtimeServer() {
-      restartServerButton.disabled = true;
-      unloadServerButton.disabled = true;
       log(events, "realtime unload requested");
       const cleanupGeneration = beginIntentionalExitCleanup();
+      const feedback = beginBackendControlFeedback("unload", cleanupGeneration);
       try {
         if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
           const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime unload" }), { timeoutMs: 18000, prefix: "unload step" });
@@ -20617,9 +20633,11 @@
       if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) realtimeConnection.socket.close();
       clearAudioQueue();
       endIntentionalExitCleanupSoon(cleanupGeneration);
-      setState("Unloading realtime", "warn");
-      setConnectionButtonsDisabled(true);
-      disconnectButton.disabled = true;
+      feedback.update(() => {
+        setState("Unloading realtime", "warn");
+        setConnectionButtonsDisabled(true);
+        disconnectButton.disabled = true;
+      });
 
       try {
         const response = await fetch(new URL("/api/realtime/unload", location.href), {
@@ -20633,18 +20651,16 @@
           throw new Error(result.error || `${response.status} ${response.statusText}`);
         }
         log(events, `realtime unload started: pid ${result.pid || "unknown"}`);
-        setTimeout(() => {
-          restartServerButton.disabled = false;
-          unloadServerButton.disabled = false;
+        feedback.defer(() => {
           setConnectionButtonsDisabled(false);
           setState("Unloaded");
           log(events, "realtime backend stopped; LM Studio unload requested");
         }, 4000);
       } catch (error) {
-        restartServerButton.disabled = false;
-        unloadServerButton.disabled = false;
-        setConnectionButtonsDisabled(false);
-        setState("Unload failed");
+        feedback.complete(() => {
+          setConnectionButtonsDisabled(false);
+          setState("Unload failed");
+        });
         log(events, `realtime unload error: ${error.message}`);
       }
     }

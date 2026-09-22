@@ -47,8 +47,11 @@ prompts and companion behavior. Resumed-thread trials preserve continuity and
 stop speech on Disconnect; isolated tests cover network loss and save recovery.
 Voice interruptions no longer hide a completed image thumbnail; Sensing Eye
 transfer remains Eric's separate action. Unused thread-reset controls are retired.
-The accepted checkpoint passes 712 JavaScript and 990 Python tests, plus isolated
-browser checks. Backend-control cleanup remains separate work ahead.
+The accepted feedback checkpoint passes 735 JavaScript and 990 Python tests on
+the full rerun, plus isolated browser checks. Backend-control status feedback
+now has its own owner so stale replies cannot overwrite newer operations.
+Restart cleanup is the next small scope; further Halt/Unload work is deferred
+until a practical need appears.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
 has the larger video collection. This site's media shelf is a curated selection,
