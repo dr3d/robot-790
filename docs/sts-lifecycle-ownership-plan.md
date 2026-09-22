@@ -21,8 +21,9 @@ current responsibilities, not a claim that they already form isolated modules.
 
 | Responsibility | Current entry points / state | Boundary risk |
 | --- | --- | --- |
-| Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. Transition coordination remains page-owned. |
-| Stop, save, reconnect | `quiesceRealtimeForSave`, `haltRealtimeActivity`, `disconnectRealtime`, `resetSessionContextForConnection`, `clearHotConversationState` | Cleanup is spread across functions; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
+| Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
+| Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Backend controls and explicit resets are still separate. |
+| Stop, save, reconnect work | `saveAndDisconnectRealtime`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Device cleanup and save orchestration remain page-owned; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
@@ -393,10 +394,62 @@ eye-inbox poll failure and a contained private-output warning are watch items,
 not demonstrated lifecycle regressions. Initial LLM latency remains separate.
 Evidence: `logs/runs/20260922-0926-connection-owner-acceptance/postmortem.md`.
 
-Next, extract the single in-flight transition separately; keep context assembly
-and save receipt semantics unchanged. Concurrent preparation, page-exit recovery
-and long unattended operation were not exercised by this pair. Do not claim the
-larger lifecycle problem solved here. No runtime repair followed this PM.
+This acceptance is checkpointed as `52a3dc9`. Concurrent preparation, page-exit
+recovery and long unattended operation were not exercised by the live pair.
+No runtime repair followed that PM; the subsequent transition work is below.
+
+### Single Normal Transition: September 22
+
+`realtime-connection.js` now owns one private operation token. Its
+`runTransition(kind, operation, parent)` executes immediately when available,
+retains ownership until the returned promise settles, and releases on either
+success or failure. Only an explicit current parent token permits composition;
+an expired token is rejected. Competing requests are not queued or automatically
+retried. Socket identity and operation ownership have different lifetimes.
+
+Connect/Empty, Previous, selected-session loading, Disconnect and session-map
+execution enter through this owner. A session-map move still drains speech
+before acquiring the token, allowing user speech/Disconnect to cancel a pending
+move as before. Once executing, the same token covers save, destination loading,
+arrival checking and mic restoration. Nested callers await their child work;
+children cannot release the parent. The separate `continuitySaveBusy` flag is
+gone. The existing backend-control button hold is distinct from operation
+ownership; it is not a second normal-transition algorithm.
+
+The page retains thin entry wrappers and UI rendering. Existing work moved to
+`openRealtimeConnection`, `preparePreviousConnection`,
+`prepareSelectedConnection`, `saveAndDisconnectRealtime` and
+`completeSessionMapMove`. Connection setup/transport was checked byte-for-byte
+against the accepted body, apart from the function name; the save body differs
+only by its name and removal of the replaced busy flag. There is no new prompt,
+context selection, timer, save payload, automatic image staging or idle policy.
+
+Before repair, three deterministic fixtures reproduced competing Connect/Empty
+preparations, Connect clearing the transcript during post-close snapshot saving,
+and Disconnect running against half-loaded connection context. All now pass.
+Fifteen new tests also cover six delayed setup stages, every normal entry point,
+Previous/selected preparation and retry, UI unlock attempted during cleanup,
+real save-then-selected-connect composition, expired tokens and exception release.
+The prior synchronous popup-opening assertions still pass.
+
+Verification: 656 JavaScript tests and 990 Python tests pass, including the real
+HTTP/temporary-disk transaction tests. The existing Starlette/httpx deprecation
+warning remains. Isolated Edge checks load the real page, hold an operation,
+attempt competing entries and a premature UI unlock, then verify release.
+Audio-clock/tool-drain and desktop/mobile checks still pass; no live model,
+microphone or paid generation was invoked. Reproduction and suite receipts are
+under `logs/maintenance/lifecycle-review/connection-transition-*`.
+
+Live acceptance is pending. Refresh while disconnected, resume the rich thread,
+briefly converse, Disconnect during speech, then Connect and check continuity.
+No server/model restart is required. There is no need to deliberately double-click
+or inject failed saves into real history; the race fixtures cover those cases.
+
+Next boundary is ordered step 5: unexpected closure, emergency backend controls,
+explicit Reset To Pinned/Clear Latest and page exit. They do not all pass through
+this owner yet. Do not claim cancellation of arbitrary pending backend work,
+browser-crash recovery or a new unload guarantee. Review/test those semantics
+separately before consolidating them.
 
 ## Acceptance And Gaps
 

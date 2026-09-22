@@ -11,13 +11,7 @@ function load(names, globals) {
   globals.toolFollowupTerminal ??= false;
   globals.lastUserTurnActivityAt ??= 0;
   const c = vm.createContext(globals);
-  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
-  for (const name of names) {
-    const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
-    const end = page.indexOf('\n    }\n', start);
-    assert.ok(start >= 0 && end > start, name);
-    vm.runInContext(page.slice(start, end + 6), c);
-  }
+  require('./helpers/sts_tool_harness.cjs').loadFunctions(c, names);
   return c;
 }
 function idleContext(overrides = {}) {
@@ -259,7 +253,7 @@ function stopContext(overrides = {}) {
     'handleEvent', 'disconnectRealtime', 'connect',
   ], {
     ws: socket, WebSocket: { OPEN: 1, CLOSED: 3 }, realtimeSessionGeneration: 1,
-    realtimeStopRequested: false, continuitySaveBusy: false, continuitySaveHalted: false,
+    realtimeStopRequested: false, continuitySaveHalted: false,
     conversationLines: ['KEEP THIS TRANSCRIPT'], brain2DeferredSurface: { mouthText: 'OLD' },
     disconnectButton: {}, startMicButton: {}, resetMicButton: {}, idlePonderNowButton: {},
     events: {}, log: (_, text) => calls.push(text), recordUiEvent: noop,
@@ -300,7 +294,7 @@ test('failed Disconnect stops immediately, ignores late work, keeps transcript, 
   await stopping;
   assert.equal(c.continuitySaveHalted, false);
   assert.equal(c.disconnectButton.disabled, false);
-  assert.equal(c.continuitySaveBusy, false);
+  assert.equal(c.realtimeConnection.transition, null);
   assert.equal(c.realtimeConnected(), false);
   assert.deepEqual(Array.from(c.conversationLines), ['KEEP THIS TRANSCRIPT', 'LAST WORDS']);
   assert.ok(!calls.some(text => text.startsWith('BAD') || text === 'response.create' || text === 'close'));

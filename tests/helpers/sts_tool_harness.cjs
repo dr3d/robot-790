@@ -44,12 +44,23 @@ function fixture() {
 
 function loadFunctions(context, names) {
   require('./sts_continuation_harness.cjs').installToolContinuation(context);
-  for (const name of names) {
+  const dependencies = {
+    connect: ['runConnectionTransition', 'openRealtimeConnection'],
+    connectPrevious: ['runConnectionTransition', 'preparePreviousConnection'],
+    connectSelectedContinuityFilename: ['runConnectionTransition', 'prepareSelectedConnection'],
+    disconnectRealtime: ['runConnectionTransition', 'saveAndDisconnectRealtime'],
+    performSessionMapMove: ['runConnectionTransition', 'completeSessionMapMove'],
+  };
+  function load(name) {
+    for (const dependency of dependencies[name] || []) {
+      if (typeof context[dependency] !== 'function') load(dependency);
+    }
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
     assert.ok(start >= 0 && end > start, name);
     vm.runInContext(page.slice(start, end + 6), context, { filename: `sts:${name}` });
   }
+  names.forEach(load);
 }
 
 module.exports = { fixture, loadFunctions, page };

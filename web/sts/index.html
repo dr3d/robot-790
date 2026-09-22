@@ -3788,7 +3788,6 @@
     let continuitySessionRefreshTimer = null;
     const contextCardOpenByName = new Map();
     let continuitySaveHalted = false;
-    let continuitySaveBusy = false;
     let continuitySaveTransaction = null;
     const ttsStylePresets = {
       neutral: "",
@@ -6191,7 +6190,7 @@
           || idleInFlight || reengageInFlight || gpuWatchInFlight || standingRoutineInFlight) {
         throw new Error("Session navigation requires an operator conversation turn, not autonomous activity.");
       }
-      if (pendingSessionMapMove || sessionMapMoveBusy || continuitySaveBusy) throw new Error("A session transition is already pending.");
+      if (pendingSessionMapMove || sessionMapMoveBusy || realtimeConnection.transition) throw new Error("A session transition is already pending.");
       const target = String(destination || "").trim().toLowerCase();
       if (!target) throw new Error("Name a session to enter.");
       const result = await fetchContinuitySessions();
@@ -6210,7 +6209,7 @@
           || requestEpoch !== sessionMapRequestEpoch) {
         throw new Error("Session move canceled after new activity; ask again if still wanted.");
       }
-      if (pendingSessionMapMove || sessionMapMoveBusy || continuitySaveBusy) throw new Error("A session transition is already pending.");
+      if (pendingSessionMapMove || sessionMapMoveBusy || realtimeConnection.transition) throw new Error("A session transition is already pending.");
       pendingSessionMapMove = {
         ...selected, socket, generation, userActivityAt,
         resumeForm: currentContinuityScrubMode(),
@@ -6240,36 +6239,40 @@
         while (stillRequested() && outputAudioActive() && Date.now() < deadline) await sleepMs(100);
         if (!stillRequested()) return;
         if (outputAudioActive()) throw new Error("Speech did not finish; session unchanged. Ask to enter it again.");
-        recordUiEvent("session map move requested", move.session_id, { title: move.title });
-        const stopped = await disconnectRealtime({ reloadSavedNote: false });
-        if (stopped?.status !== "ok") return;
-        if (realtimeConnection.socket !== move.socket || realtimeConnection.generation !== move.generation || !realtimeConnection.stopped) return;
-        await connectSelectedContinuityFilename(move.session_id, "Enter Session", move.resumeForm);
-        const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
-        if (socket === move.socket) throw new Error("Destination did not connect. The conversation you left is saved.");
-        const connectDeadline = Date.now() + 15000;
-        while (socket === realtimeConnection.socket && generation === realtimeConnection.generation && !realtimeConnection.stopped
-            && socket.readyState === WebSocket.CONNECTING && Date.now() < connectDeadline) await sleepMs(100);
-        if (!activeRealtimeSession(socket, generation)) throw new Error("Destination connection unavailable. The conversation you left is saved.");
-        if (continuityParentForCurrentRun !== move.session_id) throw new Error("Destination history was not restored; arrival is unverified.");
-        const receipt = sessionMapArrivalReceipt(move);
-        setSelectedContinuitySessionFilename(move.session_id);
-        log(events, `session map arrived: ${move.title} / ${move.session_id}`);
-        log(events, `session map arrival inventory: ${JSON.stringify(receipt)}`);
-        recordUiEvent("session map arrived", move.session_id, receipt);
-        addConversation(`System: Entered ${move.title}: ${receipt.historical_sessions} historical sessions, ${receipt.other_notes} other note${receipt.other_notes === 1 ? "" : "s"} (${receipt.total_notes} notes total).`, { touchActivity: false });
-        send({ type: "conversation.item.create", item: { type: "message", role: "assistant",
-          content: [{ type: "output_text", text: `[STS runtime]\nPrivate controller update, not spoken dialogue.\nsession_arrival:\n${JSON.stringify(receipt)}\nThe previous live conversation was saved. This connection resumes the destination's retained context; the current live conversation is separate from the historical-session count.\n[End STS runtime]` }] }
-        }, { socket, generation });
-        if (move.resumeMic) {
-          micMutedForNarration = move.muted;
-          await startMic({ reason: "session map arrival" });
-        }
+        await runConnectionTransition("session map move", transition => completeSessionMapMove(move, transition));
       } catch (error) {
         log(events, `session map move failed: ${error.message}`);
       } finally {
         if (pendingSessionMapMove === move) pendingSessionMapMove = null;
         sessionMapMoveBusy = false;
+      }
+    }
+
+    async function completeSessionMapMove(move, transition) {
+      recordUiEvent("session map move requested", move.session_id, { title: move.title });
+      const stopped = await disconnectRealtime({ reloadSavedNote: false, transition });
+      if (stopped?.status !== "ok") return;
+      if (realtimeConnection.socket !== move.socket || realtimeConnection.generation !== move.generation || !realtimeConnection.stopped) return;
+      await connectSelectedContinuityFilename(move.session_id, "Enter Session", move.resumeForm, transition);
+      const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
+      if (socket === move.socket) throw new Error("Destination did not connect. The conversation you left is saved.");
+      const connectDeadline = Date.now() + 15000;
+      while (socket === realtimeConnection.socket && generation === realtimeConnection.generation && !realtimeConnection.stopped
+          && socket.readyState === WebSocket.CONNECTING && Date.now() < connectDeadline) await sleepMs(100);
+      if (!activeRealtimeSession(socket, generation)) throw new Error("Destination connection unavailable. The conversation you left is saved.");
+      if (continuityParentForCurrentRun !== move.session_id) throw new Error("Destination history was not restored; arrival is unverified.");
+      const receipt = sessionMapArrivalReceipt(move);
+      setSelectedContinuitySessionFilename(move.session_id);
+      log(events, `session map arrived: ${move.title} / ${move.session_id}`);
+      log(events, `session map arrival inventory: ${JSON.stringify(receipt)}`);
+      recordUiEvent("session map arrived", move.session_id, receipt);
+      addConversation(`System: Entered ${move.title}: ${receipt.historical_sessions} historical sessions, ${receipt.other_notes} other note${receipt.other_notes === 1 ? "" : "s"} (${receipt.total_notes} notes total).`, { touchActivity: false });
+      send({ type: "conversation.item.create", item: { type: "message", role: "assistant",
+        content: [{ type: "output_text", text: `[STS runtime]\nPrivate controller update, not spoken dialogue.\nsession_arrival:\n${JSON.stringify(receipt)}\nThe previous live conversation was saved. This connection resumes the destination's retained context; the current live conversation is separate from the historical-session count.\n[End STS runtime]` }] }
+      }, { socket, generation });
+      if (move.resumeMic) {
+        micMutedForNarration = move.muted;
+        await startMic({ reason: "session map arrival" });
       }
     }
 
@@ -6362,7 +6365,7 @@
         && typeof WebSocket !== "undefined"
         && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)
       );
-      const locked = connectionButtonsLocked || socketBusy;
+      const locked = connectionButtonsLocked || socketBusy || Boolean(realtimeConnection.transition);
       if (archiveContinuitySessionButton) archiveContinuitySessionButton.disabled = locked || !hasSelection || continuitySessions.length <= 1;
       if (connectSelectedContinuitySessionButton) connectSelectedContinuitySessionButton.disabled = locked || !hasSelection;
     }
@@ -20161,9 +20164,24 @@
     function setConnectionButtonsDisabled(disabled) {
       connectionButtonsLocked = Boolean(disabled);
       [connectButton, previousConnectButton, emptyConnectButton].forEach((button) => {
-        if (button) button.disabled = disabled;
+        if (button) button.disabled = connectionButtonsLocked || Boolean(realtimeConnection.transition);
       });
       updateContinuitySessionActionButtons();
+    }
+
+    async function runConnectionTransition(kind, operation, parent = null) {
+      try {
+        return await realtimeConnection.runTransition(kind, token => {
+          setConnectionButtonsDisabled(true);
+          return operation(token);
+        }, parent);
+      } finally {
+        if (!realtimeConnection.transition) {
+          const socket = realtimeConnection.socket;
+          setConnectionButtonsDisabled(Boolean(socket
+            && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)));
+        }
+      }
     }
 
     async function rewindContinuitySessionToPrevious() {
@@ -20262,6 +20280,11 @@
     }
 
     async function connectPrevious() {
+      if (realtimeConnection.transition) return;
+      return runConnectionTransition("previous", transition => preparePreviousConnection(transition));
+    }
+
+    async function preparePreviousConnection(transition) {
       if (realtimeConnection.socket && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)) return;
       openBrowserFaceWindow({ onlyIfActive: true });
       setState("Restoring previous", "warn");
@@ -20277,7 +20300,7 @@
         });
         log(events, `Connect Previous kept branch note: ${rewind.archived_session_filename}`);
         log(events, `Connect Previous restored session: ${rewind.restored_session_filename}`);
-        await connect({ restoredPrevious: true, continuityAlreadyLoaded: true, openFace: false });
+        await connect({ restoredPrevious: true, continuityAlreadyLoaded: true, openFace: false, transition });
       } catch (error) {
         setState(error?.code === "continuity_load_canceled" ? "Load canceled" : "Previous unavailable");
         setConnectionButtonsDisabled(false);
@@ -20288,12 +20311,17 @@
     async function connectSelectedContinuityFilename(
       filename,
       source = "Connect Selected",
-      resumeForm = currentContinuityScrubMode()
+      resumeForm = currentContinuityScrubMode(),
+      transition = null
     ) {
       if (realtimeConnection.socket && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)) {
         throw new Error("Disconnect before connecting a selected session.");
       }
-      if (connectionButtonsLocked) throw new Error("A connection is already being prepared.");
+      if (connectionButtonsLocked && !transition) throw new Error("A connection is already being prepared.");
+      return runConnectionTransition("selected", token => prepareSelectedConnection(filename, source, resumeForm, token), transition);
+    }
+
+    async function prepareSelectedConnection(filename, source, resumeForm, transition) {
       openBrowserFaceWindow({ onlyIfActive: true });
       setConnectionButtonsDisabled(true);
       let selected, selectedForm;
@@ -20322,7 +20350,7 @@
         requested_resume_form_label: continuityScrubModeLabel(selectedForm)
       });
       log(events, `${source}: ${selected.session_filename || "selected session"} / note flavor ${continuityScrubModeLabel(selectedForm)}`);
-      await connect({ continuityAlreadyLoaded: true, openFace: false });
+      await connect({ continuityAlreadyLoaded: true, openFace: false, transition });
       return selected;
     }
 
@@ -20448,7 +20476,12 @@
       recordUiEvent("connection context warning", "save and reconnect", { input_tokens: tokens, remaining_tokens: remaining });
     }
 
-    async function connect({ coreNotesOnly = false, restoredPrevious = false, continuityAlreadyLoaded = false, openFace = true } = {}) {
+    async function connect({ transition = null, ...options } = {}) {
+      if (realtimeConnection.transition && !transition) return;
+      return runConnectionTransition("connect", () => openRealtimeConnection(options), transition);
+    }
+
+    async function openRealtimeConnection({ coreNotesOnly = false, restoredPrevious = false, continuityAlreadyLoaded = false, openFace = true } = {}) {
       if (realtimeConnection.stopped && !continuitySaveHalted && conversationLines.length) {
         log(events, "connect blocked: stopped session is not saved; retry Disconnect first");
         return;
@@ -21255,9 +21288,12 @@
       });
       connect({ coreNotesOnly: true });
     });
-    async function disconnectRealtime({ reloadSavedNote = true } = {}) {
-      if (continuitySaveBusy) return;
-      continuitySaveBusy = true;
+    async function disconnectRealtime({ transition = null, ...options } = {}) {
+      if (realtimeConnection.transition && !transition) return;
+      return runConnectionTransition("disconnect", () => saveAndDisconnectRealtime(options), transition);
+    }
+
+    async function saveAndDisconnectRealtime({ reloadSavedNote = true } = {}) {
       recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
       const cleanupGeneration = beginIntentionalExitCleanup();
@@ -21315,7 +21351,6 @@
         return { status: "error", error: error.message };
       } finally {
         saveAttemptActive = false;
-        continuitySaveBusy = false;
         endIntentionalExitCleanupSoon(cleanupGeneration);
       }
     }

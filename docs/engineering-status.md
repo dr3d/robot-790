@@ -6,6 +6,35 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Connection Transition Owner
+
+September 22: accepted identity-owner checkpoint and live notes are preserved
+as `52a3dc9`. The next step adds a single in-flight operation to
+`realtime-connection.js`. Connect, Empty, Previous, selected-session loads,
+session-map moves and Disconnect now share that authority. Intentional nested
+save/connect steps carry the same operation token; competing actions are ignored
+or rejected, not queued for later. The old independent save-busy flag is removed.
+
+Three offline reproductions established the need: two preparations could start
+before either created a socket; Connect could begin while Disconnect still saved
+its pane snapshots; and Disconnect could run against half-loaded context.
+These paths now pass, including failure/retry and selected/Previous composition.
+Start controls remain unavailable through Disconnect cleanup even after the
+socket-close callback runs. No new controls, delays or runtime tracing were added.
+
+Verification: 656 JavaScript tests, 990 Python tests and isolated Edge checks pass
+(one existing Starlette/httpx deprecation warning). The real browser verifies
+control locking and release without connecting to Eric. Connection preparation
+and transport bodies match the prior checkpoint; save orchestration differs only
+by removal of the replaced busy flag. Prompts, context assembly, idle policy,
+audio/tool scheduling and save receipts are unchanged.
+
+Live acceptance is pending: refresh while disconnected, Connect to the same
+thread, exchange a few words, Disconnect during a reply, then Connect and check
+continuity. No server/model restart is needed. Emergency backend controls,
+Reset To Pinned/Clear Latest, unexpected closure and page exit remain separate
+lifecycle work; this does not claim a universal transition controller.
+
 ### Connection Identity Owner
 
 September 22: after the accepted save/resume checkpoint `d0dbebe`,
@@ -16,10 +45,10 @@ The existing generation boundaries, stop behavior and final-transcription
 exception are preserved. Prompts, idle policy, context assembly and the
 transactional save sequence have not changed.
 
-This is the first part of connection extraction, not a completed lifecycle
-controller. Connection preparation, transition coordination, save orchestration,
-device cleanup and unexpected closure remain page-owned. Single-flight
-transition ownership is the next separate step after live acceptance.
+This was the first part of connection extraction, not a completed lifecycle
+controller. The subsequent transition step is recorded above; context
+preparation, save orchestration, device cleanup and unexpected closure still
+have page-owned responsibilities.
 
 Verification: 641 JavaScript tests, 990 Python tests and isolated Edge checks
 pass (one existing Starlette/httpx deprecation warning). Tests compare the old

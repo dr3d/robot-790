@@ -99,7 +99,7 @@ test('camera control is available while off; Disconnect stops it before a failin
   assert.match(source('enabledToolList'), /visionCameraActive\(\) \? sensingEyeTools : \[\]/);
   const c = setup(); await c.setLiveCamera({ enabled: true }); const media = c.visionCameraStream;
   Object.assign(c, {
-    continuitySaveBusy: false, continuitySaveHalted: false, disconnectButton: {},
+    continuitySaveHalted: false, disconnectButton: {},
     realtimeSessionGeneration: 1,
     realtimeConnected: () => true, beginIntentionalExitCleanup() {}, quiesceRealtimeForSave() {},
     ws: null, WebSocket: { CLOSED: 3 }, micStream: null, conversationLines: ['keep'],
@@ -111,7 +111,7 @@ test('camera control is available while off; Disconnect stops it before a failin
     setState() {}, endIntentionalExitCleanupSoon() {}
   });
   require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
-  vm.runInContext(source('disconnectRealtime'), c);
+  require('./helpers/sts_tool_harness.cjs').loadFunctions(c, ['disconnectRealtime']);
   assert.equal((await c.disconnectRealtime()).status, 'error');
   assert.equal(c.visionCameraStream, null); assert.equal(c.conversationLines[0], 'keep');
 });

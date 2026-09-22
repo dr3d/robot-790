@@ -194,7 +194,7 @@ for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFile
   test(`${name}: popup opens before any asynchronous connection work`, () => {
     let opened = 0;
     const context = loadFunctions([name], {
-      ws: null, continuitySaveBusy: false, connectionButtonsLocked: false, currentContinuityScrubMode: () => 'full',
+      ws: null, connectionButtonsLocked: false, currentContinuityScrubMode: () => 'full',
       realtimeConnected: () => false, saveFaceControllerPreference: () => {},
       openBrowserFaceWindow: options => {
         assert.equal(options.onlyIfActive, true);
@@ -1336,6 +1336,10 @@ function loadFunctions(names, globals, source = page) {
   globals.sessionMapRequestEpoch ??= 0;
   globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
+  if (source === page) {
+    require('./helpers/sts_tool_harness.cjs').loadFunctions(context, names);
+    return context;
+  }
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
   for (const name of names) {
     const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));

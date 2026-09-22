@@ -22,7 +22,7 @@ function saveFixture() {
     URL, crypto: webcrypto, location: { href: 'http://fixture.invalid/' },
     WebSocket: { OPEN: 1, CONNECTING: 0, CLOSED: 3 }, ws: socket,
     realtimeSessionGeneration: 1, realtimeStopRequested: false,
-    continuitySaveBusy: false, continuitySaveHalted: false,
+    continuitySaveHalted: false,
     continuitySaveTransaction: null,
     intentionalExitCleanupInProgress: false,
     intentionalExitCleanupGeneration: 0,

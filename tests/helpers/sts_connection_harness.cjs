@@ -1,6 +1,7 @@
 const { create } = require('../../web/sts/realtime-connection.js');
 
 function installRealtimeConnection(context) {
+  context.setConnectionButtonsDisabled ??= () => {};
   if (context.realtimeConnection) return context.realtimeConnection;
   const owner = context.realtimeConnection = create();
   // Legacy fixture names seed/assert the real owner, never a second state copy.

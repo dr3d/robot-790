@@ -24,7 +24,7 @@ function fixture() {
     toolFollowupTerminal: false,
     Date: Clock, ws: { readyState: 1 }, WebSocket: { OPEN: 1, CONNECTING: 0, CLOSED: 3 },
     realtimeSessionGeneration: 1, realtimeStopRequested: false,
-    pendingSessionMapMove: null, sessionMapMoveBusy: false, sessionMapRequestEpoch: 0, continuitySaveBusy: false,
+    pendingSessionMapMove: null, sessionMapMoveBusy: false, sessionMapRequestEpoch: 0,
     lastAcceptedUserTranscriptAt: 1, lastUserTurnActivityAt: 100,
     idleInFlight: false, reengageInFlight: false, gpuWatchInFlight: false, standingRoutineInFlight: false,
     continuityParentForCurrentRun: 'sessions/b.txt', micStream: {}, micMutedForNarration: true,
@@ -61,9 +61,7 @@ function fixture() {
     startMic: async () => { calls.push(['mic', c.micMutedForNarration]); c.micStream = {}; },
   });
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
-  for (const name of ['activeRealtimeSession', 'sessionMapEntries', 'listSessionMap', 'requestEnterSession', 'sessionMapArrivalReceipt', 'performSessionMapMove']) {
-    vm.runInContext(source(name), c);
-  }
+  require('./helpers/sts_tool_harness.cjs').loadFunctions(c, ['activeRealtimeSession', 'sessionMapEntries', 'listSessionMap', 'requestEnterSession', 'sessionMapArrivalReceipt', 'performSessionMapMove']);
   return { c, sessions, calls, logs };
 }
 
@@ -143,8 +141,13 @@ test('handoff drains speech, saves first, connects selected history, and restore
   const labels = calls.map(call => call[0]);
   assert.ok(labels.indexOf('drained') < labels.indexOf('save-disconnect'));
   assert.ok(labels.indexOf('save-disconnect') < labels.indexOf('connect'));
-  assert.deepEqual(calls.find(call => call[0] === 'connect'), ['connect', 'sessions/a.txt', 'Enter Session', 'auto']);
-  assert.equal(calls.find(call => call[0] === 'save-disconnect')[1].reloadSavedNote, false);
+  const connectCall = calls.find(call => call[0] === 'connect');
+  const saveOptions = calls.find(call => call[0] === 'save-disconnect')[1];
+  assert.deepEqual(connectCall.slice(0, 4), ['connect', 'sessions/a.txt', 'Enter Session', 'auto']);
+  assert.equal(saveOptions.reloadSavedNote, false);
+  assert.equal(connectCall[4], saveOptions.transition);
+  assert.equal(saveOptions.transition.kind, 'session map move');
+  assert.equal(c.realtimeConnection.transition, null);
   assert.deepEqual(calls.at(-1), ['mic', true]);
   assert.equal(c.pendingSessionMapMove, null);
   assert.equal(c.sessionMapMoveBusy, false);
@@ -249,6 +252,6 @@ test('runtime wiring keeps navigation out of idle and retains normal connect eye
   assert.match(source('executeTool'), /requestEnterSession\(args\)/);
   assert.match(source('haltRealtimeActivity'), /pendingSessionMapMove = null/);
   assert.match(source('handleEvent'), /event.response.status !== "completed"/);
-  assert.match(source('connectSelectedContinuityFilename'), /loadFreshContinuityContext/);
+  assert.match(source('prepareSelectedConnection'), /loadFreshContinuityContext/);
   assert.match(source('resetSessionContextForConnection'), /clearSensingEyeState/);
 });

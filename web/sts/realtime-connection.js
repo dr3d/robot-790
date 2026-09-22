@@ -6,8 +6,26 @@
   "use strict";
 
   function create() {
+    let transition = null;
     const owner = {
       socket: undefined, generation: 0, stopped: false,
+      get transition() { return transition; },
+
+      async runTransition(kind, operation, parent = null) {
+        // Session jumps share their parent's token; unrelated actions never queue.
+        if (parent) {
+          if (parent !== transition) throw new Error("The connection operation has expired.");
+          return operation(parent);
+        }
+        if (transition) throw new Error("A connection change is already in progress.");
+        const token = Object.freeze({ kind });
+        transition = token;
+        try {
+          return await operation(token);
+        } finally {
+          if (transition === token) transition = null;
+        }
+      },
 
       invalidate() { owner.generation++; },
       adopt(socket) {

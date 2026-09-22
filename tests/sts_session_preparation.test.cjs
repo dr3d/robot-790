@@ -7,13 +7,7 @@ const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf
 
 function load(names, globals) {
   const context = vm.createContext(globals);
-  require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(context);
-  for (const name of names) {
-    const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
-    const end = page.indexOf('\n    }\n', start);
-    assert.notEqual(start, -1);
-    vm.runInContext(page.slice(start, end + 6), context);
-  }
+  require('./helpers/sts_tool_harness.cjs').loadFunctions(context, names);
   return context;
 }
 

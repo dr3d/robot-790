@@ -149,14 +149,34 @@ async function main() {
     results.connectionPage = await ui.evaluate(() => ({
       factory: typeof Robot790RealtimeConnection.create,
       generation: realtimeConnection.generation, stopped: realtimeConnection.stopped,
+      transition: realtimeConnection.transition, legacySaveBusy: typeof continuitySaveBusy,
       hasSocket: Boolean(realtimeConnection.socket), active: activeRealtimeSession(),
       legacySocket: typeof ws, legacyGeneration: typeof realtimeSessionGeneration,
       legacyStopped: typeof realtimeStopRequested,
     }));
     assert.deepEqual(results.connectionPage, {
       factory: 'function', generation: 0, stopped: false, hasSocket: false, active: false,
+      transition: null, legacySaveBusy: 'undefined',
       legacySocket: 'undefined', legacyGeneration: 'undefined', legacyStopped: 'undefined',
     });
+    results.transitionControls = await ui.evaluate(async () => {
+      let release;
+      const gate = new Promise(resolve => { release = resolve; });
+      const pending = runConnectionTransition('isolated UI check', () => gate);
+      setConnectionButtonsDisabled(false);
+      const controls = [connectButton, previousConnectButton, emptyConnectButton];
+      const lockedDuringWork = controls.every(button => button.disabled);
+      await connect();
+      await connectPrevious();
+      await disconnectRealtime();
+      const stillOwned = realtimeConnection.transition?.kind === 'isolated UI check';
+      release();
+      await pending;
+      return { lockedDuringWork, stillOwned, released: realtimeConnection.transition === null,
+        availableAfterWork: controls.every(button => !button.disabled), hasSocket: Boolean(realtimeConnection.socket) };
+    });
+    assert.deepEqual(results.transitionControls, { lockedDuringWork: true, stillOwned: true,
+      released: true, availableAfterWork: true, hasSocket: false });
     assert.equal(await ui.locator('#saveAndHaltEric').count(), 0);
     results.serverManagement = await ui.locator('#serverManagementExpando button').allTextContents();
     assert.deepEqual(results.serverManagement, ['Halt', 'Restart', 'Unload']);

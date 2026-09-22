@@ -84,7 +84,7 @@ test('tool wired separately from browser camera and disconnect stops both',()=>{
   assert.match(source('executeTool'),/capture_esp32_camera.*captureEsp32Camera/);
   assert.match(source('executeTool'),/set_esp32_camera.*setEsp32Camera/);
   assert.match(source('handleFunctionCall'),/capture_esp32_camera.*includes\(event.name\)/);
-  assert.match(source('disconnectRealtime'),/stopEsp32Camera\(\)/);
+  assert.match(source('saveAndDisconnectRealtime'),/stopEsp32Camera\(\)/);
   assert.ok(html.indexOf('id="esp32CameraExpando"')>html.indexOf('id="browserCameraExpando"'));
 });
 

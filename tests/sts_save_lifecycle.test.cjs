@@ -41,7 +41,7 @@ test('Disconnect composes the real save request and closes only after its receip
   const stopping = f.c.disconnectRealtime();
   await settle();
   assert.equal(f.c.realtimeStopRequested, true);
-  assert.equal(f.c.continuitySaveBusy, true);
+  assert.equal(f.c.realtimeConnection.transition?.kind, 'disconnect');
   assert.equal(f.c.continuitySaveHalted, false);
   assert.equal(f.socket.readyState, 1);
   assert.deepEqual(Array.from(f.c.eyeAssets), ['existing-image.jpg']);
@@ -56,7 +56,7 @@ test('Disconnect composes the real save request and closes only after its receip
     save_request_id: f.c.continuitySaveTransaction.request.requestId,
   }]);
   assert.equal(f.c.continuitySaveHalted, true);
-  assert.equal(f.c.continuitySaveBusy, false);
+  assert.equal(f.c.realtimeConnection.transition, null);
   assert.equal(f.socket.readyState, 3);
   assert.equal(f.c.continuityParentForCurrentRun, result.session_filename);
   assert.ok(f.calls.indexOf('reload: sessions/saved-1.txt') < f.calls.indexOf('socket close'));
@@ -324,7 +324,7 @@ test('Connect after Disconnect prepares a clean connection with saved history', 
   assert.equal(f.c.ws, sockets[0]);
   assert.equal(f.c.realtimeStopRequested, false);
   assert.equal(f.c.continuitySaveHalted, false);
-  assert.equal(f.c.continuitySaveBusy, false);
+  assert.equal(f.c.realtimeConnection.transition, null);
   assert.deepEqual(Array.from(f.c.conversationLines), []);
   assert.equal(f.c.continuityParentForCurrentRun, 'sessions/saved-1.txt');
   assert.deepEqual(Array.from(f.c.loadedNoteContexts, note => note.filename),
@@ -341,7 +341,7 @@ test('Connect keeps successful-save state through failed preparation and permits
   await f.c.connect();
   assert.equal(sockets.length, 0);
   assert.equal(f.c.continuitySaveHalted, true);
-  assert.equal(f.c.continuitySaveBusy, false);
+  assert.equal(f.c.realtimeConnection.transition, null);
   assert.ok(f.calls.includes('release preparation lease'));
   f.c.prepareConnectionContext = prepare;
   await f.c.connect();
