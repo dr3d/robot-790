@@ -6,6 +6,32 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Socket-Close Audio Stop
+
+September 22: the first repair following `fdde834` is implemented. The current
+WebSocket's close handler now uses existing `stopPlaybackNow` instead of only
+clearing queued bytes. That stops scheduled sources, invalidates pending audio
+setup and releases the speech-mouth cue. The existing stale-socket guard remains
+before cleanup. This is one production-line change; no prompts, idle timing,
+context/save behavior, model settings or runtime instrumentation changed.
+
+Three regressions failed before the repair and pass afterward (running clock,
+suspended clock, and pending setup). Additional checks preserve fresh-session
+audio against old close events, repeat-stop safety and error-without-close
+behavior. All 674 JavaScript and 990 Python tests pass (one existing Starlette/
+httpx deprecation warning). The isolated Edge check uses the actual
+page close callback and real Web Audio: two scheduled sources stop, analyser
+signal disappears, delayed setup creates no source, and fresh audio survives
+stale close events. Transport/preparation are simulated; no model, mic or device
+action is used. Existing audio-drain and desktop/mobile smoke checks also pass.
+
+Unexpected-close unsaved-state recovery and late mic-cleanup ownership remain
+unfixed and still reproduce offline; they are the next separate repair. This
+does not claim a full unexpected-disconnect controller. Activate with a refresh
+while disconnected, then ordinary Connect -> exchange -> Disconnect during
+speech -> Connect. Do not kill a server during valuable unsaved conversation
+to test it. No server/model restart is needed; live acceptance remains pending.
+
 ### Unexpected-Close Preparation
 
 September 22: `2887027` checkpoints the accepted normal transition owner and its

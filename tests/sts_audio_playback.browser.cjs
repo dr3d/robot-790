@@ -197,6 +197,7 @@ async function main() {
       assert.equal(buttonsFit, true, `${name} server controls fit`);
       await panel.screenshot({ path: path.join(artifacts, `server-management-${name}.png`) });
     }
+    results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     assert.deepEqual(pageErrors, []);
     await context.close();
     fs.writeFileSync(path.join(artifacts, 'results.json'), JSON.stringify(results, null, 2) + '\n');

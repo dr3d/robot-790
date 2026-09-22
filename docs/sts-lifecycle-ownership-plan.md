@@ -539,6 +539,42 @@ normal Connect -> brief exchange -> Disconnect during speech -> Connect, to
 ensure its established behavior stays intact. Induce unexpected loss only in
 an isolated test, never by killing the backend during valuable unsaved dialogue.
 
+#### First Repair: Socket-Close Audio
+
+Implemented September 22 after preparation checkpoint `fdde834`. The close
+callback replaces `clearAudioQueue()` with existing `stopPlaybackNow()`, after
+the current-socket guard and existing scheduler/assistant-finish cleanup. The
+audio owner already invalidates pending setup and stops scheduled sources;
+no second cancellation algorithm, owner flag or timing adjustment is added.
+The same call safely repeats after normal Disconnect has already stopped audio.
+It also releases the mouth cue. Persistence, cleanup ownership, context and
+conversation policy remain unchanged.
+
+Six new regressions bring the socket-close suite to 18 and the full JavaScript
+suite to 674 passing tests. All 990 Python tests also pass, with the existing
+Starlette/httpx deprecation warning. Before repair, the running/suspended scheduled-audio
+and pending-setup cases failed. Stale socket closure, repeated stop, fresh audio
+after reconnect and error-without-close are covered without changing semantics.
+
+The existing isolated Edge smoke now includes the actual page close callback
+with real Web Audio. It verifies nonzero signal before closure and silence
+afterward, both scheduled sources stopped, no source created by delayed setup,
+and fresh audio unaffected by old sockets closing. Connection preparation,
+transport and external effects are simulated; network writes/live sockets are
+blocked, and no real mic/model/device is used. This is browser audio acceptance,
+not a complete real-server unexpected-loss test. Existing audio-clock, tool-drain
+and responsive-page checks pass as well.
+
+Evidence: `logs/maintenance/lifecycle-review/close-audio-before.log`,
+`close-audio-suite.log`, `close-audio-pytest.log`, `close-audio-browser.log`, and
+`close-audio-reproduction.json`. The diagnostic now expects the two audio defects
+to be absent; the unsaved-transcript and late-mic-cleanup reproductions still
+hold and remain next. The original baseline reproduction JSON is preserved.
+Activation/live check: disconnected refresh, then normal Connect -> exchange ->
+Disconnect during speech -> Connect. No server/model restart. Do not combine the
+next ownership repair or explicit-discard/backend/page-exit semantics into this
+audio repair. Live operator acceptance is pending.
+
 ### Live Acceptance Progress: September 21
 
 The 21:17-21:23 resumed-thread run exercised microphone interruption and

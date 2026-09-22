@@ -20621,7 +20621,7 @@
         if (gpuWatchRoutine) stopGpuWatch({ reason: "realtime disconnected" });
         if (standingRoutine) stopStandingRoutine({ reason: "realtime disconnected" });
         clearUserTurnPending();
-        clearAudioQueue();
+        stopPlaybackNow();
         setState("Disconnected");
         setConnectionButtonsDisabled(false);
         disconnectButton.disabled = true;

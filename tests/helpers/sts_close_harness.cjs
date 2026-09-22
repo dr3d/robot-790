@@ -32,6 +32,7 @@ async function closeFixture() {
     c[name] = () => calls.push(name);
   }
   c.clearAudioQueue = () => calls.push('clear audio queue');
+  c.stopPlaybackNow = () => calls.push('stop playback');
   loadFunctions(c, ['setConnectionButtonsDisabled']);
   await c.connect();
   const socket = sockets[0];
@@ -58,12 +59,13 @@ function installClosePlayback(f) {
   const { c } = f, sources = [];
   Object.assign(c, {
     recordingDestination: null, ensureEricPlaybackGain: () => null,
-    stopSpeechMouthCue() {}, checkAssistantUtteranceFinished() {},
+    stopSpeechMouthCue() { f.calls.push('stop speech mouth'); }, checkAssistantUtteranceFinished() {},
     audioContext: {
       currentTime: 10, state: 'running', destination: {},
       createBuffer: (_, n, rate) => ({ duration: n / rate, copyToChannel() {} }),
       createBufferSource() {
-        const source = { connect() {}, start(at) { this.startAt = at; }, stop() { this.stopped = true; } };
+        const source = { stops: 0, connect() {}, start(at) { this.startAt = at; },
+          stop() { this.stops++; this.stopped = true; } };
         sources.push(source);
         return source;
       },

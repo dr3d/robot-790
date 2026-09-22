@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { closeFixture, installClosingMic } = require('./helpers/sts_close_harness.cjs');
+const { closeFixture, installClosingMic, installClosePlayback } = require('./helpers/sts_close_harness.cjs');
 const { deferred, settle } = require('./helpers/sts_save_harness.cjs');
 
 test('current socket closure keeps accepted words, eye assets and parent without inventing a save', async () => {
@@ -33,7 +33,7 @@ test('current close disables live controls and clears idle, B2 and image-protect
   for (const call of ['browser camera stop', 'network camera stop', 'release preparation lease',
     'clearBrain2Timer', 'clearBrain2SurfaceTimer', 'cancelBrain2MonitorSpeech',
     'clearAssistantFinishTimer', 'clearMicFreshnessTimer', 'clearUserTurnPending',
-    'GPU watch stop', 'standing routine stop', 'mic stop', 'clear audio queue']) assert(calls.includes(call), call);
+    'GPU watch stop', 'standing routine stop', 'mic stop', 'stop playback']) assert(calls.includes(call), call);
   assert.equal(c.realtimeConnected(), false);
 });
 
@@ -133,4 +133,76 @@ test('real mic teardown stops old tracks before awaiting AudioContext closure', 
   } finally { gate.resolve(); await settle(); }
   assert.equal(f.c.micStream, null);
   assert.equal(f.c.micContext, null);
+});
+
+for (const state of ['running', 'suspended']) {
+  test(`socket loss stops scheduled audio with a ${state} audio clock`, async () => {
+    const f = await closeFixture(), a = installClosePlayback(f);
+    try {
+      await a.playback.play(a.pcm(30));
+      await a.playback.play(a.pcm(15));
+      a.playback.enqueue(a.pcm(0.05));
+      f.c.audioContext.state = state;
+      assert.equal(a.playback.isActive(), true);
+      f.socket.close();
+      assert.equal(a.playback.isActive(), false);
+      assert(a.sources.every(source => source.stops === 1));
+      assert(f.calls.includes('stop speech mouth'));
+      assert.equal(f.requests.length, 0, 'audio cleanup does not invent a continuity save');
+    } finally { a.playback.stop(); }
+  });
+}
+
+test('socket loss invalidates pending audio setup without blocking fresh audio after reconnect', async () => {
+  const f = await closeFixture(), a = installClosePlayback(f), gate = deferred();
+  f.c.ensurePlayback = () => gate.promise;
+  const pending = a.playback.play(a.pcm(3));
+  try {
+    f.socket.close();
+    assert.equal(a.playback.isActive(), false);
+    gate.resolve();
+    await pending;
+    assert.equal(a.sources.length, 0, 'old setup cannot start speech after close');
+    f.c.realtimeConnection.adopt({ readyState: 1 });
+    f.c.ensurePlayback = async () => {};
+    await a.playback.play(a.pcm(1));
+    assert.equal(a.sources.length, 1);
+    assert.equal(a.playback.isActive(), true);
+    assert.equal(a.sources[0].startAt, f.c.audioContext.currentTime + 0.03);
+  } finally { gate.resolve(); await pending; a.playback.stop(); }
+});
+
+test('old socket close cannot silence audio belonging to the new connection', async () => {
+  const f = await closeFixture(), a = installClosePlayback(f);
+  f.c.realtimeConnection.adopt({ readyState: 1 });
+  try {
+    await a.playback.play(a.pcm(3));
+    f.socket.listeners.close();
+    assert.equal(a.playback.isActive(), true);
+    assert.equal(a.sources[0].stops, 0);
+    assert(!f.calls.includes('stop speech mouth'));
+  } finally { a.playback.stop(); }
+});
+
+test('close after normal playback stop is harmless and retains the accepted transcript', async () => {
+  const f = await closeFixture(), a = installClosePlayback(f);
+  await a.playback.play(a.pcm(3));
+  f.c.stopPlaybackNow();
+  f.c.intentionalExitCleanupInProgress = true;
+  f.socket.close();
+  f.socket.listeners.close();
+  assert.equal(a.playback.isActive(), false);
+  assert.equal(a.sources[0].stops, 1);
+  assert.deepEqual([...f.c.conversationLines], ['Keep this unsaved exchange.']);
+  assert.equal(f.requests.length, 0);
+});
+
+test('socket error without closure does not cancel current playback', async () => {
+  const f = await closeFixture(), a = installClosePlayback(f);
+  try {
+    await a.playback.play(a.pcm(3));
+    f.socket.listeners.error();
+    assert.equal(a.playback.isActive(), true);
+    assert.equal(a.sources[0].stops, 0);
+  } finally { a.playback.stop(); }
 });
