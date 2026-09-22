@@ -308,13 +308,18 @@ test('failed Disconnect stops immediately, ignores late work, keeps transcript, 
   assert.equal(calls.filter(text => text === 'response.cancel').length, 1);
 });
 
-test('an otherwise empty Disconnect waits for the final user transcription before deciding to save', async () => {
+test('an otherwise empty Disconnect delegates transcript settling to the snapshot owner', async () => {
   let settle;
   let saves = 0;
   const { c } = stopContext({
     conversationLines: [], micStream: null,
-    waitForPendingUserTranscriptBeforeSessionSave: () => new Promise(resolve => { settle = resolve; }),
-    saveEricContinuitySnapshot: async () => { saves += 1; return { status: 'ok' }; },
+    saveEricContinuitySnapshot: async ({ allowEmpty }) => {
+      assert.equal(allowEmpty, true);
+      await new Promise(resolve => { settle = resolve; });
+      assert.equal(c.conversationLines[0], 'LAST WORDS');
+      saves += 1;
+      return { status: 'ok' };
+    },
   });
   const stopping = c.disconnectRealtime();
   c.handleEvent({ type: 'conversation.item.input_audio_transcription.completed', transcript: 'LAST WORDS' });

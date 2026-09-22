@@ -262,6 +262,108 @@ test('a final transcript received during settling is in the save payload', async
   assert.equal(f.requests[0].body, 'The final STT result.');
 });
 
+function transcriptClock(f) {
+  let elapsed = 0;
+  f.c.Date = class extends Date { static now() { return 100000 + elapsed; } };
+  f.c.sleepMs = async ms => { elapsed += ms; };
+  return () => elapsed;
+}
+
+test('an unfinished draft consumes only one settle budget and is never promoted', async () => {
+  const f = saveFixture(), elapsed = transcriptClock(f);
+  f.c.inputDraft = 'Good work';
+  f.c.inputAudioTranscriptionPending = true;
+  assert.equal((await f.c.disconnectRealtime()).status, 'ok');
+  assert.equal(elapsed(), 4560);
+  assert.equal(f.calls.filter(call => call.startsWith('session-save transcript settle waited')).length, 1);
+  assert.equal(f.requests[0].body, 'The last accepted thought.');
+  assert.equal(f.c.inputDraft, 'Good work', 'partial remains available to pane snapshots');
+  assert.equal(f.socket.readyState, 3);
+});
+
+test('an empty connection with only a draft waits once and skips note and eye preparation', async () => {
+  const f = saveFixture(), elapsed = transcriptClock(f);
+  f.c.conversationLines = [];
+  f.c.inputDraft = 'Unfinished';
+  const result = await f.c.disconnectRealtime();
+  assert.equal(result.status, 'ok');
+  assert.equal(result.session_filename, null);
+  assert.equal(elapsed(), 4560);
+  assert.equal(f.requests.length, 0);
+  assert.ok(!f.calls.includes('eye flush'));
+  assert.equal(f.c.continuitySaveTransaction, null);
+  assert.equal(f.socket.readyState, 3);
+});
+
+test('retrying a frozen save does not settle the same draft again', async () => {
+  const f = saveFixture(), elapsed = transcriptClock(f), fetch = f.c.fetch;
+  f.c.inputDraft = 'Not finalized';
+  f.c.fetch = async (...args) => { await fetch(...args); throw new Error('reply lost'); };
+  assert.equal((await f.c.disconnectRealtime()).status, 'error');
+  const afterFirst = elapsed();
+  assert.equal(afterFirst, 4560);
+  f.c.fetch = fetch;
+  assert.equal((await f.c.disconnectRealtime()).status, 'ok');
+  assert.equal(elapsed(), afterFirst);
+  assert.deepEqual(f.requests[0], f.requests[1]);
+  assert.equal(f.saved.size, 1);
+});
+
+test('direct snapshots settle late final speech before freezing the save', async () => {
+  const f = saveFixture(), gate = deferred();
+  f.c.conversationLines = [];
+  f.c.inputAudioTranscriptionPending = true;
+  f.c.sleepMs = () => gate.promise;
+  const saving = f.c.saveEricContinuitySnapshot();
+  await settle();
+  assert.equal(f.requests.length, 0);
+  f.c.conversationLines.push('Final direct-save words.');
+  f.c.inputAudioTranscriptionPending = false;
+  gate.resolve();
+  assert.equal((await saving).continuity_session_filename, 'sessions/saved-1.txt');
+  assert.equal(f.requests[0].body, 'Final direct-save words.');
+});
+
+test('direct snapshots still reject an empty transcript by default', async () => {
+  const f = saveFixture();
+  f.c.conversationLines = [];
+  await assert.rejects(f.c.saveEricContinuitySnapshot(), /No accepted conversation lines/);
+  assert.equal(f.requests.length, 0);
+  assert.equal(f.c.continuitySaveTransaction, null);
+});
+
+test('an expired transcript wait cannot freeze or submit a later save', async () => {
+  const f = saveFixture(), gate = deferred();
+  f.c.inputAudioTranscriptionPending = true;
+  f.c.sleepMs = () => gate.promise;
+  const first = f.c.disconnectRealtime();
+  await settle();
+  f.fireTimer(16000);
+  assert.equal((await first).status, 'error');
+  assert.equal(f.requests.length, 0);
+  f.c.inputAudioTranscriptionPending = false;
+  assert.equal((await f.c.disconnectRealtime()).status, 'ok');
+  gate.resolve();
+  await settle();
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.saved.size, 1);
+});
+
+test('session-map departure settles final words without reloading departing notes', async () => {
+  const f = saveFixture(), gate = deferred();
+  f.c.conversationLines = [];
+  f.c.inputDraft = 'Unfinished';
+  f.c.sleepMs = () => gate.promise;
+  f.c.readTextFile = async () => assert.fail('must not reload departing history');
+  const stopping = f.c.disconnectRealtime({ reloadSavedNote: false });
+  await settle();
+  f.c.conversationLines.push('Before the jump.');
+  f.c.inputDraft = '';
+  gate.resolve();
+  assert.equal((await stopping).status, 'ok');
+  assert.equal(f.requests[0].body, 'Before the jump.');
+});
+
 test('repeated Disconnect clicks do not submit competing save requests', async () => {
   const f = saveFixture(), gate = deferred(), fetch = f.c.fetch;
   f.c.fetch = async (...args) => { await gate.promise; return fetch(...args); };

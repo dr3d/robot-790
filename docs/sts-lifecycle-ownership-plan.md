@@ -24,7 +24,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
 | Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Backend controls remain separate; unused explicit-reset controls are retired. |
 | Current-socket closure | `realtime-connection.js` owns the idempotent close promise and stopped state; `handleRealtimeClose` / `cleanupClosedRealtime` adapt page resources and recovery UI | Reconnect cannot race pending close cleanup. The stopped unsaved transcript must survive until Disconnect/save succeeds. Explicit backend controls and page exit are not a crash-save protocol. |
-| Stop, save, reconnect work | `saveAndDisconnectRealtime`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Device cleanup and save orchestration remain page-owned; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
+| Stop, save, reconnect work | `saveAndDisconnectRealtime`, `saveEricContinuitySnapshot`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Snapshot preparation owns one bounded final-transcript wait and the empty/save decision; frozen retries do not wait again. Device cleanup and save orchestration remain page-owned. Final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
@@ -777,6 +777,32 @@ sessions; returning to prompt-description can suggest that thread has weakened.
 It is a behavioral observation, not proof that context was omitted. Automatically
 staging every creation would conceal this signal. Preserve the model's choice
 unless the operator explicitly requests automatic staging.
+
+### Final-Transcript Wait Consolidated: September 22
+
+Accepted baseline `cd3a281` precedes this change. The 18:00-18:06 live run paid
+the same final-STT wait twice, without receiving a final result. Snapshot
+preparation now owns that wait and decides whether an empty connection should
+skip its note. Disconnect calls preparation even when no lines have arrived yet;
+it no longer maintains its own pre-save wait or premature line-count decision.
+Direct snapshots still reject empty input unless explicitly allowed to skip.
+Frozen save retries bypass preparation; the payload, request ID and parent are
+unchanged. The existing generation/attempt checks reject expired preparation.
+
+Seven new tests cover unfinished drafts, late final speech, empty connections,
+direct snapshots, frozen retries, expiration and session-map departure. Three
+regression assertions failed before repair. All 719 JavaScript and 990 Python
+tests and the isolated Edge suite pass. No STT partial is promoted and no timing constant,
+prompt, idle policy or backend-control path is changed. Live acceptance is next:
+refresh disconnected, resume, talk, Disconnect, then check continuity on Connect.
+Evidence: `logs/maintenance/lifecycle-review/transcript-settle-*.log`.
+
+The 19:04-19:09 normal-path trial saved the final accepted exchange and closed
+cleanly; journal/disk equality and 21 prior-pin receipts pass. Final STT had
+already settled 18 seconds before Disconnect, so neither the pending-draft
+edge nor fresh-build activation is established by its zero-wait result. That
+edge remains covered offline; no contrived repeat or behavior change is needed.
+PM: `logs/runs/20260922-1909-genius-recall-and-save/postmortem.md`.
 
 ### Remaining Coverage
 

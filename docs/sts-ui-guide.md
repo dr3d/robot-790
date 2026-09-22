@@ -291,10 +291,14 @@ Generating a picture and seeing that picture are separate steps. **Clear**
 clears the displayed generated-image state, not an instruction to delete every
 saved copy.
 
-If generation finishes after an interruption, its receipt can report that the
-image was retained on disk without being displayed. Eric's move-to-eye tool can
-now retrieve that saved image using the exact filename from the receipt; it does
-not need to draw it again. This also works after refreshing when the filename is
+Voice interruption alone no longer suppresses the finished thumbnail in the
+same connected session. It still cancels the old spoken continuation; it does
+not force the picture into Sensing Eye. Disconnect, a newer preview or an
+explicit Clear can still prevent an old result from being displayed.
+
+Eric's move-to-eye tool can retrieve a retained image using the exact filename
+from the receipt; it does not need to draw it again. This also works after
+refreshing when the filename is
 still in context. Without a filename, the tool uses the current preview or
 pending idle image. The manual **Move To Eye** button still uses the preview.
 

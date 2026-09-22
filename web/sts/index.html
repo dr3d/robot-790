@@ -17056,20 +17056,23 @@
     }
 
     async function saveEricContinuitySnapshot({ reason = "session note saved", eventLabel = "session note saved",
-      reloadSavedNote = true, isCurrent = () => true } = {}) {
+      reloadSavedNote = true, allowEmpty = false, isCurrent = () => true } = {}) {
       const generation = realtimeConnection.generation;
       const checkCurrent = () => {
         if (!isCurrent() || generation !== realtimeConnection.generation) throw new Error("Session save attempt expired; retry Disconnect.");
       };
       checkCurrent();
       if (!continuitySaveTransaction || continuitySaveTransaction.generation !== generation) {
+        // Settle once before deciding whether there is anything to save.
+        // Retries reuse the frozen transaction, not another transcript wait.
         await waitForPendingUserTranscriptBeforeSessionSave();
         checkCurrent();
-        await flushSensingEyeInboxForSessionSave({ isCurrent: () => isCurrent() && generation === realtimeConnection.generation });
-        checkCurrent();
         if (!conversationTranscriptSinceCleanConnect()) {
+          if (allowEmpty) return null;
           throw new Error("No accepted conversation lines in this clean connection to save into a session note.");
         }
+        await flushSensingEyeInboxForSessionSave({ isCurrent: () => isCurrent() && generation === realtimeConnection.generation });
+        checkCurrent();
         const state = buildEricContinuityState();
         // Freeze once, including the parent and CTX receipt. A retry never
         // rebuilds this payload from UI state that may have changed meanwhile.
@@ -21142,19 +21145,17 @@
         if (micStream) {
           await runtimeStep("stop mic", () => stopMic({ reason: "realtime disconnect" }), { timeoutMs: 6000, prefix: "disconnect step" });
         }
-        await waitForPendingUserTranscriptBeforeSessionSave();
-        const saveResult = conversationLines.length
-          ? await runtimeStep(
-            "write session note",
-            () => saveEricContinuitySnapshot({
-              reason: "realtime disconnect",
-              eventLabel: "session note saved",
-              reloadSavedNote,
-              isCurrent: () => saveAttemptActive && sessionGeneration === realtimeConnection.generation
-            }),
-            { timeoutMs: 16000, prefix: "disconnect step", required: true }
-          )
-          : null;
+        const saveResult = await runtimeStep(
+          "write session note",
+          () => saveEricContinuitySnapshot({
+            reason: "realtime disconnect",
+            eventLabel: "session note saved",
+            reloadSavedNote,
+            allowEmpty: true,
+            isCurrent: () => saveAttemptActive && sessionGeneration === realtimeConnection.generation
+          }),
+          { timeoutMs: 16000, prefix: "disconnect step", required: true }
+        );
         continuitySaveHalted = true;
         if (!saveResult) {
           log(events, "disconnect skipped session note: no accepted conversation lines");

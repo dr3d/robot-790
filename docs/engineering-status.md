@@ -6,6 +6,47 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### One Final-Transcript Wait
+
+September 22: `cd3a281` checkpoints the accepted thumbnail repair, retired
+controls, acceptance notes and refreshed public documentation. The next small
+repair is implemented and awaiting a refreshed live run: snapshot preparation
+now owns the single bounded final-STT wait. Disconnect no longer waits once
+before calling a snapshot function that waits again. The 4.5-second budget and
+120 ms polling interval are unchanged; this is not a faster STT model or a
+promise that every draft will finalize.
+
+Empty connections are checked after settling, so a late first utterance can
+still create a session note. An unfinished draft is not promoted; an actually
+empty connection closes without a note. Retries of an already frozen transaction
+reuse that payload without another wait. Direct snapshots retain their default
+empty-transcript error, and session-map departures still avoid reloading the
+departing history. Expired preparation cannot submit a late second save.
+
+Seven focused tests cover these cases. The persistent-draft replay reproduced
+9120 ms before the repair and 4560 ms afterward; three regression assertions
+failed before the change. All 719 JavaScript and 990 Python tests pass (one
+existing Starlette/httpx deprecation warning), including reconnect, late speech
+and frozen-payload retry coverage. Isolated Edge audio, thumbnail
+and network-loss/recovery checks pass. Evidence:
+`logs/maintenance/lifecycle-review/transcript-settle-*.log`.
+
+Refresh while disconnected, resume the same thread, exchange a few words and
+Disconnect normally. Check the saved final accepted line and reconnect
+continuity. This repair does not alter prompts, idle/B2 policy, context,
+thumbnail ownership, server controls or model settings. No server restart is
+needed; backend-control cleanup remains a separate next boundary.
+
+September 22, 19:04-19:09: normal-path live acceptance passed. The final user
+line was accepted about 18 seconds before Disconnect; the note saved and socket
+closed in the next clock second, with no transcript wait required. The saved
+draft matches disk exactly and all 21 prior-pin receipts are `ok`. This does not
+exercise the pending-draft edge or independently prove page-build activation;
+that edge retains its offline regression coverage. A repeated two-sentence joke
+was present verbatim in loaded history, not evidence of missing context. No
+behavioral repair follows. Evidence:
+`logs/runs/20260922-1909-genius-recall-and-save/postmortem.md`.
+
 ### Voice Does Not Cancel Thumbnails
 
 September 22: the 17:08-17:16 paired PM established two successful renders whose
@@ -46,8 +87,8 @@ twice for the same unfinished final STT draft, once in the disconnect wrapper
 and again in the snapshot function. Saving and shutdown succeeded, but the final
 partial "Good work" was never finalized and is only in the pane log, not the
 continuity note. Consolidate the wait budget with regression tests; do not
-promote partial transcripts or mix that repair into image behavior. No additional
-runtime change or server/model restart follows from this PM.
+promote partial transcripts or mix that repair into image behavior. The separate
+follow-up is documented above under One Final-Transcript Wait.
 
 ### Unused Thread Controls Retired
 

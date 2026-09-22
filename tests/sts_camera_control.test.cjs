@@ -103,11 +103,12 @@ test('camera control is available while off; Disconnect stops it before a failin
     realtimeSessionGeneration: 1,
     realtimeConnected: () => true, beginIntentionalExitCleanup() {}, quiesceRealtimeForSave() {},
     ws: null, WebSocket: { CLOSED: 3 }, micStream: null, conversationLines: ['keep'],
-    waitForPendingUserTranscriptBeforeSessionSave: async () => {
+    saveEricContinuitySnapshot: async () => {
       assert.equal(c.visionCameraStream, null);
       assert.ok(media.tracks.every(t => t.readyState === 'ended'));
+      throw new Error('disk full');
     },
-    runtimeStep: async (_, run) => run(), saveEricContinuitySnapshot: async () => { throw new Error('disk full'); },
+    runtimeStep: async (_, run) => run(),
     setState() {}, endIntentionalExitCleanupSoon() {}
   });
   require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
