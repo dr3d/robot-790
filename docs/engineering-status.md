@@ -29,9 +29,18 @@ and transport bodies match the prior checkpoint; save orchestration differs only
 by removal of the replaced busy flag. Prompts, context assembly, idle policy,
 audio/tool scheduling and save receipts are unchanged.
 
-Live acceptance is pending: refresh while disconnected, Connect to the same
-thread, exchange a few words, Disconnect during a reply, then Connect and check
-continuity. No server/model restart is needed. Emergency backend controls,
+September 22, 10:29-10:35: the paired resumed-thread trial on `1f69646` passed
+the exercised normal path. A fresh module fetch preceded the runs; the second
+Connect loaded the first save plus its ancestry (10 to 11 sessions). Both
+complete transaction journals matched their saved sources and all four eye-asset
+hashes. Both Disconnects released their backend sessions within half a second
+of cancellation; the second stopped queued speech after generation had finished.
+Scott reported great continuity. A wrong initial image choice recovered after
+clarification, without redrawing; no runtime repair was made. Startup still took
+about 24 seconds to first audio, while ordinary subsequent turns were much faster.
+Private PM: `logs/runs/20260922-1035-transition-owner-acceptance/postmortem.md`.
+Live failed-save/concurrent-click and sustained idle coverage are not claimed.
+No server/model restart is needed. Emergency backend controls,
 Reset To Pinned/Clear Latest, unexpected closure and page exit remain separate
 lifecycle work; this does not claim a universal transition controller.
 

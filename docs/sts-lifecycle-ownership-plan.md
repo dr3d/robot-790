@@ -440,10 +440,19 @@ Audio-clock/tool-drain and desktop/mobile checks still pass; no live model,
 microphone or paid generation was invoked. Reproduction and suite receipts are
 under `logs/maintenance/lifecycle-review/connection-transition-*`.
 
-Live acceptance is pending. Refresh while disconnected, resume the rich thread,
-briefly converse, Disconnect during speech, then Connect and check continuity.
-No server/model restart is required. There is no need to deliberately double-click
-or inject failed saves into real history; the race fixtures cover those cases.
+Live acceptance of the normal path passed September 22, 10:29-10:35, on `1f69646`.
+A fresh page/module fetch preceded two resumed-thread runs. The second loaded
+the first saved session plus its ancestry; both journals matched their sources
+and four eye-asset hashes. Both backend sessions released within half a second
+of cancellation. The second Disconnect stopped buffered speech well after
+generation had completed. Scott reported great continuity. Search/render/staging,
+retained-image recovery and microphone interruptions also ran; no runtime repair
+was needed. B2 passes went stale on user activity, so sustained idle/advice is
+not established by this pair. Startup remained about 24 seconds to first audio.
+Evidence: `logs/runs/20260922-1035-transition-owner-acceptance/postmortem.md`.
+Run 2's save is verified; its next live resume has not yet occurred. There is no
+need to deliberately double-click or inject failed saves into real history;
+the race fixtures cover those cases. No server/model restart is required.
 
 Next boundary is ordered step 5: unexpected closure, emergency backend controls,
 explicit Reset To Pinned/Clear Latest and page exit. They do not all pass through
