@@ -6,6 +6,15 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+Accepted checkpoint: `9b56e40`, including the feedback owner, updated public
+documents and the glass-submarine run's acceptance notes. The 735 JavaScript
+tests and isolated Edge suite were rerun successfully before committing;
+the prior complete Python rerun remains 990 passes with its intermittent
+note-write failure documented below. No new runtime changes were made during
+next-step preparation. The [Restart-only cleanup plan](sts-lifecycle-ownership-plan.md#next-step-restart-cleanup)
+defines the offline tests, preserved behavior and live acceptance sequence.
+Halt/Unload work is parked until needed.
+
 ### Backend-Control Feedback Ownership
 
 September 22: `04a8aa8` checkpoints the single transcript-wait repair and the

@@ -14,6 +14,46 @@ permissions, receipts, persistence and exclusive access to public speech.
 This work must not introduce English intent classifiers, prescribed dialogue,
 shorter answers, new quiet periods or a setup-card requirement.
 
+## Next Step: Restart Cleanup
+
+Prepared September 22 after accepted feedback checkpoint `9b56e40`. This is the
+next implementation scope, not an already completed repair. Scott uses Restart
+to reboot STS; he does not use Halt or Unload. Further work on those controls is
+parked until practical use exposes a problem. Keep their current implementation
+and existing regression tests, but do not expand this into a general exit rewrite.
+
+The remaining Restart risk is after asynchronous cleanup, not its status timer:
+`restartRealtimeServer` waits for recording, mic and pane snapshots, then reads
+the current global socket and clears audio. An old operation could resume after
+resources have changed. Characterize this offline before changing production.
+
+1. Extend `tests/helpers/sts_exit_harness.cjs` with delayed/rejected recording,
+   mic and snapshot completion. Reproduce a late old Restart after a replacement
+   connection, repeated Restart, and Restart during a normal save/connection
+   transition. No real backend commands or devices in these fixtures.
+2. Make the smallest Restart-only ownership repair supported by those tests.
+   Capture the resources it owns and reuse the existing connection/audio owners
+   and compatible cleanup helpers. A stale operation must not close a newer
+   socket, clear newer audio or send another stale restart request.
+3. Preserve the existing restart endpoint and model-setting intent, retained
+   unsaved words/parent/eye assets, no automatic continuity save, and no automatic
+   reconnect. Do not simply call save-and-Disconnect: its save contract differs.
+   Keep already-submitted/unknown backend outcomes distinct from work not yet
+   dispatched; do not invent automatic POST retries.
+4. Run the full JavaScript suite and isolated browser checks, including normal
+   Disconnect/save retry and recording-off paths. Broaden Python tests if the
+   eventual change crosses the backend boundary. Keep the intermittent Windows
+   note-replacement failure separate rather than silently fixing it here.
+5. When ready, the safe live trial is ordinary Disconnect and confirmed save,
+   then Restart, then Connect to the same thread and a brief exchange. Do not
+   ask Scott to race controls or risk an unsaved conversation. A normal-session
+   run alone does not establish live Restart coverage.
+
+Stop and rescope if the patch requires changing save semantics, backend process
+lifecycle, recorder design, Halt/Unload behavior, or a broad new command queue.
+No changes to prompts, B2 policy, idle cadence, speech length, context assembly,
+model settings or Eric's discretion over tool use belong in this work.
+
 ## Current Ownership Map
 
 Functions below are in `web/sts/index.html` unless a module is named. These are
@@ -823,7 +863,8 @@ PM: `logs/runs/20260922-1909-genius-recall-and-save/postmortem.md`.
 - Backend command dispatch and awaited device cleanup still need separate
   ownership work. In particular, suppressing an old status callback does not stop
   its backend request or make late cleanup incapable of touching newer resources.
-  Do not declare those races resolved by the feedback extraction.
+  Do not declare those races resolved by the feedback extraction. The active
+  next scope is Restart only, as specified above; Halt and Unload are deferred.
 - Save HTTP/disk failure recovery is now covered above; real browser/socket/
   device teardown, full selected-session transitions and live acceptance remain.
 - B2 advisory revision/freshness, private-to-public delivery and idle arbitration

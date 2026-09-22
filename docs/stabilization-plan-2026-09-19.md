@@ -286,6 +286,12 @@ No new initiative restrictions, rhetoric, quotas or paid retries were introduced
    settings or conversational policy; 558 JavaScript tests, 129 page-server tests
    and a real Web Audio browser check pass. Refresh while disconnected, then
    validate live speech/interrupt/tool/idle/reconnect before the next extraction.
+   September 22: checkpoint `9b56e40` includes the subsequent tool/connection
+   ownership work, continuity-save repairs, voice-safe image previews and
+   backend-control feedback owner, with accepted normal-session runs. Next is
+   [Restart cleanup only](sts-lifecycle-ownership-plan.md#next-step-restart-cleanup),
+   starting with offline delayed-cleanup tests. Scott uses Restart, not Halt or
+   Unload; further work on those unused controls is deferred until needed.
 
 ## Acceptance
 
