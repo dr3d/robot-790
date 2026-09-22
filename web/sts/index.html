@@ -3270,6 +3270,7 @@
     let lastExitSnapshotAt = 0;
     let lastExitSnapshotReason = "";
     let intentionalExitCleanupInProgress = false;
+    let intentionalExitCleanupGeneration = 0;
     let realtimeStopRequested = false;
     let quickRecordConversationBusy = false;
     const minAudioRecordChunkMs = 30000;
@@ -16865,6 +16866,7 @@
 
     function beginIntentionalExitCleanup() {
       intentionalExitCleanupInProgress = true;
+      return ++intentionalExitCleanupGeneration;
     }
 
     function quiesceRealtimeForSave(reason) {
@@ -16879,9 +16881,9 @@
       updateTypedInputButtons();
     }
 
-    function endIntentionalExitCleanupSoon() {
+    function endIntentionalExitCleanupSoon(generation) {
       setTimeout(() => {
-        intentionalExitCleanupInProgress = false;
+        if (generation === intentionalExitCleanupGeneration) intentionalExitCleanupInProgress = false;
       }, 5000);
     }
 
@@ -17139,7 +17141,7 @@
       if (continuitySaveBusy) return;
       continuitySaveBusy = true;
       updateSaveAndHaltButton();
-      beginIntentionalExitCleanup();
+      const cleanupGeneration = beginIntentionalExitCleanup();
       quiesceRealtimeForSave(reason);
       try {
         if (micStream) await continuityStep("stop mic", () => stopMic({ reason }), { timeoutMs: 6000 });
@@ -17169,7 +17171,7 @@
         log(events, `session note save error: ${error.message}; Eric remains stopped; transcript retained for retry`);
       } finally {
         continuitySaveBusy = false;
-        endIntentionalExitCleanupSoon();
+        endIntentionalExitCleanupSoon(cleanupGeneration);
         updateSaveAndHaltButton();
       }
     }
@@ -20668,7 +20670,7 @@
       restartServerButton.disabled = true;
       unloadServerButton.disabled = true;
       log(events, "realtime restart requested");
-      beginIntentionalExitCleanup();
+      const cleanupGeneration = beginIntentionalExitCleanup();
       try {
         if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
           const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime restart" }), { timeoutMs: 18000, prefix: "restart step" });
@@ -20681,7 +20683,7 @@
       }
       if (ws && ws.readyState === WebSocket.OPEN) ws.close();
       clearAudioQueue();
-      endIntentionalExitCleanupSoon();
+      endIntentionalExitCleanupSoon(cleanupGeneration);
       setState("Restarting realtime", "warn");
       setConnectionButtonsDisabled(true);
       disconnectButton.disabled = true;
@@ -20719,7 +20721,7 @@
         button.disabled = true;
       });
       log(events, "realtime halt requested");
-      beginIntentionalExitCleanup();
+      const cleanupGeneration = beginIntentionalExitCleanup();
       try {
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
         haltRealtimeActivity("realtime halt");
@@ -20756,7 +20758,7 @@
       } catch (error) {
         log(events, `realtime halt error: ${error.message}`);
       } finally {
-        endIntentionalExitCleanupSoon();
+        endIntentionalExitCleanupSoon(cleanupGeneration);
         haltRuntimeButtons.forEach((button) => {
           button.disabled = false;
         });
@@ -20767,7 +20769,7 @@
       restartServerButton.disabled = true;
       unloadServerButton.disabled = true;
       log(events, "realtime unload requested");
-      beginIntentionalExitCleanup();
+      const cleanupGeneration = beginIntentionalExitCleanup();
       try {
         if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
           const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime unload" }), { timeoutMs: 18000, prefix: "unload step" });
@@ -20780,7 +20782,7 @@
       }
       if (ws && ws.readyState === WebSocket.OPEN) ws.close();
       clearAudioQueue();
-      endIntentionalExitCleanupSoon();
+      endIntentionalExitCleanupSoon(cleanupGeneration);
       setState("Unloading realtime", "warn");
       setConnectionButtonsDisabled(true);
       disconnectButton.disabled = true;
@@ -21297,7 +21299,7 @@
       continuitySaveBusy = true;
       recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
-      beginIntentionalExitCleanup();
+      const cleanupGeneration = beginIntentionalExitCleanup();
       quiesceRealtimeForSave("realtime disconnect");
       try {
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
@@ -21351,7 +21353,7 @@
       } finally {
         continuitySaveBusy = false;
         updateSaveAndHaltButton();
-        endIntentionalExitCleanupSoon();
+        endIntentionalExitCleanupSoon(cleanupGeneration);
       }
     }
     disconnectButton.addEventListener("click", disconnectRealtime);

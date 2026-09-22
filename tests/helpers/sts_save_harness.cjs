@@ -23,6 +23,7 @@ function saveFixture() {
     realtimeSessionGeneration: 1, realtimeStopRequested: false,
     continuitySaveBusy: false, continuitySaveHalted: false,
     intentionalExitCleanupInProgress: false,
+    intentionalExitCleanupGeneration: 0,
     conversationLines: ['The last accepted thought.'], inputDraft: '',
     inputAudioTranscriptionPending: false, userSpeechActive: false,
     lastSpeechStartedAt: 0, brain2DeferredSurface: {},

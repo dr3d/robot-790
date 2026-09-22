@@ -2,6 +2,30 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { saveFixture, deferred, settle } = require('./helpers/sts_save_harness.cjs');
 
+test('an old cleanup timer cannot end a newer cleanup', () => {
+  const f = saveFixture();
+  const first = f.c.beginIntentionalExitCleanup();
+  f.c.endIntentionalExitCleanupSoon(first);
+  const second = f.c.beginIntentionalExitCleanup();
+  f.fireTimer(5000);
+  assert.equal(f.c.intentionalExitCleanupInProgress, true);
+  f.c.endIntentionalExitCleanupSoon(second);
+  f.fireTimer(5000);
+  assert.equal(f.c.intentionalExitCleanupInProgress, false);
+});
+
+test('a late finally block cannot release cleanup begun by another operation', () => {
+  const f = saveFixture();
+  const first = f.c.beginIntentionalExitCleanup();
+  const second = f.c.beginIntentionalExitCleanup();
+  f.c.endIntentionalExitCleanupSoon(first);
+  f.fireTimer(5000);
+  assert.equal(f.c.intentionalExitCleanupInProgress, true);
+  f.c.endIntentionalExitCleanupSoon(second);
+  f.fireTimer(5000);
+  assert.equal(f.c.intentionalExitCleanupInProgress, false);
+});
+
 test('Disconnect composes the real save request and closes only after its receipt', async () => {
   const f = saveFixture(), gate = deferred(), fetch = f.c.fetch;
   f.c.fetch = async (...args) => { await gate.promise; return fetch(...args); };

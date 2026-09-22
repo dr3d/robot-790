@@ -47,7 +47,10 @@ separates save receipts, unknown write outcomes, connection identity and cleanup
 Eight new simulated stop/save orchestration tests bring the JavaScript suite to
 617 passing tests. The 13 Python continuity tests also pass with temporary disk
 storage. This is not yet an integrated browser-to-durable-storage failure test,
-and the four injected defects remain open. No diagnostics or servers were changed.
+and the injected defects were not fixed by that review. The first repair now
+guards cleanup release with operation identity, including late finally blocks;
+49 focused tests pass. The other three findings and live acceptance remain open.
+No diagnostics or servers were changed.
 
 ### Full Notes And Stable Live Context
 

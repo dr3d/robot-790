@@ -190,6 +190,12 @@ Diagnostic reproductions are preserved in
 for diagnosis, not the intended contract, and are separate from the passing suite.
 These are injected failures, not claims that the recent live run experienced them.
 
+Repair progress: cleanup release now carries the identity returned when that
+operation began. Both a captured old timer and an old operation finishing late
+are unable to release a newer cleanup. All five exit callers pass the identity;
+the existing five-second grace period is unchanged. Two regressions and the
+focused save/idle/camera suite pass (49 tests). Live acceptance remains pending.
+
 ### Ordered Work
 
 1. **Close the two small flag defects separately.** Give intentional cleanup an
