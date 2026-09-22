@@ -158,6 +158,102 @@ observations, not failed tool continuations. This comparison supports the rich
 resumed-thread path, not fresh card-free acceptance or all remaining transitions.
 Activation remains a disconnected page refresh; no backend/model restart.
 
+## Next Boundary: Stop, Save And Reconnect
+
+September 21 review checkpoint: `1f52674` on `master` records the accepted
+audio/tool baseline and comparison notes. The review below adds tests and a work
+plan only. No production lifecycle, prompt, timing or model change has shipped.
+
+### Findings Before Extraction
+
+Do not move all the current flags into a class and call the problem solved.
+There are separate authorities: permission to act on a connection, ownership
+of a save attempt, acknowledgment of durable storage, and device cleanup.
+
+Offline fault injection against the actual page orchestration reproduced:
+
+| Fault | Current result | Required distinction |
+| --- | --- | --- |
+| Session write succeeds; note reload fails | Disconnect says save failed. Retry writes another session, parents it to the first, and has already cleared the original eye-asset list. The first saved artifact remains; this is duplicate lineage, not demonstrated file loss. | Committed save versus failed optional refresh. Retry must reuse an acknowledged receipt. |
+| Eye-inbox flush outlives the outer 16-second save wait | UI permits retry, but the old promise is still running. After retry saves successfully, releasing the old flush starts another write and changes current session selection. | A wait timeout does not cancel underlying work. Expired attempts must not start writes or mutate a newer attempt. |
+| Save + Halt succeeds, then Start Eric | Start clears `continuitySaveHalted` before `connect`; the retained transcript and stop flag make `connect` reject it as unsaved. | A saved run remains saved until successful new-session preparation takes ownership. |
+| Old five-second cleanup timer fires during a newer exit | It clears the newer `intentionalExitCleanupInProgress` flag. | Cleanup completion belongs to a particular operation, not a shared wall-clock timer. |
+
+Sources: `saveEricContinuitySnapshot`, `runtimeStep`, `disconnectRealtime`,
+`startContinuityEric`, `endIntentionalExitCleanupSoon` in the page. The inbox fetch
+has no local abort deadline. The storage API currently creates a new filename on
+each save and has no idempotency key. Aborting a fetch alone would not establish
+whether the server already committed a write.
+
+Diagnostic reproductions are preserved in
+`logs/maintenance/lifecycle-review/reproduce.cjs`. They assert the current defects
+for diagnosis, not the intended contract, and are separate from the passing suite.
+These are injected failures, not claims that the recent live run experienced them.
+
+### Ordered Work
+
+1. **Close the two small flag defects separately.** Give intentional cleanup an
+   operation identity so an old release cannot end a new cleanup. Route Start
+   Eric through the ordinary guarded fresh-context connection path without
+   clearing the successful-save state prematurely. Test startup failure/retry as
+   well as success. Do not simultaneously alter browser audio or tool owners.
+2. **Establish the save transaction contract before extraction.** Settle accepted
+   final speech and eye work, then freeze one payload with its real parent and
+   asset list. Track the attempt independently of UI cleanup. A durable save
+   receipt is authoritative even if reloading/pinning the note or refreshing the
+   map fails; report those failures separately. A retry of the same attempt must
+   not invent another branch. Do not clear assets before acknowledgment.
+3. **Handle unknown write outcomes explicitly.** Guard every post-await effect
+   with attempt identity; canceled preparation must not later submit a write.
+   For an already-submitted request whose reply is lost, use a persisted
+   request identity and matching-payload receipt/readback in the storage API.
+   Reuse it on retry; reject reuse with different content. Abort is cleanup, not
+   proof of non-commit. Cover server restart and concurrent retries using real
+   temporary storage. Do not infer success from a timeout or blindly resubmit.
+4. **Extract connection/transition ownership after those behaviors pass.** One
+   owner for current socket/generation, stop state and a single in-flight
+   transition. Cover Connect, Empty, Previous, selected/map jumps, Start Eric,
+   Disconnect and Save + Halt. Retain thin page adapters for UI, context assembly,
+   transport and resource owners. No mirrored flags or second save algorithm.
+5. **Handle unexpected closure and page exit as separate work.** Read the socket
+   close, server restart/halt/unload, Reset To Pinned, Clear Latest and pagehide
+   paths before consolidation. Their semantics differ: explicit discard, stop,
+   durable save and emergency cleanup are not interchangeable. Do not silently
+   add automatic saving, reconnection, resubmission or a new unload guarantee.
+
+Each production repair/extraction gets its own commit and a narrow rollback.
+Preserve accepted artifacts when work is interrupted; suppress stale effects,
+not the fact that a completed artifact exists. Reuse the audio/tool owners for
+stop and drain. Do not centralize their internals in a new all-purpose controller.
+
+### Verification And Operator Trial
+
+Eight new `sts_save_lifecycle.test.cjs` checks compose the real stop/save functions,
+transcript settling and save-request serialization. They cover successful saves,
+explicit rejection and retry, final transcription, duplicate clicks, empty stop,
+map-refresh failure, no-reload session jumps and Save + Halt. Storage, note-body
+formatting/loading, sockets and devices are simulated. These do not yet exercise
+the actual HTTP/durable-storage path together or establish the four defects fixed.
+
+At this review: all 617 JavaScript tests pass; all 13 existing Python continuity
+tests pass against temporary storage. The prior full Python suite remains the
+969-test baseline, not a new full-suite run. No live model/device calls were made.
+
+Before production extraction, add desired-behavior regressions for all four
+findings, lost HTTP acknowledgments, reconnect after save failure, an old socket's
+late close, concurrent connection preparation, and late paid-art completion.
+Then use an isolated browser/page-server fixture with temporary notes to exercise
+real HTTP saving and socket/device teardown. Never induce disk/transport failure
+against Scott's actual session files. Do not add permanent verbose instrumentation.
+
+The human trial remains small: resume the rich thread, request a long answer,
+interrupt, disconnect during speech, then reconnect and check the last accepted
+exchange and the single new branch in the map. Test Save + Halt / Start Eric once
+separately. Use a marker such as "the kettle is named Tuesday" to distinguish
+history delivery from a fluent guess, while verifying the saved file directly.
+No deliberate speech, sentence-count, idle-initiative or tool-choice change is an
+acceptable side effect of this work. Keep fresh card-free acceptance open too.
+
 ## Acceptance And Gaps
 
 ### Live Acceptance Progress: September 21

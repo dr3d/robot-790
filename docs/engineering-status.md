@@ -33,6 +33,22 @@ comparison and remaining coverage. Occasional forgotten eye staging remains an
 accepted conversational continuity signal, not a repair item. Activation needs
 only a disconnected page refresh, not a backend/model restart.
 
+### Lifecycle Review Before The Next Extraction
+
+Checkpoint `1f52674` preserves that accepted state. Offline review then reproduced
+four failure-path defects: duplicate session creation after successful save but
+failed reload; timed-out preparation continuing after retry; Start Eric rejecting
+its own saved transcript; and stale cleanup timers clearing newer cleanup state.
+These were not observed failures in the accepted live comparison. Production
+code remains unchanged. Repair those transitions before moving their ownership;
+the [ordered work plan](sts-lifecycle-ownership-plan.md#next-boundary-stop-save-and-reconnect)
+separates save receipts, unknown write outcomes, connection identity and cleanup.
+
+Eight new simulated stop/save orchestration tests bring the JavaScript suite to
+617 passing tests. The 13 Python continuity tests also pass with temporary disk
+storage. This is not yet an integrated browser-to-durable-storage failure test,
+and the four injected defects remain open. No diagnostics or servers were changed.
+
 ### Full Notes And Stable Live Context
 
 September 21 checkpoint: ordinary notes no longer suffer a second silent
