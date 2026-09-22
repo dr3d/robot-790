@@ -462,6 +462,83 @@ separately before consolidating them.
 
 ## Acceptance And Gaps
 
+### Unexpected-Close Groundwork
+
+September 22 checkpoint: `2887027` preserves the accepted normal-transition owner
+and 10:29-10:35 live notes. This preparation changes tests/documentation only.
+It is safe to proceed narrowly, not to combine every remaining exit into one
+operation with assumed identical semantics.
+
+| Path | Present contract / boundary |
+| --- | --- |
+| Normal Disconnect | Stop, settle accepted input, commit a session, then close and finish device/snapshot cleanup under the operation owner. Preserve this accepted path. |
+| Unexpected current-socket close | Stop cameras/schedulers, asynchronously stop mic/recording and snapshot panes. No continuity transaction. UI currently unlocks before that cleanup settles. |
+| Old socket close/error | Identity guard rejects callbacks belonging to another socket/generation. Preserve this before any resource or UI effect. |
+| Socket error without close | Reports the error; do not treat this notification alone as a save receipt or automatic reconnect request. |
+| Reset To Pinned / Clear Latest | Explicit scratch-state discard; connected reset stops mic, closes, clears, reconnects and restores mic. Not a save action and not yet covered by normal transition ownership. |
+| Halt / Restart / Unload | Explicit backend actions, with different ordering and asynchronous UI timers. Snapshotting is not a continuity save. Do not silently promote these into save-and-resume flows. |
+| beforeunload / pagehide | Recording warning and best-effort log beacons, camera/popout/idle-art cleanup. Not a crash-safe save protocol. |
+
+The isolated fixture registers callbacks through the actual `connect` function,
+uses the production connection owner and UI-lock adapter, and can compose the
+real audio owner/page wiring and real `stopMic`. Storage, UI, audio clock, media
+devices and transport are simulated; no live server/model/hardware is contacted.
+
+Four baseline reproductions at `2887027`:
+
+1. Current socket close calls `clearAudioQueue`, which removes queued bytes but
+   does not stop already scheduled Web Audio sources. A 30-second source remains
+   active. Normal Disconnect already calls `stopPlaybackNow` before closure.
+2. An audio setup promise already awaiting playback initialization can resolve
+   after unexpected closure and still schedule a source. The close path changes
+   neither the playback generation nor the stopped flag used by that owner.
+3. An unexpected close leaves `stopped` false and enables Connect; subsequent
+   connection preparation clears the unsaved hot transcript without a continuity
+   transaction. Pane snapshots can retain evidence but do not establish a saved
+   branch. No existing on-disk session is deleted in this reproduction.
+4. The UI permits reconnect while old `stopMic` awaits `AudioContext.close()`.
+   Assigning fresh mic resources before that promise resolves lets old teardown
+   clear the new references. The fixture reproduces that interleaving, not a
+   claim that the last live reconnect hit it.
+
+Diagnostic: `logs/maintenance/lifecycle-review/unexpected-close-reproduce.cjs`.
+It asserts the known unsafe baseline, not desired acceptance, and must be updated
+or retired as each defect is fixed. Do not add these expectations to the passing
+regression suite. Output and suite receipt are retained alongside it.
+
+Twelve desired preservation checks in `tests/sts_socket_close.test.cjs` pass:
+retained words/assets/parent without invented saves; scheduler/UI cleanup;
+stale close/error rejection; error-versus-close distinction; failed opening;
+intentional-close delegation; normal Disconnect composing the actual callback;
+three recording states; visible async cleanup failures; and old mic tracks
+stopped before awaiting context closure. All 668 JavaScript tests pass.
+Python/production behavior is unchanged; the prior 990-test Python result is
+not a new run. Browser-backed unexpected-close coverage is still needed.
+
+Proceed in this order, each as a separate production change:
+
+1. **Stop local playback on current-socket closure.** Reuse `stopPlaybackNow` so
+   both scheduled sources and pending setup are invalidated. Keep the stale
+   callback guard. Add desired regressions for reproductions 1/2 and a real,
+   muted Web Audio check. Do not mix persistence or backend controls into this.
+2. **Own unexpected cleanup and preserve unsaved work.** Capture resource identity
+   across awaits, coordinate with an already-running normal Disconnect, and
+   prevent a new Connect from discarding unsaved text or racing resource cleanup.
+   Expose recovery through the existing Disconnect/save path, without automatic
+   saving, reconnection, backend restarts or invented durable-success claims.
+   Test close during opening, saving, failed save and repeated stop/retry. Keep
+   intentional discard separate so resets are not accidentally made impossible.
+3. **Extract the proven close orchestration.** Reuse existing connection, audio
+   and tool owners rather than moving their state into a new general controller.
+   Only after this passes, separately scope explicit resets, backend actions and
+   page exit. Late backend-control timers and recorder completion still require
+   their own ownership checks; this groundwork does not pronounce them safe.
+
+For Scott, no new trial or refresh is needed now. After the first repair, repeat
+normal Connect -> brief exchange -> Disconnect during speech -> Connect, to
+ensure its established behavior stays intact. Induce unexpected loss only in
+an isolated test, never by killing the backend during valuable unsaved dialogue.
+
 ### Live Acceptance Progress: September 21
 
 The 21:17-21:23 resumed-thread run exercised microphone interruption and

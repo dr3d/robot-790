@@ -6,6 +6,31 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Unexpected-Close Preparation
+
+September 22: `2887027` checkpoints the accepted normal transition owner and its
+paired live acceptance notes. The next boundary is prepared, not activated:
+unexpected WebSocket closure first, with explicit resets, backend emergency
+controls and page exit remaining separate. No production files, prompts, model
+settings, context handling, idle timing or instrumentation changed in this step.
+
+Offline fault injection against actual page callbacks reproduced scheduled
+audio surviving an unexpected close, pending audio setup starting after close,
+Connect clearing an unsaved hot transcript, and old asynchronous mic cleanup
+clearing newly assigned mic references. These are synthetic edge cases, not
+failures attributed to the two good live runs. Pane snapshots may preserve text;
+they are not a committed continuity session.
+
+Twelve preservation tests now exercise current/stale close callbacks, normal
+Disconnect composition, failed opening, recording finalization and cleanup
+errors. All 668 JavaScript tests pass. The separate diagnostic reproduces known
+unsafe behavior and is not a passing acceptance gate for those defects.
+First production step should only stop scheduled/pending playback on current
+socket closure, with stale sockets still ignored. Then address cleanup ownership
+and unsaved-state recovery before extracting shared close orchestration.
+See [Lifecycle Ownership](sts-lifecycle-ownership-plan.md#unexpected-close-groundwork).
+No refresh or new operator run is needed for this test/documentation preparation.
+
 ### Connection Transition Owner
 
 September 22: accepted identity-owner checkpoint and live notes are preserved
