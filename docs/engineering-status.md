@@ -26,9 +26,18 @@ pass (one existing Starlette/httpx deprecation warning). Tests compare the old
 connection predicates and sent packets, reject stale socket callbacks, and keep
 the final user transcript during Disconnect. Edge loads the real page and all
 three owners without connecting to Eric; audio/tool-drain checks still pass.
-Live acceptance of this extraction is pending. Refresh while disconnected,
-Connect to the same thread, exchange a few words, then Disconnect and Connect
-again to check continuity. No server or model restart is needed.
+The September 22 09:21-09:26 paired resumed-thread trial passed the exercised
+paths: the second Connect loaded the first save plus its ancestry (eight to
+nine sessions), both transaction journals matched disk sources and eye hashes,
+and the final Disconnect stopped a run with queued speech after generation had
+already completed. Scott reported very good continuity. Brief B2/idle activity
+and microphone interruption also ran. One eye-inbox fetch failed then recovered;
+one private-output fragment was filtered before speech/history. Neither showed
+a connection regression. Startup still took about 21-22 seconds; later user
+turns reached first audio in 1.5-3.9 seconds. No runtime repair was made.
+Private paired PM: `logs/runs/20260922-0926-connection-owner-acceptance/postmortem.md`.
+Concurrent preparation, page-exit recovery and extended idle remain separate
+coverage. Activation needs only a disconnected refresh, not a server restart.
 
 ### Transactional Disconnect Saves
 

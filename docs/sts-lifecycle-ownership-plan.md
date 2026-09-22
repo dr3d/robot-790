@@ -382,10 +382,21 @@ confirm the real page loads it without legacy state globals or JavaScript
 errors, with unchanged audio/tool-drain behavior. No live session was opened.
 
 Activation is a disconnected page refresh, with no server/model restart.
-Live acceptance remains pending: Connect to the rich thread, briefly interact,
-Disconnect, Connect again and check continuity. Once accepted, extract the
-single in-flight transition separately; keep context assembly and save receipt
-semantics unchanged. Do not claim the larger lifecycle problem solved here.
+The September 22 09:21-09:26 live pair passed ordinary resumed-thread acceptance.
+The new script was served before connection. Run 2 loaded run 1 and its ancestry,
+increasing history from eight sessions to nine. Both saves had complete journals
+matching their source notes and retained eye hashes. The final Disconnect stopped
+buffered speech after TTS generation had already completed; cancellation, durable
+save and socket release were recorded. Scott reported very good continuity.
+Interruption, tool follow-up and brief B2/idle activity also worked. A recovered
+eye-inbox poll failure and a contained private-output warning are watch items,
+not demonstrated lifecycle regressions. Initial LLM latency remains separate.
+Evidence: `logs/runs/20260922-0926-connection-owner-acceptance/postmortem.md`.
+
+Next, extract the single in-flight transition separately; keep context assembly
+and save receipt semantics unchanged. Concurrent preparation, page-exit recovery
+and long unattended operation were not exercised by this pair. Do not claim the
+larger lifecycle problem solved here. No runtime repair followed this PM.
 
 ## Acceptance And Gaps
 
