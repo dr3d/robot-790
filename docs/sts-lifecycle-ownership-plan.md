@@ -114,7 +114,8 @@ structural change should not be perceptible as a different Eric.
 
 ## Second Production Extraction: Tool Continuation Owner
 
-Implemented September 21; post-extraction live comparison pending.
+Implemented September 21; resumed-thread live comparison passed the exercised
+paths that evening. Remaining coverage is listed below.
 `web/sts/tool-continuation.js` owns pending calls, response-done readiness,
 duplicate call IDs, continuation rounds/scope, source names and the audio-drain
 timer. Page adapters retain tool execution, receipts, permissions, prompt
@@ -142,10 +143,20 @@ The baseline is the 22:22-22:28 Harbor Courtesy Engine run, saved as
 task and adapted after interruption. STT changed "ferry" to "fairy"; one fully
 filtered reply recovered before eye staging. Both predate this extraction.
 
-Activation: disconnected page refresh, then Connect Previous to repeat from
-`session-20260921-213620-770.txt` while that baseline is still latest. Otherwise
-select that parent in the session map. Compare successful execution and speech
-ordering, not identical content. No backend/model restart is needed.
+The 22:42-22:49 post-extraction run used Connect Previous from exactly that parent.
+Nine successful tool calls (three searches, three renders, three eye loads)
+produced nine follow-ups. Playback interruption, revision, idle web research/B2
+contributions and cancellation on Disconnect worked; the session and three eye
+assets saved. No backend warnings/errors or output-filter recovery were recorded.
+First audio on ordinary user turns took 1.356-3.858 seconds; startup was 17.635
+seconds, similar to baseline. Context went from 40.9% to 51.6%, without overflow.
+Evidence: `logs/runs/20260921-2249-tool-continuation-comparison/`.
+
+The model needed a nudge to draw after clarifying ferry versus fairy, and the
+final passenger design drifted from the original weir fact. These are content
+observations, not failed tool continuations. This comparison supports the rich
+resumed-thread path, not fresh card-free acceptance or all remaining transitions.
+Activation remains a disconnected page refresh; no backend/model restart.
 
 ## Acceptance And Gaps
 

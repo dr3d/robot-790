@@ -37,8 +37,9 @@ September 20 checkpoint: the homepage now reflects shared conversation/idle
 history, the measured cache-state repair, compact file lookup, optional complete
 B1/B2 cards, retained-image retrieval, idle note writing and TimerCam snapshots.
 The extra deep-think experiment is disabled. Browser factoring now has dedicated
-audio-playback and tool-continuation owners with transition tests; live comparison
-of the tool extraction is next. The Memory Jar report
+audio-playback and tool-continuation owners with transition tests. The tool
+extraction passed its exercised resumed-thread comparison on September 21;
+broader lifecycle acceptance remains open. The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source
 for test results, observed weaknesses and remaining live acceptance work.

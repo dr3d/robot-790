@@ -43,7 +43,8 @@ Interrupted image results can now be retrieved by filename without another
 render; ordinary idle can save notes using existing file permissions. The extra
 deep-think experiment is disabled. Browser restructuring has begun with separate
 audio-playback and tool-continuation owners, preserving current prompts and
-companion behavior. The latest tool extraction awaits its live comparison.
+companion behavior. The tool extraction passed its exercised resumed-thread
+comparison on September 21; broader lifecycle acceptance remains open.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
 has the larger video collection. This site's media shelf is a curated selection,

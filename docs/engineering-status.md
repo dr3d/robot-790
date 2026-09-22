@@ -23,10 +23,15 @@ and interrupted continuations. The preceding live checks include a 230-second
 lecture, microphone interruption, stop-during-speech, reconnect and long-idle
 return; these validate the audio baseline, not the new extraction in live use.
 
-Post-extraction comparison remains pending. Refresh the disconnected page;
-no backend/model restart. The [ownership plan](sts-lifecycle-ownership-plan.md)
-records the exact baseline parent and remaining coverage. Occasional forgotten
-eye staging is an accepted conversational continuity signal, not a repair item.
+The 22:42-22:49 post-extraction comparison passed the exercised resumed-thread
+paths from the same parent: nine successful tool calls/follow-ups, interruption,
+revision, idle research with B2, and clean cancellation/save on Disconnect. No
+backend warnings/errors were recorded. Ordinary replies reached first audio in
+1.356-3.858 seconds; startup remained about 18 seconds. This is not full lifecycle
+acceptance. The [ownership plan](sts-lifecycle-ownership-plan.md) records the
+comparison and remaining coverage. Occasional forgotten eye staging remains an
+accepted conversational continuity signal, not a repair item. Activation needs
+only a disconnected page refresh, not a backend/model restart.
 
 ### Full Notes And Stable Live Context
 
