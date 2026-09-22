@@ -43,6 +43,7 @@ function fixture(speed = 5) {
     brain2MouthBrainEnabled: () => true, brain2VoiceMonitorEnabled: () => true,
     userSpeechActive: false, userTurnPending: () => false,
   });
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   for (const name of ['scheduleIdlePonder', 'clearAssistantFinishTimer',
     'armAssistantUtteranceFinished', 'checkAssistantUtteranceFinished', 'noteConversationActivity',
     'maybeCreateToolFollowup', 'brain2MouthCanSurface', 'brain2VoiceCanSpeak']) vm.runInContext(source(name), c);
@@ -99,7 +100,7 @@ test('quiet tool experiment is absent; full-context opportunities remain', () =>
   vm.runInContext(schema + '\nglobalThis.tools = runtimeWatchTools;', c);
   assert.equal(c.tools.find(tool => tool.name === 'wait_silently'), undefined);
   assert.match(c.tools.find(tool => tool.name === 'stop_standing_routine').description, /does not stop ordinary idle/);
-  assert.match(source('triggerIdlePonder'), /toolFollowupTerminal = false/);
+  assert.match(source('triggerIdlePonder'), /toolContinuation.startTurn\("idle"\)/);
   assert.match(source('triggerIdlePonder'), /robot790_idle_continuation: true/);
   assert.match(source('triggerIdlePonder'), /do not need a new user question/);
   assert.doesNotMatch(page, /wait_silently|waitSilently|silentWaitActive|silentWaitUntil|clearSilentWait/);

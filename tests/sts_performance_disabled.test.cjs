@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const html = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 function load(c, names) {
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   for (const name of names) {
     const start = html.indexOf(`    function ${name}(`);
     const end = html.indexOf('\n    }', start);

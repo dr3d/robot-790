@@ -55,6 +55,7 @@ function setup(overrides = {}, extraFunctions = []) {
     },
     ...overrides,
   });
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
   for (const name of [
     'brain2HeadlinesEnabled', 'brain2HeadlinesDue', 'brain2BlockedReason', 'brain2DelayMs',
     'fetchIdleHeadlines', 'requestBrain2Mull', 'acceptBrain2Headline', 'triggerBrain2Mull',

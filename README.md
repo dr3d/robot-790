@@ -190,13 +190,16 @@ ordinary conversation, B2 and idle thinking are unchanged. Gold startup now
 stops explicitly if model unloading or loading fails. The sidebar maximum is
 930px on wide screens, still bounded by 48% of the viewport.
 
-The checkpoint passes 540 JavaScript and 871 Python tests. Live image generation
-and Eye transfer are working, but willingness to join make-believe, inspecting
-images before describing them, and consistently following B2 advice remain
-observed weaknesses. Sustained idle at the new baseline still needs evaluation.
-The next stabilization focus is browser lifecycle ownership: first map the
-existing state and test interrupted tools, playback, stale results and reconnect
-before extracting runtime code. File splitting alone is not the solution.
+That checkpoint passed 540 JavaScript and 871 Python tests. Live image generation
+and Eye transfer work. Voluntary eye staging remains Eric's choice: carrying an
+instruction across sessions is useful evidence, and a conversational reminder
+is acceptable. Long-run behavior and B1/B2 coordination remain observationally
+assessed rather than guaranteed.
+Browser lifecycle factoring is underway: dedicated audio-playback and
+tool-continuation owners now coordinate execution, with transition tests for
+interrupted tools, playback, stale results and reconnect. The tool extraction
+awaits its live before/after comparison; prompts and companion behavior are
+unchanged. See [Engineering Status](docs/engineering-status.md).
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.

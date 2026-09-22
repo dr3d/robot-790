@@ -1337,6 +1337,7 @@ function loadFunctions(names, globals, source = page) {
   globals.sessionMapRequestEpoch ??= 0;
   globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
   for (const name of names) {
     const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     assert.notEqual(start, -1, `Missing ${name}`);

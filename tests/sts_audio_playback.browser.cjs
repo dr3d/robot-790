@@ -13,6 +13,7 @@ async function main() {
   try {
     const page = await browser.newPage();
     await page.addScriptTag({ path: path.join(root, 'web/sts/audio-playback.js') });
+    await page.addScriptTag({ path: path.join(root, 'web/sts/tool-continuation.js') });
     await page.evaluate(async () => {
       const context = new AudioContext({ sampleRate: 16000 });
       const gain = context.createGain(), analyser = context.createAnalyser();
@@ -93,6 +94,30 @@ async function main() {
     await page.waitForFunction(() => check.owner.isPlaying());
     await page.waitForFunction(() => !check.owner.isActive());
     assert.deepEqual(await page.evaluate(() => check.errors), []);
+    results.toolContinuationBeforeDrain = await page.evaluate(async () => {
+      const requests = [];
+      const session = { generation: check.state.generation };
+      check.continuationRequests = requests;
+      check.continuation = Robot790ToolContinuation.create({
+        isCurrent: s => s.generation === check.state.generation,
+        isSameSession: s => s.generation === check.state.generation,
+        getUserActivity: () => 100, audioActive: () => check.owner.isActive(),
+        getMaxRounds: () => 8, hasSessionMove: () => false,
+        onSessionMove() {}, onTerminal() {},
+        onFollowup: request => requests.push({ ...request, audioBusy: check.owner.isActive() }),
+      });
+      await check.owner.play(check.tone(0.35));
+      check.continuation.beginCall({ call_id: 'tool', name: 'search_web' }, { ...session, userActivityAt: 100 });
+      check.continuation.completeResponse();
+      check.continuation.finishCall(session);
+      return { audioBusy: check.owner.isActive(), requests: requests.length };
+    });
+    assert.deepEqual(results.toolContinuationBeforeDrain, { audioBusy: true, requests: 0 });
+    await page.waitForFunction(() => check.continuationRequests.length === 1);
+    results.toolContinuationAfterDrain = await page.evaluate(() => ({
+      requests: check.continuationRequests.length, audioBusyAtDispatch: check.continuationRequests[0].audioBusy,
+    }));
+    assert.deepEqual(results.toolContinuationAfterDrain, { requests: 1, audioBusyAtDispatch: false });
     await page.evaluate(async () => { check.owner.stop(); await check.context.close(); });
     await page.close();
 
@@ -116,6 +141,11 @@ async function main() {
     results.page = await ui.evaluate(() => ({ factory: typeof Robot790AudioPlayback.create,
       active: outputAudioActive(), playing: outputAudioPlaying(), connected: realtimeConnected() }));
     assert.deepEqual(results.page, { factory: 'function', active: false, playing: false, connected: false });
+    results.continuationPage = await ui.evaluate(() => ({
+      factory: typeof Robot790ToolContinuation.create, pending: toolContinuation.pending,
+      needed: toolContinuation.needed, dispatch: typeof dispatchToolFollowup,
+    }));
+    assert.deepEqual(results.continuationPage, { factory: 'function', pending: 0, needed: false, dispatch: 'function' });
     for (const [name, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844]]) {
       await ui.setViewportSize({ width, height });
       await ui.screenshot({ path: path.join(artifacts, `${name}.png`) });

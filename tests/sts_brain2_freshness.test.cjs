@@ -21,6 +21,7 @@ function load(names, globals = {}) {
   globals.brain2SetupCards ??= () => [];
   globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     assert.notEqual(start, -1, name);

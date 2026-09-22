@@ -11,6 +11,7 @@ function load(names, globals) {
   globals.toolFollowupTerminal ??= false;
   globals.lastUserTurnActivityAt ??= 0;
   const c = vm.createContext(globals);
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);

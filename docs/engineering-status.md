@@ -6,6 +6,28 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Tool Continuation Owner Extracted
+
+September 21: `web/sts/tool-continuation.js` now owns pending tool calls,
+response completion readiness, duplicate IDs, round state and audio-drain
+waiting. The page still executes tools, checks permissions and constructs the
+unchanged follow-up prompt. No prompts, model settings, idle behavior, tool
+limits or automatic image-staging behavior changed.
+
+All 609 JavaScript tests and 969 Python tests pass, with one existing
+Starlette/httpx deprecation warning; the 144 focused page-server tests also
+passed separately. Real
+Edge/Web Audio checks confirm that a follow-up waits for playback to drain.
+Before/after fixture wire packets match for ordinary, idle, exhausted, denied
+and interrupted continuations. The preceding live checks include a 230-second
+lecture, microphone interruption, stop-during-speech, reconnect and long-idle
+return; these validate the audio baseline, not the new extraction in live use.
+
+Post-extraction comparison remains pending. Refresh the disconnected page;
+no backend/model restart. The [ownership plan](sts-lifecycle-ownership-plan.md)
+records the exact baseline parent and remaining coverage. Occasional forgotten
+eye staging is an accepted conversational continuity signal, not a repair item.
+
 ### Full Notes And Stable Live Context
 
 September 21 checkpoint: ordinary notes no longer suffer a second silent

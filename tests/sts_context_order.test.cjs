@@ -37,6 +37,7 @@ function fixture() {
     currentInterruptSensitivity: () => 6,
     events: {}, log: (_target, text) => logs.push(text), rememberSessionPromptSnapshot() {},
   });
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   for (const name of ['runtimeContextProtocolInstructions', 'liveNoteEntries', 'sessionNotesForInstructions', 'buildSessionInstructions', 'buildRuntimeContextSections',
     'formatAloneStateForInstructions', 'formatRecentSearchContextForInstructions', 'appendRuntimeContextToConversation',
     'realtimeInterruptEnabled', 'sessionUpdateFingerprint', 'contextDiagnosticsEnabled', 'sessionPromptChange', 'updateSessionTools']) {

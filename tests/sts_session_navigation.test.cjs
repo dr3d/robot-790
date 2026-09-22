@@ -60,6 +60,7 @@ function fixture() {
     setSelectedContinuitySessionFilename: id => calls.push(['select', id]),
     startMic: async () => { calls.push(['mic', c.micMutedForNarration]); c.micStream = {}; },
   });
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   for (const name of ['activeRealtimeSession', 'sessionMapEntries', 'listSessionMap', 'requestEnterSession', 'sessionMapArrivalReceipt', 'performSessionMapMove']) {
     vm.runInContext(source(name), c);
   }

@@ -36,6 +36,7 @@ function load(names, globals = {}) {
   globals.runtimeConfig ??= {};
   globals.handledFunctionCallIds ??= new Set();
   const c = vm.createContext(globals);
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
@@ -163,8 +164,14 @@ test('the function-call pipeline delivers completion evidence before requesting 
     toolFollowupNeeded: false, toolFollowupPromptSources: [], idleInFlight: false, loadedNoteContextDirty: false,
     parseToolArguments: JSON.parse, beginToolActivity: () => {}, endToolActivity: () => {},
     toolDetailFromArgs: () => '', executeTool: async () => result,
-    send: event => sent.push(event), maybeCreateToolFollowup: () => { followups++; },
+    send: event => sent.push(event),
   });
+  const maybeFollowup = c.toolContinuation.maybeFollowup;
+  c.toolContinuation.maybeFollowup = session => {
+    followups++;
+    assert.equal(JSON.parse(sent[0].item.output).completion, 'verified');
+    maybeFollowup(session);
+  };
   await c.handleFunctionCall({ name: 'play_face_beat', call_id: 'call1', arguments: '{"name":"drowsy"}' }, options);
   assert.equal(sent.length, 1);
   assert.equal(JSON.parse(sent[0].item.output).completion, 'verified');

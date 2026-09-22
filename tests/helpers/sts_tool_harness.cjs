@@ -43,6 +43,7 @@ function fixture() {
 }
 
 function loadFunctions(context, names) {
+  require('./sts_continuation_harness.cjs').installToolContinuation(context);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);

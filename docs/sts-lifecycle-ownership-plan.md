@@ -24,7 +24,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Connection identity | `activeRealtimeSession`, `send`, `realtimeSessionGeneration`, `ws`, `realtimeStopRequested` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
 | Stop, save, reconnect | `quiesceRealtimeForSave`, `haltRealtimeActivity`, `disconnectRealtime`, `resetSessionContextForConnection`, `clearHotConversationState` | Cleanup is spread across functions; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
-| Tool batch and continuation | `handleFunctionCall`, `maybeCreateToolFollowup`, pending count, done flag, drain timer, user activity timestamp, round budget | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
+| Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
 | Turn completion | `armAssistantUtteranceFinished`, `checkAssistantUtteranceFinished`, `noteConversationActivity` | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
 | Generated-image presentation | `generateImage`, `showGeneratedImage`, `moveGeneratedImageToSensingEye`, preview/eye generations | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. |
@@ -74,8 +74,8 @@ the actual page initializer to exercise the production callback wiring.
 
 ## First Production Extraction: Audio Playback Owner
 
-**Implemented September 20; live acceptance pending.** The steps below were
-the extraction boundary; the final live check remains open:
+**Implemented September 20; live acceptance in progress.** The steps below were
+the extraction boundary; September 21 receipts and remaining checks are below:
 
 1. Move playback queue, source scheduling, pending setup tokens, playback
    generation and stop/drain checks into one small module. Preserve sample rate,
@@ -89,8 +89,8 @@ the extraction boundary; the final live check remains open:
    speech and reconnect before moving another ownership boundary.
 
 Do not simultaneously move prompts, B2 reasoning, persistence or idle policy.
-The following candidate is the tool-continuation owner, but its session/audio
-contracts need to be stable first. A wholesale backend migration is not required.
+The subsequent extraction is the tool-continuation owner documented below.
+A wholesale backend migration is not required.
 
 `audio-playback.js` exports `create` in the same browser/CommonJS pattern as the
 existing STS modules. Its API is `enqueue`, `flush`, `play`, `clearQueue`, `stop`,
@@ -112,7 +112,92 @@ permissions, sentence batching, flush thresholds, voice and idle cadence are
 unchanged. Keep the autonomous-art run as a live behavioral comparison; this
 structural change should not be perceptible as a different Eric.
 
-## Still Missing
+## Second Production Extraction: Tool Continuation Owner
+
+Implemented September 21; post-extraction live comparison pending.
+`web/sts/tool-continuation.js` owns pending calls, response-done readiness,
+duplicate call IDs, continuation rounds/scope, source names and the audio-drain
+timer. Page adapters retain tool execution, receipts, permissions, prompt
+construction and socket dispatch. Readiness consumers read the owner directly;
+there are no mirrored page counters. Existing test fixtures alias old names to
+the actual module through the production initializer, not a second algorithm.
+
+The existing 100 ms drain poll, default/configured round limits, 512-ID and
+eight-source bookkeeping bounds are unchanged. This adds no new restrictions.
+The continuation prompt, tool catalogue, idle policy, image staging choices,
+context assembly and model/TTS settings are unchanged. A canceled timer callback
+already queued before reset cannot clear the new owner's timer.
+
+Verification: 609 JavaScript tests pass, including ten new owner checks;
+969 Python tests pass (one existing Starlette/httpx deprecation warning),
+including a separate 144-test page-server run. Before/after wire packets matched for normal,
+idle, exhausted, denied and interrupted fixture scenarios. The real Edge check
+now composes both owners: no follow-up while actual Web Audio is active, exactly
+one after drain. Desktop/mobile page loads have no JavaScript errors. No live
+model, microphone, hardware action or paid render was used by these checks.
+
+The baseline is the 22:22-22:28 Harbor Courtesy Engine run, saved as
+`session-20260921-222825-511.txt`, with evidence preserved in
+`logs/runs/20260921-2228-tool-continuation-baseline/`. It completed the multi-step
+task and adapted after interruption. STT changed "ferry" to "fairy"; one fully
+filtered reply recovered before eye staging. Both predate this extraction.
+
+Activation: disconnected page refresh, then Connect Previous to repeat from
+`session-20260921-213620-770.txt` while that baseline is still latest. Otherwise
+select that parent in the session map. Compare successful execution and speech
+ordering, not identical content. No backend/model restart is needed.
+
+## Acceptance And Gaps
+
+### Live Acceptance Progress: September 21
+
+The 21:17-21:23 resumed-thread run exercised microphone interruption and
+disconnect during speech. The browser recorded playback barge-in, the backend
+canceled the old response, and Eric accepted the changed subject. On disconnect,
+TTS canceled, the session and two eye assets saved, and the socket closed. Scott
+independently confirmed that speech fully ceased. He reports a subsequent run
+underway; that run still needs its own delivery check.
+
+The same day's focused audio/lifecycle suite passed all 27 tests, and the real
+Edge audio-clock check passed again without connecting to Eric. The earlier
+19:41-20:20 run supplied a 25-minute idle interval and a 3.591-second logged
+return-to-speech result. These are partial acceptance receipts, not a complete
+release-gate pass: sustained long speech, fresh card-free comparison, and the
+remaining transitions below are not all established by these two runs.
+
+A separate image-ordering miss occurred: one foreground render was described
+before eye staging; the second followed generate/stage/describe correctly. Do
+not label every image path gated or bundle a behavioral repair into extraction.
+Private PM evidence is retained under
+`logs/runs/20260921-2124-audio-acceptance/` and
+`logs/runs/20260921-2020-guest-introduction-idle/`.
+
+The subsequent 21:24-21:36 resumed run exercised sustained speech: the
+Consequence Postponement Engine lecture generated 230.43 seconds of audio.
+Text finished at 21:27:40 and backend response completion at 21:28:26, but the
+browser did not return to idle until 21:31:17. No new B1 response or B2 spoken
+aside started during the lecture; Scott reported an excellent run. His next
+turn received first speech output in 2.479 seconds. This closes the sustained
+long-speech check for the resumed-thread path, not all remaining coverage.
+The foreground describe-before-eye issue repeated on the first new image and
+recovered after a reminder; keep it separate from audio ownership acceptance.
+Evidence: `logs/runs/20260921-2136-consequence-engine-long-speech/`.
+
+**Operator disposition, September 21:** occasionally forgetting to stage a
+picture before discussing it is acceptable and easily corrected in conversation.
+It is not a repair item or an extraction acceptance blocker. Do not add a gate,
+prompt rule or automatic choreography to enforce this ordering. Actual failures
+to retrieve or stage a requested image remain execution issues; this disposition
+concerns the model's choice of when to do it, not broken tools.
+
+The choice itself is also a useful continuity signal for Scott: voluntarily
+staging before describing can demonstrate an instruction sustained across
+sessions; returning to prompt-description can suggest that thread has weakened.
+It is a behavioral observation, not proof that context was omitted. Automatically
+staging every creation would conceal this signal. Preserve the model's choice
+unless the operator explicitly requests automatic staging.
+
+### Remaining Coverage
 
 - Full stop/save/reconnect and failed-save retry replay with the actual durable
   save pipeline, including final transcription and session-map transitions.

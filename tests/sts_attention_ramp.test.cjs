@@ -48,6 +48,7 @@ function fixture() {
     idleLaneAllowedByAttention: () => true, idleLaneCursor: -1,
     lastGoalIdleAt: 0, lastIdleSelfTaskAt: 0,
   });
+  require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   for (const name of [
     'idleTiming', 'conversationAttentionEnabled', 'conversationAttentionState', 'conversationIdleDelayMs',
     'conversationAttentionInstruction', 'conversationPauseHoldUntil', 'conversationReengagePolicy', 'conversationReengageWindowActive',
