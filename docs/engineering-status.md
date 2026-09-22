@@ -36,6 +36,18 @@ an old page server instead of silently falling back to unsafe writes.
 The page server was restarted and checked locally; no realtime connection was
 active, and the model/voice servers were left running. Refresh before resuming.
 
+Live acceptance, September 22, 08:01-08:04: two short ordinary Connect/Disconnect
+runs saved two complete, matching transaction journals with the correct chain.
+The second Connect loaded the first save plus its ancestry (six historical
+sessions became seven). Retained-image lookup/staging worked in both, with one
+matching eye-asset receipt in each save. Scott confirmed continuity was good.
+Run 1 stopped active TTS cleanly; run 2 completed readback after socket closure
+without invalidating the save. No save/tool error or duplicate session was found.
+Startup still took about 20/17 seconds, mostly in B1; subsequent requests began
+audio in 1.2-1.6 seconds. These short runs do not establish sustained idle/B2 or
+live failed-save recovery. No further repair was made. Private paired PM:
+`logs/runs/20260922-0804-disconnect-continuity-acceptance/postmortem.md`.
+
 ### One Save And Resume Workflow
 
 September 22: at Scott's request, the unused Save + Halt / Start Eric control and

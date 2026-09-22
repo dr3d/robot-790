@@ -339,8 +339,20 @@ Starlette/httpx deprecation warning. Isolated Edge page/audio checks pass. The
 page server has been restarted for the new endpoint without restarting the
 model or TTS; a disconnected page refresh loads the browser half of the change.
 
-Next: connection/transition ownership extraction as its own checkpoint, after
-normal resumed-thread Connect/Disconnect acceptance. Do not expand this repair
+The September 22 08:01-08:04 paired live trial passed the ordinary resumed-thread
+path: two complete save journals matched their source notes and original parents;
+the second Connect loaded the first save and all prior ancestry. Both retained
+the same successfully recalled eye asset. Scott confirmed continuity was good.
+The first Disconnect canceled active TTS; the second followed drained speech.
+Optional readback finished after socket close without affecting acknowledgment.
+No duplicate note or failed tool/save was observed. The slow initial LLM replies
+remain a separate observation, not a save regression; subsequent requests began
+audio in 1.2-1.6 seconds. These short trials did not exercise sustained idle/B2,
+fresh card-free comparison, or an actual live save retry. Evidence:
+`logs/runs/20260922-0804-disconnect-continuity-acceptance/postmortem.md`.
+
+Next: connection/transition ownership extraction as its own checkpoint, with
+normal resumed-thread Connect/Disconnect acceptance now recorded. Do not expand this repair
 into unexpected-close, emergency Halt or page-unload semantics.
 
 ## Acceptance And Gaps
