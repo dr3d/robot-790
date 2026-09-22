@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const page = fs.readFileSync(`${__dirname}/../../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 
 function installToolContinuation(context) {
+  require('./sts_connection_harness.cjs').installRealtimeConnection(context);
   if (context.toolContinuation) return context.toolContinuation;
   context.Robot790ToolContinuation = require('../../web/sts/tool-continuation.js');
   for (const name of ['createToolContinuationOwner', 'dispatchToolFollowup']) {

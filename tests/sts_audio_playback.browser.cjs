@@ -146,6 +146,17 @@ async function main() {
       needed: toolContinuation.needed, dispatch: typeof dispatchToolFollowup,
     }));
     assert.deepEqual(results.continuationPage, { factory: 'function', pending: 0, needed: false, dispatch: 'function' });
+    results.connectionPage = await ui.evaluate(() => ({
+      factory: typeof Robot790RealtimeConnection.create,
+      generation: realtimeConnection.generation, stopped: realtimeConnection.stopped,
+      hasSocket: Boolean(realtimeConnection.socket), active: activeRealtimeSession(),
+      legacySocket: typeof ws, legacyGeneration: typeof realtimeSessionGeneration,
+      legacyStopped: typeof realtimeStopRequested,
+    }));
+    assert.deepEqual(results.connectionPage, {
+      factory: 'function', generation: 0, stopped: false, hasSocket: false, active: false,
+      legacySocket: 'undefined', legacyGeneration: 'undefined', legacyStopped: 'undefined',
+    });
     assert.equal(await ui.locator('#saveAndHaltEric').count(), 0);
     results.serverManagement = await ui.locator('#serverManagementExpando button').allTextContents();
     assert.deepEqual(results.serverManagement, ['Halt', 'Restart', 'Unload']);

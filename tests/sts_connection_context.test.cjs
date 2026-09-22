@@ -167,6 +167,7 @@ function preparationPage() {
     Robot790ConnectionContext: { prepare: async ({ notes }) => ({ notes, receipt: {
       prompt_tokens: 100, growth_available_tokens: 33000, context_window_tokens: 65536, attempts: [] } }) }
   });
+  require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
   vm.runInContext(source('prepareConnectionContext'), c);
   return c;
 }

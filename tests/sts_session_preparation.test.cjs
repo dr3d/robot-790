@@ -7,6 +7,7 @@ const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf
 
 function load(names, globals) {
   const context = vm.createContext(globals);
+  require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(context);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
@@ -53,7 +54,7 @@ test('Connect waits for preparation before creating the realtime socket and rele
   assert.ok(connect.indexOf('await pauseSessionPreparation()') < connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun'));
   assert.ok(connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun') < connect.indexOf('new WebSocket('));
   assert.match(connect, /catch \(error\) \{\s*releaseSessionPreparation\(\)/);
-  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(ws !== socket[^\n]+\n\s*stopVisionCamera\(\{ quiet: true \}\);\s*stopEsp32Camera\(\);\s*releaseSessionPreparation/);
+  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(!realtimeConnection.isCurrent\(socket, sessionGeneration\)\) return;\s*stopVisionCamera\(\{ quiet: true \}\);\s*stopEsp32Camera\(\);\s*releaseSessionPreparation/);
 });
 
 test('a parent archived during Connect preflight prevents opening an unsavable session', async () => {

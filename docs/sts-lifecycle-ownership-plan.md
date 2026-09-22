@@ -21,7 +21,7 @@ current responsibilities, not a claim that they already form isolated modules.
 
 | Responsibility | Current entry points / state | Boundary risk |
 | --- | --- | --- |
-| Connection identity | `activeRealtimeSession`, `send`, `realtimeSessionGeneration`, `ws`, `realtimeStopRequested` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
+| Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. Transition coordination remains page-owned. |
 | Stop, save, reconnect | `quiesceRealtimeForSave`, `haltRealtimeActivity`, `disconnectRealtime`, `resetSessionContextForConnection`, `clearHotConversationState` | Cleanup is spread across functions; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
@@ -351,9 +351,41 @@ audio in 1.2-1.6 seconds. These short trials did not exercise sustained idle/B2,
 fresh card-free comparison, or an actual live save retry. Evidence:
 `logs/runs/20260922-0804-disconnect-continuity-acceptance/postmortem.md`.
 
-Next: connection/transition ownership extraction as its own checkpoint, with
-normal resumed-thread Connect/Disconnect acceptance now recorded. Do not expand this repair
-into unexpected-close, emergency Halt or page-unload semantics.
+The accepted baseline and paired-run notes are checkpointed as `d0dbebe`.
+Connection ownership is proceeding in smaller steps below. Do not expand this
+repair into unexpected-close, emergency Halt or page-unload semantics.
+
+### Connection Identity Extraction: September 22
+
+First part of ordered step 4 only: `realtime-connection.js` owns current socket,
+generation and stopped state. Its `invalidate`, `adopt`, `requestStop`,
+`isCurrent`, `isActive`, `isConnected` and `send` methods preserve the existing
+decisions and wire serialization. Reset still advances the generation before
+context preparation; adopting the new socket advances it again. Stop does not
+erase identity: final transcription and current-socket cleanup still need it.
+There is no new prompt, timer, network request, retry or automatic reconnect.
+
+All production consumers read the owner directly. Existing test fixtures alias
+the old names to that same module for compatibility, not to a second state
+implementation. The page still owns preparation, save transactions, transition
+coordination, socket event handling and resource cleanup. This extraction does
+not yet serialize competing connection preparations or guarantee page-exit
+recovery. Those are separate changes, not implied benefits of moving state.
+
+Verification: all 641 JavaScript and 990 Python tests pass; the existing
+Starlette/httpx deprecation warning remains. Seven new tests compare old/new
+connection predicates and packet serialization, exercise stop/invalidate/adopt,
+ignore old socket open/close/error callbacks through the real page functions,
+and accept only the current socket's final transcription while stopped. The
+HTTP/durable-save tests now compose the new owner too. Isolated Edge checks
+confirm the real page loads it without legacy state globals or JavaScript
+errors, with unchanged audio/tool-drain behavior. No live session was opened.
+
+Activation is a disconnected page refresh, with no server/model restart.
+Live acceptance remains pending: Connect to the rich thread, briefly interact,
+Disconnect, Connect again and check continuity. Once accepted, extract the
+single in-flight transition separately; keep context assembly and save receipt
+semantics unchanged. Do not claim the larger lifecycle problem solved here.
 
 ## Acceptance And Gaps
 

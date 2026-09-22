@@ -25,6 +25,7 @@ function fixture() {
   for (const name of ['admitLiveNoteRead', 'readTextFile']) {
     const start = page.indexOf(`    async function ${name}(`);
     const end = page.indexOf('\n    }\n', start);
+    require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(context);
     vm.runInContext(page.slice(start, end + 6), context);
   }
   return { c: context, measured, pinned };

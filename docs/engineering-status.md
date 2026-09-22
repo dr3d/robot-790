@@ -6,6 +6,30 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Connection Identity Owner
+
+September 22: after the accepted save/resume checkpoint `d0dbebe`,
+`web/sts/realtime-connection.js` now owns the current socket, session generation
+and stopped state. Page consumers read that owner directly; active-session
+checks and guarded sends use it. There are no mirrored production globals.
+The existing generation boundaries, stop behavior and final-transcription
+exception are preserved. Prompts, idle policy, context assembly and the
+transactional save sequence have not changed.
+
+This is the first part of connection extraction, not a completed lifecycle
+controller. Connection preparation, transition coordination, save orchestration,
+device cleanup and unexpected closure remain page-owned. Single-flight
+transition ownership is the next separate step after live acceptance.
+
+Verification: 641 JavaScript tests, 990 Python tests and isolated Edge checks
+pass (one existing Starlette/httpx deprecation warning). Tests compare the old
+connection predicates and sent packets, reject stale socket callbacks, and keep
+the final user transcript during Disconnect. Edge loads the real page and all
+three owners without connecting to Eric; audio/tool-drain checks still pass.
+Live acceptance of this extraction is pending. Refresh while disconnected,
+Connect to the same thread, exchange a few words, then Disconnect and Connect
+again to check continuity. No server or model restart is needed.
+
 ### Transactional Disconnect Saves
 
 September 22: normal Disconnect now freezes one save identity, transcript,

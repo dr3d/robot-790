@@ -57,6 +57,7 @@ function captureContext(snapshot=async()=>({width:240,height:320})) {
       assert.ok(options.isCurrent()); assert.equal(options.eyeGeneration,c.sensingEyeGeneration);
       c.writes++; c.options=options; return {savedFilename:name,openUrl:'/saved.jpg'};
     }});
+  require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
   vm.runInContext(source('captureEsp32Camera'),c);
   return {c,stop:()=>generation++,elements};
 }

@@ -3003,6 +3003,7 @@
   <script src="network-camera.js"></script>
   <script src="idle-art.js"></script>
   <script src="audio-playback.js"></script>
+  <script src="realtime-connection.js"></script>
   <script src="tool-continuation.js"></script>
   <script src="connection-context.js"></script>
   <script>
@@ -3215,7 +3216,7 @@
     const events = document.querySelector("#events");
     const settingsPanel = document.querySelector("#settingsPanel");
 
-    let ws;
+    const realtimeConnection = Robot790RealtimeConnection.create();
     let audioContext;
     let ericPlaybackGain;
     let micContext;
@@ -3269,7 +3270,6 @@
     let lastExitSnapshotReason = "";
     let intentionalExitCleanupInProgress = false;
     let intentionalExitCleanupGeneration = 0;
-    let realtimeStopRequested = false;
     let quickRecordConversationBusy = false;
     const minAudioRecordChunkMs = 30000;
     const audioPlayback = Robot790AudioPlayback.create({
@@ -3277,8 +3277,8 @@
       ensurePlayback: () => ensurePlayback(),
       getPlaybackDestination: () => ensureEricPlaybackGain(),
       getRecordingDestination: () => recordingDestination,
-      getSessionGeneration: () => realtimeSessionGeneration,
-      isStopped: () => realtimeStopRequested,
+      getSessionGeneration: () => realtimeConnection.generation,
+      isStopped: () => realtimeConnection.stopped,
       decodePcm16: bytes => pcm16ToFloat32(bytes),
       onSettled: () => { if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished(); },
       onError: error => log(events, `audio playback error: ${error.message}`),
@@ -3318,7 +3318,6 @@
     let lastAcceptedUserTranscriptAt = 0;
     let lastUserConversationIndex = -1;
     const toolContinuation = createToolContinuationOwner();
-    let realtimeSessionGeneration = 0;
     let lastSessionUpdateSocket = null;
     const liveNotes = new Robot790LiveNotes.LiveNotes();
     let lastSessionUpdateFingerprint = "";
@@ -6186,7 +6185,7 @@
     }
 
     async function requestEnterSession({ destination } = {}) {
-      const socket = ws, generation = realtimeSessionGeneration, userActivityAt = lastUserTurnActivityAt;
+      const socket = realtimeConnection.socket, generation = realtimeConnection.generation, userActivityAt = lastUserTurnActivityAt;
       const requestEpoch = sessionMapRequestEpoch;
       if (!activeRealtimeSession(socket, generation) || !lastAcceptedUserTranscriptAt
           || idleInFlight || reengageInFlight || gpuWatchInFlight || standingRoutineInFlight) {
@@ -6244,12 +6243,12 @@
         recordUiEvent("session map move requested", move.session_id, { title: move.title });
         const stopped = await disconnectRealtime({ reloadSavedNote: false });
         if (stopped?.status !== "ok") return;
-        if (ws !== move.socket || realtimeSessionGeneration !== move.generation || !realtimeStopRequested) return;
+        if (realtimeConnection.socket !== move.socket || realtimeConnection.generation !== move.generation || !realtimeConnection.stopped) return;
         await connectSelectedContinuityFilename(move.session_id, "Enter Session", move.resumeForm);
-        const socket = ws, generation = realtimeSessionGeneration;
+        const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
         if (socket === move.socket) throw new Error("Destination did not connect. The conversation you left is saved.");
         const connectDeadline = Date.now() + 15000;
-        while (socket === ws && generation === realtimeSessionGeneration && !realtimeStopRequested
+        while (socket === realtimeConnection.socket && generation === realtimeConnection.generation && !realtimeConnection.stopped
             && socket.readyState === WebSocket.CONNECTING && Date.now() < connectDeadline) await sleepMs(100);
         if (!activeRealtimeSession(socket, generation)) throw new Error("Destination connection unavailable. The conversation you left is saved.");
         if (continuityParentForCurrentRun !== move.session_id) throw new Error("Destination history was not restored; arrival is unverified.");
@@ -6359,9 +6358,9 @@
     function updateContinuitySessionActionButtons() {
       const hasSelection = Boolean(selectedContinuitySessionFilename());
       const socketBusy = Boolean(
-        ws
+        realtimeConnection.socket
         && typeof WebSocket !== "undefined"
-        && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+        && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)
       );
       const locked = connectionButtonsLocked || socketBusy;
       if (archiveContinuitySessionButton) archiveContinuitySessionButton.disabled = locked || !hasSelection || continuitySessions.length <= 1;
@@ -7506,7 +7505,7 @@
       const advisory = formatBrain2AdvisoryContent();
       if (!advisory) return false;
       const text = `[B2 advisory]\nPrivate runtime context, not spoken dialogue. Use silently; do not continue or reproduce this block.\n${advisory}\n[End B2 advisory]`;
-      if (lastBrain2AdvisorySocket === ws && lastBrain2AdvisoryText === text) return false;
+      if (lastBrain2AdvisorySocket === realtimeConnection.socket && lastBrain2AdvisoryText === text) return false;
       send({
         type: "conversation.item.create",
         item: {
@@ -7515,7 +7514,7 @@
           content: [{ type: "output_text", text }]
         }
       });
-      lastBrain2AdvisorySocket = ws;
+      lastBrain2AdvisorySocket = realtimeConnection.socket;
       lastBrain2AdvisoryText = text;
       rememberPromptLedger({
         kind: "conversation.item.create",
@@ -7645,18 +7644,18 @@
 
     function sessionNotesForInstructions(noteContexts) {
       if (noteContexts !== undefined) return formatLoadedNotesForInstructions(noteContexts);
-      return ws && liveNotes.socket === ws && ws.readyState === WebSocket.OPEN
+      return realtimeConnection.socket && liveNotes.socket === realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN
         ? liveNotes.prefix : formatLoadedNotesForInstructions();
     }
 
     function appendRuntimeContextToConversation({ reason = "runtime update", toolBoundary = false } = {}) {
-      if (!realtimeConnected() || realtimeStopRequested || firstContactModeEnabled()) return false;
+      if (!realtimeConnected() || realtimeConnection.stopped || firstContactModeEnabled()) return false;
       // Never insert context between an unfinished tool call and its receipt.
       if (toolContinuation.pending > 0 || (!toolBoundary && (responseActive || toolContinuation.needed))) return false;
       const sections = buildRuntimeContextSections();
-      const notePlan = liveNotes.socket === ws ? liveNotes.plan(liveNoteEntries()) : null;
+      const notePlan = liveNotes.socket === realtimeConnection.socket ? liveNotes.plan(liveNoteEntries()) : null;
       for (const change of notePlan?.changes || []) sections[`pinned_note ${JSON.stringify(change.filename)}`] = change.text;
-      const previous = lastRuntimeContextSocket === ws ? lastRuntimeContextSections : {};
+      const previous = lastRuntimeContextSocket === realtimeConnection.socket ? lastRuntimeContextSections : {};
       const changed = Object.keys(sections).filter(key => previous[key] !== sections[key]);
       if (!changed.length) return false;
       const text = [
@@ -7669,7 +7668,7 @@
         type: "conversation.item.create",
         item: { type: "message", role: "assistant", content: [{ type: "output_text", text }] }
       });
-      lastRuntimeContextSocket = ws;
+      lastRuntimeContextSocket = realtimeConnection.socket;
       lastRuntimeContextSections = sections;
       if (notePlan) liveNotes.commit(notePlan);
       rememberPromptLedger({
@@ -8947,7 +8946,7 @@
     }
 
     function realtimeConnected() {
-      return Boolean(!realtimeStopRequested && ws && ws.readyState === WebSocket.OPEN);
+      return realtimeConnection.isConnected();
     }
 
     function micRuntimeLabel() {
@@ -9375,7 +9374,7 @@
         saveTtsVoice();
         saveTtsStyle();
       }
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
+      if (!realtimeConnection.socket || realtimeConnection.socket.readyState !== WebSocket.OPEN) {
         if (announce) log(events, "voice settings saved; reconnect or apply after connecting");
         return;
       }
@@ -10855,7 +10854,7 @@
     }
 
     function noteIdleDiscovery(keys, { source, detail }) {
-      if (!realtimeConnected() || realtimeStopRequested || !idleDiscoveryEnabled()) return false;
+      if (!realtimeConnected() || realtimeConnection.stopped || !idleDiscoveryEnabled()) return false;
       const fresh = [...new Set(keys.filter(Boolean))].filter((key) => !idleDiscoverySeen.includes(key));
       if (!fresh.length) return false;
       idleDiscoverySeen = [...idleDiscoverySeen, ...fresh].slice(-256);
@@ -11172,8 +11171,8 @@
       idleTimerFireAt = Date.now() + waitMs;
       updateIdleSchedulerStatus();
       scheduleIdleSchedulerStatusTimer();
-      const socket = ws;
-      const generation = realtimeSessionGeneration;
+      const socket = realtimeConnection.socket;
+      const generation = realtimeConnection.generation;
       idleTimer = setTimeout(async () => {
         if (!activeRealtimeSession(socket, generation)) return;
         idleTimer = null;
@@ -11437,7 +11436,7 @@
     function brain2EvidenceSnapshot() {
       const now = Date.now();
       const rows = conversationLines.map((text, index) => ({
-        id: `${realtimeSessionGeneration}:${brain2EvidenceGeneration}:${index}`,
+        id: `${realtimeConnection.generation}:${brain2EvidenceGeneration}:${index}`,
         text,
         at: conversationLineMetadata[index]?.iso || "",
         role: /\] You:/.test(text) ? "user" : /\] Robot 790:/.test(text) ? "assistant" : "other",
@@ -11557,7 +11556,7 @@
     }
 
     function brain2VoiceMonitorEnabled() {
-      return Boolean(!realtimeStopRequested && brain2VoiceMonitor?.checked);
+      return Boolean(!realtimeConnection.stopped && brain2VoiceMonitor?.checked);
     }
 
     function browserSpeechAvailable() {
@@ -11726,9 +11725,9 @@
     }
 
     async function surfaceBrain2MouthText(mouthText, options = {}) {
-      if (realtimeStopRequested) return;
-      const generation = realtimeSessionGeneration;
-      const socket = ws;
+      if (realtimeConnection.stopped) return;
+      const generation = realtimeConnection.generation;
+      const socket = realtimeConnection.socket;
       try {
         await setMouthText({
           text: mouthText,
@@ -11738,11 +11737,11 @@
           duration: 7
         });
       } catch (error) {
-        if (socket === ws && generation === realtimeSessionGeneration) {
+        if (socket === realtimeConnection.socket && generation === realtimeConnection.generation) {
           logBrain2("mouth display error", error.message);
         }
       }
-      if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) return;
+      if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return;
       bumpBrain2Counter("surfaced");
       logBrain2("mouth", mouthText);
       rememberBrain2Output("mouth", mouthText);
@@ -11898,7 +11897,7 @@
       const body = brain2BodyContext();
       const observed = result.observed_body;
       const evidence = brain2EvidenceSnapshot();
-      if (realtimeStopRequested || !realtimeConnected()) return "disconnected";
+      if (realtimeConnection.stopped || !realtimeConnected()) return "disconnected";
       if (!brain2MouthBrainEnabled()) return "brain2 disabled";
       if (!body?.gestures.includes(result.body_beat) || !observed || observed.url !== normalizeFaceBaseUrl()) return "body changed or unsupported";
       if (observed.revision !== faceVisualHoldRevision) return "visual revision changed";
@@ -11918,7 +11917,7 @@
         brain2BodyCueTimer = null;
         const pending = brain2PendingBodyCue;
         if (!pending) return;
-        if (pending.generation !== realtimeSessionGeneration || pending.context !== currentPromptContextModeKey() || Date.now() >= pending.expiresAt) {
+        if (pending.generation !== realtimeConnection.generation || pending.context !== currentPromptContextModeKey() || Date.now() >= pending.expiresAt) {
           clearBrain2BodyCue("expired or session changed");
           return;
         }
@@ -11935,7 +11934,7 @@
       const blocked = brain2BodyCueBlockedReason(result);
       if (blocked === "playback") {
         if (!deferred) {
-          brain2PendingBodyCue = { result, generation: realtimeSessionGeneration,
+          brain2PendingBodyCue = { result, generation: realtimeConnection.generation,
             context: currentPromptContextModeKey(), expiresAt: Date.now() + 15000 };
           logBrain2("body cue deferred", `${name}: playback; up to 15 real seconds`);
         }
@@ -11960,8 +11959,8 @@
     }
 
     async function requestBrain2Mull({ manual = false, headlines = null } = {}) {
-      const generation = realtimeSessionGeneration;
-      const socket = ws;
+      const generation = realtimeConnection.generation;
+      const socket = realtimeConnection.socket;
       const evidence = brain2EvidenceSnapshot();
       const body = headlines ? null : brain2BodyContext();
       const observedBody = body ? { url: normalizeFaceBaseUrl(), revision: faceVisualHoldRevision } : null;
@@ -11987,7 +11986,7 @@
         body: JSON.stringify(requestPayload)
       });
       const result = await response.json().catch(() => ({}));
-      const current = socket === ws && generation === realtimeSessionGeneration && evidence.evidence_generation === brain2EvidenceGeneration
+      const current = socket === realtimeConnection.socket && generation === realtimeConnection.generation && evidence.evidence_generation === brain2EvidenceGeneration
         && JSON.stringify(evidence.setup_cards) === JSON.stringify(brain2SetupCards())
         && JSON.stringify(evidence.note_guidance) === JSON.stringify(Robot790NoteBrains.forBrain(loadedNoteContexts, "b2"));
       if (current) {
@@ -12005,9 +12004,9 @@
     }
 
     async function triggerBrain2Mull({ manual = false } = {}) {
-      if (realtimeStopRequested) return;
-      const generation = realtimeSessionGeneration;
-      const socket = ws;
+      if (realtimeConnection.stopped) return;
+      const generation = realtimeConnection.generation;
+      const socket = realtimeConnection.socket;
       const evidenceGeneration = brain2EvidenceGeneration;
       const userActivityAt = lastUserTurnActivityAt;
       const readHeadlines = !manual && brain2HeadlinesDue();
@@ -12028,7 +12027,7 @@
       try {
         bumpBrain2Counter("fired");
         logBrain2("fired", readHeadlines ? "idle headlines" : manual ? "manual" : "auto");
-        const headlineWorkCurrent = () => !realtimeStopRequested && socket === ws && generation === realtimeSessionGeneration
+        const headlineWorkCurrent = () => !realtimeConnection.stopped && socket === realtimeConnection.socket && generation === realtimeConnection.generation
           && evidenceGeneration === brain2EvidenceGeneration && userActivityAt === lastUserTurnActivityAt
           && !userSpeechActive && !userTurnPending() && brain2HeadlinesEnabled() && brain2MouthBrainEnabled();
         const headlines = readHeadlines ? await fetchIdleHeadlines() : null;
@@ -12041,7 +12040,7 @@
           return;
         }
         const result = await requestBrain2Mull({ manual, headlines });
-        if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) {
+        if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) {
           logBrain2("stale", "ignored result from previous realtime session");
           return;
         }
@@ -12061,7 +12060,7 @@
           await surfaceBrain2BodyCue(result);
           if (userSpeechActive || result.observed_evidence?.user_key !== brain2EvidenceSnapshot().user_key) return;
         }
-        if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) return;
+        if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return;
         const mouthText = String(result.mouth_text || "").trim();
         const noteForEric = String(result.note_for_eric || "").trim();
         if (result.note_delivery && (noteForEric || result.note_delivery.truncated)) {
@@ -12076,7 +12075,7 @@
           rememberBrain2Output("held echo", mouthText);
         } else if (mouthText && shouldSurface && brain2MouthCanSurface()) {
           await surfaceBrain2MouthText(mouthText);
-          if (realtimeStopRequested || socket !== ws || generation !== realtimeSessionGeneration) return;
+          if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return;
         } else if (mouthText && shouldSurface) {
           deferBrain2Surface(mouthText, "waiting for pause");
           rememberBrain2Output("deferred", mouthText);
@@ -12123,7 +12122,7 @@
           appendBrain2AdvisoryToConversation({ reason: "arrived during user speech" });
         }
       } catch (error) {
-        if (socket !== ws || generation !== realtimeSessionGeneration) {
+        if (socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) {
           logBrain2("stale", `ignored error from previous realtime session: ${error.message}`);
           return;
         }
@@ -12137,7 +12136,7 @@
         }
         throw error;
       } finally {
-        if (socket === ws && generation === realtimeSessionGeneration) {
+        if (socket === realtimeConnection.socket && generation === realtimeConnection.generation) {
           brain2InFlight = false;
           brain2HeadlinesInFlight = false;
           updateLanePressure({ reason: "Brain 2 mull finished" });
@@ -12518,8 +12517,8 @@
     }
 
     async function triggerIdlePonder({ manual = false, statusChecked = false } = {}) {
-      const socket = ws;
-      const generation = realtimeSessionGeneration;
+      const socket = realtimeConnection.socket;
+      const generation = realtimeConnection.generation;
       const userActivityAt = lastUserTurnActivityAt;
       if (!statusChecked) {
         const status = await refreshBrainStatusQuietly();
@@ -13216,18 +13215,12 @@
       return output;
     }
 
-    function activeRealtimeSession(socket = ws, generation = realtimeSessionGeneration) {
-      return Boolean(
-        !realtimeStopRequested && socket
-        && socket === ws
-        && generation === realtimeSessionGeneration
-        && socket.readyState === WebSocket.OPEN
-      );
+    function activeRealtimeSession(socket = realtimeConnection.socket, generation = realtimeConnection.generation) {
+      return realtimeConnection.isActive(socket, generation);
     }
 
-    function send(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
-      if (!activeRealtimeSession(socket, generation)) return;
-      socket.send(JSON.stringify(event));
+    function send(event, { socket = realtimeConnection.socket, generation = realtimeConnection.generation } = {}) {
+      realtimeConnection.send(event, { socket, generation });
     }
 
     function beginRealtimeSession() {
@@ -14862,8 +14855,8 @@
     async function searchWeb({ query, max_results = 5 } = {}) {
       const text = String(query || "").trim();
       if (!text) throw new Error("Missing search query");
-      const socket = ws;
-      const generation = realtimeSessionGeneration;
+      const socket = realtimeConnection.socket;
+      const generation = realtimeConnection.generation;
       const contextGeneration = brain2EvidenceGeneration;
       const wasIdle = idleInFlight;
       const userActivityAt = lastUserTurnActivityAt;
@@ -16872,8 +16865,8 @@
     }
 
     function quiesceRealtimeForSave(reason) {
-      if (!realtimeStopRequested) send({ type: "response.cancel" });
-      realtimeStopRequested = true;
+      if (!realtimeConnection.stopped) send({ type: "response.cancel" });
+      realtimeConnection.requestStop();
       brain2DeferredSurface = null;
       haltRealtimeActivity(reason);
       setState("Stopped; saving", "warn");
@@ -17111,15 +17104,15 @@
 
     async function saveEricContinuitySnapshot({ reason = "session note saved", eventLabel = "session note saved",
       reloadSavedNote = true, isCurrent = () => true } = {}) {
-      const generation = realtimeSessionGeneration;
+      const generation = realtimeConnection.generation;
       const checkCurrent = () => {
-        if (!isCurrent() || generation !== realtimeSessionGeneration) throw new Error("Session save attempt expired; retry Disconnect.");
+        if (!isCurrent() || generation !== realtimeConnection.generation) throw new Error("Session save attempt expired; retry Disconnect.");
       };
       checkCurrent();
       if (!continuitySaveTransaction || continuitySaveTransaction.generation !== generation) {
         await waitForPendingUserTranscriptBeforeSessionSave();
         checkCurrent();
-        await flushSensingEyeInboxForSessionSave({ isCurrent: () => isCurrent() && generation === realtimeSessionGeneration });
+        await flushSensingEyeInboxForSessionSave({ isCurrent: () => isCurrent() && generation === realtimeConnection.generation });
         checkCurrent();
         if (!conversationTranscriptSinceCleanConnect()) {
           throw new Error("No accepted conversation lines in this clean connection to save into a session note.");
@@ -17150,7 +17143,7 @@
       continuityParentForCurrentRun = filename;
       // Optional readback cannot hold the disk receipt hostage. Never pin an
       // old reply into a connection that has since moved on.
-      const stillSelected = () => generation === realtimeSessionGeneration
+      const stillSelected = () => generation === realtimeConnection.generation
         && continuitySaveTransaction === transaction && currentContinuitySessionFilename === filename;
       refreshSavedContinuityNote(filename, { reloadSavedNote, isCurrent: stillSelected });
       recordUiEvent(eventLabel, filename, {
@@ -17285,8 +17278,8 @@
     }
 
     async function waitForRealtimeOpen(timeoutMs = 4500) {
-      if (ws && ws.readyState === WebSocket.OPEN) return true;
-      const socket = ws;
+      if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) return true;
+      const socket = realtimeConnection.socket;
       if (!socket) return false;
       return new Promise((resolve) => {
         let done = false;
@@ -17308,7 +17301,7 @@
       resetToPinnedContextButton && (resetToPinnedContextButton.disabled = true);
       clearLatestThreadButton && (clearLatestThreadButton.disabled = true);
       try {
-        const closingSocket = ws;
+        const closingSocket = realtimeConnection.socket;
         if (restartMic) await stopMic({ reason });
         if (wasConnected && closingSocket) {
           closingSocket.close();
@@ -17377,8 +17370,8 @@
 
 
     async function admitLiveNoteRead(result) {
-      if (!realtimeConnected() || realtimeStopRequested) return;
-      const socket = ws, generation = realtimeSessionGeneration;
+      if (!realtimeConnected() || realtimeConnection.stopped) return;
+      const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
       // Count the complete B1 receipt, not B2-private guidance. This tokenizes only;
       // it neither generates a reply nor resubmits the conversation for prefill.
       const response = await fetch(new URL("/api/context/measure", location.href), {
@@ -17387,7 +17380,7 @@
         signal: AbortSignal.timeout(30000)
       });
       const measured = await response.json().catch(() => ({}));
-      if (!activeRealtimeSession(socket, generation) || realtimeStopRequested) {
+      if (!activeRealtimeSession(socket, generation) || realtimeConnection.stopped) {
         throw new Error("Connection changed during note admission; nothing pinned or delivered.");
       }
       if (!response.ok || measured.status !== "ok") {
@@ -17423,7 +17416,7 @@
         throw error;
       }
       log(events, `note file read: ${result.filename}`);
-      if ((pin || toolRead) && realtimeConnected() && !realtimeStopRequested) await admitLiveNoteRead(result);
+      if ((pin || toolRead) && realtimeConnected() && !realtimeConnection.stopped) await admitLiveNoteRead(result);
       if (pin) {
         try {
           rememberLoadedNoteContext(result);
@@ -18337,8 +18330,8 @@
       const camera = esp32Camera();
       const generation = camera.generation();
       const eyeGeneration = sensingEyeGeneration;
-      const session = realtimeSessionGeneration;
-      const isCurrent = () => generation === camera.generation() && session === realtimeSessionGeneration
+      const session = realtimeConnection.generation;
+      const isCurrent = () => generation === camera.generation() && session === realtimeConnection.generation
         && (!_isCurrent || _isCurrent());
       const pending = (async () => {
         try {
@@ -19013,7 +19006,7 @@
         unidentifiedOutputSuppressed = true;
       }
       // Keep clean audio already queued; reject subsequent chunks from this response.
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) {
         send({ type: "response.cancel" });
       }
       log(events, `tool markup suppressed: response ${id || "unidentified"}; queued audio retained; ${String(text || "").slice(0, 80)}`);
@@ -19125,7 +19118,7 @@
     }
 
 
-    async function handleFunctionCall(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
+    async function handleFunctionCall(event, { socket = realtimeConnection.socket, generation = realtimeConnection.generation } = {}) {
       if (!activeRealtimeSession(socket, generation) || suppressedResponseIds.has(eventResponseId(event))) return;
       const userActivityAt = lastUserTurnActivityAt;
       if (!toolContinuation.beginCall(event, { generation, userActivityAt })) return;
@@ -19220,7 +19213,7 @@
     function createToolContinuationOwner() {
       return Robot790ToolContinuation.create({
         isCurrent: ({ socket, generation }) => activeRealtimeSession(socket, generation),
-        isSameSession: ({ socket, generation }) => socket === ws && generation === realtimeSessionGeneration,
+        isSameSession: ({ socket, generation }) => socket === realtimeConnection.socket && generation === realtimeConnection.generation,
         getUserActivity: () => lastUserTurnActivityAt,
         audioActive: () => outputAudioActive(),
         getMaxRounds: () => runtimeConfig.tool_continuation?.max_rounds,
@@ -19237,7 +19230,7 @@
       });
     }
 
-    function maybeCreateToolFollowup({ socket = ws, generation = realtimeSessionGeneration } = {}) {
+    function maybeCreateToolFollowup({ socket = realtimeConnection.socket, generation = realtimeConnection.generation } = {}) {
       toolContinuation.maybeFollowup({ socket, generation });
     }
 
@@ -19293,8 +19286,8 @@
     function updateSessionTools({ quiet = false } = {}) {
       saveToolPrefs();
       if (contextPanel?.open) renderContextMap();
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      liveNotes.bind(ws, formatLoadedNotesForInstructions(), liveNoteEntries());
+      if (!realtimeConnection.socket || realtimeConnection.socket.readyState !== WebSocket.OPEN) return;
+      liveNotes.bind(realtimeConnection.socket, formatLoadedNotesForInstructions(), liveNoteEntries());
       const enabledTools = enabledToolList();
       const instructions = buildSessionInstructions();
       const toolChoice = enabledTools.length ? "auto" : "none";
@@ -19309,18 +19302,18 @@
         }
       };
       const fingerprint = sessionUpdateFingerprint(session);
-      if (lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint === fingerprint) {
+      if (lastSessionUpdateSocket === realtimeConnection.socket && lastSessionUpdateFingerprint === fingerprint) {
         appendRuntimeContextToConversation();
         return false;
       }
       if (contextDiagnosticsEnabled()) {
-        const previous = lastSessionUpdateSocket === ws && lastSessionUpdateFingerprint
+        const previous = lastSessionUpdateSocket === realtimeConnection.socket && lastSessionUpdateFingerprint
           ? JSON.parse(lastSessionUpdateFingerprint) : null;
         log(events, `B1 session prompt change: ${JSON.stringify(sessionPromptChange(previous, session))}`);
       }
       rememberSessionPromptSnapshot({ instructions, tools: enabledTools, toolChoice, announce: !quiet });
       send({ type: "session.update", session });
-      lastSessionUpdateSocket = ws;
+      lastSessionUpdateSocket = realtimeConnection.socket;
       lastSessionUpdateFingerprint = fingerprint;
       appendRuntimeContextToConversation();
       if (!quiet) {
@@ -19950,7 +19943,7 @@
       resetMicInterruptCandidate();
       lastBargeInAt = now;
       stopPlaybackNow();
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) {
         send({ type: "response.cancel" });
       }
       cueFaceMode("listening", 0.45, { force: true });
@@ -19969,10 +19962,10 @@
       audioPlayback.enqueue(b64ToBytes(b64));
     }
 
-    function handleEvent(event, { socket = ws, generation = realtimeSessionGeneration } = {}) {
+    function handleEvent(event, { socket = realtimeConnection.socket, generation = realtimeConnection.generation } = {}) {
       // Keep the last in-flight user transcript for a stop/save, but never revive
       // speech, tool execution, or idle scheduling from late response events.
-      if (realtimeStopRequested && socket === ws && generation === realtimeSessionGeneration) {
+      if (realtimeConnection.stopped && socket === realtimeConnection.socket && generation === realtimeConnection.generation) {
         if (event.type === "conversation.item.input_audio_transcription.completed") {
           inputAudioTranscriptionPending = false;
           clearInputDraft();
@@ -20204,11 +20197,11 @@
     }
 
     async function resetSessionContextForConnection(reason) {
-      if (realtimeStopRequested && !continuitySaveHalted && conversationLines.length) {
+      if (realtimeConnection.stopped && !continuitySaveHalted && conversationLines.length) {
         throw new Error("The stopped session is not saved. Retry Disconnect before loading another session.");
       }
       // Every connection starts a new transcript and clears transient work from the last run.
-      realtimeSessionGeneration += 1;
+      realtimeConnection.invalidate();
       toolScopeDenials.clear();
       toolContinuation.reset();
       idleArt.reset();
@@ -20269,7 +20262,7 @@
     }
 
     async function connectPrevious() {
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      if (realtimeConnection.socket && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)) return;
       openBrowserFaceWindow({ onlyIfActive: true });
       setState("Restoring previous", "warn");
       setConnectionButtonsDisabled(true);
@@ -20297,7 +20290,7 @@
       source = "Connect Selected",
       resumeForm = currentContinuityScrubMode()
     ) {
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      if (realtimeConnection.socket && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)) {
         throw new Error("Disconnect before connecting a selected session.");
       }
       if (connectionButtonsLocked) throw new Error("A connection is already being prepared.");
@@ -20399,7 +20392,7 @@
       if (runtimeConfig.connection_context?.enabled !== true) {
         throw new Error("Connection budget config unavailable; restart the STS page server and refresh.");
       }
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      if (realtimeConnection.socket && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)) {
         throw new Error("Context budgeting is only allowed before connection.");
       }
       const original = loadedNoteContexts;
@@ -20456,11 +20449,11 @@
     }
 
     async function connect({ coreNotesOnly = false, restoredPrevious = false, continuityAlreadyLoaded = false, openFace = true } = {}) {
-      if (realtimeStopRequested && !continuitySaveHalted && conversationLines.length) {
+      if (realtimeConnection.stopped && !continuitySaveHalted && conversationLines.length) {
         log(events, "connect blocked: stopped session is not saved; retry Disconnect first");
         return;
       }
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      if (realtimeConnection.socket && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)) return;
       saveFaceControllerPreference();
       if (openFace) openBrowserFaceWindow({ onlyIfActive: true });
       setState("Connecting", "warn");
@@ -20489,11 +20482,8 @@
         await ensurePlayback();
         socket = new WebSocket(serverUrl.value.trim());
         idleArt.reset();
-        realtimeStopRequested = false;
         continuitySaveHalted = false;
-        realtimeSessionGeneration += 1;
-        sessionGeneration = realtimeSessionGeneration;
-        ws = socket;
+        sessionGeneration = realtimeConnection.adopt(socket);
       } catch (error) {
         releaseSessionPreparation();
         setState(error?.code === "continuity_load_canceled" ? "Load canceled" : "Connect failed");
@@ -20569,7 +20559,7 @@
         }
       });
       socket.addEventListener("close", () => {
-        if (ws !== socket || realtimeSessionGeneration !== sessionGeneration) return;
+        if (!realtimeConnection.isCurrent(socket, sessionGeneration)) return;
         stopVisionCamera({ quiet: true });
         stopEsp32Camera();
         releaseSessionPreparation();
@@ -20631,7 +20621,7 @@
         }
       });
       socket.addEventListener("error", () => {
-        if (ws !== socket || realtimeSessionGeneration !== sessionGeneration) return;
+        if (!realtimeConnection.isCurrent(socket, sessionGeneration)) return;
         setState("Socket error");
         setConnectionButtonsDisabled(false);
         log(events, "websocket error");
@@ -20653,7 +20643,7 @@
       } catch (error) {
         log(events, `recording/mic stop during restart error: ${error.message}`);
       }
-      if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+      if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) realtimeConnection.socket.close();
       clearAudioQueue();
       endIntentionalExitCleanupSoon(cleanupGeneration);
       setState("Restarting realtime", "warn");
@@ -20695,7 +20685,7 @@
       log(events, "realtime halt requested");
       const cleanupGeneration = beginIntentionalExitCleanup();
       try {
-        const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
+        const closingSocket = realtimeConnection.socket && realtimeConnection.socket.readyState !== WebSocket.CLOSED ? realtimeConnection.socket : null;
         haltRealtimeActivity("realtime halt");
         if (closingSocket) {
           await runtimeStep("close realtime websocket", async () => {
@@ -20752,7 +20742,7 @@
       } catch (error) {
         log(events, `recording/mic stop during unload error: ${error.message}`);
       }
-      if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+      if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) realtimeConnection.socket.close();
       clearAudioQueue();
       endIntentionalExitCleanupSoon(cleanupGeneration);
       setState("Unloading realtime", "warn");
@@ -20817,13 +20807,13 @@
       micStream = await navigator.mediaDevices.getUserMedia({
         audio: audioConstraints
       });
-      if (realtimeStopRequested) {
+      if (realtimeConnection.stopped) {
         micStream.getTracks().forEach((track) => track.stop());
         micStream = null;
         return;
       }
       await refreshMicDevices({ preserveSelection: deviceId, quiet: true });
-      if (realtimeStopRequested) {
+      if (realtimeConnection.stopped) {
         await stopMic({ reason: "stopped during microphone setup" });
         return;
       }
@@ -21271,11 +21261,11 @@
       recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
       const cleanupGeneration = beginIntentionalExitCleanup();
-      const sessionGeneration = realtimeSessionGeneration;
+      const sessionGeneration = realtimeConnection.generation;
       let saveAttemptActive = true;
       quiesceRealtimeForSave("realtime disconnect");
       try {
-        const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
+        const closingSocket = realtimeConnection.socket && realtimeConnection.socket.readyState !== WebSocket.CLOSED ? realtimeConnection.socket : null;
         stopVisionCamera({ quiet: true });
         stopEsp32Camera();
         if (micStream) {
@@ -21289,7 +21279,7 @@
               reason: "realtime disconnect",
               eventLabel: "session note saved",
               reloadSavedNote,
-              isCurrent: () => saveAttemptActive && sessionGeneration === realtimeSessionGeneration
+              isCurrent: () => saveAttemptActive && sessionGeneration === realtimeConnection.generation
             }),
             { timeoutMs: 16000, prefix: "disconnect step", required: true }
           )
@@ -21666,7 +21656,7 @@
         return result;
       },
       context: () => ({
-        connected: realtimeConnected() && !realtimeStopRequested,
+        connected: realtimeConnected() && !realtimeConnection.stopped,
         eligible: idleArtEnabled.checked && llmImageTools.checked
           && !firstContactModeEnabled() && !performanceModeEnabled(),
         proposalsEnabled: brain2MouthBrainEnabled(),
@@ -21725,7 +21715,7 @@
 
     async function syncIdleArtPermission() {
       // The preference persists; each connection still needs its own revocable grant.
-      if (!idleArtEnabled.checked || !llmImageTools.checked || !realtimeConnected() || realtimeStopRequested) {
+      if (!idleArtEnabled.checked || !llmImageTools.checked || !realtimeConnected() || realtimeConnection.stopped) {
         idleArt.disarm();
         return;
       }

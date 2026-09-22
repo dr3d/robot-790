@@ -178,6 +178,7 @@ function preferenceUi(storage = new Map()) {
     const start = page.indexOf(`    ${name === 'syncIdleArtPermission' ? 'async ' : ''}function ${name}(`);
     assert.notEqual(start, -1);
     const end = page.indexOf('\n    }\n', start);
+    require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
     vm.runInContext(page.slice(start, end + 6), c);
   }
   fixture.controller.context = () => ({ ...fixture.state,

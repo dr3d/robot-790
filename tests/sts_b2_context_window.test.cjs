@@ -25,6 +25,7 @@ test('B2 can retain an old request after its completion leaves the transcript wi
     const start = page.indexOf(`    function ${name}(`);
     const end = page.indexOf('\n    }\n', start);
     assert.ok(start >= 0 && end > start);
+    require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
     vm.runInContext(page.slice(start, end + 6), c);
   }
   const snapshot = c.brain2EvidenceSnapshot();

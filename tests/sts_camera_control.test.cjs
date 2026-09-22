@@ -110,6 +110,7 @@ test('camera control is available while off; Disconnect stops it before a failin
     runtimeStep: async (_, run) => run(), saveEricContinuitySnapshot: async () => { throw new Error('disk full'); },
     setState() {}, endIntentionalExitCleanupSoon() {}
   });
+  require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
   vm.runInContext(source('disconnectRealtime'), c);
   assert.equal((await c.disconnectRealtime()).status, 'error');
   assert.equal(c.visionCameraStream, null); assert.equal(c.conversationLines[0], 'keep');
