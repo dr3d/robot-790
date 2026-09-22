@@ -204,7 +204,7 @@ for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFile
       ensureRuntimeConfigLoaded: () => new Promise(() => {}),
       pauseSessionPreparation: () => new Promise(() => {}),
       fetchContinuitySessionMetadata: () => new Promise(() => {}),
-      loadLatestContinuitySession: () => new Promise(() => {}),
+      connect: () => new Promise(() => {}),
     });
     context[name]();
     assert.equal(opened, 1);

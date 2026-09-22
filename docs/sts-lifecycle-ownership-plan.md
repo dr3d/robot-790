@@ -187,8 +187,10 @@ each save and has no idempotency key. Aborting a fetch alone would not establish
 whether the server already committed a write.
 
 Diagnostic reproductions are preserved in
-`logs/maintenance/lifecycle-review/reproduce.cjs`. They assert the current defects
-for diagnosis, not the intended contract, and are separate from the passing suite.
+`logs/maintenance/lifecycle-review/reproduce.cjs`. They record the defects at the
+`e067a54` checkpoint, not the intended contract, and are separate from the passing
+suite. Their pre-repair assertions are expected to fail as fixes land; use the
+desired-behavior regressions in `sts_save_lifecycle.test.cjs` for acceptance.
 These are injected failures, not claims that the recent live run experienced them.
 
 Repair progress: cleanup release now carries the identity returned when that
@@ -212,6 +214,16 @@ a second write (15 save-lifecycle tests pass). This does not yet fix the broader
 timeout/unknown-outcome case: a whole-snapshot timeout can still outlive its
 underlying work. That requires the transaction and receipt work below, not a
 larger timeout or a claim that optional-refresh handling solved every save race.
+
+Commits: cleanup identity `15282dc`, Start Eric `79a263e`, acknowledged-save versus
+optional reload `e6126aa`. September 22 verification: all 624 JavaScript and 969
+Python tests pass (one existing Starlette/httpx deprecation warning). The isolated
+Edge/Web Audio check passes, including desktop/mobile page loading and unchanged
+audio-drain/tool-continuation ordering. The startup popup fixture now pauses at
+the new connection entry point while preserving its synchronous-open assertion.
+No server restart, model call or paid generation was used for these checks.
+These three repairs are ready for a disconnected page refresh and a live trial;
+transaction timeout/unknown-outcome repair and ownership extraction remain next.
 
 ### Ordered Work
 

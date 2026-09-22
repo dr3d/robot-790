@@ -1,6 +1,6 @@
 # Engineering Status
 
-Reviewed September 21, 2026. This is the maintained engineering view; session
+Reviewed September 22, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
@@ -56,6 +56,12 @@ note reload now warns without invalidating the disk-save acknowledgment; both
 exit paths and resume without a duplicate write are covered (15 save-lifecycle
 tests pass). The remaining timeout/unknown-write-outcome work and live acceptance
 remain open. No diagnostics or servers were changed.
+
+September 22 verification of these three separately committed repairs: 624
+JavaScript tests, 969 Python tests, and isolated Edge/Web Audio/page-load checks
+pass. One existing Starlette/httpx deprecation warning remains. Activation is a
+disconnected page refresh; no backend restart is required. The next production
+change is the save timeout/unknown-outcome protocol, before lifecycle extraction.
 
 ### Full Notes And Stable Live Context
 
