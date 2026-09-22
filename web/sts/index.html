@@ -17182,14 +17182,14 @@
       continuitySaveBusy = true;
       updateSaveAndHaltButton();
       try {
-        await loadLatestContinuitySession({ source: "Start Eric" });
-        continuitySaveHalted = false;
+        const previousSocket = ws;
+        await connect({ openFace: false });
+        if (ws === previousSocket || realtimeStopRequested) return;
         recordUiEvent("session note restore requested", currentContinuitySessionFilename || "none", {
           connected: realtimeConnected(),
           load_continuity_session: Boolean(currentContinuitySessionFilename)
         });
         log(events, `session note restore requested from ${currentContinuitySessionFilename || "no session note"}`);
-        if (!realtimeConnected()) connect({ continuityAlreadyLoaded: true, openFace: false });
       } catch (error) {
         if (error?.code === "continuity_load_canceled") setState("Load canceled");
         log(events, `session note restore ${error?.code === "continuity_load_canceled" ? "canceled" : "error"}: ${error.message}`);

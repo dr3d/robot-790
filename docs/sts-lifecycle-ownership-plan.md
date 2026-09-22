@@ -161,8 +161,9 @@ Activation remains a disconnected page refresh; no backend/model restart.
 ## Next Boundary: Stop, Save And Reconnect
 
 September 21 review checkpoint: `1f52674` on `master` records the accepted
-audio/tool baseline and comparison notes. The review below adds tests and a work
-plan only. No production lifecycle, prompt, timing or model change has shipped.
+audio/tool baseline and comparison notes. Review/test groundwork was committed
+as `e067a54` before repairs. Repair progress is recorded below; prompts, model
+settings and conversational timing remain unchanged.
 
 ### Findings Before Extraction
 
@@ -195,6 +196,13 @@ operation began. Both a captured old timer and an old operation finishing late
 are unable to release a newer cleanup. All five exit callers pass the identity;
 the existing five-second grace period is unchanged. Two regressions and the
 focused save/idle/camera suite pass (49 tests). Live acceptance remains pending.
+
+The second repair routes Start Eric through normal connection preparation,
+including transcript reset and current saved-history loading. It no longer
+clears the acknowledged-save flag before connection succeeds. Tests cover
+successful restart, failed preparation followed by retry, and refusal to bypass
+an actually unsaved stopped session. The focused save/navigation/replay suite
+passes all 34 tests; live Save + Halt / Start Eric acceptance remains pending.
 
 ### Ordered Work
 

@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { saveFixture, deferred, settle } = require('./helpers/sts_save_harness.cjs');
+const { saveFixture, deferred, settle, installConnectionFixture } = require('./helpers/sts_save_harness.cjs');
 
 test('an old cleanup timer cannot end a newer cleanup', () => {
   const f = saveFixture();
@@ -132,4 +132,48 @@ test('a successful Save + Halt uses the same real snapshot save path', async () 
   assert.equal(f.c.continuitySaveBusy, false);
   assert.equal(f.socket.readyState, 3);
   assert.equal(f.c.saveAndHaltEricButton.textContent, 'Start Eric');
+});
+
+test('Start Eric after Save + Halt prepares a clean connection with saved history', async () => {
+  const f = saveFixture(), sockets = installConnectionFixture(f);
+  await f.c.saveAndHaltEricState();
+  await f.c.startContinuityEric();
+  assert.equal(sockets.length, 1);
+  assert.equal(f.c.ws, sockets[0]);
+  assert.equal(f.c.realtimeStopRequested, false);
+  assert.equal(f.c.continuitySaveHalted, false);
+  assert.equal(f.c.continuitySaveBusy, false);
+  assert.deepEqual(Array.from(f.c.conversationLines), []);
+  assert.equal(f.c.continuityParentForCurrentRun, 'sessions/saved-1.txt');
+  assert.deepEqual(Array.from(f.c.loadedNoteContexts, note => note.filename),
+    ['core/example.txt', 'sessions/saved-1.txt']);
+  assert.ok(f.calls.includes('context budget'));
+  assert.ok(!f.calls.some(line => line.startsWith('connect blocked:')));
+});
+
+test('Start Eric keeps successful-save state through failed preparation and permits retry', async () => {
+  const f = saveFixture(), sockets = installConnectionFixture(f);
+  await f.c.saveAndHaltEricState();
+  const prepare = f.c.prepareConnectionContext;
+  f.c.prepareConnectionContext = async () => { throw new Error('budget unavailable'); };
+  await f.c.startContinuityEric();
+  assert.equal(sockets.length, 0);
+  assert.equal(f.c.continuitySaveHalted, true);
+  assert.equal(f.c.continuitySaveBusy, false);
+  assert.equal(f.c.saveAndHaltEricButton.textContent, 'Start Eric');
+  assert.ok(f.calls.includes('release preparation lease'));
+  f.c.prepareConnectionContext = prepare;
+  await f.c.startContinuityEric();
+  assert.equal(sockets.length, 1);
+  assert.equal(f.saved.size, 1, 'startup retries do not save again');
+});
+
+test('Start Eric cannot bypass the unsaved stopped-session guard', async () => {
+  const f = saveFixture(), sockets = installConnectionFixture(f);
+  f.c.realtimeStopRequested = true;
+  await f.c.startContinuityEric();
+  assert.equal(sockets.length, 0);
+  assert.deepEqual(Array.from(f.c.conversationLines), ['The last accepted thought.']);
+  assert.equal(f.c.continuitySaveHalted, false);
+  assert.ok(f.calls.some(line => line.startsWith('connect blocked:')));
 });

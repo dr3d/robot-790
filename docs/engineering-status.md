@@ -39,8 +39,8 @@ Checkpoint `1f52674` preserves that accepted state. Offline review then reproduc
 four failure-path defects: duplicate session creation after successful save but
 failed reload; timed-out preparation continuing after retry; Start Eric rejecting
 its own saved transcript; and stale cleanup timers clearing newer cleanup state.
-These were not observed failures in the accepted live comparison. Production
-code remains unchanged. Repair those transitions before moving their ownership;
+These were not observed failures in the accepted live comparison. Repair those
+transitions before moving their ownership;
 the [ordered work plan](sts-lifecycle-ownership-plan.md#next-boundary-stop-save-and-reconnect)
 separates save receipts, unknown write outcomes, connection identity and cleanup.
 
@@ -49,8 +49,11 @@ Eight new simulated stop/save orchestration tests bring the JavaScript suite to
 storage. This is not yet an integrated browser-to-durable-storage failure test,
 and the injected defects were not fixed by that review. The first repair now
 guards cleanup release with operation identity, including late finally blocks;
-49 focused tests pass. The other three findings and live acceptance remain open.
-No diagnostics or servers were changed.
+49 focused tests pass. Start Eric now uses normal connection preparation and
+retains saved-state acknowledgment until startup succeeds; 34 focused
+save/navigation/replay tests pass, including failure and retry. The two save
+transaction findings and live acceptance remain open. No diagnostics or servers
+were changed.
 
 ### Full Notes And Stable Live Context
 

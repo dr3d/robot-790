@@ -93,4 +93,41 @@ function saveFixture() {
 }
 
 const settle = () => new Promise(setImmediate);
-module.exports = { saveFixture, deferred, settle };
+
+function installConnectionFixture(f) {
+  const { c, calls } = f;
+  const sockets = [];
+  c.WebSocket = class {
+    static OPEN = 1;
+    static CONNECTING = 0;
+    static CLOSED = 3;
+    constructor() { this.readyState = 0; this.listeners = {}; sockets.push(this); }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+  };
+  Object.assign(c, {
+    saveFaceControllerPreference() {}, setConnectionButtonsDisabled() {},
+    ensureRuntimeConfigLoaded: async () => {},
+    pauseSessionPreparation: async () => { calls.push('preparation lease'); },
+    releaseSessionPreparation: () => calls.push('release preparation lease'),
+    prepareConnectionContext: async () => { calls.push('context budget'); },
+    ensurePlayback: async () => {}, serverUrl: { value: 'ws://fixture.invalid/' },
+    toolScopeDenials: new Map(), idleArt: { reset() {} }, suppressedResponseIds: new Set(),
+    resetMicInterruptCandidate() {}, cancelBrain2MonitorSpeech() {},
+    clearHotConversationState() { calls.push('clear old transcript'); c.conversationLines = []; },
+    clearSensingEyeState: async () => {},
+    resolveContinuitySessionForLoad: async () => ({ status: 'ok', session_filename: 'sessions/saved-1.txt' }),
+    confirmContinuitySessionLoad: async () => {},
+    loadCoreNoteContext: async () => { c.loadedNoteContexts.push({ filename: 'core/example.txt' }); },
+    loadCurrentContinuitySession: async ({ sessionMetadata }) => {
+      c.currentContinuitySessionFilename = sessionMetadata.session_filename;
+      c.loadedNoteContexts.push({ filename: sessionMetadata.session_filename });
+    },
+    fetchContinuitySessionMetadata: async () => {},
+    continuitySessionContext: () => true,
+    updateLoadedNoteControls() {}, renderMemory() {}, updateSessionTools() {}, contextPanel: {},
+  });
+  loadFunctions(c, ['resetSessionContextForConnection', 'loadFreshContinuityContext']);
+  return sockets;
+}
+
+module.exports = { saveFixture, deferred, settle, installConnectionFixture };
