@@ -23,6 +23,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | --- | --- | --- |
 | Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
 | Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Backend controls and explicit resets are still separate. |
+| Current-socket closure | `realtime-connection.js` owns the idempotent close promise and stopped state; `handleRealtimeClose` / `cleanupClosedRealtime` adapt page resources and recovery UI | Reconnect cannot race pending close cleanup. The stopped unsaved transcript must survive until Disconnect/save succeeds. Explicit backend controls and page exit are not a crash-save protocol. |
 | Stop, save, reconnect work | `saveAndDisconnectRealtime`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Device cleanup and save orchestration remain page-owned; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
@@ -454,7 +455,7 @@ Run 2's save is verified; its next live resume has not yet occurred. There is no
 need to deliberately double-click or inject failed saves into real history;
 the race fixtures cover those cases. No server/model restart is required.
 
-Next boundary is ordered step 5: unexpected closure, emergency backend controls,
+Next boundary after that checkpoint was ordered step 5: unexpected closure, emergency backend controls,
 explicit Reset To Pinned/Clear Latest and page exit. They do not all pass through
 this owner yet. Do not claim cancellation of arbitrary pending backend work,
 browser-crash recovery or a new unload guarantee. Review/test those semantics
@@ -570,10 +571,95 @@ Evidence: `logs/maintenance/lifecycle-review/close-audio-before.log`,
 `close-audio-reproduction.json`. The diagnostic now expects the two audio defects
 to be absent; the unsaved-transcript and late-mic-cleanup reproductions still
 hold and remain next. The original baseline reproduction JSON is preserved.
-Activation/live check: disconnected refresh, then normal Connect -> exchange ->
-Disconnect during speech -> Connect. No server/model restart. Do not combine the
-next ownership repair or explicit-discard/backend/page-exit semantics into this
-audio repair. Live operator acceptance is pending.
+September 22, 12:28-12:37: the paired live trial on `94b3d3d` passed normal-path
+regression acceptance. A fresh page fetch preceded Run 1; Run 2 connected without
+another refresh. Both mid-speech Disconnects canceled active TTS and completed
+their continuity saves. Run 2 loaded Run 1's save and directly recalled Priya
+and Chamber Seven without tools. Four minutes of story playback in Run 1 drained
+before the next B1 idle response, with B2 advice remaining private. Scott reports
+both abrupt cutoffs worked correctly. Evidence:
+`logs/runs/20260922-1237-socket-audio-acceptance/postmortem.md`.
+
+This does not exercise a real unexpected network/server loss; isolated browser
+tests supply that close-callback audio coverage. Do not combine the next ownership
+repair or explicit-discard/backend/page-exit semantics into this audio repair.
+
+#### Second Repair: Owned Close Cleanup
+
+Implemented September 22 after the paired acceptance of `94b3d3d` above. No
+new general controller: the existing realtime connection owner now provides
+`close(socket, generation, cleanup)`, `closing`, and computed `busy`. It marks
+the current connection stopped synchronously, publishes one cleanup promise,
+rejects competing normal transitions until settlement, and deduplicates repeat
+close callbacks. Old identities cannot acquire cleanup ownership or release a
+newer close. A normal transition and transport closure can overlap without
+either pretending to own the other's asynchronous work.
+
+The former large inline callback is now `handleRealtimeClose` plus a page
+resource adapter, `cleanupClosedRealtime`. The resource adapter calls the
+existing `haltRealtimeActivity`; there is no longer a second scheduler/audio
+stop list in the close listener. UI and device references stay in the page for
+now; persistence remains with the already tested save transaction. The wrapper
+releases controls only for the same connection after both owners settle.
+
+Recovery contract:
+
+- No automatic saving, reconnecting or backend restarting. Unsaved text, loaded
+  notes, parent and eye assets remain available. Once cleanup settles, Disconnect
+  is enabled to save/retry. Connect/Empty/Previous/selected loading cannot silently
+  replace the stopped unsaved transcript. A failed opening with no dialogue can
+  be retried without manufacturing a session.
+- Normal Disconnect still owns its post-save cleanup. Delegation is tied to the
+  originating socket/generation, not merely the five-second exit grace flag.
+  Transport loss before a durable save receipt performs device cleanup even if
+  that pending save ultimately fails. Failed-save retry stays locked while any
+  loss cleanup remains outstanding.
+- `stopMic` detaches old resource references and updates stopped UI before its
+  context-close await. Its completion cannot null new resources or reset new UI.
+  `startMic` verifies connection and stream identity after permission and device
+  discovery; stale setup stops only its own returned stream. Audio callbacks also
+  reject replaced sessions. Audio constraints/format/timing are unchanged.
+
+Verification: all 692 JavaScript and 990 Python tests pass (one existing
+Starlette/httpx deprecation warning). The initial eight added regressions failed
+before repair. Coverage also includes loss during a successful/failed save,
+loss immediately after failed saving, delayed recording finalization, every
+history-replacement route, stale mic setup, normal mic streaming, owner failure
+release and stale completion. The four baseline fault-injection outcomes are
+now all false; the diagnostic was updated while old baseline receipts remain.
+
+The isolated Edge suite still verifies real Web Audio stop/drain, fresh audio
+after stale closure, and desktop/mobile page loading. It additionally uses a
+disposable localhost WebSocket server and destroys TCP without a close frame.
+The actual browser reports code 1006 and exercises the actual close callback,
+UI locks, mic-stop orchestration, retained dialogue, failed-save retry and a
+second connection. Model work, mic resources and save receipt are simulated;
+no live backend, hardware or persistence writes occur. This is stronger than
+manually invoking a close callback, but not a full real-device outage trial.
+
+Evidence under `logs/maintenance/lifecycle-review/`: `close-owner-suite.log`,
+`close-owner-pytest.log`, `close-owner-browser.log`, `close-owner-reproduction.json`.
+Browser results/screenshots are also in `logs/maintenance/audio-owner-browser/`.
+
+September 22, 13:17-13:26: live normal-path acceptance passed. Fresh page/module
+GETs preceded Run 1; Run 2 used the same page without refreshing. Run 1 canceled
+active TTS, while Run 2 stopped after playback drained. Both continuity saves
+are complete and exactly match their frozen drafts. The second run loaded the
+first plus its ancestry, restarted the microphone and recalled the Reachy
+exchange without tools. An external embodiment fetch failed and the multi-voice
+input confused speaker identity; these are separate from lifecycle acceptance.
+Evidence: `logs/runs/20260922-1326-close-owner-acceptance/postmortem.md`.
+
+No live outage was induced; the disposable-socket browser test supplies that
+coverage. Run 2's next live resume remains untested. No server/model restart or
+additional repair follows from this PM. Prompts, tool choice, context assembly,
+idle policy, speech length and model settings remain unchanged.
+
+Next scope, after acceptance: characterize explicit resets/backend actions/page
+exit before migrating their ownership. Their intentional discard and best-effort
+snapshot contracts are not silently converted into continuity saves. This work
+does not provide browser-crash persistence, cancel arbitrary backend jobs, or
+settle ownership of every backend-control timer or recorder timeout.
 
 ### Live Acceptance Progress: September 21
 

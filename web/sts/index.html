@@ -3269,6 +3269,7 @@
     let lastExitSnapshotAt = 0;
     let lastExitSnapshotReason = "";
     let intentionalExitCleanupInProgress = false;
+    let intentionalExitCleanupSession = null;
     let intentionalExitCleanupGeneration = 0;
     let quickRecordConversationBusy = false;
     const minAudioRecordChunkMs = 30000;
@@ -6190,7 +6191,7 @@
           || idleInFlight || reengageInFlight || gpuWatchInFlight || standingRoutineInFlight) {
         throw new Error("Session navigation requires an operator conversation turn, not autonomous activity.");
       }
-      if (pendingSessionMapMove || sessionMapMoveBusy || realtimeConnection.transition) throw new Error("A session transition is already pending.");
+      if (pendingSessionMapMove || sessionMapMoveBusy || realtimeConnection.busy) throw new Error("A session transition is already pending.");
       const target = String(destination || "").trim().toLowerCase();
       if (!target) throw new Error("Name a session to enter.");
       const result = await fetchContinuitySessions();
@@ -6209,7 +6210,7 @@
           || requestEpoch !== sessionMapRequestEpoch) {
         throw new Error("Session move canceled after new activity; ask again if still wanted.");
       }
-      if (pendingSessionMapMove || sessionMapMoveBusy || realtimeConnection.transition) throw new Error("A session transition is already pending.");
+      if (pendingSessionMapMove || sessionMapMoveBusy || realtimeConnection.busy) throw new Error("A session transition is already pending.");
       pendingSessionMapMove = {
         ...selected, socket, generation, userActivityAt,
         resumeForm: currentContinuityScrubMode(),
@@ -6365,7 +6366,7 @@
         && typeof WebSocket !== "undefined"
         && (realtimeConnection.socket.readyState === WebSocket.OPEN || realtimeConnection.socket.readyState === WebSocket.CONNECTING)
       );
-      const locked = connectionButtonsLocked || socketBusy || Boolean(realtimeConnection.transition);
+      const locked = connectionButtonsLocked || socketBusy || realtimeConnection.busy;
       if (archiveContinuitySessionButton) archiveContinuitySessionButton.disabled = locked || !hasSelection || continuitySessions.length <= 1;
       if (connectSelectedContinuitySessionButton) connectSelectedContinuitySessionButton.disabled = locked || !hasSelection;
     }
@@ -16862,8 +16863,9 @@
       return runtimeStep(label, operation, { ...options, prefix: "continuity step" });
     }
 
-    function beginIntentionalExitCleanup() {
+    function beginIntentionalExitCleanup({ saving = false } = {}) {
       intentionalExitCleanupInProgress = true;
+      intentionalExitCleanupSession = { socket: realtimeConnection.socket, generation: realtimeConnection.generation, saving };
       return ++intentionalExitCleanupGeneration;
     }
 
@@ -20164,7 +20166,7 @@
     function setConnectionButtonsDisabled(disabled) {
       connectionButtonsLocked = Boolean(disabled);
       [connectButton, previousConnectButton, emptyConnectButton].forEach((button) => {
-        if (button) button.disabled = connectionButtonsLocked || Boolean(realtimeConnection.transition);
+        if (button) button.disabled = connectionButtonsLocked || realtimeConnection.busy;
       });
       updateContinuitySessionActionButtons();
     }
@@ -20176,7 +20178,7 @@
           return operation(token);
         }, parent);
       } finally {
-        if (!realtimeConnection.transition) {
+        if (!realtimeConnection.busy) {
           const socket = realtimeConnection.socket;
           setConnectionButtonsDisabled(Boolean(socket
             && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)));
@@ -20280,7 +20282,7 @@
     }
 
     async function connectPrevious() {
-      if (realtimeConnection.transition) return;
+      if (realtimeConnection.busy) return;
       return runConnectionTransition("previous", transition => preparePreviousConnection(transition));
     }
 
@@ -20477,7 +20479,7 @@
     }
 
     async function connect({ transition = null, ...options } = {}) {
-      if (realtimeConnection.transition && !transition) return;
+      if (realtimeConnection.busy && !transition) return;
       return runConnectionTransition("connect", () => openRealtimeConnection(options), transition);
     }
 
@@ -20592,66 +20594,7 @@
         }
       });
       socket.addEventListener("close", () => {
-        if (!realtimeConnection.isCurrent(socket, sessionGeneration)) return;
-        stopVisionCamera({ quiet: true });
-        stopEsp32Camera();
-        releaseSessionPreparation();
-        if (idleTimer) clearTimeout(idleTimer);
-        idleTimer = null;
-        idleTimerFireAt = 0;
-        clearIdleSchedulerStatusTimer();
-        clearBrain2Timer();
-        clearBrain2SurfaceTimer();
-        cancelBrain2MonitorSpeech();
-        if (imageToolProtectionTimer) clearTimeout(imageToolProtectionTimer);
-        imageToolProtectionTimer = null;
-        imageToolProtectionUntil = 0;
-        imageToolProtectionEnabled = false;
-        assistantFinishPending = false;
-        assistantFinishWasIdle = false;
-        assistantFinishArmedAt = 0;
-        clearAssistantFinishTimer();
-        resetConversationReengageCycle();
-        clearMicFreshnessTimer();
-        responseActive = false;
-        idleInFlight = false;
-        brain2InFlight = false;
-        gpuWatchInFlight = false;
-        standingRoutineInFlight = false;
-        if (gpuWatchRoutine) stopGpuWatch({ reason: "realtime disconnected" });
-        if (standingRoutine) stopStandingRoutine({ reason: "realtime disconnected" });
-        clearUserTurnPending();
-        stopPlaybackNow();
-        setState("Disconnected");
-        setConnectionButtonsDisabled(false);
-        disconnectButton.disabled = true;
-        startMicButton.disabled = true;
-        stopMicButton.disabled = true;
-        resetMicButton.disabled = true;
-        micMutedForNarration = false;
-        updateMicMuteButton();
-        faceIdleButton.disabled = true;
-        faceBeatButton.disabled = true;
-        idlePonderNowButton.disabled = true;
-        visionImageStaged = false;
-        updateIdleSchedulerStatus();
-        updateLanePressure({ reason: "realtime disconnected" });
-        updateTypedInputButtons();
-        updateVisionButtons();
-        syncServerPanelToConnection();
-        log(events, "disconnected");
-        if (!intentionalExitCleanupInProgress && (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise)) {
-          stopAudioRecording({ reason: "realtime disconnected" }).then(
-            (stopResult) => log(events, `audio recording stopped for disconnect: ${stopResult?.recording_name || stopResult?.status || "done"}`),
-            (error) => log(events, `audio recording stop after disconnect error: ${error.message}`)
-          );
-        }
-        if (!intentionalExitCleanupInProgress && micStream) {
-          stopMic({ reason: "realtime disconnected" }).catch((error) => log(events, `mic stop after disconnect error: ${error.message}`));
-        }
-        if (!intentionalExitCleanupInProgress) {
-          recordExitPaneSnapshots("disconnect").catch((error) => log(events, `disconnect snapshots error: ${error.message}`));
-        }
+        void handleRealtimeClose(socket, sessionGeneration);
       });
       socket.addEventListener("error", () => {
         if (!realtimeConnection.isCurrent(socket, sessionGeneration)) return;
@@ -20659,6 +20602,65 @@
         setConnectionButtonsDisabled(false);
         log(events, "websocket error");
       });
+    }
+
+    async function handleRealtimeClose(socket, generation) {
+      if (!realtimeConnection.isCurrent(socket, generation)) return;
+      // Loss before a save receipt still needs cleanup, even if that write later fails.
+      const delegated = intentionalExitCleanupInProgress
+        && intentionalExitCleanupSession?.socket === socket
+        && intentionalExitCleanupSession?.generation === generation
+        && (!intentionalExitCleanupSession.saving || continuitySaveHalted);
+      try {
+        await realtimeConnection.close(socket, generation, () => cleanupClosedRealtime(delegated));
+      } catch (error) {
+        log(events, `connection cleanup error: ${error.message}`);
+      } finally {
+        if (realtimeConnection.isCurrent(socket, generation) && !realtimeConnection.busy) {
+          setConnectionButtonsDisabled(false);
+          const unsaved = !continuitySaveHalted && conversationLines.length > 0;
+          disconnectButton.disabled = !unsaved;
+          setState(unsaved ? "Disconnected; unsaved" : "Disconnected", unsaved ? "warn" : "");
+          if (unsaved) log(events, "Transcript retained; press Disconnect to save before reconnecting.");
+        }
+      }
+    }
+
+    async function cleanupClosedRealtime(delegated) {
+      haltRealtimeActivity("realtime disconnected");
+      stopVisionCamera({ quiet: true });
+      stopEsp32Camera();
+      releaseSessionPreparation();
+      setState("Disconnected");
+      setConnectionButtonsDisabled(true);
+      disconnectButton.disabled = true;
+      startMicButton.disabled = true;
+      stopMicButton.disabled = true;
+      resetMicButton.disabled = true;
+      micMutedForNarration = false;
+      updateMicMuteButton();
+      faceIdleButton.disabled = true;
+      faceBeatButton.disabled = true;
+      idlePonderNowButton.disabled = true;
+      visionImageStaged = false;
+      updateTypedInputButtons();
+      updateVisionButtons();
+      syncServerPanelToConnection();
+      log(events, "disconnected");
+      if (delegated) return;
+      const settle = async (operation, failure, success = null) => {
+        try {
+          const result = await operation();
+          if (success) log(events, success(result));
+        } catch (error) { log(events, `${failure}: ${error.message}`); }
+      };
+      await Promise.all([
+        micStream ? settle(() => stopMic({ reason: "realtime disconnected" }), "mic stop after disconnect error") : null,
+        (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise)
+          ? settle(() => stopAudioRecording({ reason: "realtime disconnected" }), "audio recording stop after disconnect error",
+            result => `audio recording stopped for disconnect: ${result?.recording_name || result?.status || "done"}`) : null,
+        settle(() => recordExitPaneSnapshots("disconnect"), "disconnect snapshots error")
+      ]);
     }
 
     async function restartRealtimeServer() {
@@ -20826,6 +20828,7 @@
     async function startMic({ reason = "" } = {}) {
       if (!realtimeConnected()) return;
       if (micStream) return;
+      const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
       resetInputAudioBuffer(reason ? `before mic start: ${reason}` : "before mic start");
       const deviceId = selectedMicDeviceId();
       const audioConstraints = {
@@ -20837,23 +20840,25 @@
       if (deviceId) {
         audioConstraints.deviceId = { exact: deviceId };
       }
-      micStream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: audioConstraints
       });
-      if (realtimeConnection.stopped) {
-        micStream.getTracks().forEach((track) => track.stop());
-        micStream = null;
+      if (!activeRealtimeSession(socket, generation) || micStream) {
+        stream.getTracks().forEach((track) => track.stop());
         return;
       }
+      micStream = stream;
       await refreshMicDevices({ preserveSelection: deviceId, quiet: true });
-      if (realtimeConnection.stopped) {
-        await stopMic({ reason: "stopped during microphone setup" });
+      if (!activeRealtimeSession(socket, generation) || micStream !== stream) {
+        if (micStream === stream) await stopMic({ reason: "stopped during microphone setup" });
+        else stream.getTracks().forEach((track) => track.stop());
         return;
       }
       micContext = new AudioContext();
       micSource = micContext.createMediaStreamSource(micStream);
       micProcessor = micContext.createScriptProcessor(2048, 1, 1);
       micProcessor.onaudioprocess = (event) => {
+        if (!activeRealtimeSession(socket, generation) || micStream !== stream) return;
         const input = event.inputBuffer.getChannelData(0);
         let peak = 0, sumSquares = 0;
         for (const sample of input) {
@@ -20890,14 +20895,15 @@
     async function stopMic({ reason = "" } = {}) {
       resetMicInterruptCandidate();
       detachMicFromRecording();
-      if (micProcessor) micProcessor.disconnect();
-      if (micSource) micSource.disconnect();
-      if (micStream) micStream.getTracks().forEach((track) => track.stop());
-      if (micContext) await micContext.close();
+      const processor = micProcessor, source = micSource, stream = micStream, context = micContext;
+      // Relinquish old resources before awaiting closure; later completion owns no page state.
       micProcessor = null;
       micSource = null;
       micStream = null;
       micContext = null;
+      if (processor) processor.disconnect();
+      if (source) source.disconnect();
+      if (stream) stream.getTracks().forEach((track) => track.stop());
       micStoppedAt = Date.now();
       micMutedForNarration = false;
       clearMicFreshnessTimer();
@@ -20908,6 +20914,7 @@
       updateMicMuteButton();
       resetConversationReengageCycle();
       syncMicPanelToMic();
+      if (context) await context.close();
       log(events, reason ? `mic stopped: ${reason}` : "mic stopped");
     }
 
@@ -21289,14 +21296,14 @@
       connect({ coreNotesOnly: true });
     });
     async function disconnectRealtime({ transition = null, ...options } = {}) {
-      if (realtimeConnection.transition && !transition) return;
+      if (realtimeConnection.busy && !transition) return;
       return runConnectionTransition("disconnect", () => saveAndDisconnectRealtime(options), transition);
     }
 
     async function saveAndDisconnectRealtime({ reloadSavedNote = true } = {}) {
       recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
-      const cleanupGeneration = beginIntentionalExitCleanup();
+      const cleanupGeneration = beginIntentionalExitCleanup({ saving: true });
       const sessionGeneration = realtimeConnection.generation;
       let saveAttemptActive = true;
       quiesceRealtimeForSave("realtime disconnect");
@@ -21347,7 +21354,7 @@
       } catch (error) {
         setState("Stopped; save failed", "warn");
         log(events, `disconnect save blocked: ${error.message}; Eric remains stopped; transcript retained; press Disconnect to retry`);
-        disconnectButton.disabled = false;
+        disconnectButton.disabled = realtimeConnection.closing;
         return { status: "error", error: error.message };
       } finally {
         saveAttemptActive = false;

@@ -25,6 +25,7 @@ function saveFixture() {
     continuitySaveHalted: false,
     continuitySaveTransaction: null,
     intentionalExitCleanupInProgress: false,
+    intentionalExitCleanupSession: null,
     intentionalExitCleanupGeneration: 0,
     conversationLines: ['The last accepted thought.'], inputDraft: '',
     inputAudioTranscriptionPending: false, userSpeechActive: false,

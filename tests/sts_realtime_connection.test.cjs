@@ -2,11 +2,49 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { create } = require('../web/sts/realtime-connection.js');
 const { page, loadFunctions } = require('./helpers/sts_tool_harness.cjs');
-const { saveFixture, installConnectionFixture } = require('./helpers/sts_save_harness.cjs');
+const { saveFixture, installConnectionFixture, deferred } = require('./helpers/sts_save_harness.cjs');
 
 function socket(readyState = 1) {
   return { readyState, packets: [], send(packet) { this.packets.push(packet); } };
 }
+
+test('close owns one cleanup promise and excludes transitions until settlement', async () => {
+  const owner = create(), transport = socket(), gate = deferred();
+  const generation = owner.adopt(transport);
+  let calls = 0;
+  const closing = owner.close(transport, generation, () => {
+    calls++;
+    assert.equal(owner.busy, true, 'ownership is published before effects');
+    return gate.promise;
+  });
+  assert.equal(owner.stopped, true);
+  assert.equal(owner.close(transport, generation, () => assert.fail('duplicate')), closing);
+  await assert.rejects(owner.runTransition('connect', () => assert.fail('must not enter')), /cleanup/);
+  gate.resolve();
+  await closing;
+  assert.equal(calls, 1);
+  assert.equal(owner.busy, false);
+  assert.equal(owner.close(transport, generation, () => assert.fail('completed duplicate')), closing);
+  await owner.runTransition('retry', () => {});
+});
+
+test('close failure releases ownership and stale completion cannot release a newer close', async () => {
+  const owner = create(), old = socket(), gate = deferred(), nextGate = deferred();
+  const first = owner.close(old, owner.adopt(old), () => gate.promise);
+  const next = socket(), generation = owner.adopt(next);
+  const second = owner.close(next, generation, () => nextGate.promise);
+  gate.resolve();
+  await first;
+  assert.equal(owner.closing, true);
+  await owner.close(old, generation - 1, () => assert.fail('stale effect'));
+  const rejected = assert.rejects(second, /fixture/);
+  nextGate.reject(new Error('fixture'));
+  await rejected;
+  assert.equal(owner.busy, false);
+  const fresh = socket();
+  await assert.rejects(owner.close(fresh, owner.adopt(fresh), () => { throw new Error('sync fixture'); }), /sync fixture/);
+  assert.equal(owner.busy, false);
+});
 
 test('connection identity preserves the old active/connected decisions and wire packets', () => {
   const event = { type: 'response.create', response: { modalities: ['audio', 'text'], instructions: 'Unchanged.' } };

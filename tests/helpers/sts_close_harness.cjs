@@ -20,8 +20,9 @@ async function closeFixture() {
     gpuWatchInFlight: true, standingRoutineInFlight: true,
     gpuWatchRoutine: {}, standingRoutine: {}, micMutedForNarration: true,
     visionImageStaged: true,
-    stopGpuWatch: () => calls.push('GPU watch stop'),
-    stopStandingRoutine: () => calls.push('standing routine stop'),
+    stopGpuWatch() { calls.push('GPU watch stop'); c.gpuWatchInFlight = false; },
+    stopStandingRoutine() { calls.push('standing routine stop'); c.standingRoutineInFlight = false; },
+    clearBrain2BodyCue() {},
     updateMicMuteButton() {}, updateVisionButtons() {}, syncServerPanelToConnection() {},
     updateIdleSchedulerStatus() {}, updateLanePressure() {},
     async stopAudioRecording() { calls.push('recording stop'); return { status: 'ok' }; },
@@ -33,7 +34,8 @@ async function closeFixture() {
   }
   c.clearAudioQueue = () => calls.push('clear audio queue');
   c.stopPlaybackNow = () => calls.push('stop playback');
-  loadFunctions(c, ['setConnectionButtonsDisabled']);
+  c.idleArt.disarm = () => calls.push('idle art disarm');
+  loadFunctions(c, ['setConnectionButtonsDisabled', 'haltRealtimeActivity']);
   await c.connect();
   const socket = sockets[0];
   socket.readyState = 1;

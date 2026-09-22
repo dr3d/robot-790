@@ -46,6 +46,8 @@ function loadFunctions(context, names) {
   require('./sts_continuation_harness.cjs').installToolContinuation(context);
   const dependencies = {
     connect: ['runConnectionTransition', 'openRealtimeConnection'],
+    openRealtimeConnection: ['handleRealtimeClose'],
+    handleRealtimeClose: ['cleanupClosedRealtime'],
     connectPrevious: ['runConnectionTransition', 'preparePreviousConnection'],
     connectSelectedContinuityFilename: ['runConnectionTransition', 'prepareSelectedConnection'],
     disconnectRealtime: ['runConnectionTransition', 'saveAndDisconnectRealtime'],

@@ -6,6 +6,51 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Owned Unexpected Close
+
+September 22: following the accepted `94b3d3d` audio repair, the existing
+`realtime-connection.js` owner now owns current-socket closure as well as normal
+transitions. One close promise deduplicates cleanup, marks the connection stopped
+immediately, and prevents Connect/Previous/selected/Disconnect from racing
+unfinished cleanup. The page's close listener is a small adapter; its cleanup
+reuses `haltRealtimeActivity` instead of a second scheduler/audio stop list.
+
+Unexpected loss retains unsaved words, loaded history, parent and eye assets.
+After cleanup, the existing Disconnect action can save/retry; Connect cannot
+silently replace that transcript. There is no automatic save, reconnect or backend
+restart. Intentional cleanup is scoped to its socket/generation so a previous
+exit's grace period cannot suppress cleanup in a newly connected run. Loss during
+an unfinished or failed save still finalizes devices. Mic stop releases old
+references before awaiting context closure; delayed mic permission/device setup
+and audio callbacks are checked against the originating connection.
+
+Verification: 692 JavaScript tests and 990 Python tests pass (the existing
+Starlette/httpx deprecation warning remains). Eight initial regressions failed
+against the prior code before this repair. The four original isolated defects
+no longer reproduce. Headless Edge passes the existing real-audio and
+desktop/mobile checks plus a real TCP-drop test against a disposable localhost
+WebSocket: code 1006, locked cleanup, retained words, failed-save retry, successful
+save/reconnect and stale-close rejection. Model work, microphone resources and
+save receipts in that browser test are simulated; no live session, persistence
+writes or hardware actions are used. Evidence under
+`logs/maintenance/lifecycle-review/`: `close-owner-suite.log`,
+`close-owner-pytest.log`, `close-owner-browser.log`, and
+`close-owner-reproduction.json`.
+
+September 22, 13:17-13:26: the paired live trial passed normal-path regression
+acceptance. The new page/module were fetched before Run 1, with no refresh before
+Run 2. Run 1 canceled active TTS; Run 2's final playback had drained before its
+stop. Both saves exactly match their frozen drafts; Run 2 loaded the first save
+and recalled the Reachy exchange without tools. The mic restarted successfully
+on the reused page. A failed external Reachy body switch and speaker-identity
+confusion are recorded separately, not treated as cleanup regressions. Evidence:
+`logs/runs/20260922-1326-close-owner-acceptance/postmortem.md`.
+
+No need to deliberately break a valuable live session. This is not crash-safe
+browser persistence, and explicit resets, backend-control timers and page exit
+remain separately scoped work. Nothing changed Eric's prompts, context assembly,
+tools, idle timing, voice, model settings or runtime instrumentation.
+
 ### Socket-Close Audio Stop
 
 September 22: the first repair following `fdde834` is implemented. The current
@@ -25,12 +70,21 @@ signal disappears, delayed setup creates no source, and fresh audio survives
 stale close events. Transport/preparation are simulated; no model, mic or device
 action is used. Existing audio-drain and desktop/mobile smoke checks also pass.
 
-Unexpected-close unsaved-state recovery and late mic-cleanup ownership remain
-unfixed and still reproduce offline; they are the next separate repair. This
-does not claim a full unexpected-disconnect controller. Activate with a refresh
-while disconnected, then ordinary Connect -> exchange -> Disconnect during
-speech -> Connect. Do not kill a server during valuable unsaved conversation
-to test it. No server/model restart is needed; live acceptance remains pending.
+At the audio-only checkpoint, unexpected-close unsaved-state recovery and late
+mic-cleanup ownership still reproduced offline. The separate repair above now
+addresses those boundaries. Do not kill a server during valuable unsaved
+conversation to test them.
+
+September 22, 12:28-12:37: paired live acceptance on `94b3d3d` passed the
+normal Disconnect/reconnect path. The repaired page was fetched before the
+first run; the second Connect used the same page without a refresh. Both
+Disconnects canceled active response/TTS work and committed complete continuity
+saves. The second run loaded the first save and recalled Priya and Chamber Seven
+without tools. A 240-second story also drained before the next B1 idle response,
+while B2 supplied private advice without overlapping public speech. Scott
+confirmed both abrupt cutoffs worked correctly. This is normal-path regression
+acceptance, not a live unexpected-network-loss test. Evidence and content notes:
+`logs/runs/20260922-1237-socket-audio-acceptance/postmortem.md`.
 
 ### Unexpected-Close Preparation
 

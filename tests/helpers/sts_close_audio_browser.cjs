@@ -74,6 +74,7 @@ async function checkSocketCloseAudio(page) {
       const activeAfterClose = outputAudioActive();
       release();
       await pending;
+      await handleRealtimeClose(second, realtimeConnection.generation);
       const pendingSetup = { activeWhilePending, activeAfterClose, newSources: sources.length - before };
 
       ensurePlayback = original.ensurePlayback;
@@ -89,6 +90,7 @@ async function checkSocketCloseAudio(page) {
       if (pending) await pending;
       audioPlayback.stop();
       sockets.at(-1)?.close();
+      if (sockets.length) await handleRealtimeClose(sockets.at(-1), realtimeConnection.generation);
       recordingDestination = null;
       if (audioContext) await audioContext.close();
       audioContext = null;

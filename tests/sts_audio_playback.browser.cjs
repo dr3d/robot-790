@@ -130,6 +130,7 @@ async function main() {
     });
     await context.addInitScript(() => {
       const NativeSocket = WebSocket;
+      window.isolatedNativeWebSocket = NativeSocket;
       window.WebSocket = class extends NativeSocket {
         constructor() { throw new Error('Live connection prohibited in the audio smoke test'); }
       };
@@ -198,6 +199,7 @@ async function main() {
       await panel.screenshot({ path: path.join(artifacts, `server-management-${name}.png`) });
     }
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
+    results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);
     assert.deepEqual(pageErrors, []);
     await context.close();
     fs.writeFileSync(path.join(artifacts, 'results.json'), JSON.stringify(results, null, 2) + '\n');

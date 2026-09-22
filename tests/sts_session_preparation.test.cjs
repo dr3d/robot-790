@@ -48,7 +48,10 @@ test('Connect waits for preparation before creating the realtime socket and rele
   assert.ok(connect.indexOf('await pauseSessionPreparation()') < connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun'));
   assert.ok(connect.indexOf('await fetchContinuitySessionMetadata(continuityParentForCurrentRun') < connect.indexOf('new WebSocket('));
   assert.match(connect, /catch \(error\) \{\s*releaseSessionPreparation\(\)/);
-  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*if \(!realtimeConnection.isCurrent\(socket, sessionGeneration\)\) return;\s*stopVisionCamera\(\{ quiet: true \}\);\s*stopEsp32Camera\(\);\s*releaseSessionPreparation/);
+  assert.match(connect, /socket.addEventListener\("close", \(\) => \{\s*void handleRealtimeClose\(socket, sessionGeneration\)/);
+  assert.match(connect, /async function handleRealtimeClose\(socket, generation\) \{\s*if \(!realtimeConnection.isCurrent\(socket, generation\)\) return;/);
+  assert.match(connect, /realtimeConnection.close\(socket, generation, \(\) => cleanupClosedRealtime\(delegated\)\)/);
+  assert.match(connect, /async function cleanupClosedRealtime\(delegated\) \{\s*haltRealtimeActivity\("realtime disconnected"\);\s*stopVisionCamera\(\{ quiet: true \}\);\s*stopEsp32Camera\(\);\s*releaseSessionPreparation/);
 });
 
 test('a parent archived during Connect preflight prevents opening an unsavable session', async () => {
