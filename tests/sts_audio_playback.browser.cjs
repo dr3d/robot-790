@@ -179,6 +179,8 @@ async function main() {
     assert.deepEqual(results.transitionControls, { lockedDuringWork: true, stillOwned: true,
       released: true, availableAfterWork: true, hasSocket: false });
     assert.equal(await ui.locator('#saveAndHaltEric').count(), 0);
+    assert.equal(await ui.locator('#latestThreadExpando, #conversationNoteSave, #clearLatestThread, #resetToPinnedContext').count(), 0);
+    assert.equal(await ui.locator('#pinnedNotesExpando #loadEricMemories').count(), 1);
     results.serverManagement = await ui.locator('#serverManagementExpando button').allTextContents();
     assert.deepEqual(results.serverManagement, ['Halt', 'Restart', 'Unload']);
     for (const [name, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844]]) {
@@ -197,7 +199,22 @@ async function main() {
       }));
       assert.equal(buttonsFit, true, `${name} server controls fit`);
       await panel.screenshot({ path: path.join(artifacts, `server-management-${name}.png`) });
+      const notes = ui.locator('#pinnedNotesExpando');
+      await notes.evaluate(panel => {
+        for (let element = panel; element; element = element.parentElement) {
+          if (element.tagName === 'DETAILS') element.open = true;
+        }
+      });
+      await notes.scrollIntoViewIfNeeded();
+      assert.equal(await notes.locator('#loadEricMemories').isVisible(), true);
+      const memoryToggleFits = await notes.locator('.toggle-row').evaluate(label => {
+        const rect = label.getBoundingClientRect();
+        return rect.width > 0 && rect.left >= 0 && rect.right <= innerWidth && label.scrollWidth <= label.clientWidth;
+      });
+      assert.equal(memoryToggleFits, true, `${name} memory-loading toggle fits`);
+      await notes.screenshot({ path: path.join(artifacts, `pinned-notes-${name}.png`) });
     }
+    results.imagePreview = await require('./helpers/sts_image_preview_browser.cjs').checkImagePreview(ui, artifacts);
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);
     assert.deepEqual(pageErrors, []);

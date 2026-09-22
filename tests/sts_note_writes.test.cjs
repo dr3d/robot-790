@@ -111,5 +111,4 @@ test('tool instructions prefer composed notes and no longer offer keyword summar
   assert.doesNotMatch(schema, /note_summary|source_filename/);
   assert.match(page, /Save these ideas, make a note, save our discussion, and summarize this mean an authored note/);
   assert.doesNotMatch(page, /function formatLoadedNoteSummary|function appendTopicSections|detailed summary note of this conversation or our situation/);
-  assert.match(source('saveConversationThreadNote'), /formatSessionNote\(\{ source: "conversation" \}\)/);
 });

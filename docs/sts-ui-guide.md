@@ -1,6 +1,7 @@
 # STS UI Operator Guide
 
-Updated: 2026-09-12. Screenshots: the local STS build on 2026-09-10.
+Updated: 2026-09-22. Screenshots: the local STS build on 2026-09-10;
+some panel layouts have since changed. Current control descriptions take precedence.
 
 This is the operating guide for the STS browser page: where to click, what
 changes, what gets saved, and which controls deserve care. For addresses and
@@ -535,27 +536,25 @@ the selected source from the loaded set; it does not delete the file. A session
 can reference earlier notes for rehydration. A selector entry is not, by itself,
 a claim that the whole session list is pinned into Eric.
 
-![Latest Thread](assets/sts-ui/2026-09-10/18-latest-thread.png)
+**Load Eric memories on refresh** is now in Pinned Notes. It allows the
+configured core memory note to load; its default and saved preference are
+unchanged. The file must exist: a checkbox cannot restore a missing file.
 
-| Control | Effect and caution |
-| --- | --- |
-| Filename field + Save Latest | Write the current conversation as a note at the requested name. Use a distinct filename when preserving another version; this is a write, not just a preview. |
-| Reset after save | Follow the save with a hot-context reset. Leave off unless that is the experiment. |
-| Clear Latest | Clear the live thread; when connected, also use the reset/reconnect path. Save first. |
-| Reset To Pinned | Clear hot conversation/idle/B2 state and reconnect if connected. See the implementation caveat below. |
-| Load Eric memories on refresh | Allow the configured core memory note to load. The file must actually exist; a checkbox cannot restore a missing file. |
+The unused Latest Thread panel (Save Latest, Clear Latest, Reset To Pinned and
+Reset after save) was retired on September 22. Use normal **Disconnect** to
+preserve the conversation, then **Connect** to resume. Eric's note-writing and
+explicit transcript-export tools remain available.
 
 **Spoken note requests:** "Save these ideas as puppet.txt" or "Summarize our
 Gulu Gulu plans" asks Eric to compose a focused note in his own words. It does
 not ask for the whole transcript. Say "Save the verbatim transcript as
 puppet-transcript.txt" when that is what you want. Missing authored text no
-longer silently falls back to a conversation dump. Save Latest and automatic
-Disconnect session saves still preserve transcripts; they are separate paths.
+longer silently falls back to a conversation dump. Automatic Disconnect session
+saves preserve the accepted transcript separately from these authored notes.
 
-This default is not a complete file-workflow repair: approval of an offered save
-can still be rejected by the current write gate, and read-to-write tool
-continuations still need the reliability work documented in the task-continuation
-experiment. A successful write receipt remains the evidence that a file exists.
+A successful write receipt remains the evidence that a file exists, not Eric's
+promise to write it. See [Engineering Status](engineering-status.md) for current
+tool and continuation guarantees and remaining limitations.
 
 If Connect reports a missing startup note, the configured core file is
 `notes/core/erics_memories.txt`. Restore that file from your retained copy, or
@@ -563,12 +562,9 @@ uncheck **Load Eric memories on refresh** here to intentionally connect without
 it. The error names the file and this setting. STS does not silently substitute
 an empty memory note when a requested file is missing.
 
-**Current reset caveat:** Reset To Pinned and connected Clear Latest call the
-ordinary connection loader after clearing scratch state. That loader rebuilds
-notes from current continuity; it does not reliably preserve an arbitrarily
-hand-edited in-memory pin set. For a controlled reload, save first, Disconnect,
-and explicitly choose Connect Empty or Connect Selected. Do not use this label
-as proof of exactly which notes survived; check Context Map afterward.
+For a controlled reload, Disconnect first and wait for the save to finish,
+then choose the intended Connect mode. Check Context Map to inspect what was
+loaded; a connection label alone is not proof of which notes are in context.
 
 ## Session Map
 

@@ -825,9 +825,6 @@
     #pinnedNotesExpando {
       --subpanel-accent-rgb: 188, 206, 255;
     }
-    #latestThreadExpando {
-      --subpanel-accent-rgb: 174, 150, 255;
-    }
     #advancedToolsExpando {
       --subpanel-accent-rgb: 235, 132, 218;
     }
@@ -1018,13 +1015,6 @@
       color: var(--text);
       background: var(--panel-2);
       font-weight: 650;
-    }
-    .thread-note-control {
-      grid-column: 1 / span 2;
-      min-width: 0;
-    }
-    .thread-reset-option {
-      justify-self: start;
     }
     .mic-vision-controls {
       grid-template-columns: 152px auto 152px auto minmax(140px, 1fr) minmax(120px, 160px);
@@ -1489,7 +1479,6 @@
       height: var(--live-camera-preview-height, 72px);
     }
     #settingsPanel .lab-goal-control,
-    #settingsPanel .thread-note-control,
     #serverPanel .advanced-connect-controls > label,
     #serverPanel .session-select-control {
       grid-column: auto;
@@ -1497,7 +1486,6 @@
     #serverPanel .advanced-connect-controls > .subtle {
       grid-column: 1 / -1;
     }
-    #settingsPanel .thread-reset-option,
     #settingsPanel .url-controls .toggle-row {
       justify-self: stretch;
     }
@@ -2861,25 +2849,6 @@
                 <select id="loadedNoteSelect"></select>
               </label>
               <button id="loadedNoteUnpin" type="button" disabled>Unpin</button>
-            </section>
-          </div>
-        </details>
-
-        <details id="latestThreadExpando" class="runtime-settings-expando">
-          <summary>
-            <span class="runtime-settings-label">Latest Thread</span>
-            <span class="subtle">Save, clear, or reload conversation continuity</span>
-          </summary>
-          <div class="runtime-settings-expando-body">
-            <section class="controls memory-controls">
-              <label class="thread-note-control">
-                Latest Thread
-                <input id="conversationNoteFilename" placeholder="threads/personal-talk">
-              </label>
-              <button id="conversationNoteSave" type="button">Save Latest</button>
-              <button id="clearLatestThread" type="button">Clear Latest</button>
-              <button id="resetToPinnedContext" type="button">Reset To Pinned</button>
-              <label class="toggle-row thread-reset-option"><input id="conversationNoteResetAfterSave" type="checkbox"> Reset after save</label>
               <label class="toggle-row"><input id="loadEricMemories" type="checkbox" checked> Load Eric memories on refresh</label>
             </section>
           </div>
@@ -3058,11 +3027,6 @@
     const memoryForgetAllButton = document.querySelector("#memoryForgetAll");
     const loadedNoteSelect = document.querySelector("#loadedNoteSelect");
     const loadedNoteUnpinButton = document.querySelector("#loadedNoteUnpin");
-    const conversationNoteFilename = document.querySelector("#conversationNoteFilename");
-    const conversationNoteSaveButton = document.querySelector("#conversationNoteSave");
-    const clearLatestThreadButton = document.querySelector("#clearLatestThread");
-    const conversationNoteResetAfterSave = document.querySelector("#conversationNoteResetAfterSave");
-    const resetToPinnedContextButton = document.querySelector("#resetToPinnedContext");
     const ttsVoice = document.querySelector("#ttsVoice");
     const ttsPrecision = document.querySelector("#ttsPrecision");
     const ttsInstruct = document.querySelector("#ttsInstruct");
@@ -12938,7 +12902,6 @@
       conversation.scrollTop = conversation.scrollHeight;
       renderLogPopout("conversation");
       updateBrain2Controls();
-      updateConversationThreadButtons();
     }
 
     function conversationLineMetadataFromDate(date = new Date()) {
@@ -16523,7 +16486,7 @@
       };
     }
 
-    async function generateImage({ prompt, title, size = "1024x1024", _isCurrent = () => true, _idleArt = false } = {}) {
+    async function generateImage({ prompt, title, size = "1024x1024", _isCurrent = () => true, _isPreviewCurrent = _isCurrent, _idleArt = false } = {}) {
       const text = String(prompt || "").replace(/\s+/g, " ").trim();
       if (!text) throw Object.assign(new Error("Missing image prompt"), { generationSubmitted: false });
       if (!_isCurrent()) throw Object.assign(new Error("Image request was superseded."), { generationSubmitted: false });
@@ -16573,15 +16536,21 @@
       }
       const absoluteUrl = new URL(String(result.url || ""), location.href).href;
       const hydrated = { ...result, local_url: result.url, url: absoluteUrl, displayed: true };
-      if (!_isCurrent() || result.retained || requestGeneration !== generatedImageRequestGeneration) {
-        if (ownsProgress()) {
+      // Speech can supersede a turn without superseding its artifact preview.
+      const canPreview = _isPreviewCurrent() && ownsProgress();
+      if (!_isCurrent() || result.retained || !canPreview) {
+        if (canPreview) {
+          showGeneratedImage(hydrated);
+        } else if (ownsProgress()) {
           generatedImageStatusState = "empty";
           generatedImageStatusLabel = "";
           generatedImageHint.textContent = "Image retained on disk";
           updateGeneratedImageButtons();
         }
-        log(events, `image retained on disk after superseded request: ${hydrated.filename}`);
-        return { ...hydrated, displayed: false, staged: false, retained: true,
+        log(events, canPreview
+          ? `image preview ready after superseded turn: ${hydrated.filename}`
+          : `image retained on disk after superseded request: ${hydrated.filename}`);
+        return { ...hydrated, displayed: canPreview, staged: false, retained: true,
           retrieval: { tool: "move_generated_image_to_sensing_eye", arguments: { filename: hydrated.filename } } };
       }
       showGeneratedImage(hydrated);
@@ -16739,27 +16708,6 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       log(events, `local file ${result.filename}: ${result.characters || 0} chars`);
-      return result;
-    }
-
-    async function writeOperatorNoteFile({ filename, content, mode = "overwrite" } = {}) {
-      const name = String(filename || "").trim();
-      if (!name) throw new Error("Missing filename");
-      const payload = {
-        filename: name,
-        content: String(content || ""),
-        mode: String(mode || "overwrite")
-      };
-      const response = await fetch(new URL("/api/notes/write", location.href), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || result.status === "error") {
-        throw new Error(result.error || `${response.status} ${response.statusText}`);
-      }
-      log(events, `operator local file ${result.filename}: ${result.characters || 0} chars`);
       return result;
     }
 
@@ -17244,30 +17192,6 @@
       return clipSessionNote(content);
     }
 
-    function timestampForFilename(date = new Date()) {
-      const pad = (value) => String(value).padStart(2, "0");
-      return [
-        date.getFullYear(),
-        pad(date.getMonth() + 1),
-        pad(date.getDate()),
-        "-",
-        pad(date.getHours()),
-        pad(date.getMinutes()),
-        pad(date.getSeconds())
-      ].join("");
-    }
-
-    function conversationThreadFilenameValue() {
-      const typed = String(conversationNoteFilename?.value || "").trim();
-      return typed || `threads/conversation-${timestampForFilename()}.txt`;
-    }
-
-    function updateConversationThreadButtons() {
-      if (conversationNoteSaveButton) conversationNoteSaveButton.disabled = !conversationLines.length;
-      if (clearLatestThreadButton) clearLatestThreadButton.disabled = !conversationLines.length;
-      if (resetToPinnedContextButton) resetToPinnedContextButton.disabled = false;
-    }
-
     async function waitForRealtimeClose(socket, timeoutMs = 2500) {
       if (!socket || socket.readyState === WebSocket.CLOSED) return;
       await new Promise((resolve) => {
@@ -17281,98 +17205,6 @@
         setTimeout(finish, timeoutMs);
       });
     }
-
-    async function waitForRealtimeOpen(timeoutMs = 4500) {
-      if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) return true;
-      const socket = realtimeConnection.socket;
-      if (!socket) return false;
-      return new Promise((resolve) => {
-        let done = false;
-        const finish = (value) => {
-          if (done) return;
-          done = true;
-          resolve(value);
-        };
-        socket.addEventListener("open", () => finish(true), { once: true });
-        socket.addEventListener("close", () => finish(false), { once: true });
-        socket.addEventListener("error", () => finish(false), { once: true });
-        setTimeout(() => finish(false), timeoutMs);
-      });
-    }
-
-    async function resetToPinnedContext({ reason = "manual reset to pinned notes" } = {}) {
-      const wasConnected = realtimeConnected();
-      const restartMic = Boolean(micStream);
-      resetToPinnedContextButton && (resetToPinnedContextButton.disabled = true);
-      clearLatestThreadButton && (clearLatestThreadButton.disabled = true);
-      try {
-        const closingSocket = realtimeConnection.socket;
-        if (restartMic) await stopMic({ reason });
-        if (wasConnected && closingSocket) {
-          closingSocket.close();
-          await waitForRealtimeClose(closingSocket);
-        }
-        clearHotConversationState({ reason });
-        if (wasConnected) {
-          await connect();
-          const opened = await waitForRealtimeOpen();
-          if (opened && restartMic) await startMic({ reason: "after pinned-context reset" });
-        }
-      } catch (error) {
-        log(events, `reset to pinned context error: ${error.message}`);
-      } finally {
-        updateConversationThreadButtons();
-      }
-    }
-
-    async function clearLatestThread() {
-      if (!conversationLines.length) return;
-      recordUiEvent("latest thread clear", realtimeConnected() ? "reset to pinned" : "local clear", {
-        conversation_lines: conversationLines.length,
-        loaded_notes: loadedNoteContexts.map((item) => item.filename)
-      });
-      if (realtimeConnected()) {
-        await resetToPinnedContext({ reason: "operator cleared latest thread" });
-        return;
-      }
-      clearHotConversationState({ reason: "operator cleared latest thread", clearEvents: false });
-      updateConversationThreadButtons();
-    }
-
-    async function saveConversationThreadNote() {
-      if (!conversationLines.length) return;
-      const originalText = conversationNoteSaveButton?.textContent || "Save Latest";
-      if (conversationNoteSaveButton) {
-        conversationNoteSaveButton.disabled = true;
-        conversationNoteSaveButton.textContent = "Saving...";
-      }
-      try {
-        const filename = conversationThreadFilenameValue();
-        const content = await formatSessionNote({ source: "conversation" });
-        const result = await writeOperatorNoteFile({ filename, content });
-        if (conversationNoteFilename && !conversationNoteFilename.value.trim()) {
-          conversationNoteFilename.value = result.filename || filename;
-        }
-        recordUiEvent("conversation saved as note", result.filename || filename, {
-          characters: result.characters || content.length,
-          reset_after_save: Boolean(conversationNoteResetAfterSave?.checked)
-        });
-        log(events, `conversation saved as note: ${result.filename || filename}`);
-        if (conversationNoteSaveButton) conversationNoteSaveButton.textContent = "Saved";
-        if (conversationNoteResetAfterSave?.checked) {
-          await resetToPinnedContext({ reason: `saved conversation note ${result.filename || filename}` });
-        }
-      } catch (error) {
-        if (conversationNoteSaveButton) conversationNoteSaveButton.textContent = "Failed";
-        log(events, `conversation note save error: ${error.message}`);
-      } finally {
-        setTimeout(() => {
-          if (conversationNoteSaveButton) conversationNoteSaveButton.textContent = originalText;
-          updateConversationThreadButtons();
-        }, 1400);
-      }
-    }
-
 
     async function admitLiveNoteRead(result) {
       if (!realtimeConnected() || realtimeConnection.stopped) return;
@@ -19131,9 +18963,10 @@
       let generationStarted = false;
       const artTool = ["generate_image", "move_generated_image_to_sensing_eye"].includes(event.name);
       const idleGrant = artTool && toolContinuation.origin === "idle" && typeof idleArt !== "undefined" ? idleArt.grant : null;
-      const isCurrent = () => activeRealtimeSession(socket, generation)
-        && userActivityAt === lastUserTurnActivityAt && !suppressedResponseIds.has(eventResponseId(event))
+      const isPreviewCurrent = () => activeRealtimeSession(socket, generation)
         && (!idleGrant || (idleArt.grant === idleGrant && idleArt.authorized()));
+      const isCurrent = () => isPreviewCurrent()
+        && userActivityAt === lastUserTurnActivityAt && !suppressedResponseIds.has(eventResponseId(event));
       try {
         // Enforce the final speech-only boundary even if a provider emits a tool anyway.
         if (toolContinuation.terminal) {
@@ -19161,6 +18994,7 @@
         activityArgs = parseToolArguments(event.arguments);
         if (artTool) {
           activityArgs = { ...activityArgs, _isCurrent: isCurrent, _idleArt: toolContinuation.origin === "idle" };
+          if (event.name === "generate_image") activityArgs._isPreviewCurrent = isPreviewCurrent;
         } else if (["recall_sensing_eye_note", "select_sensing_eye_image", "capture_esp32_camera", "set_esp32_camera"].includes(event.name)) {
           activityArgs = { ...activityArgs, _isCurrent: isCurrent };
         }
@@ -20948,7 +20782,6 @@
       labRunExpando: "Open session goal, run preset, creature seed, and idle tuning controls.",
       memoryExpando: "Open browser memory facts and preview controls.",
       pinnedNotesExpando: "Open pinned note selection and unpin controls.",
-      latestThreadExpando: "Open save, clear, reset, and continuity loading controls.",
       advancedToolsExpando: "Open LLM tool exposure switches.",
       visionDrop: "Drop an image, text file, or markdown note into Eric's sensing eye.",
       visionPreviewHandle: "Drag to reveal more or less of the staged sensing-eye image; double-click to reset.",
@@ -21023,11 +20856,6 @@
       memoryForgetAll: "Clear Robot 790 browser memory facts.",
       loadedNoteSelect: "Choose a note currently pinned into the runtime context.",
       loadedNoteUnpin: "Stop feeding this loaded note into future context updates; it does not erase the live conversation history.",
-      conversationNoteFilename: "Optional note filename for saving the latest hot conversation thread. Blank uses threads/conversation-YYYYMMDD-HHMMSS.txt.",
-      conversationNoteSave: "Save Latest writes the current hot conversation as a durable thread note without pinning it automatically.",
-      clearLatestThread: "Clear Latest discards the hot conversation scratch state. If connected, it reconnects so old realtime conversation context is actually dropped.",
-      resetToPinnedContext: "Close the hot realtime session, clear conversation/idle/B2 scratch state, and reconnect from the currently pinned notes.",
-      conversationNoteResetAfterSave: "After saving the conversation note, reset the hot session back to the pinned-note context.",
       loadEricMemories: "Load Eric's memory note into startup context on refresh.",
       continuitySessionSelect: "Choose a timestamped session note to select or connect.",
       refreshContinuitySessions: "Refresh the timestamped session-note list.",
@@ -22042,15 +21870,6 @@
     });
       loadedNoteUnpinButton?.addEventListener("click", () => {
         unpinLoadedNoteContext(loadedNoteSelect?.value || "");
-      });
-      conversationNoteSaveButton?.addEventListener("click", () => {
-        saveConversationThreadNote();
-      });
-      clearLatestThreadButton?.addEventListener("click", () => {
-        clearLatestThread();
-      });
-      resetToPinnedContextButton?.addEventListener("click", () => {
-        resetToPinnedContext({ reason: "operator reset to pinned notes" });
       });
     refreshContinuitySessionsButton?.addEventListener("click", () => {
       fetchContinuitySessions()

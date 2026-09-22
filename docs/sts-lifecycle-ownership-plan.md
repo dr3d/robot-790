@@ -22,7 +22,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Responsibility | Current entry points / state | Boundary risk |
 | --- | --- | --- |
 | Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
-| Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Backend controls and explicit resets are still separate. |
+| Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Backend controls remain separate; unused explicit-reset controls are retired. |
 | Current-socket closure | `realtime-connection.js` owns the idempotent close promise and stopped state; `handleRealtimeClose` / `cleanupClosedRealtime` adapt page resources and recovery UI | Reconnect cannot race pending close cleanup. The stopped unsaved transcript must survive until Disconnect/save succeeds. Explicit backend controls and page exit are not a crash-save protocol. |
 | Stop, save, reconnect work | `saveAndDisconnectRealtime`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Device cleanup and save orchestration remain page-owned; final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
@@ -655,11 +655,80 @@ coverage. Run 2's next live resume remains untested. No server/model restart or
 additional repair follows from this PM. Prompts, tool choice, context assembly,
 idle policy, speech length and model settings remain unchanged.
 
-Next scope, after acceptance: characterize explicit resets/backend actions/page
-exit before migrating their ownership. Their intentional discard and best-effort
-snapshot contracts are not silently converted into continuity saves. This work
-does not provide browser-crash persistence, cancel arbitrary backend jobs, or
-settle ownership of every backend-control timer or recorder timeout.
+The next step after this acceptance is recorded below. This work does not
+provide browser-crash persistence, cancel arbitrary backend jobs, or settle
+ownership of every backend-control timer or recorder timeout.
+
+### Unused Explicit Resets Retired
+
+September 22 checkpoint: `c9d55b0` preserves the accepted close owner and both
+paired acceptance PM references. Scott confirmed he does not use Save Latest,
+Clear Latest or Reset To Pinned. Remove that unused branch of the lifecycle
+instead of migrating it into the owner: panel, filename/reset-after-save inputs,
+handlers, button updater and private save/reset helpers. The only consumer of
+`waitForRealtimeOpen`, `timestampForFilename` and `writeOperatorNoteFile` was that
+branch; those helpers are removed too. Shared formatting, conversation reset,
+`waitForRealtimeClose`, transactional Disconnect saving and tool note writing
+remain. The memory-loading checkbox moves unchanged to Pinned Notes.
+
+`sts_explicit_exit.test.cjs` adds ten isolated characterization tests for the
+retained Halt/Restart/Unload and page-exit paths, plus two removal/UI assertions.
+It exercises actual page functions and the current close owner against fake
+transport, backend endpoints, mic/recording resources and timers. These are
+contract checks, not proof that arbitrary concurrent backend actions are safe.
+No production backend/page-exit logic changes in this step. Pagehide remains
+best-effort cleanup/log beacons; none of these controls becomes a continuity save.
+
+All 704 JavaScript and 990 Python tests pass (one existing Starlette/httpx
+deprecation warning). Isolated Edge checks retain real-audio and TCP-loss
+coverage and verify the remaining memory checkbox at desktop/mobile sizes.
+Receipts: `logs/maintenance/lifecycle-review/unused-thread-controls-*.log`;
+screenshots under `logs/maintenance/audio-owner-browser/`. Normal live regression
+acceptance remains pending: refresh disconnected, resume, converse, Disconnect,
+and reconnect. No model restart or special destructive action is needed.
+
+September 22, 17:08-17:16 follow-up: two normal runs saved exactly against their
+journals; the second recalled the unfinished game directly from history. All
+three saved eye assets matched their hashes. Fresh-page activation of the UI
+removal is not independently established by these artifacts. Two completed
+images stayed out of the preview after intervening user input, then reached the
+eye by exact retrieval; the third displayed normally. This is the older preview
+freshness contract, separate from session cleanup. Do not turn it into forced eye
+staging or prescribed dialogue. PM: `logs/runs/20260922-1716-headline-game-preview/postmortem.md`.
+
+Next: reproduce backend-control timer/cleanup races offline before migrating
+their ownership. Preserve explicit backend intent and emergency Halt access;
+do not casually route it behind a potentially stuck normal transition. Keep page
+exit and browser-crash persistence separate. Prompts, idle/B2 opportunities,
+context assembly, tool choice, voice and model settings are unchanged.
+
+### Thumbnail Ownership: September 22
+
+For the preview repair, see
+[Voice Does Not Cancel Thumbnails](engineering-status.md#voice-does-not-cancel-thumbnails).
+The 17:08-17:16 PM led to an explicitly requested contract refinement: a completed
+model-requested picture may update its still-current thumbnail after voice
+interrupts its turn, but cannot resume speech or stage the eye automatically.
+Session/request identity and manual clear/replacement still govern preview
+ownership. Eye and continuation guards remain turn-scoped. Four previously
+failing assertions now pass; all 712 JavaScript and 990 Python tests and isolated
+Edge checks pass (one existing Starlette/httpx warning). This is separate from
+the backend-control refactor. The historical PM records behavior before repair.
+
+Live foreground acceptance passed at 18:00-18:06: three interrupted renders
+kept their thumbnails, three model-chosen eye transfers succeeded, and a fourth
+uninterrupted render displayed normally. The new log entries confirm activation.
+Save source/journal and all three eye hashes match. One overlapping model request
+was rejected without another render. Scott accepted the experience. PM:
+`logs/runs/20260922-1806-thumbnail-acceptance/postmortem.md`.
+
+That run also exposed duplicate transcript-settle waits: 4,576ms in the
+Disconnect wrapper and 4,555ms in the snapshot function for the same unfinished
+input. The final "Good work" remained partial and was not a saved accepted turn;
+the completed journal correctly ends with the preceding accepted conversation.
+This is a small follow-up ownership issue, not a failed transaction. Characterize
+late-final/retry/direct-snapshot behavior before consolidating the wait budget.
+Do not silently accept partial STT or remove the final-transcript grace period.
 
 ### Live Acceptance Progress: September 21
 

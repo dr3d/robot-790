@@ -30,7 +30,7 @@ to be readable without digging through live private logs.
 
 ## Articles
 
-September 20 checkpoint: conversation and idle thinking share retained history,
+September 22 checkpoint: conversation and idle thinking share retained history,
 with measured cache-reuse repairs, compact memory lookup, and more reliable
 image handoffs. Optional setup notes can guide both speaking and advisory
 brains; they are not required for companionship. A small TimerCam can now put
@@ -42,9 +42,13 @@ tool execution and consistently thoughtful behavior.
 Interrupted image results can now be retrieved by filename without another
 render; ordinary idle can save notes using existing file permissions. The extra
 deep-think experiment is disabled. Browser restructuring has begun with separate
-audio-playback and tool-continuation owners, preserving current prompts and
-companion behavior. The tool extraction passed its exercised resumed-thread
-comparison on September 21; broader lifecycle acceptance remains open.
+audio-playback, tool-continuation and connection owners, preserving current
+prompts and companion behavior. Resumed-thread trials preserve continuity and
+stop speech on Disconnect; isolated tests cover network loss and save recovery.
+Voice interruptions no longer hide a completed image thumbnail; Sensing Eye
+transfer remains Eric's separate action. Unused thread-reset controls are retired.
+The accepted checkpoint passes 712 JavaScript and 990 Python tests, plus isolated
+browser checks. Backend-control cleanup remains separate work ahead.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
 has the larger video collection. This site's media shelf is a curated selection,

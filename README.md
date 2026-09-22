@@ -195,11 +195,16 @@ and Eye transfer work. Voluntary eye staging remains Eric's choice: carrying an
 instruction across sessions is useful evidence, and a conversational reminder
 is acceptable. Long-run behavior and B1/B2 coordination remain observationally
 assessed rather than guaranteed.
-Browser lifecycle factoring is underway: dedicated audio-playback and
-tool-continuation owners now coordinate execution, with transition tests for
-interrupted tools, playback, stale results and reconnect. The tool extraction
-awaits its live before/after comparison; prompts and companion behavior are
-unchanged. See [Engineering Status](docs/engineering-status.md).
+Browser lifecycle factoring is underway: dedicated audio-playback,
+tool-continuation and connection owners coordinate execution. Paired live runs
+have accepted normal Disconnect/reconnect continuity; isolated tests also cover
+unexpected network loss and unsaved-session recovery. Unused Latest Thread
+save/reset controls are retired; normal Disconnect still saves, and Eric's note
+tools remain available. Voice interruptions no longer suppress a completed image
+thumbnail; Sensing Eye transfer remains a separate action chosen by Eric.
+Backend-control timers and page exit remain separate
+work. Prompts and companion behavior are unchanged. See
+[Engineering Status](docs/engineering-status.md).
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,
   plus `session-map.html` for wide session-note selection and lineage preview.

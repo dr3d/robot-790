@@ -5,24 +5,27 @@ const { page } = require('./helpers/sts_tool_harness.cjs');
 const { fixture } = require('./helpers/sts_image_harness.cjs');
 
 
-test('interrupted generation stays off screen and can be retrieved from its receipt without another render', async () => {
+test('voice interruption keeps the thumbnail without staging the eye or regenerating', async () => {
   const { c, requests, staged } = fixture();
   let current = true, finish;
   const fetch = c.fetch;
   c.fetch = (url, options) => options?.method === 'POST'
     ? new Promise(resolve => { finish = async () => resolve(await fetch(url, options)); })
     : fetch(url, options);
-  const pending = c.generateImage({ prompt: 'Mars canyon', _isCurrent: () => current });
+  const pending = c.generateImage({ prompt: 'Mars canyon', _isCurrent: () => current, _isPreviewCurrent: () => true });
   current = false;
   await finish();
   const receipt = await pending;
-  assert.equal(receipt.displayed, false);
+  assert.equal(receipt.displayed, true);
   assert.equal(receipt.staged, false);
   assert.equal(receipt.retained, true);
   assert.equal(receipt.retrieval.tool, 'move_generated_image_to_sensing_eye');
   assert.equal(receipt.retrieval.arguments.filename, receipt.filename);
-  assert.equal(c.generatedImageUrl, '');
+  assert.equal(c.generatedImageUrl, 'http://127.0.0.1:8790/generated-images/retained.png');
+  assert.equal(c.generatedImageStatusState, 'ready');
+  assert.doesNotMatch(c.generatedImageHint.textContent, /retained on disk/);
   assert.equal(c.visionImageUrl, '/operator.jpg');
+  assert.equal(staged.length, 0);
   const moved = await c.moveGeneratedImageToSensingEye({ ...receipt.retrieval.arguments, _usePending: true });
   assert.equal(moved.source_image, 'retained.png');
   assert.equal(moved.staged, true);

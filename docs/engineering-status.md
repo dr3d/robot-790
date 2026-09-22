@@ -6,6 +6,94 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Voice Does Not Cancel Thumbnails
+
+September 22: the 17:08-17:16 paired PM established two successful renders whose
+Imagined Image thumbnails were suppressed by intervening microphone input.
+Scott requested a preview-only repair. `generateImage` now distinguishes the
+current preview/session from the current conversational turn. Foreground and
+model-selected idle renders can finish their thumbnail after voice interrupts;
+receipts accurately report `displayed: true`, `staged: false`, `retained: true`
+when the old turn was superseded. No new speech, eye transfer or render is forced.
+
+Disconnect, socket replacement/closure, session generation changes, revoked idle
+permission, manual Clear and a newer preview still block stale display. The
+existing continuation and eye-retrieval guards remain. The separate B2-proposal
+controller's automatic delivery policy is unchanged; this repairs the two
+`generate_image` routes observed in the PM, not an idle-policy redesign.
+
+Four focused thumbnail assertions failed before repair and pass afterward.
+All 712 JavaScript and 990 Python tests pass (one existing Starlette/httpx
+deprecation warning), including the real idle-art controller with fake
+rendering, stale-result cases and canceled speech. Isolated Edge confirms decoded
+thumbnail pixels, IMG READY, enabled controls and unchanged eye state at desktop
+and mobile sizes; existing audio/network-loss checks also pass. No paid image,
+live model or hardware action was used. Evidence:
+`logs/maintenance/lifecycle-review/thumbnail-voice-*.log` and
+`logs/maintenance/audio-owner-browser/image-preview-{desktop,mobile}.png`.
+
+September 22, 18:00-18:06: live foreground acceptance passed. Three interrupted
+renders displayed their thumbnails via the new log path; a fourth uninterrupted
+render also displayed. Eric chose three successful eye transfers separately.
+The extra drawing was a distinct model request, not a controller retry; one
+overlapping request was correctly rejected before another render. The session
+save exactly matches its frozen journal, and all three eye hashes match disk.
+Scott confirms the result worked well. Live idle-tool coverage is not claimed.
+Evidence: `logs/runs/20260922-1806-thumbnail-acceptance/postmortem.md`.
+
+One separate lifecycle follow-up surfaced: Disconnect waited about 4.5 seconds
+twice for the same unfinished final STT draft, once in the disconnect wrapper
+and again in the snapshot function. Saving and shutdown succeeded, but the final
+partial "Good work" was never finalized and is only in the pane log, not the
+continuity note. Consolidate the wait budget with regression tests; do not
+promote partial transcripts or mix that repair into image behavior. No additional
+runtime change or server/model restart follows from this PM.
+
+### Unused Thread Controls Retired
+
+September 22: `c9d55b0` checkpoints the accepted socket-close owner and paired
+13:17-13:26 acceptance notes. Scott confirmed that Save Latest, Clear Latest
+and Reset To Pinned are unused. Their Latest Thread panel, filename/reset-after-
+save inputs, event handlers and dedicated helpers are now removed: 189 lines
+out of the main page, including the independent discard/reconnect path.
+
+The existing Load Eric memories on refresh checkbox moves to Pinned Notes with
+the same ID, default and persistence. Normal Connect/Previous/Empty, session-map
+loading, Disconnect's transactional save, Eric's authored-note/raw-capture tools,
+pinning and existing stored notes are unchanged. Shared conversation formatting,
+reset and socket-close helpers remain. No prompt, idle, context, TTS, model or
+runtime instrumentation changes are included. Halt/Restart/Unload and page-exit
+production behavior are unchanged.
+
+Ten new isolated characterization tests preserve those backend/page-exit
+contracts, including rejection and delayed completion; two more guard removal
+and the retained memory control. All 704 JavaScript and 990 Python tests pass
+(the existing Starlette/httpx deprecation warning remains). Edge passes
+desktop/mobile layout checks, real-audio stop/drain and disposable-socket network
+loss/recovery. Its screenshots confirm the memory checkbox fits under Pinned
+Notes. No live Eric connection, device action or persistence write was exercised.
+Evidence: `logs/maintenance/lifecycle-review/unused-thread-controls-*.log` and
+`logs/maintenance/audio-owner-browser/pinned-notes-{desktop,mobile}.png`.
+
+September 22, 17:08-17:16: the paired normal-path trial preserved continuity,
+saved both sessions exactly against their journals and retained all three new
+eye assets. Run 2 recalled the unfinished headline game before using any tool.
+The reviewed artifacts do not independently confirm a fresh page fetch after
+the control removal, so its activation evidence remains limited. No cleanup
+regression was observed. Two missing thumbnails were the pre-existing
+interrupted-generation preview guard, not failed renders: new microphone input
+arrived while rendering, and exact retrieval later staged both images in the
+eye without restoring their Imagined Image previews. The third uninterrupted
+render displayed normally. This is a separate UI ownership task, not automatic
+eye staging or a prompt change. Final measured context was 67.4%. Evidence:
+`logs/runs/20260922-1716-headline-game-preview/postmortem.md`.
+
+Refresh while disconnected to pick up the UI removal if not already refreshed.
+No special reset trial or server/model restart is required.
+Next ownership work: reproduce late backend-control completion and cleanup races
+offline, then change one boundary at a time without taking away emergency Halt.
+These preservation tests alone do not establish that every race is safe.
+
 ### Owned Unexpected Close
 
 September 22: following the accepted `94b3d3d` audio repair, the existing

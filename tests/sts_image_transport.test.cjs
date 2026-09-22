@@ -82,12 +82,14 @@ test('image routes preserve foreground settings and use the idle permission serv
   assert.equal(f.renders[0].options.size, '1536x1024');
 });
 
-test('retained idle result and foreground network failure release their progress indicator', async () => {
+test('retained idle result can show its preview without staging; foreground failure releases progress', async () => {
   const f = fixture();
   f.c.idleArt.renderRequested = async () => ({ status: 'ok', filename: 'late.png', url: '/late.png', retained: true });
   const retained = await f.c.generateImage({ prompt: 'A harbor', _idleArt: true });
-  assert.equal(retained.displayed, false);
-  assert.equal(f.c.generatedImageStatusState, 'empty');
+  assert.equal(retained.displayed, true);
+  assert.equal(retained.staged, false);
+  assert.equal(retained.retained, true);
+  assert.equal(f.c.generatedImageStatusState, 'ready');
   f.c.fetch = async () => { throw new Error('network failure'); };
   await assert.rejects(f.c.generateImage({ prompt: 'Another harbor' }), /network failure/);
   assert.equal(f.c.generatedImageStatusState, 'failed');

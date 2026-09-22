@@ -1,0 +1,96 @@
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
+const { exitFixture, pageExitFixture } = require('./helpers/sts_exit_harness.cjs');
+const { settle } = require('./helpers/sts_save_harness.cjs');
+const { page } = require('./helpers/sts_tool_harness.cjs');
+
+const actions = [
+  ['restart', 'restartRealtimeServer', '/api/realtime/restart'],
+  ['halt', 'haltRealtimeServer', '/api/realtime/stop'],
+  ['unload', 'unloadRealtimeServer', '/api/realtime/unload'],
+];
+
+for (const [kind, method, pathname] of actions) {
+  test(`${kind} preserves accepted words and calls its existing backend endpoint, not a continuity save`, async () => {
+    const f = await exitFixture();
+    f.c.audioRecordingActive = () => true;
+    const parent = f.c.continuityParentForCurrentRun;
+    await f.c[method]();
+    await settle();
+    assert.equal(f.backendRequests.length, 1);
+    assert.equal(f.backendRequests[0].pathname, pathname);
+    assert.equal(f.backendRequests[0].method, 'POST');
+    if (kind === 'restart') assert.deepEqual(JSON.parse(f.backendRequests[0].body), { preset: 'fixture-model', context: 131072 });
+    if (kind === 'unload') assert.equal(f.backendRequests[0].body, '{}');
+    assert.deepEqual([...f.c.conversationLines], ['Keep this unsaved exchange.']);
+    assert.equal(f.c.continuityParentForCurrentRun, parent);
+    assert.deepEqual([...f.c.eyeAssets], ['retained.jpg']);
+    assert.equal(f.requests.length, 0);
+    assert.equal(f.sockets.length, 1, 'no automatic reconnect');
+    assert.equal(f.calls.filter(call => call === 'mic stop').length, 1);
+    assert.equal(f.calls.filter(call => call === 'recording stop').length, 1);
+    assert.equal(f.calls.filter(call => call === 'pane snapshots').length, 1);
+  });
+
+  test(`${kind} backend rejection retains words and reports failure without inventing a save`, async () => {
+    const f = await exitFixture();
+    f.c.fetch = async () => ({ ok: false, json: async () => ({ error: 'fixture rejection' }) });
+    await f.c[method]();
+    await settle();
+    assert(f.calls.some(call => call === `realtime ${kind} error: fixture rejection`));
+    assert.deepEqual([...f.c.conversationLines], ['Keep this unsaved exchange.']);
+    assert.equal(f.requests.length, 0);
+    assert.equal(f.sockets.length, 1);
+  });
+}
+
+for (const kind of ['restart', 'unload']) {
+  test(`${kind} delayed completion retains its existing status wording without auto-connecting`, async () => {
+    const f = await exitFixture();
+    await f.c[kind === 'restart' ? 'restartRealtimeServer' : 'unloadRealtimeServer']();
+    await settle();
+    f.fireStatusTimer(kind);
+    assert(f.calls.includes(`state: ${kind === 'restart' ? 'Disconnected' : 'Unloaded'}`));
+    assert.equal(f.c.restartServerButton.disabled, false);
+    assert.equal(f.c.unloadServerButton.disabled, false);
+    assert.equal(f.sockets.length, 1);
+    assert.equal(f.requests.length, 0);
+  });
+}
+
+test('unused thread controls and their dedicated reset/save paths are removed', () => {
+  for (const name of ['latestThreadExpando', 'conversationNoteFilename', 'conversationNoteSave',
+    'conversationNoteResetAfterSave', 'clearLatestThread', 'resetToPinnedContext',
+    'saveConversationThreadNote', 'updateConversationThreadButtons', 'conversationThreadFilenameValue',
+    'writeOperatorNoteFile', 'timestampForFilename', 'waitForRealtimeOpen',
+    'thread-note-control', 'thread-reset-option']) {
+    assert.equal(page.includes(name), false, name);
+  }
+});
+
+test('the existing memory-loading checkbox remains under Pinned Notes', () => {
+  const start = page.indexOf('<details id="pinnedNotesExpando"');
+  const panel = page.slice(start, page.indexOf('</details>', start));
+  assert.match(panel, /id="loadedNoteSelect"/);
+  assert.match(panel, /id="loadedNoteUnpin"/);
+  assert.match(panel, /id="loadEricMemories" type="checkbox" checked/);
+  assert.equal((page.match(/id="loadEricMemories"/g) || []).length, 1);
+});
+
+test('beforeunload only warns for the recording condition; cancellation does not stop the session', () => {
+  const f = pageExitFixture(), callback = f.listeners.get('beforeunload')[0];
+  const event = { preventDefault() { f.calls.push('prevent unload'); } };
+  assert.equal(callback(event), undefined);
+  assert.deepEqual(f.calls, []);
+  f.c.warning = true;
+  assert.equal(callback(event), '');
+  assert.equal(event.returnValue, '');
+  assert.deepEqual(f.calls, ['beacons', 'prevent unload']);
+});
+
+test('pagehide performs best-effort local cleanup and log beacons, not a continuity transaction', () => {
+  const f = pageExitFixture();
+  for (const callback of f.listeners.get('pagehide')) callback();
+  assert.equal(f.c.window.__robot790PageUnloading, true);
+  assert.deepEqual(f.calls, ['popouts closed', 'beacons', 'browser camera stop', 'network camera stop', 'idle art disarm']);
+});

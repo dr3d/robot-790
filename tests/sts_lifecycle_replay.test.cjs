@@ -84,7 +84,7 @@ function replay() {
   return { ...f, images, sources, timers, transcripts, event, done, tick, reconnect, receipts };
 }
 
-test('image completes after user activity, retains receipt, then retrieval waits for actual speech drain', async () => {
+test('image completes after user activity, displays its thumbnail, then retrieval waits for actual speech drain', async () => {
   const f = replay(), { c } = f;
   const gate = deferred(), fetch = c.fetch;
   c.fetch = async (url, options) => {
@@ -98,7 +98,8 @@ test('image completes after user activity, retains receipt, then retrieval waits
   gate.resolve(); await drawing;
   const receipt = f.receipts()[0];
   assert.equal(receipt.retained, true, JSON.stringify(receipt));
-  assert.equal(c.generatedImageUrl, '');
+  assert.equal(receipt.displayed, true);
+  assert.match(c.generatedImageUrl, /\/retained.png$/);
   assert.equal(c.visionImageUrl, '/operator.jpg');
   assert.equal(f.responses().length, 0, 'old turn must not speak over the new user turn');
   await c.playPcm16Bytes(new Uint8Array(16000 * 2 * 5));
@@ -154,7 +155,7 @@ test('old socket completion cannot decrement new work or release its followup', 
   assert.equal(f.responses().length, 1);
 });
 
-test('canceled response retains a late artifact but cannot stage it or resume speech', async () => {
+test('canceled response still displays a late thumbnail but cannot stage it or resume speech', async () => {
   const f = replay(), gate = deferred(), fetch = f.c.fetch;
   f.c.fetch = async (...args) => { await gate.promise; return fetch(...args); };
   const work = f.tool('generate_image', { prompt: 'Harbor' });
@@ -162,7 +163,80 @@ test('canceled response retains a late artifact but cannot stage it or resume sp
   gate.resolve(); await work; f.tick();
   assert.equal(f.receipts()[0].retained, true, JSON.stringify(f.receipts()[0]));
   assert.equal(f.images.staged.length, 0);
+  assert.equal(f.receipts()[0].displayed, true);
+  assert.match(f.c.generatedImageUrl, /\/retained.png$/);
+  assert.equal(f.responses().length, 0);
+});
+
+function idleRenderFixture(f, gate) {
+  const { Controller } = require('../web/sts/idle-art.js');
+  const { c } = f;
+  c.idleArt = new Controller({
+    api: async action => {
+      if (action !== 'render') return {};
+      await gate.promise;
+      return { status: 'ok', filename: 'idle.png', url: '/generated-images/idle.png', idle_art_job: 'fixture' };
+    },
+    context: () => ({ connected: c.activeRealtimeSession(), eligible: true,
+      userKey: c.lastUserTurnActivityAt, eyeKey: c.visionImageUrl, mediaKey: c.generatedImageRequestGeneration }),
+    deliver() { throw new Error('Thumbnail must not deliver to the eye'); },
+    receipt() {}, id: () => 'fixture',
+  });
+  c.idleArt.grant = { token: 'fixture' };
+  c.toolContinuationOrigin = 'idle';
+  c.idleEnabledToolList = c.enabledToolList;
+}
+
+test('idle-tool render also displays its thumbnail after voice without delivering to the eye or speaking', async () => {
+  const f = replay(), gate = deferred();
+  idleRenderFixture(f, gate);
+  const work = f.tool('generate_image', { prompt: 'Idle harbor' });
+  f.done();
+  f.c.lastUserTurnActivityAt++;
+  gate.resolve(); await work; f.tick();
+  assert.equal(f.receipts()[0].displayed, true);
+  assert.equal(f.receipts()[0].retained, true);
+  assert.equal(f.c.generatedImageName, 'idle.png');
+  assert.equal(f.c.idleArt.ready, null);
+  assert.equal(f.c.idleArt.history[0].status, 'retained');
+  assert.equal(f.images.staged.length, 0);
+  assert.equal(f.responses().length, 0);
+});
+
+for (const [name, change] of [
+  ['Disconnect', c => { c.realtimeStopRequested = true; }],
+  ['closed socket', c => { c.ws.readyState = 3; }],
+  ['replacement socket', c => { c.ws = { readyState: 1 }; }],
+  ['new session generation', c => { c.realtimeSessionGeneration++; }],
+  ['manual clear', c => c.clearGeneratedImage()],
+  ['newer preview', c => c.showGeneratedImage({ filename: 'new.png', url: '/generated-images/new.png' })],
+]) {
+  test(`${name} still prevents a late render from changing the preview`, async () => {
+    const f = replay(), gate = deferred(), fetch = f.c.fetch;
+    f.c.fetch = async (...args) => { await gate.promise; return fetch(...args); };
+    const work = f.tool('generate_image', { prompt: 'Old harbor' });
+    f.done();
+    f.c.lastUserTurnActivityAt++;
+    change(f.c);
+    const preview = f.c.generatedImageUrl;
+    gate.resolve(); await work; f.tick();
+    assert.equal(f.c.generatedImageUrl, preview);
+    assert.equal(f.images.staged.length, 0);
+    assert.equal(f.responses().length, 0);
+  });
+}
+
+test('revoked idle-art permission prevents a late thumbnail even in the same connected session', async () => {
+  const f = replay(), gate = deferred();
+  idleRenderFixture(f, gate);
+  const work = f.tool('generate_image', { prompt: 'Idle harbor' });
+  f.done();
+  f.c.lastUserTurnActivityAt++;
+  f.c.idleArt.disarm();
+  gate.resolve(); await work; f.tick();
+  assert.equal(f.receipts()[0].displayed, false);
   assert.equal(f.c.generatedImageUrl, '');
+  assert.equal(f.images.staged.length, 0);
   assert.equal(f.responses().length, 0);
 });
 
