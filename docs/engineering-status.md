@@ -51,9 +51,11 @@ and the injected defects were not fixed by that review. The first repair now
 guards cleanup release with operation identity, including late finally blocks;
 49 focused tests pass. Start Eric now uses normal connection preparation and
 retains saved-state acknowledgment until startup succeeds; 34 focused
-save/navigation/replay tests pass, including failure and retry. The two save
-transaction findings and live acceptance remain open. No diagnostics or servers
-were changed.
+save/navigation/replay tests pass, including failure and retry. A failed optional
+note reload now warns without invalidating the disk-save acknowledgment; both
+exit paths and resume without a duplicate write are covered (15 save-lifecycle
+tests pass). The remaining timeout/unknown-write-outcome work and live acceptance
+remain open. No diagnostics or servers were changed.
 
 ### Full Notes And Stable Live Context
 

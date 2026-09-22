@@ -116,6 +116,32 @@ test('post-save map refresh failure does not invalidate an acknowledged write', 
   assert.equal(f.c.continuitySaveHalted, true);
 });
 
+test('failed note reload does not turn an acknowledged write into a failed Disconnect', async () => {
+  const f = saveFixture(), sockets = installConnectionFixture(f);
+  f.c.readTextFile = async () => { throw new Error('readback unavailable'); };
+  const result = await f.c.disconnectRealtime();
+  assert.equal(result.status, 'ok');
+  assert.equal(result.session_filename, 'sessions/saved-1.txt');
+  assert.equal(f.c.continuitySaveHalted, true);
+  assert.equal(f.socket.readyState, 3);
+  assert.equal(f.saved.size, 1);
+  assert.deepEqual(f.requests[0].sensing_eye_filenames, ['existing-image.jpg']);
+  assert.ok(f.calls.some(line => line.includes('note was not reloaded')));
+  await f.c.startContinuityEric();
+  assert.equal(sockets.length, 1);
+  assert.equal(f.saved.size, 1, 'resume reads saved history without a duplicate write');
+});
+
+test('failed note reload after Save + Halt still leaves Start Eric available', async () => {
+  const f = saveFixture();
+  f.c.readTextFile = async () => { throw new Error('readback unavailable'); };
+  await f.c.saveAndHaltEricState();
+  assert.equal(f.c.continuitySaveHalted, true);
+  assert.equal(f.c.saveAndHaltEricButton.textContent, 'Start Eric');
+  assert.equal(f.socket.readyState, 3);
+  assert.equal(f.saved.size, 1);
+});
+
 test('reloadSavedNote false skips pin reload but still saves and preserves the receipt', async () => {
   const f = saveFixture();
   f.c.readTextFile = async () => assert.fail('session-map jump must not reload departing history');

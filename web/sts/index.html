@@ -17120,7 +17120,8 @@
       currentContinuitySessionFilename = filename;
       continuityParentForCurrentRun = filename;
       if (reloadSavedNote) {
-        await continuityStep("reload session note", () => readTextFile({ filename }), { required: true });
+        const reloaded = await continuityStep("reload session note", () => readTextFile({ filename }));
+        if (!reloaded) log(events, `Session saved as ${filename}, but its note was not reloaded; the next Connect will read saved history from disk.`);
       }
       await fetchContinuitySessions().catch(() => {});
       recordUiEvent(eventLabel, filename, {

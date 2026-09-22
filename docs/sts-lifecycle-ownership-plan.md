@@ -204,6 +204,15 @@ successful restart, failed preparation followed by retry, and refusal to bypass
 an actually unsaved stopped session. The focused save/navigation/replay suite
 passes all 34 tests; live Save + Halt / Start Eric acceptance remains pending.
 
+The third repair treats a failed optional note reload as a post-save warning,
+not failure of the acknowledged disk write. Disconnect and Save + Halt still
+complete; ordinary connection preparation reads the saved history on resume.
+Two regressions exercise both exit routes, including resumed connection without
+a second write (15 save-lifecycle tests pass). This does not yet fix the broader
+timeout/unknown-outcome case: a whole-snapshot timeout can still outlive its
+underlying work. That requires the transaction and receipt work below, not a
+larger timeout or a claim that optional-refresh handling solved every save race.
+
 ### Ordered Work
 
 1. **Close the two small flag defects separately.** Give intentional cleanup an

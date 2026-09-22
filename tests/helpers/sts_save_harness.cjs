@@ -54,7 +54,7 @@ function saveFixture() {
     sensingEyeSessionAssetFilenamesForSave: () => [...c.eyeAssets],
     clearSensingEyeSessionAssets() { calls.push('clear saved eye assets'); c.eyeAssets = []; },
     contextUsageForSessionSave: () => ({ input_tokens: 53606 }),
-    async readTextFile({ filename }) { calls.push(`reload: ${filename}`); },
+    async readTextFile({ filename }) { calls.push(`reload: ${filename}`); return { filename }; },
     async fetchContinuitySessions() { calls.push('map refresh'); },
     micRuntimeLabel: () => 'off',
     openBrowserFaceWindow() {},
