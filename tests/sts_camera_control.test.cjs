@@ -107,7 +107,7 @@ test('camera control is available while off; Disconnect stops it before a failin
       assert.ok(media.tracks.every(t => t.readyState === 'ended'));
     },
     runtimeStep: async (_, run) => run(), saveEricContinuitySnapshot: async () => { throw new Error('disk full'); },
-    setState() {}, updateSaveAndHaltButton() {}, endIntentionalExitCleanupSoon() {}
+    setState() {}, endIntentionalExitCleanupSoon() {}
   });
   vm.runInContext(source('disconnectRealtime'), c);
   assert.equal((await c.disconnectRealtime()).status, 'error');

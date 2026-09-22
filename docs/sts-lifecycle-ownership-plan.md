@@ -167,6 +167,12 @@ settings and conversational timing remain unchanged.
 
 ### Findings Before Extraction
 
+**September 22 scope reduction:** Scott never uses the alternate Save + Halt /
+Start Eric workflow. Its control, event wiring and dedicated functions are now
+removed. Keep the shared saving/guard logic used by Disconnect, and test only
+Disconnect followed by Connect. The review and repair receipts below describe
+the earlier code; the alternate route is no longer a live acceptance item.
+
 Do not move all the current flags into a class and call the problem solved.
 There are separate authorities: permission to act on a connection, ownership
 of a save attempt, acknowledgment of durable storage, and device cleanup.
@@ -227,11 +233,10 @@ transaction timeout/unknown-outcome repair and ownership extraction remain next.
 
 ### Ordered Work
 
-1. **Close the two small flag defects separately.** Give intentional cleanup an
-   operation identity so an old release cannot end a new cleanup. Route Start
-   Eric through the ordinary guarded fresh-context connection path without
-   clearing the successful-save state prematurely. Test startup failure/retry as
-   well as success. Do not simultaneously alter browser audio or tool owners.
+1. **Keep the small cleanup repair and one connection path.** Cleanup now has an
+   operation identity so an old release cannot end a new cleanup. The alternate
+   startup route has been removed. Preserve tests for ordinary connection
+   success and failure/retry. Do not alter browser audio or tool owners here.
 2. **Establish the save transaction contract before extraction.** Settle accepted
    final speech and eye work, then freeze one payload with its real parent and
    asset list. Track the attempt independently of UI cleanup. A durable save
@@ -247,8 +252,8 @@ transaction timeout/unknown-outcome repair and ownership extraction remain next.
    temporary storage. Do not infer success from a timeout or blindly resubmit.
 4. **Extract connection/transition ownership after those behaviors pass.** One
    owner for current socket/generation, stop state and a single in-flight
-   transition. Cover Connect, Empty, Previous, selected/map jumps, Start Eric,
-   Disconnect and Save + Halt. Retain thin page adapters for UI, context assembly,
+   transition. Cover Connect, Empty, Previous, selected/map jumps and Disconnect.
+   Retain thin page adapters for UI, context assembly,
    transport and resource owners. No mirrored flags or second save algorithm.
 5. **Handle unexpected closure and page exit as separate work.** Read the socket
    close, server restart/halt/unload, Reset To Pinned, Clear Latest and pagehide
@@ -283,8 +288,8 @@ against Scott's actual session files. Do not add permanent verbose instrumentati
 
 The human trial remains small: resume the rich thread, request a long answer,
 interrupt, disconnect during speech, then reconnect and check the last accepted
-exchange and the single new branch in the map. Test Save + Halt / Start Eric once
-separately. Use a marker such as "the kettle is named Tuesday" to distinguish
+exchange and the single new branch in the map. Use a marker such as "the kettle
+is named Tuesday" to distinguish
 history delivery from a fluent guess, while verifying the saved file directly.
 No deliberate speech, sentence-count, idle-initiative or tool-choice change is an
 acceptable side effect of this work. Keep fresh card-free acceptance open too.

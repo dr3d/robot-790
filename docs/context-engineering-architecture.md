@@ -424,7 +424,6 @@ The operator controls are intentionally small:
 - `Connect Select`: manually choose a session note from the list.
 - `Disconnect`: graceful stop. Save the current `latest` into a session note,
   stop realtime, and save exit artifacts.
-- `Save + Halt`: save a session note, then halt the live loop.
 - `Halt`: hard stop. Stop realtime without promising a new session note.
 
 This gives quick paths for normal use and manual paths for replay or branching.

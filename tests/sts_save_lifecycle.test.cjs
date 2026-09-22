@@ -1,6 +1,14 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { saveFixture, deferred, settle, installConnectionFixture } = require('./helpers/sts_save_harness.cjs');
+const { page } = require('./helpers/sts_tool_harness.cjs');
+
+test('the unused alternate save/resume UI and implementation are removed', () => {
+  assert.doesNotMatch(page, /saveAndHaltEric|startContinuityEric|toggleEricSaveAndHalt|updateSaveAndHaltButton|loadLatestContinuitySession|Save \+ Halt|Start Eric/);
+  for (const id of ['connect', 'disconnect', 'haltRuntime', 'restartServer', 'unloadServer']) {
+    assert.ok(page.includes(`id="${id}"`), `${id} remains available`);
+  }
+});
 
 test('an old cleanup timer cannot end a newer cleanup', () => {
   const f = saveFixture();
@@ -85,13 +93,12 @@ test('a final transcript received during settling is in the save payload', async
   assert.equal(f.requests[0].body, 'The final STT result.');
 });
 
-test('overlapping Disconnect and Save + Halt do not submit competing save requests', async () => {
+test('repeated Disconnect clicks do not submit competing save requests', async () => {
   const f = saveFixture(), gate = deferred(), fetch = f.c.fetch;
   f.c.fetch = async (...args) => { await gate.promise; return fetch(...args); };
   const first = f.c.disconnectRealtime();
   await settle();
   await f.c.disconnectRealtime();
-  await f.c.saveAndHaltEricState();
   gate.resolve();
   await first;
   assert.equal(f.requests.length, 1);
@@ -127,19 +134,9 @@ test('failed note reload does not turn an acknowledged write into a failed Disco
   assert.equal(f.saved.size, 1);
   assert.deepEqual(f.requests[0].sensing_eye_filenames, ['existing-image.jpg']);
   assert.ok(f.calls.some(line => line.includes('note was not reloaded')));
-  await f.c.startContinuityEric();
+  await f.c.connect();
   assert.equal(sockets.length, 1);
   assert.equal(f.saved.size, 1, 'resume reads saved history without a duplicate write');
-});
-
-test('failed note reload after Save + Halt still leaves Start Eric available', async () => {
-  const f = saveFixture();
-  f.c.readTextFile = async () => { throw new Error('readback unavailable'); };
-  await f.c.saveAndHaltEricState();
-  assert.equal(f.c.continuitySaveHalted, true);
-  assert.equal(f.c.saveAndHaltEricButton.textContent, 'Start Eric');
-  assert.equal(f.socket.readyState, 3);
-  assert.equal(f.saved.size, 1);
 });
 
 test('reloadSavedNote false skips pin reload but still saves and preserves the receipt', async () => {
@@ -150,20 +147,10 @@ test('reloadSavedNote false skips pin reload but still saves and preserves the r
   assert.equal(f.saved.size, 1);
 });
 
-test('a successful Save + Halt uses the same real snapshot save path', async () => {
-  const f = saveFixture();
-  await f.c.saveAndHaltEricState();
-  assert.equal(f.saved.size, 1);
-  assert.equal(f.c.continuitySaveHalted, true);
-  assert.equal(f.c.continuitySaveBusy, false);
-  assert.equal(f.socket.readyState, 3);
-  assert.equal(f.c.saveAndHaltEricButton.textContent, 'Start Eric');
-});
-
-test('Start Eric after Save + Halt prepares a clean connection with saved history', async () => {
+test('Connect after Disconnect prepares a clean connection with saved history', async () => {
   const f = saveFixture(), sockets = installConnectionFixture(f);
-  await f.c.saveAndHaltEricState();
-  await f.c.startContinuityEric();
+  await f.c.disconnectRealtime();
+  await f.c.connect();
   assert.equal(sockets.length, 1);
   assert.equal(f.c.ws, sockets[0]);
   assert.equal(f.c.realtimeStopRequested, false);
@@ -177,27 +164,26 @@ test('Start Eric after Save + Halt prepares a clean connection with saved histor
   assert.ok(!f.calls.some(line => line.startsWith('connect blocked:')));
 });
 
-test('Start Eric keeps successful-save state through failed preparation and permits retry', async () => {
+test('Connect keeps successful-save state through failed preparation and permits retry', async () => {
   const f = saveFixture(), sockets = installConnectionFixture(f);
-  await f.c.saveAndHaltEricState();
+  await f.c.disconnectRealtime();
   const prepare = f.c.prepareConnectionContext;
   f.c.prepareConnectionContext = async () => { throw new Error('budget unavailable'); };
-  await f.c.startContinuityEric();
+  await f.c.connect();
   assert.equal(sockets.length, 0);
   assert.equal(f.c.continuitySaveHalted, true);
   assert.equal(f.c.continuitySaveBusy, false);
-  assert.equal(f.c.saveAndHaltEricButton.textContent, 'Start Eric');
   assert.ok(f.calls.includes('release preparation lease'));
   f.c.prepareConnectionContext = prepare;
-  await f.c.startContinuityEric();
+  await f.c.connect();
   assert.equal(sockets.length, 1);
   assert.equal(f.saved.size, 1, 'startup retries do not save again');
 });
 
-test('Start Eric cannot bypass the unsaved stopped-session guard', async () => {
+test('Connect cannot bypass the unsaved stopped-session guard', async () => {
   const f = saveFixture(), sockets = installConnectionFixture(f);
   f.c.realtimeStopRequested = true;
-  await f.c.startContinuityEric();
+  await f.c.connect();
   assert.equal(sockets.length, 0);
   assert.deepEqual(Array.from(f.c.conversationLines), ['The last accepted thought.']);
   assert.equal(f.c.continuitySaveHalted, false);

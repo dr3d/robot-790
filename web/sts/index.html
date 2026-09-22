@@ -2401,12 +2401,11 @@
         <details id="serverManagementExpando" class="runtime-settings-expando server-management-expando">
           <summary>
             <span class="runtime-settings-label">Server Management</span>
-            <span class="subtle">Backend halt, save-then-halt, restart, and unload</span>
+            <span class="subtle">Backend halt, restart, and unload</span>
           </summary>
           <div class="runtime-settings-expando-body">
             <section class="controls realtime-action-controls">
               <button id="haltRuntime" class="danger" type="button">Halt</button>
-              <button id="saveAndHaltEric" class="warn" type="button">Save + Halt</button>
               <button id="restartServer" class="warn">Restart</button>
               <button id="unloadServer" class="danger">Unload</button>
             </section>
@@ -3063,7 +3062,6 @@
     const clearLatestThreadButton = document.querySelector("#clearLatestThread");
     const conversationNoteResetAfterSave = document.querySelector("#conversationNoteResetAfterSave");
     const resetToPinnedContextButton = document.querySelector("#resetToPinnedContext");
-    const saveAndHaltEricButton = document.querySelector("#saveAndHaltEric");
     const ttsVoice = document.querySelector("#ttsVoice");
     const ttsPrecision = document.querySelector("#ttsPrecision");
     const ttsInstruct = document.querySelector("#ttsInstruct");
@@ -6620,10 +6618,6 @@
         pinned_notes: allowed
       });
       return { ...current, restored_pinned_notes: restored, failed_pinned_notes: failed };
-    }
-
-    async function loadLatestContinuitySession({ source = "Connect" } = {}) {
-      return loadCurrentContinuitySession({ source });
     }
 
     function handleEricMemoriesPrefChange() {
@@ -17092,14 +17086,6 @@
       return result;
     }
 
-    function updateSaveAndHaltButton() {
-      if (!saveAndHaltEricButton) return;
-      saveAndHaltEricButton.disabled = continuitySaveBusy;
-      saveAndHaltEricButton.textContent = continuitySaveBusy
-        ? "Working..."
-        : (continuitySaveHalted ? "Start Eric" : "Save + Halt");
-    }
-
     async function saveEricContinuitySnapshot({ reason = "session note saved", eventLabel = "session note saved", reloadSavedNote = true } = {}) {
       await waitForPendingUserTranscriptBeforeSessionSave();
       await flushSensingEyeInboxForSessionSave();
@@ -17136,76 +17122,6 @@
       const assetCount = Number(result.sensing_eye_asset_count) || 0;
       log(events, `${eventLabel}: ${filename}${assetCount ? ` / ${assetCount} sensing-eye asset${assetCount === 1 ? "" : "s"}` : ""}`);
       return { ...state, continuity_session_filename: filename };
-    }
-
-    async function saveAndHaltEricState({ reason = "session note save and halt" } = {}) {
-      if (continuitySaveBusy) return;
-      continuitySaveBusy = true;
-      updateSaveAndHaltButton();
-      const cleanupGeneration = beginIntentionalExitCleanup();
-      quiesceRealtimeForSave(reason);
-      try {
-        if (micStream) await continuityStep("stop mic", () => stopMic({ reason }), { timeoutMs: 6000 });
-        await saveEricContinuitySnapshot({ reason });
-        continuitySaveHalted = true;
-        const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
-        haltRealtimeActivity(reason);
-        if (closingSocket) {
-          await continuityStep("close realtime websocket", async () => {
-            closingSocket.close();
-            await waitForRealtimeClose(closingSocket);
-          }, { timeoutMs: 4000 });
-        }
-        if (audioRecordingActive()) {
-          const stopResult = await continuityStep("stop audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
-          if (stopResult) log(events, `audio recording stopped for continuity save: ${stopResult.recording_name || stopResult.status || "done"}`);
-        } else if (audioRecordFinalizing || audioRecordStopPromise) {
-          const stopResult = await continuityStep("finish audio recording", () => stopAudioRecording({ reason }), { timeoutMs: 18000 });
-          if (stopResult) log(events, `audio recording finalized for continuity save: ${stopResult.recording_name || stopResult.status || "done"}`);
-        }
-        if (micStream) {
-          await continuityStep("stop mic", () => stopMic({ reason }), { timeoutMs: 6000 });
-        }
-        await continuityStep("save pane snapshots", () => recordExitPaneSnapshots("continuity save"), { timeoutMs: 10000 });
-      } catch (error) {
-        setState("Stopped; save failed", "warn");
-        log(events, `session note save error: ${error.message}; Eric remains stopped; transcript retained for retry`);
-      } finally {
-        continuitySaveBusy = false;
-        endIntentionalExitCleanupSoon(cleanupGeneration);
-        updateSaveAndHaltButton();
-      }
-    }
-
-    async function startContinuityEric() {
-      if (continuitySaveBusy) return;
-      if (!realtimeConnected()) openBrowserFaceWindow({ onlyIfActive: true });
-      continuitySaveBusy = true;
-      updateSaveAndHaltButton();
-      try {
-        const previousSocket = ws;
-        await connect({ openFace: false });
-        if (ws === previousSocket || realtimeStopRequested) return;
-        recordUiEvent("session note restore requested", currentContinuitySessionFilename || "none", {
-          connected: realtimeConnected(),
-          load_continuity_session: Boolean(currentContinuitySessionFilename)
-        });
-        log(events, `session note restore requested from ${currentContinuitySessionFilename || "no session note"}`);
-      } catch (error) {
-        if (error?.code === "continuity_load_canceled") setState("Load canceled");
-        log(events, `session note restore ${error?.code === "continuity_load_canceled" ? "canceled" : "error"}: ${error.message}`);
-      } finally {
-        continuitySaveBusy = false;
-        updateSaveAndHaltButton();
-      }
-    }
-
-    async function toggleEricSaveAndHalt() {
-      if (continuitySaveHalted) {
-        await startContinuityEric();
-      } else {
-        await saveAndHaltEricState();
-      }
     }
 
     function formatIdleRuminationsSection() {
@@ -20234,7 +20150,7 @@
 
     async function resetSessionContextForConnection(reason) {
       if (realtimeStopRequested && !continuitySaveHalted && conversationLines.length) {
-        throw new Error("The stopped session is not saved. Retry Disconnect or Save + Halt before loading another session.");
+        throw new Error("The stopped session is not saved. Retry Disconnect before loading another session.");
       }
       // Every connection starts a new transcript and clears transient work from the last run.
       realtimeSessionGeneration += 1;
@@ -20486,7 +20402,7 @@
 
     async function connect({ coreNotesOnly = false, restoredPrevious = false, continuityAlreadyLoaded = false, openFace = true } = {}) {
       if (realtimeStopRequested && !continuitySaveHalted && conversationLines.length) {
-        log(events, "connect blocked: stopped session is not saved; retry Disconnect or Save + Halt first");
+        log(events, "connect blocked: stopped session is not saved; retry Disconnect first");
         return;
       }
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
@@ -21027,7 +20943,6 @@
       clearLatestThread: "Clear Latest discards the hot conversation scratch state. If connected, it reconnects so old realtime conversation context is actually dropped.",
       resetToPinnedContext: "Close the hot realtime session, clear conversation/idle/B2 scratch state, and reconnect from the currently pinned notes.",
       conversationNoteResetAfterSave: "After saving the conversation note, reset the hot session back to the pinned-note context.",
-      saveAndHaltEric: "Save the current conversation/context as a timestamped session note, then halt the realtime session.",
       loadEricMemories: "Load Eric's memory note into startup context on refresh.",
       continuitySessionSelect: "Choose a timestamped session note to select or connect.",
       refreshContinuitySessions: "Refresh the timestamped session-note list.",
@@ -21322,7 +21237,6 @@
           )
           : null;
         continuitySaveHalted = true;
-        updateSaveAndHaltButton();
         if (!saveResult) {
           log(events, "disconnect skipped session note: no accepted conversation lines");
           recordUiEvent("session note skipped", "no accepted conversation lines", { connected: realtimeConnected() });
@@ -21353,7 +21267,6 @@
         return { status: "error", error: error.message };
       } finally {
         continuitySaveBusy = false;
-        updateSaveAndHaltButton();
         endIntentionalExitCleanupSoon(cleanupGeneration);
       }
     }
@@ -22048,10 +21961,6 @@
       resetToPinnedContextButton?.addEventListener("click", () => {
         resetToPinnedContext({ reason: "operator reset to pinned notes" });
       });
-    saveAndHaltEricButton?.addEventListener("click", () => {
-      recordUiEvent(continuitySaveHalted ? "session note start" : "session note save and halt", "requested", currentUiSettingsSnapshot());
-      toggleEricSaveAndHalt();
-    });
     refreshContinuitySessionsButton?.addEventListener("click", () => {
       fetchContinuitySessions()
         .then((result) => log(events, `session notes refreshed: ${result.sessions?.length || 0}`))
@@ -22371,7 +22280,6 @@
     updateAudioRecordButtons();
     updateHeaderClocks();
     updateTopMicMeter(0);
-    updateSaveAndHaltButton();
     loadStartupNotes();
     fetchContinuitySessions().catch((error) => log(events, `session note list skipped: ${error.message}`));
     if (contextPanel.open) renderContextMap();

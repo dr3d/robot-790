@@ -6,6 +6,20 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### One Save And Resume Workflow
+
+September 22: at Scott's request, the unused Save + Halt / Start Eric control and
+alternate implementation have been removed, not merely hidden. Use Disconnect
+to save/stop and Connect to resume. Server Management retains only Halt, Restart
+and Unload. The save acknowledgment and cleanup-timer fixes remain on the normal
+path; the shared unsaved-session guard remains. The previous request to test the
+alternate buttons is withdrawn. Tests now exercise Disconnect/Connect instead.
+Refresh while disconnected to load this UI change; no server restart is needed.
+Verification: 622 JavaScript tests and 157 page-server/continuity Python tests
+pass. Isolated Edge checks confirm only the three backend controls remain,
+desktop/mobile layout fits, and audio/tool-drain checks still pass. The operator
+guide now shows the current panel. No prompts, model settings or idle policy changed.
+
 ### Tool Continuation Owner Extracted
 
 September 21: `web/sts/tool-continuation.js` now owns pending tool calls,
@@ -1303,8 +1317,8 @@ Eric-authored note generation has not yet been retested.
 - **One ordinary conversation path.** Connect Empty is a starting pin choice,
   not a separate personality or restricted runtime. Normal Connect operations
   clear transient state and the sensing eye, with generation checks rejecting
-  late image loads and mirror captures. Start Eric remains a separate resume
-  path with a reset caveat documented in the operator guide.
+  late image loads and mirror captures. The separate Start Eric shortcut present
+  at this checkpoint was removed on September 22; the normal Connect path remains.
 - **More honest runtime context.** Prompts identify environment values as
   assembly-time snapshots. Recording preferences, browser Cast tracking, and
   attached tools are not presented as proof of recording or device availability.

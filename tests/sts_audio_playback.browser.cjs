@@ -146,9 +146,25 @@ async function main() {
       needed: toolContinuation.needed, dispatch: typeof dispatchToolFollowup,
     }));
     assert.deepEqual(results.continuationPage, { factory: 'function', pending: 0, needed: false, dispatch: 'function' });
+    assert.equal(await ui.locator('#saveAndHaltEric').count(), 0);
+    results.serverManagement = await ui.locator('#serverManagementExpando button').allTextContents();
+    assert.deepEqual(results.serverManagement, ['Halt', 'Restart', 'Unload']);
     for (const [name, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844]]) {
       await ui.setViewportSize({ width, height });
       await ui.screenshot({ path: path.join(artifacts, `${name}.png`) });
+      await ui.locator('#serverManagementExpando').evaluate(panel => {
+        for (let element = panel; element; element = element.parentElement) {
+          if (element.tagName === 'DETAILS') element.open = true;
+        }
+      });
+      const panel = ui.locator('#serverManagementExpando');
+      await panel.scrollIntoViewIfNeeded();
+      const buttonsFit = await panel.locator('button').evaluateAll(buttons => buttons.every(button => {
+        const rect = button.getBoundingClientRect();
+        return rect.width > 0 && rect.left >= 0 && rect.right <= innerWidth && button.scrollWidth <= button.clientWidth;
+      }));
+      assert.equal(buttonsFit, true, `${name} server controls fit`);
+      await panel.screenshot({ path: path.join(artifacts, `server-management-${name}.png`) });
     }
     assert.deepEqual(pageErrors, []);
     await context.close();

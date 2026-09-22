@@ -190,7 +190,7 @@ test('restored hardware profile is the current embodiment in the prompt, not the
   assert.doesNotMatch(current, /current embodiment is the Browser Face/);
 });
 
-for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFilename', 'startContinuityEric']) {
+for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFilename']) {
   test(`${name}: popup opens before any asynchronous connection work`, () => {
     let opened = 0;
     const context = loadFunctions([name], {
@@ -200,11 +200,10 @@ for (const name of ['connect', 'connectPrevious', 'connectSelectedContinuityFile
         assert.equal(options.onlyIfActive, true);
         opened++;
       },
-      setState: () => {}, setConnectionButtonsDisabled: () => {}, updateSaveAndHaltButton: () => {},
+      setState: () => {}, setConnectionButtonsDisabled: () => {},
       ensureRuntimeConfigLoaded: () => new Promise(() => {}),
       pauseSessionPreparation: () => new Promise(() => {}),
       fetchContinuitySessionMetadata: () => new Promise(() => {}),
-      connect: () => new Promise(() => {}),
     });
     context[name]();
     assert.equal(opened, 1);

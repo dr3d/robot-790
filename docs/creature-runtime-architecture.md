@@ -109,8 +109,8 @@ It does not create a second Eric personality or invite startup announcements.
 Newly pinned notes, new images, and fresh receipts immediately work normally.
 Browser memory facts and operator controls obey the same rules for these
 connections. Saved notes and media are not deleted by starting a new session.
-The separate Start Eric resume shortcut does not perform this full reset;
-see the [operator guide](sts-ui-guide.md#stop-pause-or-restart).
+Use Disconnect to save and stop, then Connect to resume through that same reset
+path; see the [operator guide](sts-ui-guide.md#stop-pause-or-restart).
 
 Brain2 snapshots are private advisory input, not prior spoken replies. They
 currently travel as marked assistant-role context to avoid repeatedly rebuilding

@@ -170,17 +170,13 @@ as a receipt for the body build Eric is actually running.
 
 ## Exit Controls
 
-`Save + Halt` is Scott's deliberate save/resume path. It writes a timestamped
-continuity session note under `notes/sessions/`, halts idle/Brain2/re-engage
-activity, closes realtime, saves active audio, and snapshots the conversation,
-events, and Brain2 panes. The saved note keeps the timestamped transcript plus
-its pinned-note receipt.
-
-`Disconnect` is the normal graceful stop. It first sweeps the current accepted
-conversation into a new timestamped continuity session note, then halts the
-live loop, closes realtime, saves active audio if recording is on, and snapshots
-the panes for review. If no accepted conversation lines exist, it should leave
-the selected continuity session alone.
+`Disconnect` is the normal graceful stop. It stops live activity, settles final
+accepted transcription, and saves a timestamped continuity note under
+`notes/sessions/` with transcript and pinned-note receipts. It then closes
+realtime, saves active audio if recording is on, and snapshots the panes for
+review. If no accepted conversation lines exist, it leaves the selected
+continuity session alone. Use `Connect` to resume; no alternate save/resume
+button is needed.
 
 `Halt` is the emergency runtime stop. It does not promise a new continuity
 session note; it stops the realtime backend while leaving STS, browser-face,
@@ -194,8 +190,8 @@ snapshot panes, then perform the backend action.
 does not disconnect Eric.
 
 The intended invariant is simple: exits should leave logs, and any active
-recording should be saved when it is turned off. Save + Halt and Disconnect are
-special because they also write a new timestamped continuity session note.
+recording should be saved when it is turned off. Disconnect also writes a new
+timestamped continuity session note when there is accepted conversation to save.
 
 ## Connect Select And Session Map
 

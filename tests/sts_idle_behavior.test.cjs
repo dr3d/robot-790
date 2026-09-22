@@ -265,7 +265,7 @@ function stopContext(overrides = {}) {
     events: {}, log: (_, text) => calls.push(text), recordUiEvent: noop,
     beginIntentionalExitCleanup: noop, endIntentionalExitCleanupSoon: noop,
     haltRealtimeActivity: () => calls.push('halt'), setState: text => calls.push(text),
-    updateTypedInputButtons: noop, updateSaveAndHaltButton: noop,
+    updateTypedInputButtons: noop,
     runtimeStep: async (_, operation) => operation(), waitForRealtimeClose: async () => {},
     waitForPendingUserTranscriptBeforeSessionSave: async () => {}, micStream: {},
     stopVisionCamera: noop,

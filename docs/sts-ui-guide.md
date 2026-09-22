@@ -152,23 +152,20 @@ will be absent. A partial load is not the same as complete restored memory.
 
 ## Stop, Pause, Or Restart
 
-![Server Management](assets/sts-ui/2026-09-10/05-server-management.png)
+![Server Management](assets/sts-ui/2026-09-22/05-server-management.png)
 
 These are different operations, despite living next to one another.
 
 | Control | When to use it | Important distinction |
 | --- | --- | --- |
 | Disconnect | End an ordinary sit-down and preserve it. | Saves continuity; leaves the backend and model available. |
-| Save + Halt | Explicitly save and stop Eric's current browser run. | Stops activity before saving, then closes the connection. A failed save stays stopped and is retryable. It does **not** kill the realtime server process. After a successful save the button becomes **Start Eric**. |
-| Start Eric | Resume after a saved halt. | Loads saved continuity and reconnects. Check/start the mic afterward; see the resume caveat below. |
 | Halt | Stop the realtime backend process. | Not a substitute for saving continuity first. |
 | Restart | Relaunch the realtime backend using the selected brain configuration. | Interrupts the run and can reload the model. Save/disconnect first. |
 | Unload | Stop the backend and release the LM Studio model/VRAM. | Not an ordinary conversational pause. Save/disconnect first. |
 
-**Resume caveat:** Start Eric uses a different path from the normal Connect
-buttons and does not perform their full fresh-context/sensing-eye reset. Use
-Connect or Connect Selected when you want that clean reset; do not assume the
-resume shortcut cleared the eye.
+Use **Connect** to resume the latest saved session. **Disconnect** saves and
+stops the conversation. If saving fails, the conversation stays stopped and its
+transcript is retained; retry Disconnect before starting another session.
 
 ![Connection Settings and model configuration](assets/sts-ui/2026-09-10/04-connection-settings.png)
 
@@ -324,7 +321,7 @@ There are three distinct kinds of saving:
 | Header Record Conv | Text snapshots of Conversation, Events, and Brain 2. It is not the audio recorder. |
 | A pane's Record | A text snapshot. Conversation includes recall receipts even when Details is off. |
 | Record Audio / Stop Recording | The conversation audio and associated run evidence, finalized through the recording pipeline. |
-| Disconnect / Save + Halt | A continuity session note, plus exit snapshots and finalization of active recording. |
+| Disconnect | A continuity session note, plus exit snapshots and finalization of active recording. |
 
 **Auto record** starts audio when the mic starts. For a typed-only or idle-only
 test, explicitly check recording state and start recording when wanted. Brain
@@ -354,7 +351,7 @@ material is deliberately curated for publication.
 Face, physical face controllers, and Reachy Mini are different targets; choosing
 a name does not start that device or make unavailable capabilities appear.
 STS remembers the face controller in this browser across refreshes. Connect,
-Connect Empty, Connect Previous, Connect Selected, and Start Eric open or reuse
+Connect Empty, Connect Previous, and Connect Selected open or reuse
 a compact Browser Face window when it is the selected embodiment. Reconnecting
 does not resize an already-open window. A hardware embodiment does not open it.
 

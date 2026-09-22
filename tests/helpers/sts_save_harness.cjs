@@ -31,7 +31,7 @@ function saveFixture() {
     continuityParentForCurrentRun: 'sessions/parent.txt',
     eyeAssets: ['existing-image.jpg'],
     disconnectButton: {}, startMicButton: {}, resetMicButton: {},
-    idlePonderNowButton: {}, saveAndHaltEricButton: {}, events: {},
+    idlePonderNowButton: {}, events: {},
     log(_, message) { calls.push(message); },
     recordUiEvent() {}, setState(value) { calls.push(`state: ${value}`); },
     updateTypedInputButtons() {},
@@ -58,7 +58,6 @@ function saveFixture() {
     async fetchContinuitySessions() { calls.push('map refresh'); },
     micRuntimeLabel: () => 'off',
     openBrowserFaceWindow() {},
-    async loadLatestContinuitySession() { calls.push('load latest'); },
     setTimeout(callback, ms) { timers.set(++timerId, { callback, ms }); return timerId; },
     clearTimeout(id) { timers.delete(id); },
     async sleepMs() { throw new Error('Test must explicitly release pending transcription'); },
@@ -80,8 +79,7 @@ function saveFixture() {
     'endIntentionalExitCleanupSoon', 'activeRealtimeSession', 'realtimeConnected',
     'send', 'quiesceRealtimeForSave', 'inputAudioTranscriptMayBePending',
     'waitForPendingUserTranscriptBeforeSessionSave', 'saveContinuitySession',
-    'saveEricContinuitySnapshot', 'updateSaveAndHaltButton', 'disconnectRealtime',
-    'saveAndHaltEricState', 'startContinuityEric', 'connect',
+    'saveEricContinuitySnapshot', 'disconnectRealtime', 'connect',
   ]);
   const fireTimer = ms => {
     const entry = [...timers].find(([, timer]) => timer.ms === ms);
