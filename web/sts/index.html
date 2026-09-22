@@ -3790,6 +3790,7 @@
     const contextCardOpenByName = new Map();
     let continuitySaveHalted = false;
     let continuitySaveBusy = false;
+    let continuitySaveTransaction = null;
     const ttsStylePresets = {
       neutral: "",
       dry: "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
@@ -6136,7 +6137,8 @@
       return result;
     }
 
-    async function fetchContinuitySessions() {
+    async function fetchContinuitySessions({ isCurrent = () => true } = {}) {
+      if (!isCurrent()) return null;
       clearTimeout(continuitySessionRefreshTimer);
       continuitySessionRefreshTimer = null;
       const response = await fetch(new URL("/api/continuity/sessions", location.href), { cache: "no-store" });
@@ -6144,11 +6146,12 @@
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
+      if (!isCurrent()) return null;
       continuitySessions = Array.isArray(result.sessions) ? result.sessions : [];
       renderContinuitySessionSelect(result.current_session_filename || "");
       if (continuitySessions.some((item) => ["queued", "running", "waiting"].includes(item.preparation?.state))) {
         continuitySessionRefreshTimer = setTimeout(() => {
-          fetchContinuitySessions().catch((error) => log(events, `session refresh failed: ${error.message}`));
+          fetchContinuitySessions({ isCurrent }).catch((error) => log(events, `session refresh failed: ${error.message}`));
         }, 3000);
       }
       return result;
@@ -13933,11 +13936,16 @@
       }
     }
 
-    async function flushSensingEyeInboxForSessionSave() {
+    async function flushSensingEyeInboxForSessionSave({ isCurrent = () => true } = {}) {
       const generation = sensingEyeGeneration;
       try {
         const item = await fetchSensingEyeInboxItem();
-        if (item && generation === sensingEyeGeneration) await applySensingEyeInboxItem(item);
+        if (item && generation === sensingEyeGeneration && isCurrent()) {
+          // The server already retained this asset. A slow preview decode must
+          // not leave it out of a retried save's frozen asset receipt.
+          rememberSensingEyeSessionAsset(item.saved_filename);
+          await applySensingEyeInboxItem(item);
+        }
       } catch (error) {
         log(events, `sensing-eye inbox save flush error: ${error.message}`);
       }
@@ -17066,8 +17074,19 @@
       return noteLines.join("\n");
     }
 
-    async function saveContinuitySession({ body, pinnedFilenames, parentSessionFilename, sensingEyeFilenames } = {}) {
-      const response = await fetch(new URL("/api/continuity/save", location.href), {
+    function continuitySaveRequestId() {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      // Plain-HTTP LAN pages still have getRandomValues, but not randomUUID.
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 15) | 64;
+      bytes[8] = (bytes[8] & 63) | 128;
+      const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    async function saveContinuitySession({ body, pinnedFilenames, parentSessionFilename, sensingEyeFilenames,
+      contextAtSave = contextUsageForSessionSave(), requestId = continuitySaveRequestId() } = {}) {
+      const response = await fetch(new URL("/api/continuity/save-transaction", location.href), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -17075,41 +17094,65 @@
           pinned_filenames: Array.isArray(pinnedFilenames) ? pinnedFilenames : [],
           parent_session_filename: String(parentSessionFilename || ""),
           sensing_eye_filenames: Array.isArray(sensingEyeFilenames) ? sensingEyeFilenames : [],
-          context_at_save: contextUsageForSessionSave()
+          context_at_save: contextAtSave,
+          save_request_id: requestId
         })
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.status !== "ok") {
+        if (response.status === 404) throw new Error("Restart the STS page server to enable transactional saves, then retry Disconnect. Transcript retained.");
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
+      if (result.save_request_id !== requestId) throw new Error("Session save returned a mismatched receipt; retry Disconnect.");
+      if (typeof result.session_filename !== "string" || !result.session_filename) throw new Error("Session note save did not return a session filename.");
       if (result.context_at_save_warning) log(events, result.context_at_save_warning);
       return result;
     }
 
-    async function saveEricContinuitySnapshot({ reason = "session note saved", eventLabel = "session note saved", reloadSavedNote = true } = {}) {
-      await waitForPendingUserTranscriptBeforeSessionSave();
-      await flushSensingEyeInboxForSessionSave();
-      if (!conversationTranscriptSinceCleanConnect()) {
-        throw new Error("No accepted conversation lines in this clean connection to save into a session note.");
+    async function saveEricContinuitySnapshot({ reason = "session note saved", eventLabel = "session note saved",
+      reloadSavedNote = true, isCurrent = () => true } = {}) {
+      const generation = realtimeSessionGeneration;
+      const checkCurrent = () => {
+        if (!isCurrent() || generation !== realtimeSessionGeneration) throw new Error("Session save attempt expired; retry Disconnect.");
+      };
+      checkCurrent();
+      if (!continuitySaveTransaction || continuitySaveTransaction.generation !== generation) {
+        await waitForPendingUserTranscriptBeforeSessionSave();
+        checkCurrent();
+        await flushSensingEyeInboxForSessionSave({ isCurrent: () => isCurrent() && generation === realtimeSessionGeneration });
+        checkCurrent();
+        if (!conversationTranscriptSinceCleanConnect()) {
+          throw new Error("No accepted conversation lines in this clean connection to save into a session note.");
+        }
+        const state = buildEricContinuityState();
+        // Freeze once, including the parent and CTX receipt. A retry never
+        // rebuilds this payload from UI state that may have changed meanwhile.
+        continuitySaveTransaction = { generation, state, result: null, request: {
+          requestId: continuitySaveRequestId(), body: buildEricContinuitySessionBody(state),
+          pinnedFilenames: continuityPinnedFilenamesForSave(state),
+          parentSessionFilename: continuityParentForCurrentRun,
+          sensingEyeFilenames: sensingEyeSessionAssetFilenamesForSave(),
+          contextAtSave: contextUsageForSessionSave()
+        } };
       }
-      const state = buildEricContinuityState();
-      const sensingEyeFilenames = sensingEyeSessionAssetFilenamesForSave();
-      const result = await continuityStep("write session note", () => saveContinuitySession({
-        body: buildEricContinuitySessionBody(state),
-        pinnedFilenames: continuityPinnedFilenamesForSave(state),
-        parentSessionFilename: continuityParentForCurrentRun,
-        sensingEyeFilenames
-      }), { required: true });
+      const transaction = continuitySaveTransaction;
+      const { state } = transaction;
+      const result = transaction.result || await continuityStep("write session note", async () => {
+        const receipt = await saveContinuitySession(transaction.request);
+        transaction.result = receipt;
+        return receipt;
+      }, { required: true });
+      checkCurrent();
       const filename = result?.session_filename;
       if (!filename) throw new Error("Session note save did not return a session filename.");
       clearSensingEyeSessionAssets();
       currentContinuitySessionFilename = filename;
       continuityParentForCurrentRun = filename;
-      if (reloadSavedNote) {
-        const reloaded = await continuityStep("reload session note", () => readTextFile({ filename }));
-        if (!reloaded) log(events, `Session saved as ${filename}, but its note was not reloaded; the next Connect will read saved history from disk.`);
-      }
-      await fetchContinuitySessions().catch(() => {});
+      // Optional readback cannot hold the disk receipt hostage. Never pin an
+      // old reply into a connection that has since moved on.
+      const stillSelected = () => generation === realtimeSessionGeneration
+        && continuitySaveTransaction === transaction && currentContinuitySessionFilename === filename;
+      refreshSavedContinuityNote(filename, { reloadSavedNote, isCurrent: stillSelected });
       recordUiEvent(eventLabel, filename, {
         reason,
         connected: realtimeConnected(),
@@ -17122,6 +17165,18 @@
       const assetCount = Number(result.sensing_eye_asset_count) || 0;
       log(events, `${eventLabel}: ${filename}${assetCount ? ` / ${assetCount} sensing-eye asset${assetCount === 1 ? "" : "s"}` : ""}`);
       return { ...state, continuity_session_filename: filename };
+    }
+
+    async function refreshSavedContinuityNote(filename, { reloadSavedNote, isCurrent }) {
+      if (reloadSavedNote) {
+        const reloaded = await continuityStep("reload session note", async () => {
+          const note = await readTextFile({ filename, pin: false });
+          if (isCurrent()) rememberLoadedNoteContext(note);
+          return note;
+        });
+        if (!reloaded && isCurrent()) log(events, `Session saved as ${filename}, but its note was not reloaded; the next Connect will read saved history from disk.`);
+      }
+      await fetchContinuitySessions({ isCurrent }).catch(() => {});
     }
 
     function formatIdleRuminationsSection() {
@@ -21216,6 +21271,8 @@
       recordUiEvent("realtime disconnect", "session-note stop requested", { connected: realtimeConnected() });
       disconnectButton.disabled = true;
       const cleanupGeneration = beginIntentionalExitCleanup();
+      const sessionGeneration = realtimeSessionGeneration;
+      let saveAttemptActive = true;
       quiesceRealtimeForSave("realtime disconnect");
       try {
         const closingSocket = ws && ws.readyState !== WebSocket.CLOSED ? ws : null;
@@ -21231,7 +21288,8 @@
             () => saveEricContinuitySnapshot({
               reason: "realtime disconnect",
               eventLabel: "session note saved",
-              reloadSavedNote
+              reloadSavedNote,
+              isCurrent: () => saveAttemptActive && sessionGeneration === realtimeSessionGeneration
             }),
             { timeoutMs: 16000, prefix: "disconnect step", required: true }
           )
@@ -21266,6 +21324,7 @@
         disconnectButton.disabled = false;
         return { status: "error", error: error.message };
       } finally {
+        saveAttemptActive = false;
         continuitySaveBusy = false;
         endIntentionalExitCleanupSoon(cleanupGeneration);
       }

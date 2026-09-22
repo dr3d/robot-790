@@ -6,6 +6,36 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
+### Transactional Disconnect Saves
+
+September 22: normal Disconnect now freezes one save identity, transcript,
+parent, asset list and measured context receipt. Retries reuse that request;
+the page server journals it outside the note shelf and returns the same saved
+session after a lost reply or server restart. Different contents cannot reuse
+the identity, and replay will not overwrite, resurrect or duplicate an edited,
+deleted or archived session. Timed-out preparation cannot submit a late save.
+
+Optional note reload and map refresh no longer delay the disk acknowledgment.
+Their late replies cannot pin old history or repoint a newer session. The
+ordinary Connect/Disconnect workflow is unchanged; no prompts, model settings,
+idle policy or image choreography changed. This completes the save-contract
+and unknown-write-outcome steps preceding lifecycle extraction.
+
+Verification includes temporary-disk interruption/restart/concurrent-process
+tests and actual page save orchestration through HTTP to an isolated page
+server, with intentionally lost replies. Devices/socket teardown in that HTTP
+fixture are simulated; separate Edge checks cover real page loading and audio.
+All 634 JavaScript tests and 990 Python tests pass; the existing Starlette/httpx
+deprecation warning remains. Edge checks pass against the restarted page server.
+Browser-close recovery and broader connection ownership remain separate work.
+An unsaved failed Disconnect still requires keeping the tab open and retrying.
+
+Activation requires the updated **page server** and a disconnected page refresh,
+not an LLM or TTS restart. The new transactional endpoint deliberately fails on
+an old page server instead of silently falling back to unsafe writes.
+The page server was restarted and checked locally; no realtime connection was
+active, and the model/voice servers were left running. Refresh before resuming.
+
 ### One Save And Resume Workflow
 
 September 22: at Scott's request, the unused Save + Halt / Start Eric control and
@@ -75,7 +105,8 @@ September 22 verification of these three separately committed repairs: 624
 JavaScript tests, 969 Python tests, and isolated Edge/Web Audio/page-load checks
 pass. One existing Starlette/httpx deprecation warning remains. Activation is a
 disconnected page refresh; no backend restart is required. The next production
-change is the save timeout/unknown-outcome protocol, before lifecycle extraction.
+change was the save timeout/unknown-outcome protocol, now completed above before
+lifecycle extraction. The dated counts here describe those earlier checkpoints.
 
 ### Full Notes And Stable Live Context
 

@@ -100,6 +100,7 @@ test('camera control is available while off; Disconnect stops it before a failin
   const c = setup(); await c.setLiveCamera({ enabled: true }); const media = c.visionCameraStream;
   Object.assign(c, {
     continuitySaveBusy: false, continuitySaveHalted: false, disconnectButton: {},
+    realtimeSessionGeneration: 1,
     realtimeConnected: () => true, beginIntentionalExitCleanup() {}, quiesceRealtimeForSave() {},
     ws: null, WebSocket: { CLOSED: 3 }, micStream: null, conversationLines: ['keep'],
     waitForPendingUserTranscriptBeforeSessionSave: async () => {

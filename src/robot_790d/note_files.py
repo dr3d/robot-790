@@ -27,7 +27,8 @@ ALLOWED_EXTENSIONS = {
 MAX_NOTE_CHARS = 200000
 MAX_SESSION_ARCHIVE_CHARS = 16_000_000
 NOTES_DIRNAME = "notes"
-_NOTE_WRITE_LOCK = threading.Lock()
+# A save journal can hold a different directory's file lock while publishing a note.
+_NOTE_WRITE_LOCK = threading.RLock()
 
 
 @contextmanager
@@ -168,6 +169,7 @@ def write_note_file(
     mode: str = "overwrite",
     *,
     max_chars: int = MAX_NOTE_CHARS,
+    create_only: bool = False,
 ) -> NoteFile:
     if mode not in {"overwrite", "append"}:
         raise ValueError("Mode must be overwrite or append.")
@@ -179,6 +181,8 @@ def write_note_file(
     path = resolve_note_path(filename, instance_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with _note_write_transaction(notes_root_for_instance(instance_path).resolve()):
+        if create_only and path.exists():
+            raise FileExistsError(f"Note already exists: {filename}")
         if mode == "append":
             existing = path.read_text(encoding="utf-8") if path.exists() else ""
             separator = "" if not existing or existing.endswith("\n") else "\n"

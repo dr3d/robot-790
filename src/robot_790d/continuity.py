@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from robot_790d import archive_transaction
+from robot_790d import archive_transaction, continuity_save_transaction
 from robot_790d.note_files import (
     MAX_SESSION_ARCHIVE_CHARS,
     find_existing_note_path,
@@ -476,7 +476,31 @@ def save_continuity_session(
     filename_timestamp: str = "",
     sensing_eye_filenames: list[str] | tuple[str, ...] = (),
     context_at_save: dict[str, Any] | None = None,
+    save_request_id: str = "",
 ) -> dict[str, object]:
+    def prepare() -> dict[str, Any]:
+        return _prepare_continuity_save(
+            body, pinned_filenames, instance_path,
+            parent_session_filename=parent_session_filename, output_dir=output_dir,
+            created_at=created_at, created_label=created_label, filename_timestamp=filename_timestamp,
+            sensing_eye_filenames=sensing_eye_filenames, context_at_save=context_at_save,
+        )
+
+    if save_request_id:
+        return continuity_save_transaction.save_once(instance_path, save_request_id, {
+            "body": body, "pinned_filenames": pinned_filenames,
+            "parent_session_filename": parent_session_filename, "output_dir": output_dir,
+            "sensing_eye_filenames": sensing_eye_filenames, "context_at_save": context_at_save,
+        }, prepare, lambda draft: _commit_continuity_save(instance_path, draft, create_only=True))
+    return _commit_continuity_save(instance_path, prepare())
+
+
+def _prepare_continuity_save(
+    body: str, pinned_filenames: list[str] | tuple[str, ...], instance_path: str | Path | None,
+    *, parent_session_filename: str, output_dir: str, created_at: datetime | None,
+    created_label: str, filename_timestamp: str, sensing_eye_filenames: list[str] | tuple[str, ...],
+    context_at_save: dict[str, Any] | None,
+) -> dict[str, Any]:
     text = str(body or "").strip()
     if not text:
         raise ValueError("Session note body is empty.")
@@ -503,13 +527,32 @@ def save_continuity_session(
         pinned_notes=receipts,
         sensing_eye_assets=sensing_eye_assets,
     )
-    session = write_note_file(instance_path, session_filename, content, max_chars=MAX_SESSION_ARCHIVE_CHARS)
-    context = _normalize_saved_context(context_at_save)
+    return {"content": content, "result": {
+        "status": "ok", "tool": "save_continuity_session", "selection": "latest",
+        "session_filename": session_filename, "parent_session_filename": parent or None,
+        "pinned_notes": [_receipt_payload(receipt) for receipt in receipts],
+        "sensing_eye_assets": [_sensing_eye_asset_receipt_payload(receipt) for receipt in sensing_eye_assets],
+        "sensing_eye_asset_count": len(sensing_eye_assets), "characters": len(content),
+        "context_at_save": _normalize_saved_context(context_at_save),
+    }}
+
+
+def _commit_continuity_save(
+    instance_path: str | Path | None, draft: dict[str, Any], *, create_only: bool = False,
+) -> dict[str, object]:
+    result = dict(draft["result"])
+    filename, content = result["session_filename"], draft["content"]
+    try:
+        write_note_file(instance_path, filename, content, max_chars=MAX_SESSION_ARCHIVE_CHARS, create_only=create_only)
+    except FileExistsError:
+        if not create_only or resolve_note_path(filename, instance_path).read_text(encoding="utf-8") != content:
+            raise ValueError("Save target differs from its receipt; original left untouched.")
+    context = result["context_at_save"]
     context_warning = ""
     if context:
         try:
-            write_note_file(instance_path, continuity_session_context_filename(session.filename), json.dumps({
-                "version": 1, "source_sha256": hashlib.sha256(session.content.encode("utf-8")).hexdigest(),
+            write_note_file(instance_path, continuity_session_context_filename(filename), json.dumps({
+                "version": 1, "source_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
                 "context_at_save": context,
             }, indent=2))
         except OSError as exc:
@@ -517,15 +560,7 @@ def save_continuity_session(
             context_warning = f"Session saved, but CTX receipt could not be written: {exc}"
             context = None
     return {
-        "status": "ok",
-        "tool": "save_continuity_session",
-        "selection": "latest",
-        "session_filename": session.filename,
-        "parent_session_filename": parent or None,
-        "pinned_notes": [_receipt_payload(receipt) for receipt in receipts],
-        "sensing_eye_assets": [_sensing_eye_asset_receipt_payload(receipt) for receipt in sensing_eye_assets],
-        "sensing_eye_asset_count": len(sensing_eye_assets),
-        "characters": len(session.content),
+        **result,
         "context_at_save": context,
         **({"context_at_save_warning": context_warning} if context_warning else {}),
     }

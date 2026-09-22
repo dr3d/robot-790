@@ -1,4 +1,5 @@
 const vm = require('node:vm');
+const { webcrypto } = require('node:crypto');
 const { loadFunctions } = require('./sts_tool_harness.cjs');
 
 function deferred() {
@@ -18,10 +19,11 @@ function saveFixture() {
     close() { calls.push('socket close'); this.readyState = 3; },
   };
   const c = vm.createContext({
-    URL, location: { href: 'http://fixture.invalid/' },
+    URL, crypto: webcrypto, location: { href: 'http://fixture.invalid/' },
     WebSocket: { OPEN: 1, CONNECTING: 0, CLOSED: 3 }, ws: socket,
     realtimeSessionGeneration: 1, realtimeStopRequested: false,
     continuitySaveBusy: false, continuitySaveHalted: false,
+    continuitySaveTransaction: null,
     intentionalExitCleanupInProgress: false,
     intentionalExitCleanupGeneration: 0,
     conversationLines: ['The last accepted thought.'], inputDraft: '',
@@ -55,6 +57,7 @@ function saveFixture() {
     clearSensingEyeSessionAssets() { calls.push('clear saved eye assets'); c.eyeAssets = []; },
     contextUsageForSessionSave: () => ({ input_tokens: 53606 }),
     async readTextFile({ filename }) { calls.push(`reload: ${filename}`); return { filename }; },
+    rememberLoadedNoteContext(note) { calls.push(`pin: ${note.filename}`); },
     async fetchContinuitySessions() { calls.push('map refresh'); },
     micRuntimeLabel: () => 'off',
     openBrowserFaceWindow() {},
@@ -62,13 +65,16 @@ function saveFixture() {
     clearTimeout(id) { timers.delete(id); },
     async sleepMs() { throw new Error('Test must explicitly release pending transcription'); },
     async fetch(url, options) {
-      if (new URL(url).pathname !== '/api/continuity/save') throw new Error(`Unexpected request: ${url}`);
+      if (new URL(url).pathname !== '/api/continuity/save-transaction') throw new Error(`Unexpected request: ${url}`);
       const payload = JSON.parse(options.body);
       requests.push(payload);
-      const filename = `sessions/saved-${requests.length}.txt`;
+      const existing = [...saved].find(([, item]) => item.save_request_id === payload.save_request_id);
+      if (existing) assertSamePayload(existing[1], payload);
+      const filename = existing?.[0] || `sessions/saved-${saved.size + 1}.txt`;
       saved.set(filename, payload);
       return { ok: true, json: async () => ({
         status: 'ok', session_filename: filename,
+        save_request_id: payload.save_request_id,
         parent_session_filename: payload.parent_session_filename,
         sensing_eye_asset_count: payload.sensing_eye_filenames.length,
       }) };
@@ -78,8 +84,8 @@ function saveFixture() {
     'runtimeStep', 'continuityStep', 'beginIntentionalExitCleanup',
     'endIntentionalExitCleanupSoon', 'activeRealtimeSession', 'realtimeConnected',
     'send', 'quiesceRealtimeForSave', 'inputAudioTranscriptMayBePending',
-    'waitForPendingUserTranscriptBeforeSessionSave', 'saveContinuitySession',
-    'saveEricContinuitySnapshot', 'disconnectRealtime', 'connect',
+    'waitForPendingUserTranscriptBeforeSessionSave', 'continuitySaveRequestId', 'saveContinuitySession',
+    'saveEricContinuitySnapshot', 'refreshSavedContinuityNote', 'disconnectRealtime', 'connect',
   ]);
   const fireTimer = ms => {
     const entry = [...timers].find(([, timer]) => timer.ms === ms);
@@ -88,6 +94,10 @@ function saveFixture() {
     entry[1].callback();
   };
   return { c, calls, requests, saved, socket, timers, fireTimer };
+}
+
+function assertSamePayload(first, retry) {
+  require('node:assert/strict').deepEqual(retry, first, 'a retry must carry exactly the frozen payload');
 }
 
 const settle = () => new Promise(setImmediate);

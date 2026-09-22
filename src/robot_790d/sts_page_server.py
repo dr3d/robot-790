@@ -181,8 +181,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/notes/write":
             self._handle_note_write()
             return
-        if parsed.path == "/api/continuity/save":
-            self._handle_continuity_save()
+        if parsed.path in {"/api/continuity/save", "/api/continuity/save-transaction"}:
+            self._handle_continuity_save(require_identity=parsed.path.endswith("save-transaction"))
             return
         if parsed.path == "/api/continuity/prepare":
             self._handle_continuity_prepare()
@@ -447,9 +447,12 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(200, result)
 
-    def _handle_continuity_save(self) -> None:
+    def _handle_continuity_save(self, *, require_identity: bool = False) -> None:
         try:
             payload = self._read_json_body()
+            request_id = payload.get("save_request_id", "")
+            if not isinstance(request_id, str) or (require_identity and not request_id):
+                raise ValueError("A save_request_id is required for a transactional save.")
             pinned = payload.get("pinned_filenames") or []
             if not isinstance(pinned, list):
                 raise ValueError("pinned_filenames must be a list.")
@@ -462,6 +465,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 parent_session_filename=str(payload.get("parent_session_filename") or ""),
                 sensing_eye_filenames=[str(filename) for filename in sensing_eye_filenames],
                 context_at_save=payload.get("context_at_save"),
+                save_request_id=request_id,
             )
         except (OSError, ValueError) as exc:
             self._send_json(400, {"status": "error", "error": str(exc)})

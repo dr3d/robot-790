@@ -629,8 +629,8 @@ test('session saves carry sensing-eye capture receipts into their archive packag
   assert.match(page, /function rememberSensingEyeSessionAsset\(filename\)/);
   assert.match(page, /sensing_eye_filenames: Array\.isArray\(sensingEyeFilenames\)/);
   assert.match(page, /sensingEyeSessionAssetFilenames\.clear\(\)/);
-  assert.match(page, /function flushSensingEyeInboxForSessionSave\(\)/);
-  assert.match(page, /await flushSensingEyeInboxForSessionSave\(\)/);
+  assert.match(page, /function flushSensingEyeInboxForSessionSave\(/);
+  assert.match(page, /await flushSensingEyeInboxForSessionSave\(\{ isCurrent:/);
   assert.match(page, /session-scoped sensing-eye captures will move with it/);
   assert.match(sessionMapPage, /\["Eye captures", `\$\{Number\(item\.sensing_eye_asset_count \|\| 0\)\.toLocaleString\(\)\} session-scoped`\]/);
   assert.match(sessionMapPage, /Saved forms and unshared eye captures move with it/);

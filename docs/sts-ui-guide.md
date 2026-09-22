@@ -119,7 +119,10 @@ A connection with no accepted conversation lines does not create a useful new
 session note. If Disconnect reports a save failure, Eric stays stopped and the
 transcript remains in the browser. Inspect the specific error in Events, fix the
 missing dependency or service problem, then press Disconnect again. Do not
-refresh an unsaved failed-stop session. The socket can remain open for the retry;
+refresh an unsaved failed-stop session. Retrying uses the same saved snapshot
+and identity, including after a lost server reply; it does not create another
+session. A slow optional note reload or map refresh does not turn a completed
+disk save into a failure. The socket can remain open for the retry;
 that does not mean Eric is still running.
 
 ### Choose A Particular Session

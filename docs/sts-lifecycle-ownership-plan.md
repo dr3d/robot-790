@@ -294,6 +294,55 @@ history delivery from a fluent guess, while verifying the saved file directly.
 No deliberate speech, sentence-count, idle-initiative or tool-choice change is an
 acceptable side effect of this work. Keep fresh card-free acceptance open too.
 
+### Save Transaction Repair: September 22
+
+Ordered steps 2 and 3 are implemented on ordinary Disconnect. The browser
+settles the existing final-transcript/image work, freezes a request UUID and
+payload, and retains them for retry. Preparation checks its attempt and session
+identity after each wait. Once submitted, a timeout means an unknown outcome,
+not proof of failure: retry sends the same payload to
+`POST /api/continuity/save-transaction`. The old save endpoint remains available
+for legacy callers; the new browser never falls back to it.
+
+The server writes a preparation journal before the session file, then records
+the receipt. The journal preserves the exact source content and pinned/asset
+receipts, including the originally chosen filename. A restart or concurrent
+retry verifies/completes that file, rather than allocating another. Reusing an
+identity with different input is rejected. Exclusive creation prevents
+overwriting another note; changed/missing acknowledged files or an archive
+transaction fail closed without resurrecting history. Failure to write optional
+CTX telemetry or the final journal update does not negate a written source.
+
+Journals live in `logs/continuity-saves/<note-root-key>/`, outside model-visible
+notes. These are recovery state, not expendable debug logs: retain them with
+the corresponding history and do not sweep pending journals into routine log
+cleanup. No additional request tracing or raw-model capture was enabled.
+
+Acknowledgment applies only to the still-current stop attempt. An old response
+may finish its own receipt but cannot select history or clear a newer session's
+assets. Optional readback/map refresh run outside the save deadline and check
+session/selection ownership before pinning or rendering. All pre-existing final
+transcription timing, audio stop, recording and pane-snapshot behavior remains.
+
+Regressions cover hung preparation, lost acknowledgments, late replies,
+malformed receipts, old-server rejection, duplicate clicks, unchanged payloads,
+fresh-process recovery, simultaneous processes, interrupted publication,
+edited/deleted/archived sources, and original parent/eye-asset retention.
+`sts_save_transaction_http.cjs`, invoked by the Python temporary-server test,
+composes actual page save functions, HTTP routing and durable storage. Its
+socket/device/formatting adapters are simulated; this is not a real-microphone
+test or browser-crash recovery. A browser refresh still loses an unsubmitted
+snapshot; keep a failed-save tab open and retry Disconnect.
+
+Verification: 634 JavaScript tests and 990 Python tests pass, with one existing
+Starlette/httpx deprecation warning. Isolated Edge page/audio checks pass. The
+page server has been restarted for the new endpoint without restarting the
+model or TTS; a disconnected page refresh loads the browser half of the change.
+
+Next: connection/transition ownership extraction as its own checkpoint, after
+normal resumed-thread Connect/Disconnect acceptance. Do not expand this repair
+into unexpected-close, emergency Halt or page-unload semantics.
+
 ## Acceptance And Gaps
 
 ### Live Acceptance Progress: September 21
@@ -346,8 +395,8 @@ unless the operator explicitly requests automatic staging.
 
 ### Remaining Coverage
 
-- Full stop/save/reconnect and failed-save retry replay with the actual durable
-  save pipeline, including final transcription and session-map transitions.
+- Save HTTP/disk failure recovery is now covered above; real browser/socket/
+  device teardown, full selected-session transitions and live acceptance remain.
 - B2 advisory revision/freshness, private-to-public delivery and idle arbitration
   in the composed replay, including normal and accelerated idle.
 - Page unload, real socket closure and recording teardown in a browser-backed

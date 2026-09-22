@@ -93,9 +93,9 @@ test('shared save request sends measured context, while map list, tree and detai
   const payloads = [];
   Object.assign(c, { URL, location: { href: 'http://127.0.0.1:8790' },
     fetch: async (_, options) => { payloads.push(JSON.parse(options.body)); return {
-      ok: true, json: async () => ({ status: 'ok' }) }; } });
+      ok: true, json: async () => ({ status: 'ok', save_request_id: 'fixture-save', session_filename: 'sessions/fixture.txt' }) }; } });
   vm.runInContext(source(page, 'saveContinuitySession'), c);
-  await c.saveContinuitySession({ body: 'Conversation.', pinnedFilenames: [] });
+  await c.saveContinuitySession({ body: 'Conversation.', pinnedFilenames: [], requestId: 'fixture-save' });
   assert.equal(payloads[0].context_at_save.input_tokens, 32768);
   assert.equal(payloads[0].context_at_save.context_window_tokens, 65536);
   for (const name of ['renderList', 'renderNode', 'loadDetails']) {
