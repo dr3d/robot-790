@@ -1849,6 +1849,25 @@ def _brain2_evidence_context(value: object) -> str:
                 for row in image_rows[-4:] if isinstance(row, dict)
             ] if isinstance(image_rows, list) else [],
         }
+    writes = runtime.get("file_write_receipts") if isinstance(runtime, dict) else None
+    context["file_write_receipts"] = []
+    if isinstance(writes, list):
+        for row in writes[-8:]:
+            if not isinstance(row, dict):
+                continue
+            count, generation = row.get("characters"), row.get("session_generation")
+            context["file_write_receipts"].append({
+                "tool": "write_text_file",
+                "call_id": short_text(row.get("call_id"), 160),
+                "session_generation": generation if type(generation) is int and generation >= 0 else None,
+                "at": short_text(row.get("at"), 40),
+                "filename": short_text(row.get("filename"), 512),
+                "mode": short_text(row.get("mode"), 24),
+                "status": short_text(row.get("status"), 24),
+                "characters": count if type(count) is int and count >= 0 else None,
+                "code": short_text(row.get("code"), 80),
+                "error": short_text(row.get("error"), 240),
+            })
     art = runtime.get("idle_art") if isinstance(runtime, dict) else None
     if isinstance(art, dict) and isinstance(art.get("jobs"), list):
         context["idle_art"] = [

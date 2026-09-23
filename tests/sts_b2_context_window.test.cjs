@@ -15,7 +15,7 @@ test('B2 can retain an old request after its completion leaves the transcript wi
     realtimeSessionGeneration: 2, brain2EvidenceGeneration: 1, brain2LastEvidence: null,
     micRuntimeLabel: () => 'on', audioRecordingActive: () => false,
     visionImageUrl: 'new.jpg', visionImageName: 'a later image', sensingTextContent: '', sensingTextName: '',
-    imageTaskReceipt: { generated: 'a later image' }, visionCameraActive: () => false,
+    imageTaskReceipt: { generated: 'a later image' }, fileWriteReceipts: [], visionCameraActive: () => false,
     idleHardBrakeActive: () => false, conversationAttentionEnabled: () => false,
     searchContextReceipts: [], brain2SetupCards: () => [], loadedNoteContexts: [],
     Robot790NoteBrains: { forBrain: () => [] },

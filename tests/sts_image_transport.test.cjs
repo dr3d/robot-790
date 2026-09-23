@@ -49,6 +49,7 @@ function fixture() {
   const element = () => ({ classList: { add() {}, remove() {} }, removeAttribute() {} });
   const c = vm.createContext({
     URL, location: { href: 'http://127.0.0.1:8790/' }, events: {}, log() {},
+    llmImageTools: { checked: true },
     Robot790FileLookup: require('../web/sts/file-lookup.js'),
     generatedImageStatusState: 'empty', generatedImageRequestGeneration: 0,
     generatedImageStatusLabel: '', generatedImageUrl: '', generatedImageName: '',
@@ -117,9 +118,50 @@ test('late success or failure cannot replace a newer preview or undo a manual cl
   assert.equal(f.c.generatedImageStatusState, 'empty');
 });
 
-test('active idle rendering prevents foreground overlap without an unknown paid outcome', async () => {
+test('foreground request waits for idle render and submits once with original settings', async () => {
+  const f = fixture(); f.c.idleArt.busy = true; let wake;
+  f.c.setTimeout = (callback, ms) => { assert.equal(ms, 250); wake = callback; };
+  const pending = f.c.generateImage({ prompt: 'A harbor', size: '1536x1024' });
+  assert.equal(f.requests.length, 0);
+  f.c.idleArt.busy = false; wake();
+  const result = await pending;
+  assert.equal(result.displayed, true);
+  assert.equal(f.requests.length, 1);
+  assert.equal(JSON.parse(f.requests[0].options.body).size, '1536x1024');
+});
+
+test('waiting image request submits nothing after supersession, preview clear or tool disable', async () => {
+  for (const change of ['session-or-user', 'clear', 'disabled']) {
+    const f = fixture(); f.c.idleArt.busy = true; let wake, current = true;
+    f.c.setTimeout = callback => { wake = callback; };
+    const pending = f.c.generateImage({ prompt: 'Old request', _isCurrent: () => current });
+    if (change === 'session-or-user') current = false;
+    if (change === 'clear') f.c.clearGeneratedImage();
+    if (change === 'disabled') f.c.llmImageTools.checked = false;
+    wake();
+    await assert.rejects(pending, error => error.generationSubmitted === false);
+    assert.equal(f.requests.length, 0);
+  }
+});
+
+test('two waiting requests cannot both acquire the image renderer', async () => {
   const f = fixture(); f.c.idleArt.busy = true;
-  await assert.rejects(f.c.generateImage({ prompt: 'A harbor' }), error => error.generationSubmitted === false);
+  const wakes = [];
+  f.c.setTimeout = callback => { wakes.push(callback); };
+  const first = f.c.generateImage({ prompt: 'First' });
+  const second = f.c.generateImage({ prompt: 'Second' });
+  f.c.idleArt.busy = false;
+  wakes.forEach(wake => wake());
+  await first;
+  await assert.rejects(second, error => error.generationSubmitted === false);
+  assert.equal(f.requests.length, 1);
+});
+
+test('idle requests and already active foreground renders still reject duplicate generation', async () => {
+  const f = fixture(); f.c.idleArt.busy = true;
+  await assert.rejects(f.c.generateImage({ prompt: 'Idle', _idleArt: true }), error => error.generationSubmitted === false);
+  f.c.idleArt.busy = false; f.c.generatedImageStatusState = 'generating';
+  await assert.rejects(f.c.generateImage({ prompt: 'Duplicate' }), error => error.generationSubmitted === false);
   assert.equal(f.requests.length, 0);
 });
 

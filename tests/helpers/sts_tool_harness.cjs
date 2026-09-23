@@ -43,11 +43,13 @@ function fixture() {
 }
 
 function loadFunctions(context, names) {
+  context.fileWriteReceipts ??= [];
   // Readiness is exercised separately; these fixtures model an available service.
   context.realtimeReadiness ??= { ready: true, invalidate() {} };
   require('./sts_continuation_harness.cjs').installToolContinuation(context);
   require('./sts_surface_harness.cjs').installBrain2Surface(context);
   const dependencies = {
+    handleFunctionCall: ['recordFileWriteReceipt'],
     connect: ['runConnectionTransition', 'openRealtimeConnection'],
     openRealtimeConnection: ['handleRealtimeClose'],
     handleRealtimeClose: ['cleanupClosedRealtime'],

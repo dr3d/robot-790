@@ -32,6 +32,63 @@ backend-control and persistence calls, apart from their disposable test fixtures
 the later B2 checks exposed a page-exit beacon isolation gap, documented below.
 Logs: `logs/maintenance/lifecycle-review/checkpoint-restart-readiness-*.log`.
 
+### File Receipts, Render Admission and Cache Study
+
+After `e99015e` and the fresh Time Hotel trial, B2 now receives compact recent
+`write_text_file` outcomes: call/session identity, completion time, resolved
+filename, mode, reported status, character count and error/code. This is a small
+eight-entry evidence window, not a file-write quota. No document bodies or event
+log are copied into B2. New same-session speech does not hide a completed write;
+old-session completions cannot populate a replacement connection. Context reset
+clears the receipts, and the evidence fingerprint changes when a receipt arrives.
+The page-server serializer preserves these fields rather than dropping them.
+This supplies execution evidence; it does not prescribe what either brain says
+or prove a write by reading it back. Transport errors remain reported errors,
+not a claim that the disk could not have changed.
+
+A foreground image request now waits behind an active idle render. Before
+submitting, it rechecks turn/session validity, preview revision and image-tool
+permission every 250ms. Supersession, preview clear or disable submits nothing.
+The existing guard still rejects overlapping foreground renders; no automatic
+paid retry or forced eye delivery was added. Idle-art permissions, cadence,
+retention behavior and model choices are unchanged.
+
+Verification: 817 JavaScript tests, all 1,005 Python tests and the isolated Edge
+suite pass. Browser checks exercise the real page receipt/snapshot path, delayed
+render admission, canceled waiting and stale-session receipt rejection with no
+live tool requests. Live-pane hashes remain unchanged. Python retains the
+existing Starlette/httpx deprecation warning. Logs:
+`logs/maintenance/lifecycle-review/receipt-image-{suite,python-suite,browser}.log`.
+The 23:45-23:54 Hotel Note continuation passed ordinary connection, a real
+1,702-character note write, three web searches, idle return and verified saving.
+B2 completed nine requests without clipping or errors. However, saved artifacts
+omit B2's full request payload, so live receipt delivery is not independently
+proven; no image overlap occurred. Keep those two acceptance checks open rather
+than infer them from successful conversation. B1 ended at 33,867 tokens (25.84%);
+the return after three minutes was 2.784s. This does not close the large-context
+cache issue. PM: `logs/runs/20260922-2354-hotel-note/postmortem.md`.
+Activated the page server at about 23:42 while the realtime pool was idle;
+readiness returns true and realtime PID 45700 remains unchanged. One launcher
+invocation was rejected before execution; the normal hidden page launcher then
+succeeded. Refresh the browser to load its new JavaScript. A normal continuation
+asking Eric to write a short design note is sufficient for the receipt trial;
+image overlap can be checked when it naturally occurs. No model reload needed.
+
+The offline cache study correlates six B1 requests with slot 1 and ten B2
+requests with slot 0; one task predating capture remains unattributed. No slot
+takeover occurred in that interval. A 7,683.806 MiB saved entry was evicted during
+B2 task 2704, 3.803 seconds before B1's full refill. Shared saved-cache pressure
+is the leading explanation, but the entry's owner, current cache limit and the
+intervening clear/checkpoint behavior are not recorded. The 48.876-second refill
+is established; its exact cause is not. No model/cache settings were changed.
+Report and reproducible matching:
+`logs/maintenance/lifecycle-review/cache-study-20260922/report.md`.
+
+The opt-in metrics parser now retains numeric cache inventory, slot clear/purge
+and checkpoint events when emitted. Capture remains off; no raw prompt/output
+logging is added. Some diagnostics require engine trace verbosity, so richer
+parsing alone is not proof the next capture will contain the missing evidence.
+
 ### B2 Monitor Speech Ownership
 
 After checkpoint `1b9ce11`, `brain2-speech.js` owns the optional browser voice's
@@ -210,8 +267,19 @@ Evidence: `logs/runs/20260922-2238-cold-shelf/postmortem.md` and `analysis.json`
 
 ### Checkpoint and Next Order
 
-The accepted deferred-delivery extraction and 30K reserve accommodation are ready
-to checkpoint together with their scoped acceptance notes. Checkpoint rerun:
+Checkpoint committed as `e99015e`. The following 23:15-23:26 Connect Empty trial
+returned to the human in 2.511 seconds after roughly six minutes without human
+input, including an intervening B2 headline fetch. Context peaked at 28,877 /
+131,072 (22.03%). This is a useful fresh-context comparison, not a cache-fix
+claim: engine metrics were not captured. Two requested diagrams were generated,
+staged and described; a third autonomous render was retained on disk when the
+scene changed. The kitchen render initially encountered that busy idle render,
+then Eric retried successfully. No stale lock or provider error established.
+Save draft, core pin and both eye assets verify. The seven-pass idle development
+clearly used B2 suggestions. PM: `logs/runs/20260922-2326-time-hotel/postmortem.md`.
+
+The accepted deferred-delivery extraction and 30K reserve accommodation were
+checkpointed together with their scoped acceptance notes. Checkpoint rerun:
 808 JavaScript tests, 18 connection-context Python tests and the isolated Edge
 suite pass. Latest live-pane hashes are unchanged by the browser checks. Logs:
 `logs/maintenance/lifecycle-review/deferred-checkpoint-{suite,context,browser}.log`.

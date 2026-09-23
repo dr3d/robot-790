@@ -262,6 +262,11 @@ async function main() {
     assert.equal(results.exitBeaconIsolation.onlySnapshots, true);
     assert.equal(results.exitBeaconIsolation.hasContent, true);
     await monitorUi.close();
+    const receiptUi = await context.newPage();
+    receiptUi.on('pageerror', error => pageErrors.push(error.message));
+    await receiptUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.receiptImageWait = await require('./helpers/sts_receipt_image_browser.cjs').checkReceiptAndImageWait(receiptUi);
+    await receiptUi.close();
     const mapUi = await context.newPage();
     let mapReady = false;
     mapUi.on('pageerror', error => pageErrors.push(error.message));

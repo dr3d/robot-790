@@ -72,6 +72,23 @@ def parse_event(line: str) -> list[dict]:
                     **base, "kind": "cache_save_skipped", "reason": "state_exceeds_limit",
                     "state_mib": float(oversized[1]), "limit_mib": float(oversized[2]),
                 })
+            cache_state = re.search(
+                r"cache state: (\d+) prompts, (\d+(?:\.\d+)?) MiB "
+                r"\(limits: (\d+(?:\.\d+)?) MiB, (\d+) tokens, (\d+) est\)", message
+            )
+            if cache_state:
+                records.append({**base, "kind": "cache_state", "entries": int(cache_state[1]),
+                                "size_mib": float(cache_state[2]), "limit_mib": float(cache_state[3]),
+                                "limit_tokens": int(cache_state[4]), "estimated_tokens": int(cache_state[5])})
+            entry = re.search(
+                r"prompt (?:0x)?[0-9a-fA-F]+:\s*(\d+) tokens, checkpoints:\s*(\d+),\s*(\d+(?:\.\d+)?) MiB", message
+            )
+            if entry:
+                records.append({**base, "kind": "cache_entry", "tokens": int(entry[1]),
+                                "checkpoints": int(entry[2]), "size_mib": float(entry[3])})
+            purge = re.search(r"purging slot (\d+) with (\d+) tokens", message)
+            if purge:
+                records.append({**base, "kind": "slot_purged", "slot": int(purge[1]), "tokens": int(purge[2])})
             continue
         context = {**base, "slot": int(slot[2]), "task": int(slot[3])}
         body = slot[4]
@@ -107,6 +124,25 @@ def parse_event(line: str) -> list[dict]:
             records.append({**context, "kind": "cache_reprocess", "reason": "missing_cache_data"})
         elif body.strip() == "failed to load prompt from cache":
             records.append({**context, "kind": "cache_restore_failed"})
+        elif body.strip() == "saving idle slot to prompt cache":
+            records.append({**context, "kind": "idle_slot_cache_save"})
+        elif body.startswith("clearing prompt with "):
+            match = re.fullmatch(r"clearing prompt with (\d+) tokens", body.strip())
+            if match:
+                records.append({**context, "kind": "slot_prompt_clear", "tokens": int(match[1])})
+        elif body.startswith(("created context checkpoint", "restored context checkpoint",
+                              "erasing old context checkpoint", "erased invalidated context checkpoint")):
+            action = body.split(" context checkpoint", 1)[0]
+            record = {**context, "kind": "context_checkpoint", "action": action}
+            for name in ("pos_min", "pos_max", "n_tokens", "n_past", "n_swa", "pos_next"):
+                match = re.search(rf"\b{name}\s*=\s*(-?\d+)", body)
+                if match:
+                    record[name] = int(match[1])
+            size = re.search(r"size = (\d+(?:\.\d+)?) MiB", body)
+            if size:
+                record["size_mib"] = float(size[1])
+            if len(record) > len(context) + 2:
+                records.append(record)
         elif body.startswith("stop processing:"):
             match = re.search(r"n_tokens\s*=\s*(\d+), truncated\s*=\s*(\d+)", body)
             if match:

@@ -127,6 +127,29 @@ def test_ignored_input_and_unrecognized_engine_text():
         assert parse_event(line) == []
 
 
+def test_cache_capacity_and_checkpoint_diagnostics_are_numeric_not_prompt_content():
+    rows = parse_event(runtime(
+        "T srv update: - cache state: 2 prompts, 8500.100 MiB (limits: 8192.000 MiB, 131072 tokens, 131072 est)\n"
+        "T srv update: - prompt 0xDEADBEEF: 102387 tokens, checkpoints: 8, 7683.806 MiB SECRET\n"
+        "W srv clear: purging slot 1 with 102387 tokens\n"
+        "T slot cache: id 1 | task -1 | saving idle slot to prompt cache\n"
+        "T slot prompt_clear: id 1 | task -1 | clearing prompt with 102387 tokens\n"
+        "T slot update: id 1 | task 2800 | restored context checkpoint "
+        "(pos_min = 100000, pos_max = 101000, n_tokens = 101001, n_past = 101001, size = 40.500 MiB) SECRET\n"
+        "T slot update: id 1 | task 2800 | erased invalidated context checkpoint "
+        "(pos_min = 100000, pos_max = 101000, n_tokens = 101001, n_swa = 0, pos_next = 0, size = 40.500 MiB)\n"
+        "T slot prompt: id 1 | task 2800 | SECRET PROMPT"
+    ))
+    assert [row["kind"] for row in rows] == ["cache_state", "cache_entry", "slot_purged",
+        "idle_slot_cache_save", "slot_prompt_clear", "context_checkpoint", "context_checkpoint"]
+    assert rows[0]["limit_mib"] == 8192
+    assert rows[1]["tokens"] == 102387 and rows[1]["checkpoints"] == 8
+    assert "slot" not in rows[1] and "task" not in rows[1]
+    assert rows[5]["n_past"] == 101001
+    assert rows[6]["pos_next"] == 0
+    assert "SECRET" not in json.dumps(rows) and "DEADBEEF" not in json.dumps(rows)
+
+
 def test_duplicate_capture_lock(tmp_path):
     first = acquire_lock(tmp_path / "lock")
     assert first is not None

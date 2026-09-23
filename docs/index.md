@@ -47,8 +47,8 @@ prompts and companion behavior. Resumed-thread trials preserve continuity and
 stop speech on Disconnect; isolated tests cover network loss and save recovery.
 Voice interruptions no longer hide a completed image thumbnail; Sensing Eye
 transfer remains Eric's separate action. Unused thread-reset controls are retired.
-The current page-side repair passes 808 JavaScript tests and isolated browser
-checks; the preceding checkpoint passed all 1,002 Python tests. Backend-control status feedback
+The current repairs pass 817 JavaScript tests, all 1,005 Python tests and isolated
+browser checks. Backend-control status feedback
 now has its own owner so stale replies cannot overwrite newer operations.
 Restart cleanup cannot act on a replacement session; live continuation and
 mid-speech Disconnect passed. Connect now checks service readiness instead of
@@ -60,6 +60,9 @@ cancellation races retain offline coverage only.
 Deferred B2 mouth/voice delivery also has its own timer/item owner; automated
 checks and ordinary live delivery/mid-speech cleanup pass. A separately measured
 long-context cache refill remains under investigation.
+B2 evidence now includes compact file-write outcomes, and requested drawings can
+wait for an active idle render. Automated checks and ordinary continuation pass;
+live receipt-payload verification and image-overlap acceptance remain open.
 Further Halt/Unload work is deferred until a practical need appears.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)

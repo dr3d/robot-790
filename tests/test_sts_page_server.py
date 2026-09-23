@@ -113,6 +113,37 @@ def test_audio_interrupt_config_is_bounded_and_rejects_non_numeric_values() -> N
     assert sts_page_server._runtime_audio_interrupt({"minimum_active_ms": 10**1000})["minimum_active_ms"] == 200
 
 
+def test_brain2_receives_compact_file_write_outcomes_without_note_bodies() -> None:
+    row = {"call_id": "write-1", "session_generation": 7, "at": "2026-09-22T23:00:00Z",
+           "filename": "Trip plans.txt", "mode": "append", "status": "ok", "characters": 1200,
+           "content": "PRIVATE BODY", "code": "", "error": ""}
+    evidence = {"runtime": {"file_write_receipts": [row, {**row, "status": "error", "error": "Disk full"}]}}
+    context = json.loads(sts_page_server._brain2_evidence_context(evidence))
+    success, failure = context["file_write_receipts"]
+    assert success["filename"] == "Trip plans.txt"
+    assert success["characters"] == 1200
+    assert success["session_generation"] == 7
+    assert success["call_id"] == "write-1"
+    assert success["status"] == "ok"
+    assert failure["status"] == "error" and failure["error"] == "Disk full"
+    assert "PRIVATE BODY" not in json.dumps(context)
+    assert "content" not in success
+
+
+def test_brain2_file_write_receipts_bound_metadata_and_reject_bad_shapes() -> None:
+    def serialize(rows):
+        return json.loads(sts_page_server._brain2_evidence_context(
+            {"runtime": {"file_write_receipts": rows}}))["file_write_receipts"]
+    assert serialize("bad") == []
+    assert serialize([None, 3]) == []
+    rows = serialize([{"filename": "x" * 2000, "characters": True, "session_generation": "7",
+                       "error": "y" * 1000}] * 12)
+    assert len(rows) == 8
+    assert len(rows[0]["filename"]) == 512
+    assert len(rows[0]["error"]) == 240
+    assert rows[0]["characters"] is None and rows[0]["session_generation"] is None
+
+
 def test_brain2_schema_constrains_headline_urls_and_structural_fields() -> None:
     schema = sts_page_server._brain2_response_format([{"url": "https://example.test/story"}], [])
     fields = schema["json_schema"]["schema"]["properties"]

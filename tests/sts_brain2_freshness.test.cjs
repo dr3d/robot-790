@@ -10,6 +10,7 @@ function load(names, globals = {}) {
   globals.Robot790NoteBrains ??= require('../web/sts/note-brains.js');
   globals.loadedNoteContexts ??= [];
   globals.imageTaskReceipt ??= null;
+  globals.fileWriteReceipts ??= [];
   globals.pendingToolCalls ??= 0;
   globals.toolFollowupNeeded ??= false;
   globals.pendingEyeRecallResponse ??= null;
@@ -104,6 +105,18 @@ test('B2 evidence has no persistent B1 silent-wait state', () => {
   const before = c.brain2EvidenceSnapshot();
   assert.equal(before.runtime.b1_silent_wait, undefined);
   assert.equal(c.brain2EvidenceSnapshot().fingerprint, before.fingerprint);
+});
+
+test('file-write outcomes refresh B2 evidence, stay stable with time, and exclude old sessions', () => {
+  const c = evidenceContext();
+  const first = c.brain2EvidenceSnapshot();
+  c.fileWriteReceipts = [{ call_id: 'write-1', session_generation: 1, status: 'ok', filename: 'Tuesday.txt', characters: 50 }];
+  const written = c.brain2EvidenceSnapshot();
+  assert.notEqual(written.fingerprint, first.fingerprint);
+  assert.equal(written.runtime.file_write_receipts[0].filename, 'Tuesday.txt');
+  assert.equal(c.brain2EvidenceSnapshot().fingerprint, written.fingerprint);
+  c.realtimeConnection.generation++;
+  assert.equal(c.brain2EvidenceSnapshot().runtime.file_write_receipts.length, 0);
 });
 
 test('attention reaches B2 as a coarse state, not a ticking clock that retriggers every poll', () => {

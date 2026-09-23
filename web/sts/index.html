@@ -3311,6 +3311,7 @@
     let toolGenerationUncertain = false;
     let idleWritesConversation = false;
     let imageTaskReceipt = null;
+    let fileWriteReceipts = [];
     let toolFollowupPromptLog = [];
     let promptLedgerLog = [];
     let brain2PromptLog = [];
@@ -11434,6 +11435,7 @@
         audio_recording: audioRecordingActive(),
         sensing_eye_image: visionImageUrl ? visionImageName : null,
         image_task_receipts: imageTaskReceipt,
+        file_write_receipts: fileWriteReceipts.filter(row => row.session_generation === realtimeConnection.generation),
         ...(typeof idleArt !== "undefined" && idleArt.history.length ? { idle_art: idleArt.snapshot(6) } : {}),
         sensing_eye_text: sensingTextContent ? sensingTextName : null,
         camera_active: visionCameraActive(),
@@ -12928,6 +12930,7 @@
     }
 
     function clearHotConversationState({ reason = "manual", clearEvents = true } = {}) {
+      fileWriteReceipts = [];
       brain2LastEvidence = null;
       brain2EvidenceGeneration += 1;
       brain2HeadlineStartedAt = Date.now();
@@ -16481,6 +16484,20 @@
       const text = String(prompt || "").replace(/\s+/g, " ").trim();
       if (!text) throw Object.assign(new Error("Missing image prompt"), { generationSubmitted: false });
       if (!_isCurrent()) throw Object.assign(new Error("Image request was superseded."), { generationSubmitted: false });
+      if (!_idleArt && typeof idleArt !== "undefined" && idleArt.busy) {
+        // Keep the request pending, not submitted; a changed turn/session cancels the wait.
+        const previewRevision = generatedImageRequestGeneration;
+        log(events, "image request waiting for active idle render");
+        while (idleArt.busy) {
+          if (!_isCurrent() || generatedImageRequestGeneration !== previewRevision || !llmImageTools.checked) {
+            throw Object.assign(new Error("Image request was superseded or disabled while waiting."), { generationSubmitted: false });
+          }
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        if (!_isCurrent() || generatedImageRequestGeneration !== previewRevision || !llmImageTools.checked) {
+          throw Object.assign(new Error("Image request was superseded or disabled while waiting."), { generationSubmitted: false });
+        }
+      }
       if (generatedImageStatusState === "generating" || (typeof idleArt !== "undefined" && idleArt.busy)) {
         throw Object.assign(new Error("An image generation is already in progress."), { generationSubmitted: false });
       }
@@ -18949,6 +18966,26 @@
     }
 
 
+    function recordFileWriteReceipt(event, args, result, { socket, generation }) {
+      if (event.name !== "write_text_file" || !activeRealtimeSession(socket, generation)) return;
+      // A scope denial happens before tool arguments are admitted for execution.
+      if (!args?.filename) {
+        try { args = JSON.parse(event.arguments); } catch { args = {}; }
+      }
+      const text = (value, limit) => typeof value === "string" ? value.slice(0, limit) : "";
+      const receipt = {
+        tool: "write_text_file", call_id: text(event.call_id, 160),
+        session_generation: generation, at: new Date().toISOString(),
+        filename: text(result?.filename || args?.filename, 512),
+        mode: text(result?.mode || args?.mode || "overwrite", 24),
+        status: text(result?.status || "unknown", 24),
+        characters: Number.isSafeInteger(result?.characters) && result.characters >= 0 ? result.characters : null,
+        code: text(result?.code, 80), error: text(result?.error, 240)
+      };
+      fileWriteReceipts = [...fileWriteReceipts.filter(row => row.session_generation === generation
+        && row.call_id !== receipt.call_id), receipt].slice(-8);
+    }
+
     async function handleFunctionCall(event, { socket = realtimeConnection.socket, generation = realtimeConnection.generation } = {}) {
       if (!activeRealtimeSession(socket, generation) || suppressedResponseIds.has(eventResponseId(event))) return;
       const userActivityAt = lastUserTurnActivityAt;
@@ -18968,6 +19005,7 @@
             retryable: false, scope: toolContinuation.origin,
             error: "No further tool calls are available in this automatic continuation." };
           log(events, `tool ${event.name} denied: ${JSON.stringify(receipt)}`);
+          recordFileWriteReceipt(event, activityArgs, receipt, { socket, generation });
           send({ type: "conversation.item.create", item: { type: "function_call_output",
             call_id: event.call_id, output: JSON.stringify(receipt) } }, { socket, generation });
           return;
@@ -18979,6 +19017,7 @@
             error: "Tool is not enabled for this execution scope." };
           toolScopeDenials.set(`${toolContinuation.origin}:${event.name}`, { tool: event.name, scope: toolContinuation.origin, code: receipt.code });
           log(events, `tool ${event.name} denied: ${JSON.stringify(receipt)}`);
+          recordFileWriteReceipt(event, activityArgs, receipt, { socket, generation });
           send({ type: "conversation.item.create", item: { type: "function_call_output",
             call_id: event.call_id, output: JSON.stringify(receipt) } }, { socket, generation });
           return;
@@ -19001,6 +19040,7 @@
           result = await awaitFaceBeatCompletion(result, { socket, generation, baseUrl: faceUrl });
         }
         if (!activeRealtimeSession(socket, generation)) return;
+        recordFileWriteReceipt(event, activityArgs, result, { socket, generation });
         if (event.name === "move_generated_image_to_sensing_eye" && result?.staged && typeof idleArt !== "undefined") {
           const row = idleArt.history.find(item => item.filename === result.source_image);
           if (row) Object.assign(row, { status: "staged", saved_filename: result.saved_filename });
@@ -19027,6 +19067,7 @@
         }
       } catch (error) {
         if (!activeRealtimeSession(socket, generation)) return;
+        recordFileWriteReceipt(event, activityArgs, { status: "error", error: error.message }, { socket, generation });
         const generationUnknown = generationStarted && error.generationSubmitted !== false;
         if (generationUnknown && userActivityAt === lastUserTurnActivityAt) toolGenerationUncertain = true;
         if (["search_web", "generate_image", "move_generated_image_to_sensing_eye"].includes(event.name)) {

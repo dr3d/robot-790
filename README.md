@@ -213,6 +213,9 @@ passed; cancellation races retain offline coverage only.
 Deferred B2 mouth/voice delivery now has a separate timer/item owner; automated
 checks and ordinary live delivery/mid-speech cleanup pass. A separately measured
 long-context cache refill remains under investigation.
+B2 evidence now includes compact file-write outcomes, and requested drawings can
+wait for an active idle render. Automated checks and ordinary continuation pass;
+live receipt-payload verification and image-overlap acceptance remain open.
 Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).

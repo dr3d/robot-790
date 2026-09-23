@@ -85,7 +85,7 @@ test('gesture evidence is retained without a tool-specific spoken script', () =>
 function completionFixture(states) {
   let now = 100000;
   let reads = 0;
-  const c = load(['awaitFaceBeatCompletion', 'handleFunctionCall'], {
+  const c = load(['awaitFaceBeatCompletion', 'recordFileWriteReceipt', 'handleFunctionCall'], {
     Date: class extends Date { static now() { return now; } }, AbortSignal,
     activeRealtimeSession: () => true, normalizeFaceBaseUrl: () => 'http://body/',
     suppressedResponseIds: new Set(), toolContinuationOrigin: 'conversation',
