@@ -29,7 +29,7 @@ function saveFixture() {
     intentionalExitCleanupGeneration: 0,
     conversationLines: ['The last accepted thought.'], inputDraft: '',
     inputAudioTranscriptionPending: false, userSpeechActive: false,
-    lastSpeechStartedAt: 0, brain2DeferredSurface: {},
+    lastSpeechStartedAt: 0,
     currentContinuitySessionFilename: 'sessions/parent.txt',
     continuityParentForCurrentRun: 'sessions/parent.txt',
     eyeAssets: ['existing-image.jpg'],

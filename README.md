@@ -210,6 +210,9 @@ free slot rather than treating the restart timer as readiness. The optional B2
 spoken monitor now has its own cancellation/callback owner; offline and browser
 tests cover human/B1 handoffs and stale callbacks. Ordinary live continuation
 passed; cancellation races retain offline coverage only.
+Deferred B2 mouth/voice delivery now has a separate timer/item owner; automated
+checks and ordinary live delivery/mid-speech cleanup pass. A separately measured
+long-context cache refill remains under investigation.
 Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).

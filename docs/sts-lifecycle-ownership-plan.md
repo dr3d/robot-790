@@ -14,14 +14,23 @@ permissions, receipts, persistence and exclusive access to public speech.
 This work must not introduce English intent classifiers, prescribed dialogue,
 shorter answers, new quiet periods or a setup-card requirement.
 
+## Current Agenda
+
+Deferred B2 delivery is implemented and accepted on the live paths below. Commit
+that baseline before more changes. Next, investigate the captured full cache
+refill and repair the separate B2 file-write receipt visibility gap. Neither
+requires personality changes, shorter answers or reduced idle initiative.
+Further lifecycle extraction remains incremental; do not expand this accepted
+step into private-advice scheduling or a universal scheduler.
+
 ## Next Step: Deferred B2 Surface
 
-Queued after the accepted spoken-monitor checkpoint, not implemented yet.
-`deferBrain2Surface`, `scheduleBrain2Surface` and `maybeSurfaceDeferredBrain2`
-still share a page-level pending mouth/voice item and timeout. Isolate that
-small delivery lifetime next; do not absorb private advisory generation or the
-whole idle scheduler into it. This is an ownership candidate, not a claim that
-the latest live run exposed a new defect here.
+Implemented after accepted spoken-monitor checkpoint `49fada9`; the 22:26-22:38
+run accepts ordinary deferred delivery and mid-speech cleanup. `deferBrain2Surface`, `scheduleBrain2Surface` and
+`maybeSurfaceDeferredBrain2` now delegate to `brain2-surface.js`. The scope below
+isolates the pending mouth/voice item and timeout, not private advisory generation
+or the whole idle scheduler. Offline fixtures reproduced races; the law-vending
+live run itself did not expose a new deferred-delivery failure.
 
 1. Reproduce the existing behavior offline: ordinary deferred delivery, a newer
    item replacing an older one, B2 disable, voice already delivered, current
@@ -41,6 +50,30 @@ the latest live run exposed a new defect here.
    return to talking and Disconnect. Existing tests exercise races; Scott need
    not engineer failures or provoke another long TTS batch. Compare continuity,
    initiative and public-speech handoffs with the law-vending baseline.
+
+Implementation verification: five of the initial 13 probes failed on the old
+code. All 20 focused cases and all 808 JavaScript tests now pass. The isolated
+Edge suite uses real page handlers with captured timers, mocked speech/device
+calls and blocked persistence, exercising old callbacks after replacement,
+delayed display completion, save-stop/reconnect, once-only speech and the voice
+monitor checkbox. Latest-pane hashes are unchanged. Logs:
+`logs/maintenance/lifecycle-review/brain2-surface-{before,focused,suite,browser}.log`.
+Python was not rerun for this page-only change.
+
+Live acceptance: three held asides delivered once in gaps, one additional monitor
+aside, an active idle conversation, three idle-art jobs and a clean mid-speech
+Disconnect. The saved draft, 27 pins and three eye assets all verify. Race
+coverage remains automated, not a claim of deliberately exercised live races.
+The measured 48.876-second full prompt refill is a separate cache finding, not
+accepted as fixed by this extraction. PM:
+`logs/runs/20260922-2238-cold-shelf/postmortem.md`.
+
+The owner checks item/session identity as well as timer identity. Deferred
+display options carry a validity check across the asynchronous mouth request;
+already-submitted physical commands are not canceled. Ordinary completion still
+logs, remembers and optionally speaks the same text. The page no longer mirrors
+the pending item or timer. Existing age/retry settings are unchanged; no extra
+quiet policy or advisory filtering was introduced.
 
 Separate follow-ups: inspect B2's visibility of successful file-write receipts,
 and investigate the image-associated 48-second B1 delay using existing evidence.
@@ -231,6 +264,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
+| Optional B2 monitor | `brain2-speech.js` owns browser utterances and echo tail; `brain2-surface.js` owns deferred mouth/voice delivery and its timer | Old timers or device replies must not publish into a replacement item/session. Already-submitted device commands cannot be unsent. Private advice remains separate. |
 | Turn completion | `armAssistantUtteranceFinished`, `checkAssistantUtteranceFinished`, `noteConversationActivity` | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
 | Generated-image presentation | `generateImage`, `showGeneratedImage`, `moveGeneratedImageToSensingEye`, preview/eye generations | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
@@ -1026,7 +1060,8 @@ PM: `logs/runs/20260922-1909-genius-recall-and-save/postmortem.md`.
   transition, as specified above; offline checks and the exercised live
   continuation/stop paths pass. Readiness activation and the following normal
   connection are verified. B2 spoken-monitor ownership now passes its offline
-  checks and ordinary live continuation; deferred mouth/voice delivery is next.
+  checks and ordinary live continuation. Deferred mouth/voice delivery now also
+  passes automated checks and ordinary live continuation with mid-speech stop.
   Already-submitted backend commands and recorder-internal finalization are
   separate lifetimes, not canceled by a feedback or connection guard. Halt and
   Unload remain deferred.

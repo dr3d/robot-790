@@ -17,7 +17,7 @@
     "enabled": true,
     "history_start_index": 1,
     "history_min_recent_sessions": 1,
-    "growth_tokens": 32768,
+    "growth_tokens": 30720,
     "b2_tokens": 6144,
     "output_tokens": 2048,
     "margin_tokens": 1024,

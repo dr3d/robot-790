@@ -2973,6 +2973,7 @@
   <script src="idle-art.js"></script>
   <script src="audio-playback.js"></script>
   <script src="brain2-speech.js"></script>
+  <script src="brain2-surface.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -3377,7 +3378,7 @@
     let reengageAttempts = 0;
     let lastReengageAt = 0;
     let brain2Timer = null;
-    let brain2SurfaceTimer = null;
+    const brain2Surface = createBrain2SurfaceOwner();
     let brain2InFlight = false;
     let brain2LastEvidence = null;
     let brain2EvidenceGeneration = 0;
@@ -3392,7 +3393,6 @@
     let lastBrain2MullAt = 0;
     let brain2BackoffUntil = 0;
     let brain2FailureStreak = 0;
-    let brain2DeferredSurface = null;
     let brain2LastBodyCueAt = 0;
     let brain2PendingBodyCue = null;
     let brain2BodyCueTimer = null;
@@ -8075,8 +8075,7 @@
     }
 
     function clearBrain2SurfaceTimer() {
-      if (brain2SurfaceTimer) clearTimeout(brain2SurfaceTimer);
-      brain2SurfaceTimer = null;
+      brain2Surface.stopWaiting();
     }
 
     function brain2BlockedReason({ manual = false } = {}) {
@@ -11631,9 +11630,7 @@
       if (brain2VoicePaceValue) brain2VoicePaceValue.textContent = brain2VoicePaceLabel();
       if (!brain2VoiceMonitorEnabled()) {
         cancelBrain2MonitorSpeech();
-        if (brain2DeferredSurface) {
-          brain2DeferredSurface.voiceSpoken = true;
-        }
+        brain2Surface.markVoiceHandled();
       }
       if (!options.quiet) {
         log(events, `brain2 voice ${brain2VoiceLabel()}`);
@@ -11695,7 +11692,7 @@
     }
 
     async function surfaceBrain2MouthText(mouthText, options = {}) {
-      if (realtimeConnection.stopped) return;
+      if (realtimeConnection.stopped || (options.isCurrent && !options.isCurrent())) return;
       const generation = realtimeConnection.generation;
       const socket = realtimeConnection.socket;
       const voiceRevision = brain2Speech.revision;
@@ -11708,11 +11705,13 @@
           duration: 7
         });
       } catch (error) {
-        if (socket === realtimeConnection.socket && generation === realtimeConnection.generation) {
+        if (socket === realtimeConnection.socket && generation === realtimeConnection.generation
+          && (!options.isCurrent || options.isCurrent())) {
           logBrain2("mouth display error", error.message);
         }
       }
       if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return;
+      if (options.isCurrent && !options.isCurrent()) return;
       bumpBrain2Counter("surfaced");
       logBrain2("mouth", mouthText);
       rememberBrain2Output("mouth", mouthText);
@@ -11721,48 +11720,38 @@
       }
     }
 
+    function createBrain2SurfaceOwner() {
+      return Robot790Brain2Surface.create({
+        getSession: () => ({ socket: realtimeConnection.socket, generation: realtimeConnection.generation }),
+        isCurrentSession: session => !realtimeConnection.stopped && session.socket === realtimeConnection.socket
+          && session.generation === realtimeConnection.generation,
+        isEnabled: () => brain2MouthBrainEnabled(),
+        getMaxAge: () => compressIdleMs(brain2DeferredSurfaceMaxAgeMs, { floorMs: 15000 }),
+        canSpeak: () => brain2VoiceCanSpeak(),
+        speak: text => speakBrain2Monitor(text),
+        canDisplay: () => brain2MouthCanSurface(),
+        display: (text, options) => surfaceBrain2MouthText(text, options),
+        onHeld: (reason, text) => {
+          bumpBrain2Counter("held");
+          logBrain2("held", `${reason}: ${text}`);
+        },
+        log: (kind, text) => logBrain2(kind, text),
+        now: () => Date.now(),
+        setTimer: (callback, ms) => setTimeout(callback, ms),
+        clearTimer: id => clearTimeout(id)
+      });
+    }
+
     function deferBrain2Surface(mouthText, reason) {
-      brain2DeferredSurface = {
-        mouthText,
-        reason,
-        createdAt: Date.now(),
-        voiceSpoken: false
-      };
-      bumpBrain2Counter("held");
-      logBrain2("held", `${reason}: ${mouthText}`);
-      scheduleBrain2Surface();
+      brain2Surface.defer(mouthText, reason);
     }
 
     function scheduleBrain2Surface() {
-      clearBrain2SurfaceTimer();
-      if (!brain2DeferredSurface) return;
-      brain2SurfaceTimer = setTimeout(() => {
-        maybeSurfaceDeferredBrain2().catch((error) => logBrain2("surface error", error.message));
-      }, 1200);
+      brain2Surface.schedule();
     }
 
     async function maybeSurfaceDeferredBrain2() {
-      if (!brain2DeferredSurface) return;
-      if (!brain2MouthBrainEnabled()) {
-        logBrain2("held dropped", `brain 2 off: ${brain2DeferredSurface.mouthText}`);
-        brain2DeferredSurface = null;
-        return;
-      }
-      if (Date.now() - brain2DeferredSurface.createdAt > compressIdleMs(brain2DeferredSurfaceMaxAgeMs, { floorMs: 15000 })) {
-        logBrain2("held expired", brain2DeferredSurface.mouthText);
-        brain2DeferredSurface = null;
-        return;
-      }
-      if (!brain2DeferredSurface.voiceSpoken && brain2VoiceCanSpeak()) {
-        brain2DeferredSurface.voiceSpoken = speakBrain2Monitor(brain2DeferredSurface.mouthText);
-      }
-      if (!brain2MouthCanSurface()) {
-        scheduleBrain2Surface();
-        return;
-      }
-      const { mouthText, voiceSpoken } = brain2DeferredSurface;
-      brain2DeferredSurface = null;
-      await surfaceBrain2MouthText(mouthText, { speak: !voiceSpoken });
+      await brain2Surface.maybeSurface();
     }
 
     function brain2HeadlinesEnabled() {
@@ -12960,7 +12949,7 @@
       brain2RevisionCandidates = [];
       brain2NoteCandidates = [];
       recentBrain2Outputs = [];
-      brain2DeferredSurface = null;
+      brain2Surface.reset();
       lastBrain2AdvisorySocket = null;
       lastBrain2AdvisoryText = "";
       lastRuntimeContextSocket = null;
@@ -16822,7 +16811,7 @@
     function quiesceRealtimeForSave(reason) {
       if (!realtimeConnection.stopped) send({ type: "response.cancel" });
       realtimeConnection.requestStop();
-      brain2DeferredSurface = null;
+      brain2Surface.reset();
       haltRealtimeActivity(reason);
       setState("Stopped; saving", "warn");
       startMicButton.disabled = true;
@@ -21814,7 +21803,7 @@
       if (!brain2MouthBrainEnabled()) {
         clearBrain2Timer();
         clearBrain2SurfaceTimer();
-        brain2DeferredSurface = null;
+        brain2Surface.reset();
         cancelBrain2MonitorSpeech();
       }
       updateBrain2Controls();

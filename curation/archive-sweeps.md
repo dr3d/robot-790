@@ -4,6 +4,25 @@ This file records intentional moves from the active repo tree into the adjacent
 `robot-790-archive` folder. These are not deletions; they are index/search
 relief sweeps for bulky or high-count runtime artifacts.
 
+## 2026-09-22 Cold Diagnostics
+
+- Archive: `D:\_PROJECTS\robot-790-archive\20260922-cold-diagnostics`.
+  Preserved 292 files, 33,770,795 bytes (32.21 MiB): 288 evidence/snapshot files
+  moved out and four PM paths replaced by forwarding notes. All copies verified
+  by SHA-256 before source removal and again after the sweep.
+- Kept September 20-22, the September 19 cache-refill investigation, earlier
+  forwarding notes and referenced live snapshots. Checked 2,884 retained text
+  files for references. Four completed September 19 run bundles moved; current
+  cache and deferred-B2 acceptance evidence remains local.
+- All 2,303 protected note/generated-image/sensing-eye files have unchanged
+  paths, sizes and modification times. No session graph operation, note edits,
+  media relocation, tracked-file movement or service restart was performed.
+  Rolling/server logs and original recordings were not touched.
+- Recovery: archive `README.md`, `manifest.json`, `moves.jsonl` and
+  `verification.json`; script `logs/maintenance/archive-cold-20260922.ps1`.
+  Restore individual paths only after checksum verification and checking for
+  newer local work. This same-drive sidecar is not an independent backup.
+
 ## 2026-09-21 Session And Diagnostic Cleanup
 
 - Archived 58 of 85 active sessions through the existing STS archive API.

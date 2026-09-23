@@ -26,6 +26,7 @@ function fixture() {
     idlePendingUserTurnMs: 2000, compressIdleMs: ms => ms,
     clearIdleHardBrake() {}, noteConversationActivity() {}, captureCompletedAloneInterval() {},
     audioPlayback: { enqueue() {}, play: async () => {} }, b64ToBytes: () => new Uint8Array(2),
+    setTimeout: () => 1, clearTimeout() {},
   });
   loadFunctions(c, ['brain2VoiceMonitorEnabled', 'browserSpeechAvailable', 'brain2VoiceCanSpeak',
     'speakBrain2Monitor', 'cancelBrain2MonitorSpeech', 'brain2MonitorAudioShouldMuteMic',
@@ -220,14 +221,13 @@ test('an older display completion cannot replace newer monitor speech', async ()
 test('deferred mouth and voice surface only once in an ordinary quiet gap', async () => {
   const f = fixture(), { c } = f;
   Object.assign(c, {
-    brain2DeferredSurface: { mouthText: 'Deferred.', createdAt: 1000, voiceSpoken: false },
     brain2DeferredSurfaceMaxAgeMs: 60000, brain2MouthCanSurface: () => true,
-    scheduleBrain2Surface() {},
   });
   loadFunctions(c, ['maybeSurfaceDeferredBrain2']);
+  c.brain2Surface.defer('Deferred.', 'busy');
   await c.maybeSurfaceDeferredBrain2();
   assert.equal(f.utterances.length, 1);
-  assert.equal(c.brain2DeferredSurface, null);
+  assert.equal(c.brain2Surface.pending, null);
   assert.equal(f.logs.filter(item => item.kind === 'mouth').length, 1);
 });
 

@@ -18,6 +18,10 @@ preserving private advice and existing idle behavior. It passes offline/browser
 checks and the 21:36-21:53 ordinary live continuation. That run did not provoke
 a monitor cancellation race. See the
 [implementation and scope](sts-lifecycle-ownership-plan.md#implemented-step-spoken-monitor-ownership).
+After checkpoint `49fada9`, deferred B2 mouth/voice delivery is also extracted
+and passes automated checks plus the 22:26-22:38 ordinary live continuation and
+mid-speech Disconnect. The same run exposed a separately measured full cache
+refill; that performance issue remains open.
 Further Halt/Unload work is parked until needed. The earlier intermittent Windows
 note-write test observation remains documented below, separate from these repairs.
 
@@ -87,24 +91,146 @@ and a reproducible analysis script.
 
 After the PM, Scott chose the small configuration adjustment: the launcher now
 passes 4,096 rather than 3,072 as the maximum audio-token budget per TTS request.
-PowerShell syntax and the one-line change are checked. Activation requires an
-STS restart; activation and another near-limit utterance are not verified here.
+PowerShell syntax and the one-line change are checked. The restarted process's
+command line confirms 4,096, and ordinary TTS worked in the 22:26-22:38 run.
+Another near-limit utterance is not verified here.
 No batching, answer-length or prompt change is included. Treat this as a practical
 mitigation, not proof that arbitrary-length inputs cannot truncate. Further TTS
 batching work is deferred unless clipping recurs; no forced stress run is needed.
 
-Next architecture task: isolate the deferred B2 mouth/voice item's timer and
-lifetime, beginning with offline stale-timer, replacement and reconnect fixtures.
-Keep the current timing, expiry and eligibility rules, private advice and idle
-initiative unchanged. This is proposed work, not an additional runtime repair.
-See the [bounded next step](sts-lifecycle-ownership-plan.md#next-step-deferred-b2-surface).
+The deferred B2 mouth/voice extraction is now implemented as described below.
+Timing, expiry and eligibility rules, private advice and idle initiative remain
+unchanged. See the [bounded scope](sts-lifecycle-ownership-plan.md#next-step-deferred-b2-surface).
 
-Keep two evidence questions separate from that extraction: the 48-second
-image-associated B1 wait (cache refill remains unproven), and whether B2 receives
-the successful file-write receipt before advising that it is missing. Inspect
-existing request/receipt records first; do not add behavioral restrictions or a
-general logging expansion. Halt/Unload, recorder internals, a universal scheduler
-and further context-policy changes remain outside this next step.
+Two separate findings now define the next work: a later idle request demonstrably
+refilled its full prompt despite a stable early prefix, and B2 lacks structured
+file-write receipts even when the write succeeds. Their evidence and remaining
+uncertainties are detailed below. Inspect captured slot/cache activity first,
+then make the bounded receipt-path repair. Do not add behavioral restrictions or
+a general logging expansion. Halt/Unload, recorder internals, a universal
+scheduler and further context-policy changes remain outside this checkpoint.
+
+### Deferred B2 Delivery
+
+After `49fada9`, `brain2-surface.js` owns the held mouth/voice item, timeout and
+delivery revision. Five of the first 13 offline probes failed before extraction:
+canceled callbacks could publish a newer held item early, or publish after stop
+or a changed session. Captured callbacks now check timer identity. The item also
+carries its connection identity; stale display completions cannot log/speak as
+current work after replacement, reset, disable or reconnect. A device request
+already sent cannot be unsent; this guards subsequent client effects, not the
+physical device's acceptance of an in-flight command.
+
+The existing 1,200 ms retry, 90-second age compressed by lab speed with its
+15-second floor, latest-item replacement, once-only voice flag and text-only
+monitor-disable behavior are preserved. No prompts, note context, B2 evidence,
+idle cadence, response length or device protocol changes.
+
+Verification: 20 focused deferred-surface cases, all 808 JavaScript tests and
+the isolated Edge suite pass. Edge uses actual page adapters with captured
+timers and mocked device/speech calls, including stale timers, delayed mouth
+completion, save-stop/reconnect and the monitor checkbox. All latest-pane hashes
+remain unchanged. Python is unchanged and was not rerun. Logs:
+`logs/maintenance/lifecycle-review/brain2-surface-{before,focused,suite,browser}.log`.
+Live acceptance, 22:26-22:38: three explicitly deferred asides delivered once in
+gaps, plus one ordinary monitor aside, without logged human overlap or post-stop
+revival. Mid-speech Disconnect canceled output and saved the transcript and all
+three eye assets. Stale-timer/device races retain automated coverage only; no
+room recording was supplied. PM: `logs/runs/20260922-2238-cold-shelf/postmortem.md`.
+
+### B2 File-Receipt Finding
+
+The Tuesday PM's misleading B2 advice has a concrete visibility gap.
+`handleFunctionCall` logs the successful write and sends its result to B1;
+`writeTextFile` does not append that receipt to the conversational transcript.
+`brain2EvidenceSnapshot` supplies image and search receipts but no general
+file-write receipts, and `_brain2_evidence_context` likewise has no file-write
+field. B2's conversation window is speech, not the event log. The saved record
+shows a successful write at 21:50:20, followed by B2's missing-receipt claim at
+21:52:59/21:53:24. This is not evidence that the disk write failed, and it does
+not prove how the model would behave with better evidence.
+
+No receipt-path repair is bundled with the surface extraction. Next separate
+repair: supply concise structured file-write outcomes to B2, retaining session,
+call identity, time, filename and reported status rather than injecting whole
+documents or the event log. Test success, failure, stale-session completion and
+the backend serializer together. Do not add prescribed speech or an automatic
+read-back loop as a substitute for delivering the receipt already available.
+
+### Connection Reserve Adjustment
+
+September 22, 22:20 attempt: all services were ready, but Connect exhausted the
+eligible middle-history excerpt candidates and refused 90,067 startup tokens
+against an 89,088 budget. This was the 32,768-token growth reservation, not an
+overflow of the 131,072-token model window or a deferred-B2 delivery failure.
+The current `config/runtime.json` growth reservation is now 30,720 (30K), leaving
+the B2/output/margin reserves and protected oldest/newest history boundaries
+unchanged. The recorded candidate fits the resulting 91,136 startup budget, with
+31,789 tokens of measured growth room after safety reserves. Original notes are
+unchanged; no history was deleted and no automatic live compaction was added.
+
+Verified the running page API serves 30,720; all 18 connection-context Python
+tests pass, and the recorded budget calculation passes. No model/session was
+opened by those checks. The following live Connect succeeded at 90,950 startup
+tokens / 30,906 growth room, with 21 excerpts and the two newest sessions intact.
+All 22 considered candidates reused saved selections; no new excerpt generation
+was needed. This is a small configuration accommodation for this thread,
+not a general solution for indefinitely growing history. Evidence:
+`logs/live/20260922-222134-events.txt`.
+
+### Cold Shelf Cache Finding
+
+The 22:26-22:38 run saved `session-20260922-223823-984.txt`, parent `215349-047`.
+All 27 pinned-source hashes/counts, three eye assets and the frozen save draft
+verify. Final context was 105,224/131,072 (80.28%). Nineteen B2 notes were delivered
+without clipping, three autonomous images staged, and a sensor check succeeded.
+The memory-shelf discussion remained active and developed across both lanes.
+
+The human return took 43.372 seconds to first speech, with about 42 seconds on
+the model side and approximately 49 ms STT inference. Its engine start was not
+captured. A subsequent **idle** pass has decisive metrics: slot 1/task 2800
+evaluated all 102,541 input tokens in 48.876 seconds, then generated 1,147 tokens
+in 13.299 seconds. It was not another human-return probe or a TTS wait.
+
+That request retained the first 54/56 prior messages and identical system/tool/
+option hashes, with the same two image parts. A 7,683.806 MiB cache-entry eviction
+preceded it by about four seconds, without a slot/task identity linking that
+entry definitively to B1. Adjacent B1 requests evaluated only about 4.4K tokens.
+The loaded model still has eight checkpoints, two slots and 131K context; the
+earlier checkpoint repair did not revert. Do not conflate this eviction with the
+older confirmed oversized-snapshot warning, which was not emitted here.
+
+Temporary metrics capture is stopped and evidence frozen. The post-Disconnect
+engine task matches normal saved-session preparation (4,286 input / 852 output),
+not resumed public speech. Next operator step may be Connect Empty as planned;
+larger-history compaction is deferred. Cache retention deserves a separate
+isolated reproduction using these receipts, not new prompt rewrites or reduced
+idle initiative. No runtime repair in this PM.
+Evidence: `logs/runs/20260922-2238-cold-shelf/postmortem.md` and `analysis.json`.
+
+### Checkpoint and Next Order
+
+The accepted deferred-delivery extraction and 30K reserve accommodation are ready
+to checkpoint together with their scoped acceptance notes. Checkpoint rerun:
+808 JavaScript tests, 18 connection-context Python tests and the isolated Edge
+suite pass. Latest live-pane hashes are unchanged by the browser checks. Logs:
+`logs/maintenance/lifecycle-review/deferred-checkpoint-{suite,context,browser}.log`.
+Live acceptance is described above; no new companion policy or prompt changes
+are part of this checkpoint.
+
+1. Trace the captured full refill through inference-slot activity and cache
+   retention. A nearby eviction is a lead, not proof that B2 evicted B1. The
+   earlier human-return delay lacks complete engine metrics; do not claim that
+   its cause is established by the later idle refill.
+2. Supply B2 the compact file-write outcomes it currently cannot see, with
+   success/failure and stale-session tests. Preserve the existing dialogue policy.
+3. Continue small lifecycle extractions from this accepted baseline. Choose the
+   next ownership boundary after the above investigations, not a broad rewrite.
+
+Scott can use Connect Empty normally. A fresh context is not a cache-fix test;
+there is no need to extend the old thread or reduce headroom further. Cold
+diagnostic cleanup is recorded in `curation/archive-sweeps.md`; active continuity,
+canonical images, recent evidence and the earlier cache-repair bundle stay local.
 
 ### Connect Readiness
 

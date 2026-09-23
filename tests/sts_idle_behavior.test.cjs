@@ -255,7 +255,7 @@ function stopContext(overrides = {}) {
   ], {
     ws: socket, WebSocket: { OPEN: 1, CLOSED: 3 }, realtimeSessionGeneration: 1,
     realtimeStopRequested: false, continuitySaveHalted: false,
-    conversationLines: ['KEEP THIS TRANSCRIPT'], brain2DeferredSurface: { mouthText: 'OLD' },
+    conversationLines: ['KEEP THIS TRANSCRIPT'],
     disconnectButton: {}, startMicButton: {}, resetMicButton: {}, idlePonderNowButton: {},
     events: {}, log: (_, text) => calls.push(text), recordUiEvent: noop,
     beginIntentionalExitCleanup: noop, endIntentionalExitCleanupSoon: noop,
@@ -283,7 +283,7 @@ test('failed Disconnect stops immediately, ignores late work, keeps transcript, 
   const stopping = c.disconnectRealtime();
   assert.equal(c.realtimeConnected(), false);
   assert.equal(c.realtimeStopRequested, true);
-  assert.equal(c.brain2DeferredSurface, null);
+  assert.equal(c.brain2Surface.pending, null);
   assert.deepEqual(calls.slice(0, 4), ['response.cancel', 'halt', 'Stopped; saving', 'stop mic']);
   await new Promise(setImmediate);
   c.handleEvent({ type: 'response.output_audio.delta', delta: 'OLD_AUDIO' });
