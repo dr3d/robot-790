@@ -266,6 +266,7 @@ async function main() {
     receiptUi.on('pageerror', error => pageErrors.push(error.message));
     await receiptUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
     results.receiptImageWait = await require('./helpers/sts_receipt_image_browser.cjs').checkReceiptAndImageWait(receiptUi);
+    results.pinnedTitles = await require('./helpers/sts_pinned_titles_browser.cjs').checkPinnedTitles(receiptUi, artifacts);
     await receiptUi.close();
     const mapUi = await context.newPage();
     let mapReady = false;

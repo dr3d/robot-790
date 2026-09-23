@@ -4,6 +4,48 @@ Reviewed September 23, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 23 checkpoint after `424b933`: the B2 request boundary is extracted
+into `brain2-request.js`, with explicit page adapters for current state, HTTP,
+logging and accepted evidence. Twenty-six complete pre-extraction cases match
+the committed baseline, including stale/error ordering and delayed JSON races.
+All 864 JavaScript tests, 147 focused page-server Python tests and isolated Edge
+checks pass. The browser additionally verifies a late old-session HTTP error
+cannot overwrite a newer session's accepted evidence. Prompts, cadence,
+advisory selection, payloads and B1 context remain unchanged. The 10:37-10:49
+live resume passes ordinary acceptance: nine B2 requests, a headline used by
+B1, optional monitor speech, interruption and a verified nineteen-pin/two-image
+save. Idle circled the naming topic, and B2 twice misidentified a screenshot;
+these are content findings, not new transport failures. Context ended 73.27%.
+There was no post-headline human-return probe. PM:
+`logs/runs/20260923-1049-pinned-titles/postmortem.md`.
+No service/model restart is required. Details and test logs are in
+the [request-boundary record](sts-lifecycle-ownership-plan.md#implemented-step-b2-request-boundary).
+
+The second live acceptance run, 11:07-11:16, resumed an earlier ferry branch,
+completed four draw/stage operations, developed the sequence with B2, and
+returned to the human in 2.736s before a successful topic change and search.
+Disconnect during playback saved verified continuity and released the pipeline.
+Seven pins and six eye assets verify; context grew 45.87% to 61.26%. A fifth
+idle render was retained when user activity superseded its staging request.
+No B2/tool errors. PM: `logs/runs/20260923-1116-ferry-branch/postmortem.md`.
+Scott accepts the 21.424s initial response at roughly half a window for now.
+That initial branch prefill is not an active repair target; unexpected warm
+return cache rebuilds remain a separate issue. The timing is end-to-end, not a
+measurement of pure prefill or of how many tokens were actually recomputed.
+
+That trial also demonstrated missing session titles in pinned-note management.
+A separate small UI/tool-result improvement now reuses cached session titles in
+Loaded Notes and `list_pinned_notes`, retaining exact filenames for unpinning.
+It does not rename files, change prompts or B1 note assembly, add directory
+listings, or guess between duplicate titles. Missing metadata falls back to
+the original filename. Refresh disconnected to load this display/result change.
+The combined checkpoint passes a fresh 865-test JavaScript suite and isolated
+Edge browser checks (including request races and desktop/mobile title views).
+Logs: `logs/maintenance/lifecycle-review/checkpoint-20260923-{suite,browser}.log`.
+Live title
+listing/unpinning was not exercised in the second run; automated fixtures cover
+duplicate/missing titles, unchanged note assembly and safe UI rendering.
+
 September 23 checkpoint: `5bcccbe` commits the receipt/image-admission repairs
 and cache-parser diagnostics below. A fresh focused recheck passed 60 JavaScript
 and 156 Python tests. The behavior-preserving

@@ -11,12 +11,14 @@ function setup(notes, source = page) {
     maxLoadedNoteCharsPerFile: 4500, maxTranscriptNoteChars: 64000,
     baseStartupNoteFilenames: ['core/erics_memories.txt'], loadEricMemoriesEnabled: () => true,
     Robot790NoteBrains: require('../web/sts/note-brains.js'),
+    continuitySessions: [],
     textTail: (text, length) => text.slice(-length), loadedNoteRestoreEnvelope: () => '',
   });
   for (const name of ['noteFilenameSet', 'noteFilenameInSet', 'loadedNotePromptContent',
     'loadedNoteLooksLikeTranscript', 'loadedNoteLooksLikeSessionNote', 'transcriptContextViewForPrompt',
     'clippedLoadedNoteContent', 'clippedTranscriptContextContent', 'clippedLoadedNotePromptContent',
-    'formatLoadedNoteContextsForInstructions', 'loadedNoteAdmissionReport', 'listPinnedNotes',
+    'formatLoadedNoteContextsForInstructions', 'loadedNoteAdmissionReport',
+    'continuitySessionRecord', 'pinnedNoteTitle', 'pinnedNoteLabel', 'listPinnedNotes',
     'rememberLoadedNoteContext', 'renderMemory']) {
     const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     if (start < 0) continue;
@@ -29,6 +31,29 @@ function setup(notes, source = page) {
 const card = { filename: 'setup-cards/companion.txt', content: 'a'.repeat(5000) + 'IMPORTANT END',
   brain_context: { version: 1, revision: 'v1', shared: 'SHARED', brains: { b2: 'PRIVATE B2' } } };
 const history = { filename: 'sessions/session.txt', content: 'STS Session Note\n[10:00] Robot 790: ' + 'h'.repeat(90000) };
+
+test('pinned titles use session metadata without changing filenames or assembled context', () => {
+  const notes = [{ filename: 'sessions/one.txt', content: 'Transcript one' },
+    { filename: 'sessions/two.txt', content: 'Transcript two' },
+    { filename: 'ordinary.txt', content: 'Ordinary note' }];
+  const c = setup(notes);
+  const before = c.formatLoadedNoteContextsForInstructions(notes);
+  c.continuitySessions = [
+    { filename: 'sessions/one.txt', title: '  Chamber Seven  ' },
+    { filename: 'sessions/two.txt', title: 'Chamber Seven' },
+    { filename: 'sessions/not-pinned.txt', title: 'Not loaded' },
+  ];
+  const result = c.listPinnedNotes();
+  assert.deepEqual(Array.from(result.files), notes.map(n => n.filename));
+  assert.deepEqual(Array.from(result.notes, n => n.title), ['Chamber Seven', 'Chamber Seven', null]);
+  assert.equal(c.pinnedNoteLabel('sessions/one.txt'), 'Chamber Seven (sessions/one.txt)');
+  assert.equal(c.pinnedNoteLabel('sessions/missing.txt'), 'sessions/missing.txt');
+  assert.equal(c.pinnedNoteTitle('SESSIONS\\one.txt'), 'Chamber Seven');
+  assert.equal(c.formatLoadedNoteContextsForInstructions(notes), before);
+  c.continuitySessions[0].title = 'Renamed';
+  assert.equal(c.listPinnedNotes().notes[0].title, 'Renamed');
+  assert.equal(c.pinnedNoteLabel('sessions/one.txt'), 'Renamed (sessions/one.txt)');
+});
 
 test('admission reports declared instructions as complete in their separate allowance', () => {
   const c = setup([card]);

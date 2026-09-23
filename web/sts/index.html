@@ -5912,10 +5912,22 @@
       return matches[0]?.filename || "";
     }
 
+    function pinnedNoteTitle(filename) {
+      const name = String(filename || "").trim().replace(/\\/g, "/");
+      if (!/^sessions\//i.test(name)) return "";
+      return String(continuitySessionRecord(name)?.title || "").trim();
+    }
+
+    function pinnedNoteLabel(filename) {
+      const title = pinnedNoteTitle(filename);
+      return title ? `${title} (${filename})` : filename;
+    }
+
     function listPinnedNotes() {
       const admission = new Map(loadedNoteAdmissionReport().notes.map(item => [item.filename, item]));
       const notes = loadedNoteContexts.map((item) => ({
         filename: item.filename,
+        title: pinnedNoteTitle(item.filename) || null,
         loaded_at: item.loadedAt ? new Date(item.loadedAt).toISOString() : null,
         brain_guidance: item.brain_context?.version === 1 ? {
           revision: item.brain_context.revision,
@@ -16130,7 +16142,7 @@
             `Declared instruction warnings: ${noteAdmission.instruction_warnings}`,
             "Assembly only; not provider token usage or B2 admission.",
             "",
-            ...noteAdmission.notes.map(item => `${item.filename}: ${item.status}; ${item.assembled_block_characters} assembled block chars${item.reasons.length ? ` (${item.reasons.join(", ")})` : ""}`)
+            ...noteAdmission.notes.map(item => `${pinnedNoteLabel(item.filename)}: ${item.status}; ${item.assembled_block_characters} assembled block chars${item.reasons.length ? ` (${item.reasons.join(", ")})` : ""}`)
           ].filter(Boolean)
         },
         {

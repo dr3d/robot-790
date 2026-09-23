@@ -221,8 +221,13 @@ empty, resumed and rich-history live trials pass the exercised paths, including
 same-file revision, interrupted performance and same-page reconnect recall.
 The September 23 extraction checkpoint passes 834 JavaScript tests, all 1,006
 Python tests and isolated browser checks. No prompt, personality or cadence
-changes. Initial large-history connection delays and the separate telemetry/
-export findings remain listed in [Engineering Status](docs/engineering-status.md).
+changes. Follow-up telemetry routing and B2 export repairs have live acceptance.
+The next extraction separates B2 request payloads and stale-result handling;
+automated checks and an ordinary resumed/idle live trial pass. Pinned-session
+inspection now includes existing readable titles beside exact filenames. The
+initial roughly 21-second response at half a context window is accepted for now;
+unexpected warm-return cache rebuilds and other open findings remain listed in
+[Engineering Status](docs/engineering-status.md).
 Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).

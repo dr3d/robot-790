@@ -1299,6 +1299,7 @@ test('a deliberate quiet Brain2 result succeeds without speech, advisories, or f
 // Exercise the shipped functions without starting a socket, microphone, or device.
 function loadFunctions(names, globals, source = page) {
   globals.Robot790Brain2Request ??= require('../web/sts/brain2-request.js');
+  globals.continuitySessions ??= [];
   globals.toolScopeDenials ??= new Map();
   globals.toolFollowupTerminal ??= false;
   globals.runtimeConfig ??= {};
@@ -1568,7 +1569,8 @@ function connectionContext() {
     'castMediaTools', 'smartHomeTools', 'noteFileTools']) context[name] = [{ name }];
   return loadFunctions([
     'clearHotConversationState', 'resetSessionContextForConnection', 'loadCoreNoteContext',
-    'loadFreshContinuityContext', 'loadPreviousContinuityContext', 'listPinnedNotes',
+    'loadFreshContinuityContext', 'loadPreviousContinuityContext',
+    'continuitySessionRecord', 'pinnedNoteTitle', 'pinnedNoteLabel', 'listPinnedNotes',
     'currentPromptContextModeKey', 'realtimeContextModeLabel', 'currentPromptContextModeLabel',
     'conversationDisplayTextRange', 'conversationLineMetadataFor', 'conversationLineTimeLabel',
     'conversationTranscriptSinceCleanConnect', 'conversationTimeSpanSnapshot',
