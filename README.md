@@ -233,6 +233,9 @@ resumed/idle/disconnect live checks. Its request-scoped cleanup leaves prompts,
 advice selection and idle cadence unchanged.
 Post-session preparation now uses speaker-specific source citations; the
 observed mixed-speaker failure was recovered without changing the original session.
+The private-advice extraction passes automated, isolated-browser and paired
+resume/idle/disconnect live checks. It removes 81 lines from the main HTML, keeping
+B2's advice wording, timing and selection behavior unchanged.
 Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).

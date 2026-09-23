@@ -122,9 +122,15 @@ test('page has one busy owner and unchanged scheduling policy functions', () => 
   assert.match(page, /if \(brain2Work\.finish\(work, realtimeConnection\)\)/);
   const { createHash } = require('node:crypto');
   for (const [name, expected] of Object.entries(baseline.unchangedFunctions)) {
-    const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
-    const end = page.indexOf('\n    }\n', start);
+    // Advisory formatting moved; compare its body after reversing adapter names.
+    const source = ['formatBrain2AdvisoryContent', 'formatBrain2ForInstructions'].includes(name)
+      ? fs.readFileSync(`${__dirname}/../web/sts/brain2-advisories.js`, 'utf8').replace(/\r\n/g, '\n')
+        .replaceAll('a.guidanceCurrent(item)', 'Robot790NoteBrains.isCurrent(item, loadedNoteContexts, "b2")')
+        .replaceAll('a.userAt()', 'lastUserTurnActivityAt')
+      : page;
+    const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
+    const end = source.indexOf('\n    }\n', start);
     assert(start >= 0 && end > start, name);
-    assert.equal(createHash('sha256').update(page.slice(start, end + 6)).digest('hex'), expected, name);
+    assert.equal(createHash('sha256').update(source.slice(start, end + 6)).digest('hex'), expected, name);
   }
 });

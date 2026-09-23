@@ -265,6 +265,7 @@ async function main() {
     const receiptUi = await context.newPage();
     receiptUi.on('pageerror', error => pageErrors.push(error.message));
     await receiptUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    assert.deepEqual(pageErrors, [], 'page initialization before receipt checks');
     results.receiptImageWait = await require('./helpers/sts_receipt_image_browser.cjs').checkReceiptAndImageWait(receiptUi);
     results.pinnedTitles = await require('./helpers/sts_pinned_titles_browser.cjs').checkPinnedTitles(receiptUi, artifacts);
     await receiptUi.close();
@@ -273,6 +274,11 @@ async function main() {
     await workUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
     results.brain2Work = await require('./helpers/sts_b2_work_browser.cjs').checkBrain2Work(workUi);
     await workUi.close();
+    const advisoryUi = await context.newPage();
+    advisoryUi.on('pageerror', error => pageErrors.push(error.message));
+    await advisoryUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.brain2Advisories = await require('./helpers/sts_advisory_browser.cjs').checkBrain2Advisories(advisoryUi);
+    await advisoryUi.close();
     const mapUi = await context.newPage();
     let mapReady = false;
     mapUi.on('pageerror', error => pageErrors.push(error.message));

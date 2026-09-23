@@ -10,7 +10,7 @@ async function checkBrain2Work(page) {
       brain2PersonFocus.value = '4';
       conversationLines = ['[10:00 AM] You: Offline ownership test.'];
       conversationLineMetadata = [];
-      brain2NoteCandidates = []; brain2QuestionCandidates = []; brain2RevisionCandidates = [];
+      brain2Advisories.reset();
       userSpeechActive = false; pendingSessionMapMove = null; sessionMapMoveBusy = false;
       toolContinuation.reset(); brain2Work.reset();
       window.fetch = (target, options) => {
@@ -28,11 +28,11 @@ async function checkBrain2Work(page) {
       const current = triggerBrain2Mull({ manual: true });
       pending[0].resolve(new Response(JSON.stringify({ status: 'error', error: 'Old request' }), { status: 503 }));
       await old;
-      const oldCannotRelease = brain2Work.busy && brain2MullNowButton.disabled && brain2NoteCandidates.length === 0;
+      const oldCannotRelease = brain2Work.busy && brain2MullNowButton.disabled && brain2Advisories.notes.length === 0;
       pending[1].resolve(new Response(JSON.stringify({ status: 'ok', note_for_eric: 'Current private advice' })));
       await current;
       const freshCompleted = !brain2Work.busy && !brain2MullNowButton.disabled
-        && brain2NoteCandidates.length === 1 && brain2NoteCandidates[0].text === 'Current private advice';
+        && brain2Advisories.notes.length === 1 && brain2Advisories.notes[0].text === 'Current private advice';
       const token = brain2Work.begin({ socket: realtimeConnection.socket,
         generation: realtimeConnection.generation, headlines: true });
       haltRealtimeActivity('isolated headline stop');

@@ -539,8 +539,10 @@ test('Brain2 advisories are appended at a turn boundary instead of rewriting the
   assert.notEqual(start, -1);
   assert.notEqual(end, -1);
   const block = page.slice(start, end);
-  assert.match(block, /let brain2AdvisoryChanged = false;/);
-  assert.match(block, /appendBrain2AdvisoryToConversation\(\{ reason: "arrived during user speech" \}\)/);
+  assert.match(block, /brain2Advisories\.accept\(result\)/);
+  const owner = fs.readFileSync(path.join(__dirname, '../web/sts/brain2-advisories.js'), 'utf8');
+  assert.match(owner, /let brain2AdvisoryChanged = false;/);
+  assert.match(owner, /appendBrain2AdvisoryToConversation\(\{ reason: "arrived during user speech" \}\)/);
   assert.doesNotMatch(block, /updateSessionTools\(/);
   assert.match(page, /function brain2AdvisoryProtocolInstructions\(\)/);
   assert.match(page, /function appendBrain2AdvisoryToConversation\(/);
@@ -563,7 +565,8 @@ test('a Brain2 advisory is deduplicated per realtime socket and stays out of the
     lastBrain2AdvisoryText: '',
     realtimeConnected: () => true,
     performanceModeEnabled: () => false,
-    formatBrain2AdvisoryContent: () => 'Current snapshot. Keep the next reply brief.',
+    brain2NoteCandidates: [{ text: 'Keep the next reply brief.', at: 100 }],
+    lastUserTurnActivityAt: 0,
     send: (event) => sent.push(event),
     rememberPromptLedger: (entry) => ledger.push(entry),
     logBrain2: (...entry) => brain2Log.push(entry),

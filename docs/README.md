@@ -48,6 +48,9 @@ The follow-on B2 in-flight owner passes automated, isolated browser and ordinary
 resumed/idle/disconnect live checks. A separate summary citation repair labels
 source speakers explicitly and restricts references accordingly; the rejected
 derivative was recovered with its original session intact. See Engineering Status.
+The subsequent private-advice owner passes automated, isolated browser and paired
+resume/idle/disconnect live checks. It moves candidate storage, freshness, formatting
+and delivery bookkeeping out of the main HTML without changing B2's prompts.
 The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source

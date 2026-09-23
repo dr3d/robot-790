@@ -4,7 +4,39 @@ Reviewed September 23, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
-Current small repair after `f7bbb91`: post-session preparation now gives each
+Current uncommitted refactor after `ea5132f`: `brain2-advisories.js` owns the
+three private candidate lists, accepted-advice bookkeeping, guidance filtering,
+snapshot formatting, per-socket delivery deduplication, and evidence-based loop
+counts. Five former page globals are removed. The page supplies live-state and
+transport/log adapters; scheduling, HTTP freshness guards and public mouth/art
+dispatch stay with their existing owners. B1/B2 prompt text, limits, timing,
+permissions, context admission and model settings are unchanged.
+
+Automated acceptance: all 915 JavaScript tests, 147 page-server Python tests,
+and isolated Edge browser checks pass. Twenty-three baseline checkpoints from
+`ea5132f` compare complete candidate state, formatted text, sent packets and
+side-effect order. The earlier 36 asynchronous B2 work scenarios still pass.
+Browser checks use blocked live sockets/mutating HTTP and verify private-only
+delivery, deduplication, freshness and the real clear-conversation adapter.
+Evidence: `logs/maintenance/lifecycle-review/b2-advisories-{suite,python,browser}.log`.
+
+HTML size (LF-normalized): 22,262 -> 22,181 lines; 1,007,171 -> 1,001,458 bytes.
+Net removal is 81 lines / 5,713 bytes. The new module is 158 lines / 8,080 bytes,
+so total production bytes grow by 2,367 while ownership improves. This is a
+bounded responsibility extracted, not a claim that the megabyte page is solved.
+Paired live acceptance, September 23 17:56-18:04, passes the exercised paths:
+requested draw/stage, B2 advice and headline use, 2.260s return after the headline,
+both speech cutoffs, and reconnect without refresh. Both saves/preparations are
+complete; ten then eleven pin references and the first run's image verify.
+The second stop cancelled active TTS and rejected a late B2 result as stale.
+Its unusual opening was a fresh idle request using saved history, not leftover
+speech: about 12s before idle fired, then 31.227s to first text on 78,613 tokens.
+Connection/scheduler code is unchanged. Two private-output suppression warnings
+in the first run remain a watch item; no demonstrated audible leak or new
+runtime failure. Ready to checkpoint; no behavioral repair indicated. PM:
+`logs/runs/20260923-1804-advisory-reconnect/postmortem.md`.
+
+September 23 checkpoint `ea5132f`: post-session preparation now gives each
 transcript turn an explicit structural speaker and constrains each summary
 item's citation IDs to that speaker's actual turns. System receipts stay in
 the transcript/sweep but cannot be cited as Eric's or Scott's speech. The

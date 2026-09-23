@@ -82,6 +82,7 @@ function fixture(name, page, installOwner = null) {
   if (name === 'blocked-evidence') c.brain2LastEvidence = evidence;
   if (name === 'stopped') c.realtimeConnection.stopped = true;
   if (installOwner) installOwner(c, page);
+  require('./sts_advisory_owner.cjs').installBrain2Advisories(c, page);
   for (const fn of ['brain2BlockedReason', 'triggerBrain2Mull']) {
     const start = page.indexOf(`    ${fn === 'triggerBrain2Mull' ? 'async ' : ''}function ${fn}(`);
     const end = page.indexOf('\n    }\n', start);

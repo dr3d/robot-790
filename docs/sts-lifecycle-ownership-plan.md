@@ -120,6 +120,65 @@ this roughly half-window branch. Do not optimize that startup cost as part of
 the refactor. Preserve initiative, continuity and responsive warm turns;
 unexpected post-idle cache rebuilds remain a distinct investigation.
 
+### Implemented Step: B2 Private Advisory Ownership
+
+Implemented after `ea5132f`; automated and exercised live acceptance pass.
+`brain2-advisories.js` owns acceptance and storage of private notes, questions
+and revisions, note-guidance filtering, snapshot/protocol formatting, per-socket
+delivery deduplication, and loop-evidence counts. Five page globals move into
+the owner; diagnostics, continuity exports and status UI read its lists directly.
+No duplicated production state remains in the page.
+
+Existing behavior is intentionally preserved: 12 retained candidates per list,
+four eligible items before snapshot selection, latest eligible note after user
+activity, persistent question/revision candidates, existing steering freshness,
+legacy loop-marker handling, and exact private-packet text. This step neither
+adds limits nor changes their values. First-contact candidate clearing preserves
+delivery identity; full context reset clears it. Private work still survives
+busy public audio, and accepted advice arriving during speech uses the existing
+turn-boundary delivery. No scheduling, personality or model changes.
+
+Characterization was captured from committed `ea5132f` before moving production
+code. Twenty-three checkpoints compare complete state, output text, packets and
+side-effect order for empty/current/stale guidance, all three candidate types,
+bounded retention, loop evidence, busy delivery, failed sends, deduplication,
+socket changes and resets. Existing asynchronous trigger tests still compare
+36 baseline traces, including stale replies after reconnect or device waits.
+Formatting hashes from the previous checkpoint remain equal after reversing
+adapter names. Additional instance/reset tests use the real production owner.
+
+All 915 JavaScript tests and 147 page-server Python tests pass. Isolated Edge
+loads the real page and verifies delivery during user speech, no public chat
+insertion, duplicate suppression, note freshness, actual hot-context reset and
+delivery after reset. Live sockets, external/mutating HTTP and exit beacons
+are isolated; these tests do not converse with Eric or change saved sessions.
+
+Size checkpoint: HTML 22,262 -> 22,181 lines, 1,007,171 -> 1,001,458 LF-normalized
+bytes. Net -81 lines / -5,713 bytes; new owner 158 lines / 8,080 bytes. The
+total production code grows by 2,367 bytes, so this is structural progress and
+a modest page reduction, not overall code deletion. Future checkpoints should
+continue reporting both ownership and net page reduction. Larger completion
+and image-lifecycle responsibilities remain ahead; do not broaden this step
+into a scheduler rewrite merely to obtain a larger deletion count.
+
+Operator trial: refresh while disconnected; resume normally, do one search or
+picture task, leave a few minutes for B2/idle, return, then disconnect (during
+speech is fine). Reconnect once without refreshing, exchange a few words and
+disconnect. Check that private advice still helps, stale advice does not leak,
+and continuity remains intact. Prompts and idle initiative should feel unchanged.
+Logs: `logs/maintenance/lifecycle-review/b2-advisories-{suite,python,browser}.log`.
+Paired trial, September 23 17:56-18:04: requested draw/stage, B2 advice, headline
+delivery, brief idle, human return and both speech cutoffs pass. Reconnect without
+refresh loads the correct parent; both saves prepare successfully, 21 pin
+references and one image verify. A late B2 result is discarded during the second
+stop while active TTS is cancelled. The initial idle-led opening is a new request
+over saved history, not old speech crossing the session boundary. Startup cost
+and two preexisting-class private-output suppression warnings remain observations,
+not reasons to alter greetings or cadence. Ready for checkpoint. Evidence:
+`logs/runs/20260923-1804-advisory-reconnect/postmortem.md`.
+Next structural candidate after acceptance: response/turn-completion ownership,
+starting with characterization of model completion versus audible completion.
+
 ### Implemented Step: B2 In-Flight Ownership
 
 Implemented after `07c7916`; exercised live paths accepted. `brain2-work.js` owns the

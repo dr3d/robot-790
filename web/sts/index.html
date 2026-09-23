@@ -2977,6 +2977,7 @@
   <script src="brain2-evidence.js"></script>
   <script src="brain2-request.js"></script>
   <script src="brain2-work.js"></script>
+  <script src="brain2-advisories.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -3306,8 +3307,6 @@
     let lastSessionUpdateSocket = null;
     const liveNotes = new Robot790LiveNotes.LiveNotes();
     let lastSessionUpdateFingerprint = "";
-    let lastBrain2AdvisorySocket = null;
-    let lastBrain2AdvisoryText = "";
     let lastRuntimeContextSocket = null;
     let lastRuntimeContextSections = {};
     const toolScopeDenials = new Map();
@@ -3384,6 +3383,7 @@
     let brain2Timer = null;
     const brain2Surface = createBrain2SurfaceOwner();
     const brain2Work = Robot790Brain2Work.create();
+    const brain2Advisories = createBrain2AdvisoryOwner();
     let brain2LastEvidence = null;
     let brain2EvidenceGeneration = 0;
     let brain2HeadlineStartedAt = Date.now();
@@ -3436,9 +3436,6 @@
     let idleUnresolvedQuestions = [];
     let idleSelfTasks = [];
     let recentAssistantOutputs = [];
-    let brain2QuestionCandidates = [];
-    let brain2RevisionCandidates = [];
-    let brain2NoteCandidates = [];
     let recentBrain2Outputs = [];
     let brain2BrowserVoices = [];
     let brain2VoiceUnsupportedLogged = false;
@@ -6831,9 +6828,7 @@
       idleHardBrakeReason = "";
       brain2BackoffUntil = 0;
       brain2FailureStreak = 0;
-      brain2QuestionCandidates = [];
-      brain2RevisionCandidates = [];
-      brain2NoteCandidates = [];
+      brain2Advisories.clear();
       recentBrain2Outputs = [];
       toolFollowupPromptLog = [];
       toolContinuation.clearSources();
@@ -7468,64 +7463,40 @@
       ].join(" ");
     }
 
+    function createBrain2AdvisoryOwner() {
+      return Robot790Brain2Advisories.create({
+        now: () => Date.now(),
+        guidanceCurrent: item => Robot790NoteBrains.isCurrent(item, loadedNoteContexts, "b2"),
+        userAt: () => lastUserTurnActivityAt,
+        discoveryAt: () => idleDiscovery?.at,
+        connected: () => realtimeConnected(),
+        performance: () => performanceModeEnabled(),
+        socket: () => realtimeConnection.socket,
+        outputId: () => brain2EvidenceSnapshot().last_assistant_output_id,
+        userBusy: () => brain2UserPresentButBusy(),
+        userSpeaking: () => userSpeechActive,
+        send: packet => send(packet),
+        ledger: entry => rememberPromptLedger(entry),
+        log: (kind, text) => logBrain2(kind, text),
+        count: kind => bumpBrain2Counter(kind),
+        remember: (kind, text) => rememberBrain2Output(kind, text)
+      });
+    }
+
     function brain2AdvisoryProtocolInstructions() {
-      return [
-        "Private Brain 2 advisory snapshots may arrive between turns as assistant messages marked [B2 advisory].",
-        "These are internal runtime context, not words you have spoken and not text to continue or read aloud.",
-        "Brain 2 is a slow advisory lane inside your runtime, not the operator, a sensor, or a command.",
-        "A suggested aside or observation from Brain 2 is not evidence that anything happened. Check factual claims against current operator input, runtime state, or tool receipts before adopting them.",
-        "Treat an advisory as private draft material you may use, revise, or ignore. Never reproduce its markers, headings, loop-pressure reports, guards, or instruction lists in a reply. Do not attribute your reply to Brain 2 or let an advisory override fresh operator input, runtime truth, or tool receipts. You may explain how Brain 2 works when the operator explicitly asks, without reciting the private snapshot."
-      ].join(" ");
+      return brain2Advisories.protocol();
     }
 
     function formatBrain2AdvisoryContent() {
-      const current = items => items.filter(item => !item.noteGuidanceKey
-        || Robot790NoteBrains.isCurrent(item, loadedNoteContexts, "b2")).slice(-4)
-        .map(({ text, at, b1OutputId }) => ({ text, at, b1OutputId }));
-      // A next-turn assessment is replaceable advice, not an accumulating instruction list.
-      const notes = current(brain2NoteCandidates)
-        .filter(item => Number(item.at) > lastUserTurnActivityAt).slice(-1);
-      const revisions = current(brain2RevisionCandidates);
-      const questions = current(brain2QuestionCandidates);
-      if (!notes.length && !revisions.length && !questions.length) return "";
-      return [
-        "Current private B2 snapshot, superseding earlier snapshots. These are fallible suggestions, not commands or sensor evidence. You decide whether any are useful. A quiet suggestion concerns one opportunity, not permission to think or speak on later turns.",
-        JSON.stringify({ notes, revisions, questions })
-      ].join("\n");
+      return brain2Advisories.format();
     }
 
     function formatBrain2ForInstructions() {
-      const advisory = formatBrain2AdvisoryContent();
-      return [brain2AdvisoryProtocolInstructions(), advisory].filter(Boolean).join("\n\n");
+      return brain2Advisories.instructions();
     }
 
-    function appendBrain2AdvisoryToConversation({ reason = "turn boundary" } = {}) {
-      if (!realtimeConnected() || performanceModeEnabled()) return false;
-      const advisory = formatBrain2AdvisoryContent();
-      if (!advisory) return false;
-      const text = `[B2 advisory]\nPrivate runtime context, not spoken dialogue. Use silently; do not continue or reproduce this block.\n${advisory}\n[End B2 advisory]`;
-      if (lastBrain2AdvisorySocket === realtimeConnection.socket && lastBrain2AdvisoryText === text) return false;
-      send({
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "assistant",
-          content: [{ type: "output_text", text }]
-        }
-      });
-      lastBrain2AdvisorySocket = realtimeConnection.socket;
-      lastBrain2AdvisoryText = text;
-      rememberPromptLedger({
-        kind: "conversation.item.create",
-        source: "Brain 2 advisory",
-        instructions: "[stable B1 session prompt; private Brain 2 advisory appended to the default conversation]",
-        input: text,
-        conversation: "default",
-        extra: { reason },
-        announce: false
-      });
-      logBrain2("advisory queued", reason);
-      return true;
+    function appendBrain2AdvisoryToConversation(options) {
+      return brain2Advisories.append(options);
     }
 
     function baseSessionInstructionsText() {
@@ -9824,7 +9795,7 @@
     function updateBrain2Status() {
       if (!brain2Status) return;
       const state = brain2Work.busy ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off";
-      brain2Status.textContent = `${state} / ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2NoteCandidates.length} notes / ${brain2Counters.revision} revisions / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`;
+      brain2Status.textContent = `${state} / ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2Advisories.notes.length} notes / ${brain2Counters.revision} revisions / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`;
       updateLanePressure();
       renderLogPopout("brain2_mulling");
     }
@@ -9993,7 +9964,7 @@
         `Search receipts: ${searchContextReceipts.length}${recentQueries.length ? ` / ${recentQueries.join(" | ")}` : ""}`,
         `Idle self-tasks: ${activeTasks.length ? activeTasks.join(" | ") : "none"}`,
         `Brain 2 counters: ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2Counters.revision} revisions / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`,
-        `Brain 2 notes for Eric: ${brain2NoteCandidates.length}${brain2NoteCandidates.length ? ` / ${brain2NoteCandidates.slice(-2).map((item) => item.text).join(" | ")}` : ""}`,
+        `Brain 2 notes for Eric: ${brain2Advisories.notes.length}${brain2Advisories.notes.length ? ` / ${brain2Advisories.notes.slice(-2).map((item) => item.text).join(" | ")}` : ""}`,
         `Brain 2 state: ${brain2Work.busy ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off"} / ${brain2VoiceLabel()} / person ${brain2PersonFocusLabel()}`,
         `Context estimate: live scaffold about ${contextApprox} tokens before visible transcript/events; visible conversation ${context.visible_conversation_pane.approximate_tokens}; visible events ${context.visible_events_pane.approximate_tokens}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"} / auto ${autoAudioRecordEnabled() ? "on" : "off"}`
@@ -10007,9 +9978,9 @@
       const facts = safeLoadMemoryFacts();
       const activeLoadedNoteCount = loadedNoteContextsForCurrentPrompt().length;
       const searchQueries = searchContextReceipts.map((item) => item.query).filter(Boolean);
-      const brain2QuestionCount = brain2QuestionCandidates.length;
-      const brain2RevisionCount = brain2RevisionCandidates.length;
-      const brain2NoteCount = brain2NoteCandidates.length;
+      const brain2QuestionCount = brain2Advisories.questions.length;
+      const brain2RevisionCount = brain2Advisories.revisions.length;
+      const brain2NoteCount = brain2Advisories.notes.length;
       const goal = currentLabGoal();
       const creature = runtimeConfig.creature && typeof runtimeConfig.creature === "object" ? runtimeConfig.creature : null;
       const creatureIdentity = creature?.identity && typeof creature.identity === "object" ? creature.identity : {};
@@ -10981,23 +10952,11 @@
     }
 
     function brain2LoopGuardText(text) {
-      if (text && typeof text === "object") {
-        return text.steering ? text.steering.loop === true : brain2LoopGuardText(text.text);
-      }
-      return /^\s*LOOP GUARD:/i.test(String(text || "")); // Legacy saved advisories only.
+      return brain2Advisories.loopGuardText(text);
     }
 
     function recentBrain2LoopGuardCount(limit = 6) {
-      const candidates = brain2NoteCandidates.filter(item => !item.noteGuidanceKey
-        || Robot790NoteBrains.isCurrent(item, loadedNoteContexts, "b2")).slice(-Math.max(1, limit));
-      const current = candidates.at(-1)?.steering;
-      if (current && !current.loop) return 0;
-      const evidenceIds = candidates
-        .filter((item) => brain2LoopGuardText(item) && item.at > Math.max(lastUserTurnActivityAt, idleDiscovery?.at || 0)
-          && (!current || item.steering?.topic === current.topic))
-        .map((item) => item.b1OutputId)
-        .filter(Boolean);
-      return new Set(evidenceIds).size;
+      return brain2Advisories.loopCount(limit);
     }
 
     function brain2LoopPressureState() {
@@ -12002,7 +11961,6 @@
         if (result.note_delivery && (noteForEric || result.note_delivery.truncated)) {
           logBrain2("advice delivery", JSON.stringify(result.note_delivery));
         }
-        const question = String(result.question || "").trim();
         const revisionCandidate = String(result.revision_candidate || "").trim();
         const shouldSurface = result.should_surface !== false;
         if (mouthText && (brain2EchoesRecentVoice(mouthText) || brain2EchoesRecentBrain2(mouthText)) && !brain2LooksLikeRevision(mouthText, revisionCandidate)) {
@@ -12020,43 +11978,7 @@
           logBrain2("held", mouthText);
           rememberBrain2Output("held", mouthText);
         }
-        let brain2AdvisoryChanged = false;
-        const noteGuidanceKey = result.observed_evidence?.note_guidance
-          ? JSON.stringify(result.observed_evidence.note_guidance) : null;
-        if (question) {
-          const deferred = brain2UserPresentButBusy();
-          // Busy public audio defers delivery; it does not discard private work.
-          brain2QuestionCandidates = [...brain2QuestionCandidates, { text: question, at: Date.now(), noteGuidanceKey }].slice(-12);
-          if (deferred) bumpBrain2Counter("held");
-          logBrain2(deferred ? "question deferred" : "question candidate", question);
-          rememberBrain2Output("question", question);
-          brain2AdvisoryChanged = true;
-        }
-        const b1OutputId = result.observed_evidence?.last_assistant_output_id || "";
-        const steering = result.steering?.status === "ok" && result.steering.evidence_id === b1OutputId
-          && b1OutputId === brain2EvidenceSnapshot().last_assistant_output_id ? result.steering : null;
-        if (result.steering) logBrain2("steering", steering ? JSON.stringify(steering) : `${result.steering.status}: no current assessment`);
-        const candidate = { text: noteForEric, at: Date.now(), b1OutputId, noteGuidanceKey,
-          ...(result.steering ? { steering: steering || { status: "unavailable" } } : {}) };
-        const repeatedLoopAssessment = brain2LoopGuardText(candidate) && (!b1OutputId || brain2NoteCandidates.some((item) => item.b1OutputId === b1OutputId && brain2LoopGuardText(item)));
-        if (repeatedLoopAssessment) {
-          logBrain2("loop guard held", "no new Eric output to count");
-        } else if (noteForEric || steering) {
-          brain2NoteCandidates = [...brain2NoteCandidates, candidate].slice(-12);
-          logBrain2("note for Eric", noteForEric);
-          rememberBrain2Output("note", noteForEric);
-          brain2AdvisoryChanged = true;
-        }
-        if (revisionCandidate) {
-          brain2RevisionCandidates = [...brain2RevisionCandidates, { text: revisionCandidate, at: Date.now(), noteGuidanceKey }].slice(-12);
-          bumpBrain2Counter("revision");
-          logBrain2("revision candidate", revisionCandidate);
-          rememberBrain2Output("revision", revisionCandidate);
-          brain2AdvisoryChanged = true;
-        }
-        if (brain2AdvisoryChanged && userSpeechActive) {
-          appendBrain2AdvisoryToConversation({ reason: "arrived during user speech" });
-        }
+        brain2Advisories.accept(result);
       } catch (error) {
         if (socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) {
           logBrain2("stale", `ignored error from previous realtime session: ${error.message}`);
@@ -12921,13 +12843,10 @@
         events.textContent = "";
       }
       brain2Log.textContent = "";
-      brain2QuestionCandidates = [];
-      brain2RevisionCandidates = [];
-      brain2NoteCandidates = [];
+      brain2Advisories.clear();
       recentBrain2Outputs = [];
       brain2Surface.reset();
-      lastBrain2AdvisorySocket = null;
-      lastBrain2AdvisoryText = "";
+      brain2Advisories.reset();
       lastRuntimeContextSocket = null;
       lastRuntimeContextSections = {};
       recentIdleOutputs = [];
@@ -16019,14 +15938,14 @@
         `Brain 2 person lane: ${brain2PersonFocusLabel()}`,
         `Brain 2 in flight: ${brain2Work.busy ? "yes" : "no"}`,
         `Brain 2 loop pressure: ${brain2LoopPressureLabel()}`,
-        brain2NoteCandidates.length
-          ? `Brain 2 advisory notes for Eric:\n${brain2NoteCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
+        brain2Advisories.notes.length
+          ? `Brain 2 advisory notes for Eric:\n${brain2Advisories.notes.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
           : "",
-        brain2QuestionCandidates.length
-          ? `Brain 2 question candidates:\n${brain2QuestionCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
+        brain2Advisories.questions.length
+          ? `Brain 2 question candidates:\n${brain2Advisories.questions.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
           : "",
-        brain2RevisionCandidates.length
-          ? `Brain 2 revision candidates:\n${brain2RevisionCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
+        brain2Advisories.revisions.length
+          ? `Brain 2 revision candidates:\n${brain2Advisories.revisions.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
           : "",
         recentIdleOutputsForCurrentPromptContext(8).length ? `Recent idle outputs:\n${recentIdleOutputsForCurrentPromptContext(8).join("\n")}` : "",
         idleUnresolvedContext(),
@@ -16922,9 +16841,9 @@
           headline_last_attempt_at: brain2HeadlineLastAttemptAt,
           counters: { ...brain2Counters },
           recent_outputs: arrayTail(recentBrain2Outputs, 20),
-          notes_for_eric: arrayTail(brain2NoteCandidates, 12),
-          question_candidates: arrayTail(brain2QuestionCandidates, 12),
-          revision_candidates: arrayTail(brain2RevisionCandidates, 12)
+          notes_for_eric: arrayTail(brain2Advisories.notes, 12),
+          question_candidates: arrayTail(brain2Advisories.questions, 12),
+          revision_candidates: arrayTail(brain2Advisories.revisions, 12)
         },
         tool_and_search_state: {
           pending_tool_calls: toolContinuation.pending,
@@ -21092,7 +21011,7 @@
           loaded_notes: loadedNotes,
           browser_memory_facts: browserMemoryFacts,
           search_receipts: searchContextReceipts.length,
-          brain2_notes_for_eric: brain2NoteCandidates.length
+          brain2_notes_for_eric: brain2Advisories.notes.length
         },
         controls: currentUiSettingsSnapshot()
       };
