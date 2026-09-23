@@ -41,7 +41,10 @@ audio playback, tool continuation, connection transitions and B2 evidence
 assembly. Empty, resumed and rich-history trials plus paired note-revision/
 interruption/reconnect checks pass their exercised paths without prompt changes.
 The checkpoint passes 834 JavaScript and 1,006 Python tests plus isolated browser
-checks; broader lifecycle/cache questions remain open. The Memory Jar report
+checks; broader lifecycle/cache questions remain open. The subsequent B2
+request-boundary extraction passes automated, isolated browser and ordinary
+resumed/idle live checks, with no prompt or scheduling changes.
+The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source
 for test results, observed weaknesses and remaining live acceptance work.

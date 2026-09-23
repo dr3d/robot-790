@@ -8,6 +8,7 @@ const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf
 
 function load(names, globals = {}) {
   globals.Robot790Brain2Evidence ??= require('../web/sts/brain2-evidence.js');
+  globals.Robot790Brain2Request ??= require('../web/sts/brain2-request.js');
   globals.Robot790NoteBrains ??= require('../web/sts/note-brains.js');
   globals.loadedNoteContexts ??= [];
   globals.imageTaskReceipt ??= null;
@@ -67,7 +68,7 @@ test('changing pinned setups is fresh evidence even with no new speech', () => {
   const before = c.brain2EvidenceSnapshot();
   c.brain2SetupCards = () => ['setup-cards/meeting-someone-new.txt'];
   assert.notEqual(c.brain2EvidenceSnapshot().fingerprint, before.fingerprint);
-  assert.match(page, /JSON.stringify\(evidence.setup_cards\) === JSON.stringify\(brain2SetupCards\(\)\)/);
+  assert.match(page, /setupCards: \(\) => brain2SetupCards\(\)/);
 });
 
 test('Brain2 evidence identifies chunks and remains unchanged when only time or Brain2 thoughts pass', () => {

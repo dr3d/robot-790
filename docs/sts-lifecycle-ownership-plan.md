@@ -38,9 +38,10 @@ trial confirms both repairs, continuity and saving. Its S3 face-control receipt
 delays remain a separate investigation, not justification for behavioral tuning.
 See `logs/runs/20260923-1019-s3-face/postmortem.md`.
 
-### Proposed Next Step: B2 Request Boundary
+### Implemented Step: B2 Request Boundary
 
-Start with characterization of `requestBrain2Mull`, then extract only the request
+Implemented after `424b933`, with ordinary live acceptance below. The work started
+with characterization of `requestBrain2Mull`, then extracted only the request
 payload/HTTP completion boundary behind explicit page adapters. The existing
 evidence assembler is already independent; the next risk is accepting a result
 after its session, user turn or note guidance has changed.
@@ -60,8 +61,78 @@ after its session, user turn or note guidance has changed.
    Offline deferred-response tests must cover the late-result race; the operator
    need not time a disconnect to manufacture it.
 
-This is a prepared agenda, not an implemented extraction. Stop and rescope if
-the boundary requires moving the scheduler or changing stale-result semantics.
+`brain2-request.js` now builds the exact outgoing payload and handles response
+parsing, freshness checks and accepted-evidence publication through explicit
+page adapters. It has no persistent state, timers or scheduler ownership.
+The page reads runtime inputs and supplies fetch, current-state and logging
+adapters. `triggerBrain2Mull` and all prompts remain unchanged.
+
+Twenty-six complete baseline cases were captured before editing production code,
+then independently reproduced from committed `424b933`. Tests compare serialized
+HTTP bodies, returned values, accepted evidence identity and diagnostic order.
+Coverage includes normal/manual/headline/empty-headline requests, optional art
+and body inputs, Unicode, socket/generation/evidence changes, changed note
+guidance, new speech, updated assistant output, errors and delayed JSON parsing.
+Preserved details include stale HTTP results winning over error handling,
+network rejections remaining rejections, and current-context prompt diagnostics
+being recorded before the newer-user-input check. A stopped flag alone is not
+a new request-level guard: the existing outer trigger still owns that check.
+
+Verification: 864 JavaScript tests, 147 focused page-server Python tests and the
+isolated Edge suite pass. The browser checks actual page request capture and a
+late old-session error arriving after a newer-session result has been accepted;
+the old result is stale and cannot overwrite accepted evidence. No live model,
+hardware or external API request is used by those browser fixtures. Logs:
+`logs/maintenance/lifecycle-review/b2-request-{suite,python,browser}.log`.
+
+Live acceptance: refresh disconnected, resume the current thread, converse,
+leave a brief idle interval, interrupt normally and Disconnect. BrowserFace
+keeps the separately observed S3 transport delay out of this comparison.
+No special timing, new notes, server restart or settings change is needed.
+Live acceptance, 10:37-10:49 September 23: nine B2 requests, a selected headline
+used by B1, six idle responses after the final human turn, optional B2 monitor
+speech and real interruption all functioned. Both note tools succeeded; the
+selected unpin is absent from the complete saved pin list. Nineteen pins and
+two screenshots verify; final context 73.27%. No B2/tool errors. The initial
+34.009s startup, two private-output suppression warnings and repeated/mistaken
+B2 advice remain observations, not a declared cache fix. No post-idle returning
+human probe occurred. PM: `logs/runs/20260923-1049-pinned-titles/postmortem.md`.
+This supports scoped acceptance of the extraction; the subsequent pinned-title
+UI/tool-result improvement is separate. Stop and rescope if subsequent work
+requires moving the scheduler or changing stale semantics.
+
+Follow-up acceptance, 11:07-11:16 September 23: an earlier ferry branch resumed
+with seven pins; retained-image recall, four requested draw/stage operations,
+idle continuation, headline advice and a movie-search topic change succeeded.
+B2 made ten requests with nine unclipped advice deliveries. Human return to
+first speech was 2.736s; initial startup was still 21.424s. A fifth idle image
+finished after the returning user spoke and was retained on disk without
+replacing the eye. Disconnect during reported playback halted the face/audio
+path and released the backend pipeline; seven pin and six eye-asset receipts
+verify, and preparation is ready. Context grew 45.87% to 61.26%. No B2/tool
+errors. Two B2 staging reminders aged while their requests were in flight;
+no duplicate staging followed. No pin-list/unpin call exercised friendly titles
+in this run. No runtime or prompt changes resulted from the PM:
+`logs/runs/20260923-1116-ferry-branch/postmortem.md`.
+
+Acceptance decision: Scott accepts the roughly 21-second initial response on
+this roughly half-window branch. Do not optimize that startup cost as part of
+the refactor. Preserve initiative, continuity and responsive warm turns;
+unexpected post-idle cache rebuilds remain a distinct investigation.
+
+### Next Candidate: B2 In-Flight Ownership
+
+Characterize the admission/completion bookkeeping around `triggerBrain2Mull`
+before extracting it: one current request, manual versus automatic admission,
+session replacement, stopped sessions, late success/error, and cleanup after
+an awaited body or mouth action. Explicitly test that an old request's finally
+block cannot clear a newer session's in-flight state.
+
+Keep payload construction in the already extracted request module. Preserve
+existing block reasons, headline/art decisions, advice queues, cadence,
+backoff, limits and prompts. This is ownership work, not a new scheduler or
+behavioral repair. If a bounded extraction requires moving those policies,
+stop and narrow the scope. No new runtime work is included in this checkpoint.
 
 ## Implemented Step: B2 Evidence Packet
 

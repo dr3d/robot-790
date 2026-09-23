@@ -1,0 +1,2485 @@
+{
+  "normal": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "manual": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"question\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": true,
+          "requestPayload": {
+            "mode": "question",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "headlines": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"headlines\",\"headlines\":[{\"title\":\"Dated story\",\"url\":\"https://example.test/story\"}],\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": true,
+          "requestPayload": {
+            "mode": "headlines",
+            "headlines": [
+              {
+                "title": "Dated story",
+                "url": "https://example.test/story"
+              }
+            ],
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "empty-headlines": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"headlines\",\"headlines\":[],\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "headlines",
+            "headlines": [],
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "body": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"body\":{\"key\":\"reachy_mini\",\"pose\":\"neutral\"},\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "body": {
+              "key": "reachy_mini",
+              "pose": "neutral"
+            },
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      },
+      {
+        "kind": "body choice",
+        "detail": "{\"status\":\"abstained\"}"
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": {
+        "url": "http://body.local/",
+        "revision": 7
+      }
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "art": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"idle_art\":{\"enabled\":true,\"busy\":false},\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "art",
+      "art",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "idle_art": {
+              "enabled": true,
+              "busy": false
+            },
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "unicode": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"你好\\néric\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"你好\",\"prosody\":\"\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "你好\néric",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "你好",
+                "prosody": ""
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "你好",
+          "prosody": ""
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "你好",
+        "prosody": ""
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "socket": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json"
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "generation": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json"
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "evidence-generation": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json"
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "setup": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json"
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "guidance": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json"
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "user": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "speaking": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "assistant": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "stopped-only": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "ok",
+      "note_for_eric": "Consider another angle.",
+      "body_choice": {
+        "status": "abstained"
+      },
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "http-error": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "error",
+            "error": "Backend failure"
+          }
+        }
+      }
+    ],
+    "error": "Backend failure",
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "result-error": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "error",
+            "error": "Backend failure"
+          }
+        }
+      }
+    ],
+    "error": "Backend failure",
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "http-fallback": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "error": "503 Unavailable",
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "invalid-json": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {}
+        }
+      }
+    ],
+    "result": {
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      },
+      "observed_body": null
+    },
+    "lastEvidence": {
+      "fingerprint": "private-fingerprint",
+      "setup_cards": [
+        "setup-cards/test.txt"
+      ],
+      "note_guidance": [
+        {
+          "filename": "test.txt",
+          "shared": "Shared",
+          "instruction": "Observe"
+        }
+      ],
+      "evidence_generation": 4,
+      "user_key": "user-1",
+      "sampled_at": "2026-09-23T14:00:00.000Z",
+      "last_assistant_output_id": "assistant-1",
+      "latest_user_utterance": {
+        "text": "Hello",
+        "prosody": "quiet"
+      },
+      "runtime": {
+        "file_write_receipts": [
+          {
+            "filename": "Trip.txt",
+            "status": "ok",
+            "characters": 12
+          }
+        ]
+      }
+    },
+    "acceptedCapturedIdentity": true
+  },
+  "http-invalid-json": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {}
+        }
+      }
+    ],
+    "error": "503 Unavailable",
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "stale-http-error": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json"
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "network-error": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch"
+    ],
+    "error": "Network down",
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "stale-network-error": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch"
+    ],
+    "error": "Network down",
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "json-user": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json",
+      {
+        "ledger": {
+          "manual": false,
+          "requestPayload": {
+            "mode": "person",
+            "person_focus": 4,
+            "setup_cards": [
+              "setup-cards/test.txt"
+            ],
+            "note_guidance": [
+              {
+                "filename": "test.txt",
+                "shared": "Shared",
+                "instruction": "Observe"
+              }
+            ],
+            "conversation": "Conversation",
+            "recent_idle": "Recent idle",
+            "recent_brain2": "Recent B2",
+            "voice_shape": "quiet",
+            "evidence": {
+              "setup_cards": [
+                "setup-cards/test.txt"
+              ],
+              "note_guidance": [
+                {
+                  "filename": "test.txt",
+                  "shared": "Shared",
+                  "instruction": "Observe"
+                }
+              ],
+              "evidence_generation": 4,
+              "sampled_at": "2026-09-23T14:00:00.000Z",
+              "last_assistant_output_id": "assistant-1",
+              "latest_user_utterance": {
+                "text": "Hello",
+                "prosody": "quiet"
+              },
+              "runtime": {
+                "file_write_receipts": [
+                  {
+                    "filename": "Trip.txt",
+                    "status": "ok",
+                    "characters": 12
+                  }
+                ]
+              }
+            }
+          },
+          "result": {
+            "status": "ok",
+            "note_for_eric": "Consider another angle.",
+            "body_choice": {
+              "status": "abstained"
+            }
+          }
+        }
+      }
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  },
+  "json-socket": {
+    "posts": [
+      {
+        "url": "http://127.0.0.1:8790/api/brain2/mull",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"mode\":\"person\",\"person_focus\":4,\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"conversation\":\"Conversation\",\"recent_idle\":\"Recent idle\",\"recent_brain2\":\"Recent B2\",\"voice_shape\":\"quiet\",\"evidence\":{\"setup_cards\":[\"setup-cards/test.txt\"],\"note_guidance\":[{\"filename\":\"test.txt\",\"shared\":\"Shared\",\"instruction\":\"Observe\"}],\"evidence_generation\":4,\"sampled_at\":\"2026-09-23T14:00:00.000Z\",\"last_assistant_output_id\":\"assistant-1\",\"latest_user_utterance\":{\"text\":\"Hello\",\"prosody\":\"quiet\"},\"runtime\":{\"file_write_receipts\":[{\"filename\":\"Trip.txt\",\"status\":\"ok\",\"characters\":12}]}}}"
+      }
+    ],
+    "trace": [
+      "body",
+      "fetch",
+      "json"
+    ],
+    "result": {
+      "status": "stale",
+      "observed_evidence": {
+        "fingerprint": "private-fingerprint",
+        "setup_cards": [
+          "setup-cards/test.txt"
+        ],
+        "note_guidance": [
+          {
+            "filename": "test.txt",
+            "shared": "Shared",
+            "instruction": "Observe"
+          }
+        ],
+        "evidence_generation": 4,
+        "user_key": "user-1",
+        "sampled_at": "2026-09-23T14:00:00.000Z",
+        "last_assistant_output_id": "assistant-1",
+        "latest_user_utterance": {
+          "text": "Hello",
+          "prosody": "quiet"
+        },
+        "runtime": {
+          "file_write_receipts": [
+            {
+              "filename": "Trip.txt",
+              "status": "ok",
+              "characters": 12
+            }
+          ]
+        }
+      }
+    },
+    "lastEvidence": null,
+    "acceptedCapturedIdentity": false
+  }
+}
