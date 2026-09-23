@@ -31,6 +31,38 @@ This is not private-advice scheduling or a universal scheduler.
 Deferred body-cue ownership was considered
 but is Reachy-only today; leave it parked with the unused Halt/Unload work.
 
+The extraction is committed as `a4c05b4`. Subsequent diagnostics maintenance
+restores canonical live-log routing for amber TTS telemetry and narrows the
+empty B2 export fallback to actual B2 event prefixes. The 10:12-10:19 resumed
+trial confirms both repairs, continuity and saving. Its S3 face-control receipt
+delays remain a separate investigation, not justification for behavioral tuning.
+See `logs/runs/20260923-1019-s3-face/postmortem.md`.
+
+### Proposed Next Step: B2 Request Boundary
+
+Start with characterization of `requestBrain2Mull`, then extract only the request
+payload/HTTP completion boundary behind explicit page adapters. The existing
+evidence assembler is already independent; the next risk is accepting a result
+after its session, user turn or note guidance has changed.
+
+1. Freeze complete outgoing payloads for normal, manual and headline requests,
+   including optional art/body inputs. Preserve ordering and omitted fields.
+2. Test deferred responses across socket replacement, generation changes, new
+   user input/speech, changed setup cards and note guidance, HTTP errors and
+   malformed JSON. Characterize existing prompt-ledger side effects and exactly
+   when `brain2LastEvidence` updates, including stale/error precedence.
+3. Extract only after those tests pass against the current page. Leave
+   `triggerBrain2Mull` scheduling, backoff, advisory candidate selection, speech
+   delivery and headline/art dispatch where they are. No new abort policy,
+   cooldowns, limits, language rules or prompt edits in this step.
+4. Reuse the isolated browser request-capture test, run the full JS suite and
+   focused serializer checks, then one ordinary resume/brief idle/Disconnect.
+   Offline deferred-response tests must cover the late-result race; the operator
+   need not time a disconnect to manufacture it.
+
+This is a prepared agenda, not an implemented extraction. Stop and rescope if
+the boundary requires moving the scheduler or changing stale-result semantics.
+
 ## Implemented Step: B2 Evidence Packet
 
 September 23: `brain2-evidence.js` now assembles the packet from explicit inputs;

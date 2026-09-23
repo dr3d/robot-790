@@ -413,6 +413,23 @@ Start the realtime backend:
 .\scripts\start_realtime_gold.ps1
 ```
 
+For a hidden background launch, route output to the canonical files used by
+runtime status and the amber synthesis overlay in STS and BrowserFace:
+
+```powershell
+$repo = (Get-Location).Path
+New-Item -ItemType Directory -Force "$repo/logs" | Out-Null
+Start-Process powershell.exe -WindowStyle Hidden -WorkingDirectory $repo `
+    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$repo/scripts/start_realtime_gold.ps1`"") `
+    -RedirectStandardOutput "$repo/logs/sts-realtime.out.log" `
+    -RedirectStandardError "$repo/logs/sts-realtime.err.log"
+```
+
+Use this instead of the foreground launch, not alongside it. Preserve old logs
+before replacing them when needed for a PM. Timestamped copies are fine for
+archives, but redirecting the live worker only to those copies leaves telemetry
+reading a stale file. The regular restart script already uses canonical paths.
+
 Start the browser page:
 
 ```powershell

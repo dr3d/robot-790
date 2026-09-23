@@ -48,13 +48,33 @@ Initial greetings still took 28.227s / 29.622s; the actual recall took 2.366s.
 This checkpoint records the extraction and its scoped acceptance together.
 PM: `logs/runs/20260923-0939-note-rehearsal-pair/postmortem.md`.
 
-Two separate diagnostics repairs are recorded, not implemented in that PM:
+Two separate diagnostics repairs followed checkpoint `a4c05b4`:
 the reboot launch wrote to a timestamped startup log while amber TTS telemetry
-still read yesterday's canonical log; and the pre-existing empty-B2 export
-fallback matched `brain2` inside face JSON. The latter pollutes the diagnostic
-export/raw session tail, but the combined audit is correct and the generated
-scrubbed history excludes it. The earlier 96-character spoken-monitor clipping
-also remains open. No prompt or idle-policy repair is implied by these findings.
+still read yesterday's canonical log. At 10:07 the disconnected voice service
+was relaunched with canonical stdout/stderr paths, preserving the old logs and
+leaving LM Studio, STS page and BrowserFace running. At 10:08 readiness passed
+and the live GPU endpoint returned the actual warm-up synthesis interval.
+The README now documents this background-launch routing requirement.
+The pre-existing empty-B2 export fallback now matches timestamped B2 event
+prefixes, not `brain2` inside face JSON. Existing pane text remains authoritative;
+genuine B2 fallback events and the full event log remain intact. This prevents
+new diagnostic export/raw session-tail pollution; old evidence is unchanged.
+The combined audit and generated scrubbed history already excluded that noise.
+All 837 JavaScript tests and 20 focused TTS/status Python tests pass. Suite log:
+`logs/maintenance/lifecycle-review/diagnostics-routing-export-suite.log`.
+Refresh STS while disconnected for the export fix; the shared amber feed is
+already live. No prompt, persona, cadence or idle-policy changes were made.
+The earlier 96-character spoken-monitor clipping remains a separate open item.
+
+The 10:12-10:19 live resume confirms visible amber (operator report), a clean
+B2 export, exact rehearsal-revision recall, one rendered/staged picture and a
+verified save with nineteen pins and one image. Context ended at 67.28%.
+Eric initially selected unavailable Reachy for "touch screen", then correctly
+switched to S3 after clarification. A separate hardware-path observation is
+open: sleep/goofy calls took about 73/54/28 seconds to return receipts, clustered
+at 10:16:41-42. Existing logs do not locate that delay within browser/network/
+controller servicing. No behavioral fix or firmware change was made in the PM.
+Evidence: `logs/runs/20260923-1019-s3-face/postmortem.md`.
 
 The final checkpoint recheck passes all 834 JavaScript tests, all 1,006 Python
 tests, isolated Edge checks and focused Ruff. Python reports the existing

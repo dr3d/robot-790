@@ -10365,7 +10365,7 @@
         const paneText = brain2Log.textContent.trimEnd();
         if (paneText) return paneText;
         const eventText = eventLogLines
-          .filter((line) => /\bbrain2\b/i.test(line))
+          .filter((line) => /^\[[^\]\r\n]+\]\s+brain2\b/i.test(line))
           .join("\n")
           .trimEnd();
         return eventText || "[empty]";

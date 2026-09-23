@@ -71,6 +71,36 @@ test('autosave deduplicates unchanged audit and includes new B2 evidence', async
   assert.match(saved[1].content, /B2 \/ voice started/);
 });
 
+test('empty B2 export ignores face status and tool receipts that merely mention brain2', () => {
+  const { c } = fixture();
+  c.brain2Log.textContent = '';
+  c.brain2AuditEntries = [];
+  c.eventLogLines = [
+    '[9:38:10 AM] face status: {"text_channels":{"brain2":""}}',
+    '[9:39:24 AM] tool receipt set_robot_mode: {"text_channels":{"brain2":"asleep"}}',
+    '[9:39:25 AM] other event: brain2 is mentioned here',
+  ];
+  assert.equal(c.recordingSnapshotPaneText('brain2_mulling'), '[empty]');
+  assert.ok(c.recordingSnapshotPaneText('events').includes('text_channels'));
+});
+
+test('B2 fallback keeps timestamped B2 events, including multiline details', () => {
+  const { c } = fixture();
+  c.brain2Log.textContent = '  ';
+  const entries = [
+    '[9:38:10 AM] brain2 note for Eric: first line\nsecond line',
+    '[09:38:11] brain2 mull error: backend unavailable',
+  ];
+  c.eventLogLines = [entries[0], '[09:38:10] face status: {"brain2":""}', entries[1]];
+  assert.equal(c.recordingSnapshotPaneText('brain2_mulling'), entries.join('\n'));
+});
+
+test('nonempty B2 pane stays authoritative over event fallback', () => {
+  const { c } = fixture();
+  c.eventLogLines = ['[09:38:10] brain2 voice on'];
+  assert.equal(c.recordingSnapshotPaneText('brain2_mulling'), 'B2 original');
+});
+
 test('periodic and unload wiring include audit without an audio recording', async () => {
   const { c, saved, sent } = fixture();
   c.autosaveSessionLogs();

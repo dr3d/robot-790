@@ -63,6 +63,20 @@ def test_reader_missing_log_and_truncation(tmp_path):
     assert read_tts_activity(tmp_path)["intervals"] == []
 
 
+def test_reader_observes_live_canonical_log_not_archived_startup_logs(tmp_path, monkeypatch):
+    monkeypatch.setattr("robot_790d.tts_activity.time.time", lambda: ms(25) / 1000)
+    logs = tmp_path / "logs"
+    (logs / "startup").mkdir(parents=True)
+    (logs / "startup/old-realtime.err.log").write_text(line(24, "Qwen3-TTS TTFA: 0.50s"))
+    canonical = logs / "sts-realtime.err.log"
+    canonical.write_text(line(20, "Qwen3-TTS generated 40.00s audio in 7.00s"))
+    activity = read_tts_activity(tmp_path)
+    assert activity["active"] is False
+    assert activity["intervals"] == [{"start_ms": ms(13), "end_ms": ms(20)}]
+    canonical.write_text(line(24, "Qwen3-TTS TTFA: 0.50s"))
+    assert read_tts_activity(tmp_path)["active"] is True
+
+
 def test_gpu_payload_keeps_hardware_values_and_adds_activity(monkeypatch):
     from robot_790d import brain_status
     hardware = {"status": "ok", "primary": {"utilization_percent": 82}}
