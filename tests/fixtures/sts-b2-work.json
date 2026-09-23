@@ -1,0 +1,1857 @@
+{
+  "quiet": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "advice": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "log",
+        "advice delivery",
+        "{\"original_chars\":16,\"delivered_chars\":16,\"truncated\":false}"
+      ],
+      [
+        "log",
+        "question candidate",
+        "What changed?"
+      ],
+      [
+        "remember",
+        "question",
+        "What changed?"
+      ],
+      [
+        "log",
+        "steering",
+        "{\"status\":\"ok\",\"evidence_id\":\"b1\",\"loop\":false}"
+      ],
+      [
+        "log",
+        "note for Eric",
+        "Keep the thread."
+      ],
+      [
+        "remember",
+        "note",
+        "Keep the thread."
+      ],
+      [
+        "count",
+        "revision"
+      ],
+      [
+        "log",
+        "revision candidate",
+        "Check the premise."
+      ],
+      [
+        "remember",
+        "revision",
+        "Check the premise."
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [
+        {
+          "text": "Keep the thread.",
+          "at": 101000,
+          "b1OutputId": "b1",
+          "noteGuidanceKey": "[]",
+          "steering": {
+            "status": "ok",
+            "evidence_id": "b1",
+            "loop": false
+          }
+        }
+      ],
+      "questions": [
+        {
+          "text": "What changed?",
+          "at": 101000,
+          "noteGuidanceKey": "[]"
+        }
+      ],
+      "revisions": [
+        {
+          "text": "Check the premise.",
+          "at": 101000,
+          "noteGuidanceKey": "[]"
+        }
+      ]
+    }
+  },
+  "mouth": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "mouth",
+        "An observation."
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "held": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "count",
+        "held"
+      ],
+      [
+        "log",
+        "held",
+        "An observation."
+      ],
+      [
+        "remember",
+        "held",
+        "An observation."
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "deferred-mouth": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "defer",
+        "An observation.",
+        "waiting for pause"
+      ],
+      [
+        "remember",
+        "deferred",
+        "An observation."
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "echo": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "count",
+        "held"
+      ],
+      [
+        "log",
+        "held echo",
+        "An observation."
+      ],
+      [
+        "remember",
+        "held echo",
+        "An observation."
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "revision-mouth": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "mouth",
+        "An observation."
+      ],
+      [
+        "count",
+        "revision"
+      ],
+      [
+        "log",
+        "revision candidate",
+        "A revision."
+      ],
+      [
+        "remember",
+        "revision",
+        "A revision."
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": [
+        {
+          "text": "A revision.",
+          "at": 101000,
+          "noteGuidanceKey": "[]"
+        }
+      ]
+    }
+  },
+  "art": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "art",
+        {
+          "prompt": "An illustration."
+        }
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "body": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "body"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "manual": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "manual"
+      ],
+      [
+        "request",
+        {
+          "manual": true,
+          "headlines": null
+        }
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "headlines": {
+    "trace": [
+      [
+        "controls",
+        true,
+        true
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        true
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "idle headlines"
+      ],
+      [
+        "fetch"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": [
+            {
+              "title": "A dated story",
+              "url": "https://example.test/story"
+            }
+          ]
+        }
+      ],
+      [
+        "headline",
+        {
+          "status": "ok",
+          "observed_evidence": {
+            "fingerprint": "fresh",
+            "user_key": "user",
+            "last_assistant_output_id": "b1",
+            "note_guidance": []
+          }
+        },
+        [
+          {
+            "title": "A dated story",
+            "url": "https://example.test/story"
+          }
+        ]
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "empty-headlines": {
+    "trace": [
+      [
+        "controls",
+        true,
+        true
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        true
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "idle headlines"
+      ],
+      [
+        "fetch"
+      ],
+      [
+        "log",
+        "headlines unchanged",
+        "no new dated stories; no model call needed"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "headline-user": {
+    "trace": [
+      [
+        "controls",
+        true,
+        true
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        true
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "idle headlines"
+      ],
+      [
+        "fetch"
+      ],
+      [
+        "log",
+        "headlines stale",
+        "operator activity, session reset, or idle reading disabled"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "headline-model-user": {
+    "trace": [
+      [
+        "controls",
+        true,
+        true
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        true
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "idle headlines"
+      ],
+      [
+        "fetch"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": [
+            {
+              "title": "A dated story",
+              "url": "https://example.test/story"
+            }
+          ]
+        }
+      ],
+      [
+        "log",
+        "headlines stale",
+        "discarded after operator activity or idle reading disabled"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "headline-error": {
+    "trace": [
+      [
+        "controls",
+        true,
+        true
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        true
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "idle headlines"
+      ],
+      [
+        "fetch"
+      ],
+      [
+        "count",
+        "failed"
+      ],
+      [
+        "log",
+        "failed",
+        "Feed failed"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": "Feed failed",
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 1,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "response-stale": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "log",
+        "stale",
+        "new user input or context reset; reassess the current scene"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "request-error": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "count",
+        "failed"
+      ],
+      [
+        "log",
+        "failed",
+        "Request failed"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": "Request failed",
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 1,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "second-error": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "count",
+        "failed"
+      ],
+      [
+        "log",
+        "failed",
+        "Request failed"
+      ],
+      [
+        "log",
+        "backoff",
+        "60s after 2 failures"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": "Request failed",
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 2,
+      "backoff": 161000,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "manual-error": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "manual"
+      ],
+      [
+        "request",
+        {
+          "manual": true,
+          "headlines": null
+        }
+      ],
+      [
+        "count",
+        "failed"
+      ],
+      [
+        "log",
+        "failed",
+        "Request failed"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": "Request failed",
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 2,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "body-error": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "body"
+      ],
+      [
+        "count",
+        "failed"
+      ],
+      [
+        "log",
+        "failed",
+        "Surface failed"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": "Surface failed",
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 1,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "mouth-error": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "mouth",
+        "An observation."
+      ],
+      [
+        "count",
+        "failed"
+      ],
+      [
+        "log",
+        "failed",
+        "Surface failed"
+      ],
+      [
+        "pressure",
+        "Brain 2 mull finished",
+        false,
+        false
+      ],
+      [
+        "controls",
+        false,
+        false
+      ]
+    ],
+    "error": "Surface failed",
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 101000,
+      "failures": 1,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "reconnect-result": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "replaced"
+      ],
+      [
+        "log",
+        "stale",
+        "ignored result from previous realtime session"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": true,
+      "headlines": true,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "reconnect-error": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "replaced"
+      ],
+      [
+        "log",
+        "stale",
+        "ignored error from previous realtime session: Request failed"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": true,
+      "headlines": true,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "reconnect-body": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "body"
+      ],
+      [
+        "replaced"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": true,
+      "headlines": true,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "reconnect-mouth": {
+    "trace": [
+      [
+        "controls",
+        true,
+        false
+      ],
+      [
+        "pressure",
+        "Brain 2 mull started",
+        true,
+        false
+      ],
+      [
+        "count",
+        "fired"
+      ],
+      [
+        "log",
+        "fired",
+        "auto"
+      ],
+      [
+        "request",
+        {
+          "manual": false,
+          "headlines": null
+        }
+      ],
+      [
+        "mouth",
+        "An observation."
+      ],
+      [
+        "replaced"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": true,
+      "headlines": true,
+      "last": 101000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-tool": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "tool continuation"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-flight": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "already in flight"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": true,
+      "headlines": false,
+      "last": 100000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-user": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "user speaking"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-disconnected": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "disconnected"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-off": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "brain 2 off"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-focus": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "person lane off"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 100000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-empty": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "no conversation"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 100000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-cooldown": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "cooldown"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 99900,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-backoff": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "backoff until 7:02:40 PM"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 160000,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "blocked-evidence": {
+    "trace": [
+      [
+        "count",
+        "skipped"
+      ],
+      [
+        "log",
+        "mull skipped",
+        "no new evidence"
+      ],
+      [
+        "schedule"
+      ]
+    ],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 100000,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "stopped": {
+    "trace": [],
+    "error": null,
+    "state": {
+      "busy": false,
+      "headlines": false,
+      "last": 0,
+      "failures": 0,
+      "backoff": 0,
+      "notes": [],
+      "questions": [],
+      "revisions": []
+    }
+  },
+  "unchangedFunctions": {
+    "scheduleBrain2Mull": "2bd279d9a21a45b575967ded03725bc24db1e8898e09e761b5a98b593a85eda6",
+    "brain2DelayMs": "ba26404c9343e50fd0ee1e4a26fa78e813bdbd79bba9b9a3939e02c65b0e8d2c",
+    "acceptBrain2Headline": "4055f2df63dbab309f62864d4a1a8d4644438e321187057940316ebcec7fe5ab",
+    "brain2ConversationContext": "595325813a937bf31f8dc5ad1014840f5a1bd511863ab61c5d6363f1e5960094",
+    "brain2EvidenceSnapshot": "aa3125ca2f2871c9ed71d6ae333e942d4a80501265136dbc60d4bbde45dd58a2",
+    "formatBrain2AdvisoryContent": "70d93504e8d71cd939680038dc24ba5571e2d0e2806ba989bc635142d5268bdc",
+    "formatBrain2ForInstructions": "878857d304b7a3a61d29fa2aa8c379702a75b600c7dc06edecdaefcc2ae53dbd",
+    "requestBrain2Mull": "31d95e392575379a80e807016256a52bc617bf690f9d522105ff8793a5af5486"
+  }
+}

@@ -120,19 +120,57 @@ this roughly half-window branch. Do not optimize that startup cost as part of
 the refactor. Preserve initiative, continuity and responsive warm turns;
 unexpected post-idle cache rebuilds remain a distinct investigation.
 
-### Next Candidate: B2 In-Flight Ownership
+### Implemented Step: B2 In-Flight Ownership
 
-Characterize the admission/completion bookkeeping around `triggerBrain2Mull`
-before extracting it: one current request, manual versus automatic admission,
-session replacement, stopped sessions, late success/error, and cleanup after
-an awaited body or mouth action. Explicitly test that an old request's finally
-block cannot clear a newer session's in-flight state.
+Implemented after `07c7916`; exercised live paths accepted. `brain2-work.js` owns the
+current request token and busy/headline indicators. Admission still uses the
+page's existing `brain2BlockedReason`; the owner also refuses a second start
+while occupied. Completion must match both the actual request token and its
+captured socket/generation. Reset invalidates the token. Page consumers read
+the owner directly; no mirrored global busy flags remain.
 
-Keep payload construction in the already extracted request module. Preserve
-existing block reasons, headline/art decisions, advice queues, cadence,
-backoff, limits and prompts. This is ownership work, not a new scheduler or
-behavioral repair. If a bounded extraction requires moving those policies,
-stop and narrow the scope. No new runtime work is included in this checkpoint.
+The scope stays small: scheduling, cooldown/backoff calculations, success/error
+counters, headline/art dispatch, advice queues and public delivery remain in
+the page. Payload/context construction stays in the preceding modules. No
+prompts, cadence, permissions, limits or model settings changed. This owner
+does not abort an HTTP request or retract an already-submitted device action.
+
+One explicit cleanup correction: `haltRealtimeActivity` previously cleared
+general B2 busy state but could leave headline-busy set. Stop now clears both
+and an invalidated request's finally block cannot refresh controls/reschedule
+work. Context-only clearing still clears headline indication without claiming
+the outstanding request finished; normal connection preparation resets both.
+
+Verification: 36 complete event/state traces were frozen from committed
+`07c7916` before production changes and reproduced independently afterward.
+They match the extracted implementation for normal/manual/headline work,
+blocked admissions, errors/backoff, quiet/held/deferred/revision/advice/art/body
+results, user activity during headlines, and reconnect while request/body/mouth
+work is pending. Eight unchanged scheduling/context/dispatch functions have
+baseline hashes. Focused owner/trigger tests additionally cover duplicate
+completion, same-connection token replacement, two genuinely pending requests
+across reconnect, and the actual halt adapter clearing both indicators.
+
+All 911 JavaScript tests and 147 page-server Python tests pass. Isolated Edge
+checks the real page with deferred mocked B2 HTTP replies: duplicate starts
+remain blocked, an old error cannot release newer work, current advice arrives,
+buttons release on current completion, and stop invalidates headline occupancy.
+The browser test blocks live sockets and external/mutating HTTP and does not
+call the live model or devices. Logs are
+`logs/maintenance/lifecycle-review/b2-work-{before,suite,python,browser}.log`.
+
+Live trial September 23, 12:38-12:53: module GET confirmed before connection;
+resume, normal interaction, idle/B2 headline work, search, two generated/staged
+pictures, return and disconnect during speech exercised successfully. B2 made
+17 requests, delivered 11 untruncated nonempty notes and rejected two stale
+results. No B2/tool errors. Return was 3.859s; save plus eight pins/eight assets
+verified. A pending-B2 reconnect race was not exercised live; tests cover it.
+The independent post-save summary validator rejected a System-turn citation;
+original continuity is intact, derivative failure remains open. Recall also
+needed operator correction, so acceptance is scoped to ownership, not perfect
+memory. Evidence: `logs/runs/20260923-1253-hatch-shell/postmortem.md`.
+Next candidate after acceptance is private B2 advisory ownership, starting with
+characterization of freshness/revision/delivery and preserving current policy.
 
 ## Implemented Step: B2 Evidence Packet
 

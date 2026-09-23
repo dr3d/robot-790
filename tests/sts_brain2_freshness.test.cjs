@@ -25,6 +25,7 @@ function load(names, globals = {}) {
   globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
+  require('./helpers/sts_b2_work_owner.cjs').installBrain2Work(context);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     assert.notEqual(start, -1, name);

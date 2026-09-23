@@ -49,6 +49,7 @@ function fixture() {
     lastGoalIdleAt: 0, lastIdleSelfTaskAt: 0,
   });
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
+  require('./helpers/sts_b2_work_owner.cjs').installBrain2Work(c);
   for (const name of [
     'idleTiming', 'conversationAttentionEnabled', 'conversationAttentionState', 'conversationIdleDelayMs',
     'conversationAttentionInstruction', 'conversationPauseHoldUntil', 'conversationReengagePolicy', 'conversationReengageWindowActive',

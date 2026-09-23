@@ -47,6 +47,7 @@ function loadFunctions(context, names) {
   // Readiness is exercised separately; these fixtures model an available service.
   context.realtimeReadiness ??= { ready: true, invalidate() {} };
   require('./sts_continuation_harness.cjs').installToolContinuation(context);
+  require('./sts_b2_work_owner.cjs').installBrain2Work(context);
   require('./sts_surface_harness.cjs').installBrain2Surface(context);
   const dependencies = {
     handleFunctionCall: ['recordFileWriteReceipt'],

@@ -1235,6 +1235,7 @@ test('a Brain2 mouth request finishing after reconnect cannot speak or repopulat
   assert.equal(context.brain2InFlight, true);
 
   // The same path must still work normally inside its own session.
+  context.brain2Work.reset();
   context.setMouthText = async () => {};
   await context.triggerBrain2Mull();
   assert.deepEqual(spoken, ['OLD VOICE']);

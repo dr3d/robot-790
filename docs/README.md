@@ -44,6 +44,9 @@ The checkpoint passes 834 JavaScript and 1,006 Python tests plus isolated browse
 checks; broader lifecycle/cache questions remain open. The subsequent B2
 request-boundary extraction passes automated, isolated browser and ordinary
 resumed/idle live checks, with no prompt or scheduling changes.
+The follow-on B2 in-flight owner passes automated, isolated browser and ordinary
+resumed/idle/disconnect live checks; a separate rejected summary derivative is
+recorded in Engineering Status, with the original session intact.
 The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source

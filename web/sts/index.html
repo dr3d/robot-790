@@ -2976,6 +2976,7 @@
   <script src="brain2-surface.js"></script>
   <script src="brain2-evidence.js"></script>
   <script src="brain2-request.js"></script>
+  <script src="brain2-work.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -3382,12 +3383,11 @@
     let lastReengageAt = 0;
     let brain2Timer = null;
     const brain2Surface = createBrain2SurfaceOwner();
-    let brain2InFlight = false;
+    const brain2Work = Robot790Brain2Work.create();
     let brain2LastEvidence = null;
     let brain2EvidenceGeneration = 0;
     let brain2HeadlineStartedAt = Date.now();
     let brain2HeadlineLastAttemptAt = 0;
-    let brain2HeadlinesInFlight = false;
     let brain2HeadlineSeed = null;
     let brain2HeadlineSeen = [];
     let brain2HeadlineCache = [];
@@ -7945,7 +7945,7 @@
 
     function updateBrain2Controls() {
       if (brain2PersonFocusValue) brain2PersonFocusValue.textContent = brain2PersonFocusLabel();
-      if (brain2MullNowButton) brain2MullNowButton.disabled = brain2InFlight || !conversationLines.length;
+      if (brain2MullNowButton) brain2MullNowButton.disabled = brain2Work.busy || !conversationLines.length;
       saveBrain2Controls();
       updateBrain2Status();
       scheduleBrain2Mull();
@@ -8096,7 +8096,7 @@
     function brain2BlockedReason({ manual = false } = {}) {
       if (pendingSessionMapMove || sessionMapMoveBusy) return "session transition";
       if (toolContinuation.pending > 0 || toolContinuation.needed) return "tool continuation";
-      if (brain2InFlight) return "already in flight";
+      if (brain2Work.busy) return "already in flight";
       if (!manual && !realtimeConnected()) return "disconnected";
       if (!manual && !brain2MouthBrainEnabled()) return "brain 2 off";
       const headlinesDue = !manual && brain2HeadlinesDue();
@@ -9823,7 +9823,7 @@
 
     function updateBrain2Status() {
       if (!brain2Status) return;
-      const state = brain2InFlight ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off";
+      const state = brain2Work.busy ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off";
       brain2Status.textContent = `${state} / ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2NoteCandidates.length} notes / ${brain2Counters.revision} revisions / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`;
       updateLanePressure();
       renderLogPopout("brain2_mulling");
@@ -9912,7 +9912,7 @@
       } else if (responseActive) {
         names.push("B1");
       }
-      if (brain2InFlight) names.push("B2");
+      if (brain2Work.busy) names.push("B2");
       if (toolContinuation.pending > 0) names.push(`tools:${toolContinuation.pending}`);
       return names;
     }
@@ -9994,7 +9994,7 @@
         `Idle self-tasks: ${activeTasks.length ? activeTasks.join(" | ") : "none"}`,
         `Brain 2 counters: ${brain2Counters.fired} fired / ${brain2Counters.surfaced} mouth / ${brain2Counters.revision} revisions / ${brain2Counters.held} held / ${brain2Counters.skipped} skipped / ${brain2Counters.failed} failed`,
         `Brain 2 notes for Eric: ${brain2NoteCandidates.length}${brain2NoteCandidates.length ? ` / ${brain2NoteCandidates.slice(-2).map((item) => item.text).join(" | ")}` : ""}`,
-        `Brain 2 state: ${brain2InFlight ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off"} / ${brain2VoiceLabel()} / person ${brain2PersonFocusLabel()}`,
+        `Brain 2 state: ${brain2Work.busy ? "thinking" : brain2MouthBrainEnabled() ? "armed" : "off"} / ${brain2VoiceLabel()} / person ${brain2PersonFocusLabel()}`,
         `Context estimate: live scaffold about ${contextApprox} tokens before visible transcript/events; visible conversation ${context.visible_conversation_pane.approximate_tokens}; visible events ${context.visible_events_pane.approximate_tokens}`,
         `Audio recording: ${audioRecordingActive() ? "on" : "off"} / auto ${autoAudioRecordEnabled() ? "on" : "off"}`
       ];
@@ -10794,7 +10794,7 @@
       if (Date.now() < idleCooldownUntil) return "cooldown";
       if (responseActive || outputAudioActive()) return "assistant busy";
       if (idleInFlight) return "idle already in flight";
-      if (brain2HeadlinesInFlight) return "Brain 2 reading headlines";
+      if (brain2Work.headlines) return "Brain 2 reading headlines";
       if (toolContinuation.needed || toolContinuation.pending > 0) return "tool followup pending";
       if (lmStudioPromptBusy()) return `LM Studio ${lmStudioStatusFromBrainStatus().toLowerCase()}`;
       if (userSpeechActive) return "user speaking";
@@ -11956,8 +11956,8 @@
         scheduleBrain2Mull();
         return;
       }
-      brain2InFlight = true;
-      brain2HeadlinesInFlight = readHeadlines;
+      const work = brain2Work.begin({ socket, generation, headlines: readHeadlines });
+      if (!work) return;
       updateBrain2Controls();
       updateLanePressure({ reason: "Brain 2 mull started" });
       try {
@@ -12072,9 +12072,7 @@
         }
         throw error;
       } finally {
-        if (socket === realtimeConnection.socket && generation === realtimeConnection.generation) {
-          brain2InFlight = false;
-          brain2HeadlinesInFlight = false;
+        if (brain2Work.finish(work, realtimeConnection)) {
           updateLanePressure({ reason: "Brain 2 mull finished" });
           updateBrain2Controls();
         }
@@ -12912,7 +12910,7 @@
       brain2HeadlineSeed = null;
       brain2HeadlineRefreshRequested = false;
       clearBrain2BodyCue("context reset");
-      brain2HeadlinesInFlight = false;
+      brain2Work.clearHeadlines();
       conversationLines = [];
       conversationLineMetadata = [];
       brain2AuditEntries = [];
@@ -16019,7 +16017,7 @@
         `Brain 2 mouth: ${brain2MouthBrainEnabled() ? "on" : "off"}`,
         `Brain 2 voice: ${brain2VoiceLabel()}`,
         `Brain 2 person lane: ${brain2PersonFocusLabel()}`,
-        `Brain 2 in flight: ${brain2InFlight ? "yes" : "no"}`,
+        `Brain 2 in flight: ${brain2Work.busy ? "yes" : "no"}`,
         `Brain 2 loop pressure: ${brain2LoopPressureLabel()}`,
         brain2NoteCandidates.length
           ? `Brain 2 advisory notes for Eric:\n${brain2NoteCandidates.slice(-6).map((item) => `- ${item.text}`).join("\n")}`
@@ -16842,7 +16840,7 @@
       clearMicFreshnessTimer();
       responseActive = false;
       idleInFlight = false;
-      brain2InFlight = false;
+      brain2Work.reset();
       reengageInFlight = false;
       stopGpuWatch({ reason });
       stopStandingRoutine({ reason });
@@ -20097,7 +20095,7 @@
       lastAssistantResponseDoneAt = 0;
       responseActive = false;
       idleInFlight = false;
-      brain2InFlight = false;
+      brain2Work.reset();
       reengageInFlight = false;
       await clearSensingEyeState({ source: "session_connect", reason });
     }

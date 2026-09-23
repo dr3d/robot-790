@@ -4,6 +4,30 @@ Reviewed September 23, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+Current uncommitted step after `07c7916`: B2 in-flight bookkeeping is extracted
+into `brain2-work.js`. Busy status belongs to a specific request token, so a
+late completion cannot release replacement work. Existing admission, scheduling,
+backoff, advice and dispatch policies remain page-owned and unchanged. Stop
+also clears an orphanable headline-busy indicator; no prompts or companion
+timing changed. All 911 JavaScript tests, 147 page-server Python tests and the
+isolated Edge checks pass. Thirty-six complete pre-change traces match, with
+additional owner/race checks and hashes for eight unchanged policy functions.
+The 12:38-12:53 Hatch Shell trial passes the exercised live paths: new module
+loaded, 17 B2 starts, 11 untruncated nonempty advice deliveries, two stale
+results discarded, two renders staged, and clean disconnect during playback.
+Return after idle/search took 3.859s. Save journal, eight pins and eight eye
+assets verify. Cross-connection B2 HTTP races remain automated-only coverage.
+Evidence: `logs/runs/20260923-1253-hatch-shell/postmortem.md`.
+
+Separate findings from that trial: initial recall overlooked newer pictures
+despite the correct parent and preserved source; do not call this perfect
+continuity. Post-save preparation rejected a summary item citing a System
+receipt as Eric's speech (`session-20260923-125258-701`, item 6, turn 75).
+Original save is complete; title/scrubbed derivative available, summary failed.
+The failure receipt is preserved for follow-up, not silently retried or treated
+as a lost session. No runtime or prompt changes were made during the PM.
+See [B2 In-Flight Ownership](sts-lifecycle-ownership-plan.md#implemented-step-b2-in-flight-ownership).
+
 September 23 checkpoint after `424b933`: the B2 request boundary is extracted
 into `brain2-request.js`, with explicit page adapters for current state, HTTP,
 logging and accepted evidence. Twenty-six complete pre-extraction cases match

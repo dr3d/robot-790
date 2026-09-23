@@ -268,6 +268,11 @@ async function main() {
     results.receiptImageWait = await require('./helpers/sts_receipt_image_browser.cjs').checkReceiptAndImageWait(receiptUi);
     results.pinnedTitles = await require('./helpers/sts_pinned_titles_browser.cjs').checkPinnedTitles(receiptUi, artifacts);
     await receiptUi.close();
+    const workUi = await context.newPage();
+    workUi.on('pageerror', error => pageErrors.push(error.message));
+    await workUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.brain2Work = await require('./helpers/sts_b2_work_browser.cjs').checkBrain2Work(workUi);
+    await workUi.close();
     const mapUi = await context.newPage();
     let mapReady = false;
     mapUi.on('pageerror', error => pageErrors.push(error.message));

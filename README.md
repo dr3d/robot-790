@@ -228,6 +228,9 @@ inspection now includes existing readable titles beside exact filenames. The
 initial roughly 21-second response at half a context window is accepted for now;
 unexpected warm-return cache rebuilds and other open findings remain listed in
 [Engineering Status](docs/engineering-status.md).
+The subsequent B2 in-flight owner passes automated, isolated-browser and ordinary
+resumed/idle/disconnect live checks. Its request-scoped cleanup leaves prompts,
+advice selection and idle cadence unchanged.
 Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).
