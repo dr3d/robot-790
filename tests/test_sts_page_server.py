@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from urllib.parse import urlencode
 
 import pytest
@@ -128,6 +129,29 @@ def test_brain2_receives_compact_file_write_outcomes_without_note_bodies() -> No
     assert failure["status"] == "error" and failure["error"] == "Disk full"
     assert "PRIVATE BODY" not in json.dumps(context)
     assert "content" not in success
+
+
+def test_brain2_page_packet_fixture_reaches_server_evidence_serializer() -> None:
+    fixture = Path(__file__).parent / "fixtures" / "sts-b2-evidence.json"
+    packets = json.loads(fixture.read_text(encoding="utf-8"))["packets"]
+    for name, serialized in packets.items():
+        packet = json.loads(serialized)
+        packet.pop("fingerprint")
+        packet.pop("user_key")
+        context = json.loads(sts_page_server._brain2_evidence_context(packet))
+        assert context["last_assistant_output_id"] == packet["last_assistant_output_id"], name
+        assert context["new_assistant_chunks"] == packet["new_assistant_chunks"], name
+        assert context["new_user_input"] == packet["new_user_input"], name
+        assert context["conversation"] == packet["conversation"][-12:], name
+        assert context["latest_user_utterance"] == (packet["latest_user_utterance"] or {}), name
+        if name == "write receipt with stale sibling":
+            assert context["file_write_receipts"] == [{
+                "tool": "write_text_file", "call_id": "write", "session_generation": 4,
+                "at": "2026-09-23T12:00:00Z", "filename": "Trip.txt", "mode": "overwrite",
+                "status": "ok", "characters": 12, "code": "", "error": "",
+            }]
+        else:
+            assert context["file_write_receipts"] == []
 
 
 def test_brain2_file_write_receipts_bound_metadata_and_reject_bad_shapes() -> None:

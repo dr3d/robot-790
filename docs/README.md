@@ -33,13 +33,15 @@ The page is static, but it loads `catalog.json` with browser `fetch()`. That
 works on GitHub Pages and from a local HTTP file server. It may not work when
 opened directly as a `file://` URL.
 
-September 20 checkpoint: the homepage now reflects shared conversation/idle
+September 23 checkpoint: the homepage reflects shared conversation/idle
 history, the measured cache-state repair, compact file lookup, optional complete
 B1/B2 cards, retained-image retrieval, idle note writing and TimerCam snapshots.
-The extra deep-think experiment is disabled. Browser factoring now has dedicated
-audio-playback and tool-continuation owners with transition tests. The tool
-extraction passed its exercised resumed-thread comparison on September 21;
-broader lifecycle acceptance remains open. The Memory Jar report
+The extra deep-think experiment is disabled. Browser factoring now separates
+audio playback, tool continuation, connection transitions and B2 evidence
+assembly. Empty, resumed and rich-history trials plus paired note-revision/
+interruption/reconnect checks pass their exercised paths without prompt changes.
+The checkpoint passes 834 JavaScript and 1,006 Python tests plus isolated browser
+checks; broader lifecycle/cache questions remain open. The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source
 for test results, observed weaknesses and remaining live acceptance work.

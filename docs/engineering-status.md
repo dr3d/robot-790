@@ -1,16 +1,73 @@
 # Engineering Status
 
-Reviewed September 22, 2026. This is the maintained engineering view; session
+Reviewed September 23, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
 September 23 checkpoint: `5bcccbe` commits the receipt/image-admission repairs
 and cache-parser diagnostics below. A fresh focused recheck passed 60 JavaScript
-and 156 Python tests. Next is the behavior-preserving
-[B2 evidence-packet extraction](sts-lifecycle-ownership-plan.md#queued-step-b2-evidence-packet),
-currently planned only. Prompts, cadence and advisory selection are outside its
-scope. Live receipt-payload proof, image-overlap acceptance and the large-context
+and 156 Python tests. The behavior-preserving
+[B2 evidence-packet extraction](sts-lifecycle-ownership-plan.md#implemented-step-b2-evidence-packet)
+is now implemented after published `8f5825f`, with ordinary live acceptance from
+the 07:44-07:51 Scott's Day run. Module load, note writing, render/eye handoff,
+B2 activity, return/interruption and verified save pass. Return speech began
+in 2.264s / 2.206s, and final context was 24.98%. Idle remained active but
+repeated the painting-versus-reality caveat: a content observation, not a new
+extraction defect. PM: `logs/runs/20260923-0751-scotts-day/postmortem.md`.
+At the operator's request, expanded testing preceded the proposed checkpoint.
+The 08:13-08:25 resumed trial preserved tools/save and B2 operation but
+repeated the same photo-comparison theme, ignored a newly staged museum image
+in subsequent discussion, and produced unreliable B2 image-count advice. Both
+weather receipts said 62 F, contrary to Eric's claim of a revised forecast.
+No new transport failure or extraction causality is established. No post-idle
+human return was exercised. PM: `logs/runs/20260923-0825-photo-comparison/postmortem.md`.
+The unchanged 08:29-08:38 Connect Empty comparison passes generation/staging,
+interruption and verified saving, with a 2.819s human return after B2 headline
+use. Final context was 20.39%. The photo-caveat orbit disappeared, but B2 repeated
+one question three times; repetition is not confined to inherited history.
+An optional B2 monitor aside was sent to speech cut mid-word at 96 characters:
+the pre-existing mouth-text cap, not the private-advice cap or this extraction.
+Three private-output suppression warnings were logged without a visible public
+tag leak. No runtime changes or commit were made during either comparison.
+PM: `logs/runs/20260923-0838-floating-teenagers/postmortem.md`.
+The 08:46-09:06 selected-session branch adds a rich-history pass: fifteen loaded
+notes, 16m15s without human speech, three autonomous pictures, two used headline
+selections, a 5.344s return and a 1.967s response to the subsequent unrelated
+question. Context grew 54.33% -> 66.10%; all fifteen pins and three image assets
+verify against the complete save. Early repetition developed into a coherent
+visual sequence, with attributable B2 contributions and an older mirror-test
+reference. Initial LLM startup was slow (26.627s first speech); eleven private-
+output suppression warnings and one premature staging claim remain observations,
+not changes to companion policy. No runtime edits or commit during the trial.
+PM: `logs/runs/20260923-0906-chamber-seven/postmortem.md`.
+The 09:32-09:39 paired trial completes ordinary acceptance: same-file write and
+revision, disk-matching read-back, real playback interruption, weather switch,
+same-page reconnect and exact recall of the revision without a new file read.
+Both saves and all 17/18 pins verify; final context was 60.88% / 60.92%.
+Initial greetings still took 28.227s / 29.622s; the actual recall took 2.366s.
+This checkpoint records the extraction and its scoped acceptance together.
+PM: `logs/runs/20260923-0939-note-rehearsal-pair/postmortem.md`.
+
+Two separate diagnostics repairs are recorded, not implemented in that PM:
+the reboot launch wrote to a timestamped startup log while amber TTS telemetry
+still read yesterday's canonical log; and the pre-existing empty-B2 export
+fallback matched `brain2` inside face JSON. The latter pollutes the diagnostic
+export/raw session tail, but the combined audit is correct and the generated
+scrubbed history excludes it. The earlier 96-character spoken-monitor clipping
+also remains open. No prompt or idle-policy repair is implied by these findings.
+
+The final checkpoint recheck passes all 834 JavaScript tests, all 1,006 Python
+tests, isolated Edge checks and focused Ruff. Python reports the existing
+Starlette/httpx deprecation warning. Logs:
+`logs/maintenance/lifecycle-review/b2-evidence-checkpoint-{suite,python,browser}.log`.
+No server restart, model call or real tool mutation was needed for these checks.
+Fourteen complete pre-extraction packets match byte-for-byte. The browser
+test confirms write-receipt metadata in the actual outgoing B2 request without
+the document body, and the server serializer consumes the same fixture contract.
+This does not retroactively verify the previous live request. Prompts, cadence
+and advisory selection are unchanged. Live receipt-payload proof, image-overlap acceptance and the large-context
 cache finding remain open; none is silently declared fixed by this checkpoint.
+Refresh disconnected to load the new module; no server restart is required.
 
 ## Working Baseline
 

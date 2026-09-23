@@ -7,6 +7,7 @@ const { test } = require('node:test');
 const page = fs.readFileSync(path.join(__dirname, '../web/sts/index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 function load(names, globals = {}) {
+  globals.Robot790Brain2Evidence ??= require('../web/sts/brain2-evidence.js');
   globals.Robot790NoteBrains ??= require('../web/sts/note-brains.js');
   globals.loadedNoteContexts ??= [];
   globals.imageTaskReceipt ??= null;

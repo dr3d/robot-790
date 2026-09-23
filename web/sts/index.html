@@ -2974,6 +2974,7 @@
   <script src="audio-playback.js"></script>
   <script src="brain2-speech.js"></script>
   <script src="brain2-surface.js"></script>
+  <script src="brain2-evidence.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -11420,16 +11421,6 @@
 
     function brain2EvidenceSnapshot() {
       const now = Date.now();
-      const rows = conversationLines.map((text, index) => ({
-        id: `${realtimeConnection.generation}:${brain2EvidenceGeneration}:${index}`,
-        text,
-        at: conversationLineMetadata[index]?.iso || "",
-        role: /\] You:/.test(text) ? "user" : /\] Robot 790:/.test(text) ? "assistant" : "other",
-        prosody: conversationProsodyByIndex[index] || ""
-      }));
-      const assistantRows = rows.filter((row) => row.role === "assistant");
-      const userRow = rows.filter((row) => row.role === "user").at(-1) || null;
-      const userKey = userRow ? JSON.stringify(userRow) : "";
       const runtime = {
         microphone: micRuntimeLabel(),
         audio_recording: audioRecordingActive(),
@@ -11443,28 +11434,12 @@
         b1_hard_brake_reason: idleHardBrakeActive() ? idleHardBrakeReason : ""
       };
       if (conversationAttentionEnabled()) runtime.conversational_attention = conversationAttentionState().phase;
-      const searchReceipts = searchContextReceipts.slice(0, 3);
-      const setupCards = brain2SetupCards();
-      const noteGuidance = Robot790NoteBrains.forBrain(loadedNoteContexts, "b2");
-      const fingerprint = JSON.stringify([rows.slice(-18), runtime, searchReceipts, setupCards, noteGuidance]);
-      const previous = brain2LastEvidence;
-      return {
-        fingerprint,
-        setup_cards: setupCards,
-        note_guidance: noteGuidance,
-        evidence_generation: brain2EvidenceGeneration,
-        user_key: userKey,
-        sampled_at: new Date(now).toISOString(),
-        previous_sampled_at: previous?.sampled_at || null,
-        assistant_chunks_total: assistantRows.length,
-        new_assistant_chunks: Math.max(0, assistantRows.length - (previous?.assistant_chunks_total || 0)),
-        last_assistant_output_id: assistantRows.at(-1)?.id || "",
-        new_user_input: userKey !== (previous?.user_key || ""),
-        conversation: rows.slice(-18),
-        latest_user_utterance: userRow,
-        runtime,
-        search_receipts: searchReceipts
-      };
+      return Robot790Brain2Evidence.buildSnapshot({
+        lines: conversationLines, metadata: conversationLineMetadata, prosody: conversationProsodyByIndex,
+        sessionGeneration: realtimeConnection.generation, evidenceGeneration: brain2EvidenceGeneration,
+        now, runtime, searchReceipts: searchContextReceipts, setupCards: brain2SetupCards(),
+        noteGuidance: Robot790NoteBrains.forBrain(loadedNoteContexts, "b2"), previous: brain2LastEvidence
+      });
     }
 
     function brain2RecentIdleContext() {

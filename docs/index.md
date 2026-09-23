@@ -30,7 +30,7 @@ to be readable without digging through live private logs.
 
 ## Articles
 
-September 22 checkpoint: conversation and idle thinking share retained history,
+September 23 checkpoint: conversation and idle thinking share retained history,
 with measured cache-reuse repairs, compact memory lookup, and more reliable
 image handoffs. Optional setup notes can guide both speaking and advisory
 brains; they are not required for companionship. A small TimerCam can now put
@@ -47,8 +47,8 @@ prompts and companion behavior. Resumed-thread trials preserve continuity and
 stop speech on Disconnect; isolated tests cover network loss and save recovery.
 Voice interruptions no longer hide a completed image thumbnail; Sensing Eye
 transfer remains Eric's separate action. Unused thread-reset controls are retired.
-The current repairs pass 817 JavaScript tests, all 1,005 Python tests and isolated
-browser checks. Backend-control status feedback
+The current page extraction checkpoint passes 834 JavaScript tests, all 1,006
+Python tests and isolated browser checks. Backend-control status feedback
 now has its own owner so stale replies cannot overwrite newer operations.
 Restart cleanup cannot act on a replacement session; live continuation and
 mid-speech Disconnect passed. Connect now checks service readiness instead of
@@ -63,6 +63,9 @@ long-context cache refill remains under investigation.
 B2 evidence now includes compact file-write outcomes, and requested drawings can
 wait for an active idle render. Automated checks and ordinary continuation pass;
 live receipt-payload verification and image-overlap acceptance remain open.
+B2 evidence assembly now has its own module with exact baseline-packet checks.
+Live empty/resumed/rich-history trials and a write-revise-interrupt-reconnect
+pair pass the exercised paths; prompts and scheduling are unchanged.
 Further Halt/Unload work is deferred until a practical need appears.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)

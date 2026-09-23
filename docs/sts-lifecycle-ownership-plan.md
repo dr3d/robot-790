@@ -24,18 +24,22 @@ JavaScript / 156 Python tests. Ordinary Hotel Note continuation passed; its
 saved artifacts do not independently prove B2 receipt-payload delivery, and no
 image overlap occurred. The large-context cache refill remains separate and open.
 
-Next is the bounded B2 evidence-packet extraction below, not private-advice
-scheduling or a universal scheduler. Deferred body-cue ownership was considered
+The bounded B2 evidence-packet extraction below is implemented after `8f5825f`,
+with empty/resumed/rich-history and paired note/reconnect acceptance recorded
+below. This checkpoint includes that extraction, tests and acceptance notes.
+This is not private-advice scheduling or a universal scheduler.
+Deferred body-cue ownership was considered
 but is Reachy-only today; leave it parked with the unused Halt/Unload work.
 
-## Queued Step: B2 Evidence Packet
+## Implemented Step: B2 Evidence Packet
 
-Planning only, September 23; no implementation or runtime changes in this step.
-The target is `brain2EvidenceSnapshot()` in `web/sts/index.html`. It currently
-reads transcript metadata, session identity, runtime/tool receipts, note guidance
-and previous-snapshot state through page globals. This packet determines both
+September 23: `brain2-evidence.js` now assembles the packet from explicit inputs;
+`brain2EvidenceSnapshot()` in `web/sts/index.html` remains the runtime adapter.
+It reads transcript metadata, session identity, runtime/tool receipts, note
+guidance and previous-snapshot state. This packet determines both
 what B2 sees and whether the scheduler considers evidence changed. Making that
 contract explicit is more useful than moving unrelated page helpers wholesale.
+The bounded implementation follows this contract:
 
 1. Characterize the existing packet with fixed-clock, literal expected fixtures
    before extracting it. Cover empty/new/resumed sessions, amended human input,
@@ -65,14 +69,91 @@ contract explicit is more useful than moving unrelated page helpers wholesale.
 
 Stop and rescope if this needs a scheduler rewrite, B1 context changes, altered
 advisory selection, new language interpretation or changed runtime semantics.
-Keep the eventual implementation in its own reversible commit after this plan.
+Keep the implementation in its own reversible commit after live acceptance.
+
+Verification: captured 14 complete serialized baseline packets from `8f5825f`
+before editing production code; they still match byte-for-byte after extraction,
+including fingerprints and field order. A literal empty-packet assertion, frozen
+input checks and Unicode preservation supplement those fixtures. All 834
+JavaScript tests and 147 focused page-server Python tests pass. The isolated Edge
+suite captures the actual page-generated B2 HTTP payload after a fake write:
+the compact success receipt is present, the note body is absent, internal
+fingerprint/user-key fields stay off wire, and accepted evidence updates normally.
+The Python serializer consumes the same baseline fixtures and preserves the write
+receipt. These are automated boundary checks, not retroactive proof of the prior
+live run's model input. The initial check ran focused Python tests; the final
+checkpoint reran all 1,006 Python and 834 JavaScript tests, the isolated Edge
+suite and focused Ruff successfully. Python retains its existing dependency
+deprecation warning. Initial logs:
+`logs/maintenance/lifecycle-review/b2-evidence-{suite,python,browser}.log`.
+Final logs: `logs/maintenance/lifecycle-review/b2-evidence-checkpoint-{suite,python,browser}.log`.
 
 Live acceptance after implementation: refresh while disconnected, Connect to
 the current thread, ask Eric to save a short note about the conversation, then
 talk normally, leave a short idle gap and return. Disconnect as usual. Check
 continuity, receipt visibility, B2 initiative and normal speech handoffs; no
 contrived image collision, long lecture or destructive control test is needed.
-Until implementation is ready, no special user trial is required.
+The existing page server serves the new module; a browser refresh while
+disconnected is sufficient. No model/server restart, settings change, extra
+instrumentation or hardware activation is needed. The following live trials
+were performed on one unchanged build before this checkpoint; `8f5825f` is the
+published predecessor on master.
+
+Live acceptance, 07:44-07:51 September 23: the module was fetched before Connect,
+history loaded, all six tool calls succeeded, and the real note, three pinned
+files and one eye asset verify against receipts. B2 completed ten requests
+without errors/clipping; stale work was rejected on human return. Return speech
+took 2.264s / 2.206s. Five idle responses plus a tool follow-up kept the conversation
+active, although the same visual-provenance caveat recurred. No timing or prompt
+adjustment was made to conceal that content tendency. Ordinary extraction
+acceptance passes; live receipt-payload capture and natural image overlap remain
+separate checks. PM: `logs/runs/20260923-0751-scotts-day/postmortem.md`.
+
+Expanded testing requested by Scott: the 08:13-08:25 resumed follow-up again
+passes tools and exact saving, but shows persistent thematic repetition and
+confusion about three operator uploads versus a generated image. The last
+museum drop was staged/saved yet not usefully discussed. B2's proposed correction
+also miscounted provenance. These are observations, not a demonstrated change
+from the byte-equivalent packet extraction. No post-idle spoken return occurred.
+The extraction remained uncommitted and unchanged for the Connect Empty comparison.
+PM: `logs/runs/20260923-0825-photo-comparison/postmortem.md`.
+
+Expanded comparison, 08:29-08:38: genuine Connect Empty, no parent/history,
+successful image generation/staging, real playback interruption, six idle starts
+and a 2.819s human return after B2 fetched a headline that B1 used. Verified save
+and asset hashes pass; context ended at 20.39%. The prior photo-caveat orbit did
+not recur; B2 nevertheless repeated an identical question three times. This
+extends mechanical acceptance without establishing a content regression or
+proving the separate high-context cache issue fixed. No note-write or image
+collision probe occurred. A distinct pre-existing 96-character mouth-text cap
+sent a mid-word fragment into the optional spoken monitor; keep any repair
+separate from this evidence extraction and from private-advice behavior.
+No tuning or commit in this PM. Evidence:
+`logs/runs/20260923-0838-floating-teenagers/postmortem.md`.
+
+Rich-history acceptance, 08:46-09:06: a branch from September 22 12:35 loaded
+thirteen ancestor sessions plus profile/core (fifteen notes total). During 16m15s
+without human speech, B2 and B1 developed the old story, completed three idle-art
+jobs and used two news selections. Return speech took 5.344s; an unrelated
+question then took 1.967s. Context grew 54.33% -> 66.10%, and the complete save,
+fifteen pins and three assets verify. This supports sustained rich-history
+operation on the unchanged extraction. Startup took 26.627s, early greetings
+and themes repeated, and eleven private-output filter warnings remain recorded.
+No foreground/idle render-contention or live write-payload probe was performed;
+the cache issue is not closed. No tuning or commit in this PM. Evidence:
+`logs/runs/20260923-0906-chamber-seven/postmortem.md`.
+
+Paired foreground acceptance, 09:32-09:39: a note was written, revised in place,
+read back identically to disk and performed. Playback interruption switched to
+weather; Connect on the same page then recalled the exact revision without a
+file read. Both saves, all 17/18 pin hashes and the parent chain verify. Context
+ended near 61%; no backend warnings/errors. The scope is sufficient to checkpoint
+this extraction without another long trial. Initial greetings still took about
+28-30s; live B2 receipt-payload capture and render contention remain untested.
+Amber telemetry's log-path mismatch and a pre-existing empty-B2 export fallback
+matching face JSON are separate repair candidates, not extraction regressions.
+No runtime edits/restart/commit in this PM. Evidence:
+`logs/runs/20260923-0939-note-rehearsal-pair/postmortem.md`.
 
 ## Implemented Step: Deferred B2 Surface
 

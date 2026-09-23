@@ -216,6 +216,13 @@ long-context cache refill remains under investigation.
 B2 evidence now includes compact file-write outcomes, and requested drawings can
 wait for an active idle render. Automated checks and ordinary continuation pass;
 live receipt-payload verification and image-overlap acceptance remain open.
+B2 evidence assembly is now a separate module with exact baseline-packet tests;
+empty, resumed and rich-history live trials pass the exercised paths, including
+same-file revision, interrupted performance and same-page reconnect recall.
+The September 23 extraction checkpoint passes 834 JavaScript tests, all 1,006
+Python tests and isolated browser checks. No prompt, personality or cadence
+changes. Initial large-history connection delays and the separate telemetry/
+export findings remain listed in [Engineering Status](docs/engineering-status.md).
 Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).

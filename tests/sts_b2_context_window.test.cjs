@@ -11,6 +11,7 @@ test('B2 can retain an old request after its completion leaves the transcript wi
   const rows = [request, receipt, '[6:37:23 AM] Robot 790: There it is.'];
   rows.push(...Array.from({ length: 24 }, (_, i) => `[8:00:00 AM] Robot 790: Later thought ${i}.`));
   const c = vm.createContext({
+    Robot790Brain2Evidence: require('../web/sts/brain2-evidence.js'),
     Date, conversationLines: rows, conversationLineMetadata: [], conversationProsodyByIndex: {},
     realtimeSessionGeneration: 2, brain2EvidenceGeneration: 1, brain2LastEvidence: null,
     micRuntimeLabel: () => 'on', audioRecordingActive: () => false,
