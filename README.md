@@ -231,6 +231,8 @@ unexpected warm-return cache rebuilds and other open findings remain listed in
 The subsequent B2 in-flight owner passes automated, isolated-browser and ordinary
 resumed/idle/disconnect live checks. Its request-scoped cleanup leaves prompts,
 advice selection and idle cadence unchanged.
+Post-session preparation now uses speaker-specific source citations; the
+observed mixed-speaker failure was recovered without changing the original session.
 Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).

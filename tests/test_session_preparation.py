@@ -343,7 +343,7 @@ def test_semantic_sweep_rejects_invalid_deletion_plans(ids):
 def test_preparation_request_mines_original_turns_and_feedback():
     request = prep.preparation_request(TRANSCRIPT)
     turns = json.loads(request["messages"][1]["content"])
-    assert turns[0] == {"id": 0, "text": "[10:00] You: Remember this.\n  [v: quiet]"}
+    assert turns[0] == {"id": 0, "speaker": "operator", "text": "[10:00] You: Remember this.\n  [v: quiet]"}
     assert len(turns) == 3
     assert "drop_turn_ids" in request["response_format"]["json_schema"]["schema"]["required"]
     assert "ALL original turns" in request["messages"][0]["content"]
@@ -400,6 +400,56 @@ def test_summary_source_citations_cannot_silently_cross_speakers():
     for ids in [[0], [999], [True], [], None]:
         with pytest.raises(ValueError):
             prep.validate_summary_sources([{"speaker": "eric", "source_turn_ids": ids}], turns)
+
+
+def test_preparation_schema_restricts_citations_to_actual_speaker():
+    transcript = ("[10:00] You: Voici le dessin.\n"
+                  "[10:01] System: [sensing-eye visual note opened into B1 context: id eye-1]\n"
+                  "[10:02] Robot 790: Je le vois.\n"
+                  "[10:03] Eric: Gracias.\n"
+                  "[10:04] You: Bien.")
+    request = prep.preparation_request(transcript)
+    turns = prep.transcript_turns(transcript)
+    inputs = json.loads(request["messages"][1]["content"])
+    assert [t["speaker"] for t in inputs] == ["operator", "system", "eric", "eric", "operator"]
+    assert [t["text"] for t in inputs] == turns
+    assert [t["id"] for t in inputs] == list(range(5))
+    schema = request["response_format"]["json_schema"]["schema"]
+    alternatives = schema["properties"]["summary"]["items"]["anyOf"]
+    assert len(alternatives) == 2
+    for alternative, speaker, ids in zip(alternatives, ("operator", "eric"), ([0, 4], [2, 3])):
+        assert alternative["properties"]["speaker"] == {"type": "string", "enum": [speaker]}
+        assert alternative["properties"]["source_turn_ids"] == {
+            "type": "array", "minItems": 1, "items": {"type": "integer", "enum": ids}}
+        assert alternative["required"] == ["speaker", "text", "source_turn_ids"]
+        assert alternative["additionalProperties"] is False
+        prep.validate_summary_sources([{"speaker": speaker, "source_turn_ids": ids}], turns)
+    # System receipts remain available and structurally protected in the sweep.
+    swept, dropped = prep.semantic_sweep(transcript, [1])
+    assert turns[1] in swept and dropped == []
+    # Reproduce the Hatch Shell failure: an Eric item also citing a System turn.
+    with pytest.raises(ValueError, match=r"source turns \[1\]"):
+        prep.validate_summary_sources([{"speaker": "eric", "source_turn_ids": [2, 1]}], turns)
+
+
+@pytest.mark.parametrize("label,speaker", [("You", "operator"), ("Robot 790", "eric"), ("Eric", "eric")])
+def test_preparation_schema_does_not_invent_an_absent_speaker(label, speaker):
+    request = prep.preparation_request(f"[10:00] System: Historical receipt.\n[10:01] {label}: A thought.")
+    alternatives = request["response_format"]["json_schema"]["schema"]["properties"]["summary"]["items"]["anyOf"]
+    assert len(alternatives) == 1
+    assert alternatives[0]["properties"]["speaker"]["enum"] == [speaker]
+    assert alternatives[0]["properties"]["source_turn_ids"]["items"]["enum"] == [1]
+
+
+def test_receipt_only_transcript_is_not_recast_as_speech():
+    with pytest.raises(ValueError, match="No speaker turns"):
+        prep.preparation_request("[10:00] System: Image staged.")
+
+
+def test_speaker_uses_protocol_label_not_words_inside_the_turn():
+    assert prep.transcript_speaker('[10:00] You: Eric said "System: all done."') == "operator"
+    with pytest.raises(ValueError, match="Cannot identify transcript speaker"):
+        prep.transcript_speaker("Unexpected header")
 
 
 def test_semantic_derivatives_written_and_reused_without_changing_raw(root):

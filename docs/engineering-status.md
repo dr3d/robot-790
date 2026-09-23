@@ -4,7 +4,35 @@ Reviewed September 23, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
-Current uncommitted step after `07c7916`: B2 in-flight bookkeeping is extracted
+Current small repair after `f7bbb91`: post-session preparation now gives each
+transcript turn an explicit structural speaker and constrains each summary
+item's citation IDs to that speaker's actual turns. System receipts stay in
+the transcript/sweep but cannot be cited as Eric's or Scott's speech. The
+existing result validator remains in force; no citations are silently dropped
+or relabeled. Only the preparation prompt/input/schema changed, not B1/B2
+prompts, idle timing, context admission, model settings or existing derivatives.
+
+Verification: 241 focused Python tests pass. Three isolated local-model replays
+of the failing Hatch Shell transcript passed; the original invalid response
+still fails. The page server was restarted alone and the normal prepare queue
+then completed the actual failed session in 6.078s. Summary is now available,
+source bytes are unchanged, and the original failure receipt is preserved.
+Evidence: `logs/maintenance/lifecycle-review/summary-speaker-replay.log` and
+`summary-speaker-recovery.json`. Speaker-valid citations do not prove semantic
+accuracy, and these trials do not establish that all summary failures are fixed.
+
+Fresh live acceptance, September 23 16:44-16:57: the headline-clue run saved
+and prepared automatically (`speaker-attributed-v3`, ready in 9.562s), with
+nine pins/three eye assets verified. Two requested search/render/stage chains
+and one B2-proposed idle picture completed. B2 supplied a headline that B1
+used in conversation; 22 starts, 16 untruncated nonempty advice deliveries,
+two stale results rejected, no B2/tool errors. Return was 5.149s; clean stop.
+Seven private-output suppression warnings during idle are recorded as a watch
+item, not a demonstrated audible leak or a diagnosed regression. No runtime
+changes made for this PM. Evidence:
+`logs/runs/20260923-1657-headline-clues/postmortem.md`.
+
+September 23 checkpoint `f7bbb91`: B2 in-flight bookkeeping is extracted
 into `brain2-work.js`. Busy status belongs to a specific request token, so a
 late completion cannot release replacement work. Existing admission, scheduling,
 backoff, advice and dispatch policies remain page-owned and unchanged. Stop
@@ -23,9 +51,10 @@ Separate findings from that trial: initial recall overlooked newer pictures
 despite the correct parent and preserved source; do not call this perfect
 continuity. Post-save preparation rejected a summary item citing a System
 receipt as Eric's speech (`session-20260923-125258-701`, item 6, turn 75).
-Original save is complete; title/scrubbed derivative available, summary failed.
-The failure receipt is preserved for follow-up, not silently retried or treated
-as a lost session. No runtime or prompt changes were made during the PM.
+At PM time the original save was complete, title/scrubbed derivative available,
+and summary failed. No runtime or prompt changes were made during that PM.
+The subsequent explicit preparation repair above recovered the derivative
+without modifying the original and preserved the failure receipt.
 See [B2 In-Flight Ownership](sts-lifecycle-ownership-plan.md#implemented-step-b2-in-flight-ownership).
 
 September 23 checkpoint after `424b933`: the B2 request boundary is extracted

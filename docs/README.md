@@ -45,8 +45,9 @@ checks; broader lifecycle/cache questions remain open. The subsequent B2
 request-boundary extraction passes automated, isolated browser and ordinary
 resumed/idle live checks, with no prompt or scheduling changes.
 The follow-on B2 in-flight owner passes automated, isolated browser and ordinary
-resumed/idle/disconnect live checks; a separate rejected summary derivative is
-recorded in Engineering Status, with the original session intact.
+resumed/idle/disconnect live checks. A separate summary citation repair labels
+source speakers explicitly and restricts references accordingly; the rejected
+derivative was recovered with its original session intact. See Engineering Status.
 The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source
