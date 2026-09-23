@@ -4,6 +4,14 @@ Reviewed September 22, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 23 checkpoint: `5bcccbe` commits the receipt/image-admission repairs
+and cache-parser diagnostics below. A fresh focused recheck passed 60 JavaScript
+and 156 Python tests. Next is the behavior-preserving
+[B2 evidence-packet extraction](sts-lifecycle-ownership-plan.md#queued-step-b2-evidence-packet),
+currently planned only. Prompts, cadence and advisory selection are outside its
+scope. Live receipt-payload proof, image-overlap acceptance and the large-context
+cache finding remain open; none is silently declared fixed by this checkpoint.
+
 ## Working Baseline
 
 September 22 checkpoint, following `8555bce`: Restart cleanup ownership and

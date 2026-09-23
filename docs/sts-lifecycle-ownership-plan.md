@@ -16,14 +16,65 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
-Deferred B2 delivery is implemented and accepted on the live paths below. Commit
-that baseline before more changes. Next, investigate the captured full cache
-refill and repair the separate B2 file-write receipt visibility gap. Neither
-requires personality changes, shorter answers or reduced idle initiative.
-Further lifecycle extraction remains incremental; do not expand this accepted
-step into private-advice scheduling or a universal scheduler.
+Checkpoint `5bcccbe` contains the file-write receipt path, waiting foreground
+image admission, numeric cache diagnostics and updated acceptance notes.
+The preceding full verification passed 817 JavaScript / 1,005 Python tests and
+isolated Edge checks; the September 23 pre-commit recheck passed 60 focused
+JavaScript / 156 Python tests. Ordinary Hotel Note continuation passed; its
+saved artifacts do not independently prove B2 receipt-payload delivery, and no
+image overlap occurred. The large-context cache refill remains separate and open.
 
-## Next Step: Deferred B2 Surface
+Next is the bounded B2 evidence-packet extraction below, not private-advice
+scheduling or a universal scheduler. Deferred body-cue ownership was considered
+but is Reachy-only today; leave it parked with the unused Halt/Unload work.
+
+## Queued Step: B2 Evidence Packet
+
+Planning only, September 23; no implementation or runtime changes in this step.
+The target is `brain2EvidenceSnapshot()` in `web/sts/index.html`. It currently
+reads transcript metadata, session identity, runtime/tool receipts, note guidance
+and previous-snapshot state through page globals. This packet determines both
+what B2 sees and whether the scheduler considers evidence changed. Making that
+contract explicit is more useful than moving unrelated page helpers wholesale.
+
+1. Characterize the existing packet with fixed-clock, literal expected fixtures
+   before extracting it. Cover empty/new/resumed sessions, amended human input,
+   assistant output IDs, previous-sample counters, normal and accelerated idle,
+   image/write/search receipts, stale-session writes, card-free use and changed
+   note guidance. Preserve JSON field ordering and fingerprint strings, not just
+   equivalent-looking text. Existing transcript-role parsing stays unchanged.
+2. Add a small `brain2-evidence.js` module with explicit input and return values.
+   The page remains the adapter for DOM/runtime readings, note routing and the
+   clock. The module assembles the packet; it must not fetch, schedule, send,
+   speak, alter notes, or decide what advice should reach B1. Previous-evidence
+   ownership and its update-on-accepted-response rule remain where they are.
+3. Retain every current window, field, guidance rule and freshness condition.
+   Time alone must not change the fingerprint; real receipt changes must.
+   No new truncation, semantic filtering, biography rules, idle cooldowns or
+   prompts. This step preserves policy rather than revisiting it.
+4. Exercise the real page request path in the isolated browser: record a fake
+   successful write, capture the outgoing B2 request, and assert that its compact
+   receipt is included without the document body. Exercise the server serializer
+   too. Keep this distinguished from proof of an actual live model request.
+   Do not add broad prompt logging; a live prompt-ledger export can close that
+   separate verification gap when available.
+5. Run focused packet/freshness tests, the whole JavaScript suite, the existing
+   Python evidence-serializer checks and the beacon-isolated browser suite.
+   Compare old/new complete packets and prove unchanged page behavior before
+   a normal live trial. No live model calls or hardware commands in tests.
+
+Stop and rescope if this needs a scheduler rewrite, B1 context changes, altered
+advisory selection, new language interpretation or changed runtime semantics.
+Keep the eventual implementation in its own reversible commit after this plan.
+
+Live acceptance after implementation: refresh while disconnected, Connect to
+the current thread, ask Eric to save a short note about the conversation, then
+talk normally, leave a short idle gap and return. Disconnect as usual. Check
+continuity, receipt visibility, B2 initiative and normal speech handoffs; no
+contrived image collision, long lecture or destructive control test is needed.
+Until implementation is ready, no special user trial is required.
+
+## Implemented Step: Deferred B2 Surface
 
 Implemented after accepted spoken-monitor checkpoint `49fada9`; the 22:26-22:38
 run accepts ordinary deferred delivery and mid-speech cleanup. `deferBrain2Surface`, `scheduleBrain2Surface` and
