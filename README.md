@@ -206,8 +206,11 @@ Backend-control feedback now has a separate owner so old status timers cannot
 overwrite newer operations. Restart now shares the connection-transition owner
 and checks cleanup ownership before acting. Live continuation and mid-speech
 Disconnect passed. Connect availability now checks the warmed STS service for a
-free slot rather than treating the restart timer as readiness. Page exit,
-recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
+free slot rather than treating the restart timer as readiness. The optional B2
+spoken monitor now has its own cancellation/callback owner; offline and browser
+tests cover human/B1 handoffs and stale callbacks. Ordinary live continuation
+passed; cancellation races retain offline coverage only.
+Page exit, recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
 behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).
 

@@ -1205,6 +1205,7 @@ test('a Brain2 mouth request finishing after reconnect cannot speak or repopulat
   const spoken = [];
   const outputs = [];
   const context = loadFunctions(['surfaceBrain2MouthText', 'brain2LoopGuardText', 'triggerBrain2Mull'], {
+    brain2Speech: { revision: 0 },
     realtimeSessionGeneration: 1, ws: {}, brain2InFlight: false,
     brain2EvidenceGeneration: 0, lastUserTurnActivityAt: 0, brain2HeadlinesDue: () => false,
     brain2NoteCandidates: [], brain2QuestionCandidates: [], brain2RevisionCandidates: [],

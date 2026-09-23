@@ -2972,6 +2972,7 @@
   <script src="network-camera.js"></script>
   <script src="idle-art.js"></script>
   <script src="audio-playback.js"></script>
+  <script src="brain2-speech.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -3212,9 +3213,7 @@
     let esp32CameraCapturePromise = null;
     let micSource;
     let micProcessor;
-    let brain2MonitorAudioActive = false;
-    let brain2MonitorAudioUntil = 0;
-    let brain2VoiceGeneration = 0;
+    const brain2Speech = createBrain2SpeechOwner();
     let toolActivityTimer = null;
     let deliberateIndicatorTimer = null;
     let lastToolActivityTitle = "No tool activity yet";
@@ -10661,6 +10660,7 @@
     }
 
     function noteUserTurnActivity({ pendingMs = idlePendingUserTurnMs } = {}) {
+      cancelBrain2MonitorSpeech("human turn");
       const now = Date.now();
       captureCompletedAloneInterval();
       lastUserTurnActivityAt = now;
@@ -11526,8 +11526,9 @@
       return brain2MouthBrainEnabled() && !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
     }
 
-    function brain2VoiceCanSpeak() {
-      return brain2MouthBrainEnabled() && brain2VoiceMonitorEnabled() && !responseActive && !outputAudioActive() && !userSpeechActive;
+    function brain2VoiceCanSpeak(options = {}) {
+      return (options.kind === "voice test" || brain2MouthBrainEnabled()) && brain2VoiceMonitorEnabled()
+        && !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
     }
 
     function brain2UserPresentButBusy() {
@@ -11654,65 +11655,50 @@
       return brain2BrowserVoices.find((voice) => voice.name === name) || null;
     }
 
+    function createBrain2SpeechOwner() {
+      return Robot790Brain2Speech.create({
+        getSynthesis: () => browserSpeechAvailable() ? window.speechSynthesis : null,
+        createUtterance: value => {
+          const utterance = new SpeechSynthesisUtterance(value);
+          utterance.voice = selectedBrain2BrowserVoice();
+          utterance.volume = currentBrain2VoiceVolume() / 100;
+          utterance.rate = currentBrain2VoicePace();
+          utterance.pitch = 0.62;
+          return utterance;
+        },
+        canSpeak: options => brain2VoiceCanSpeak(options),
+        getSessionGeneration: () => realtimeConnection.generation,
+        log: (kind, text) => logBrain2(kind, text),
+        now: () => Date.now()
+      });
+    }
+
     function speakBrain2Monitor(text, options = {}) {
       const value = String(text || "").replace(/\s+/g, " ").trim();
-      if (!value || !brain2VoiceMonitorEnabled()) return;
+      if (!value || !brain2VoiceMonitorEnabled()) return false;
       if (!browserSpeechAvailable()) {
         if (!brain2VoiceUnsupportedLogged) {
           brain2VoiceUnsupportedLogged = true;
           logBrain2("voice unsupported", "browser speech synthesis is unavailable");
         }
-        return;
+        return false;
       }
-      const voiceGeneration = ++brain2VoiceGeneration;
-      const utterance = new SpeechSynthesisUtterance(value);
-      utterance.voice = selectedBrain2BrowserVoice();
-      utterance.volume = currentBrain2VoiceVolume() / 100;
-      utterance.rate = currentBrain2VoicePace();
-      utterance.pitch = 0.62;
-      utterance.onstart = () => {
-        if (voiceGeneration !== brain2VoiceGeneration || !brain2VoiceMonitorEnabled()) {
-          window.speechSynthesis.cancel();
-          return;
-        }
-        brain2MonitorAudioActive = true;
-        brain2MonitorAudioUntil = Date.now() + Math.max(1800, value.length * 70);
-        logBrain2("voice started", value);
-      };
-      utterance.onend = () => {
-        if (voiceGeneration !== brain2VoiceGeneration) return;
-        brain2MonitorAudioActive = false;
-        brain2MonitorAudioUntil = Date.now() + 500;
-        logBrain2("voice ended", value);
-      };
-      utterance.onerror = () => {
-        if (voiceGeneration !== brain2VoiceGeneration) return;
-        brain2MonitorAudioActive = false;
-        brain2MonitorAudioUntil = Date.now() + 500;
-        logBrain2("voice error", value);
-      };
-      if (!brain2VoiceMonitorEnabled()) return;
-      window.speechSynthesis.cancel();
-      if (!brain2VoiceMonitorEnabled()) return;
-      window.speechSynthesis.speak(utterance);
-      logBrain2(options.kind || "voice", value);
+      return brain2Speech.speak(value, options);
     }
 
-    function cancelBrain2MonitorSpeech() {
-      brain2VoiceGeneration += 1;
-      brain2MonitorAudioActive = false;
-      brain2MonitorAudioUntil = 0;
-      if (browserSpeechAvailable()) window.speechSynthesis.cancel();
+    function cancelBrain2MonitorSpeech(reason = "monitor reset") {
+      brain2Speech.cancel(reason);
     }
 
     function brain2MonitorAudioShouldMuteMic() {
-      return brain2MonitorAudioActive || Date.now() < brain2MonitorAudioUntil;
+      return brain2Speech.shouldMuteMic();
     }
 
     async function surfaceBrain2MouthText(mouthText, options = {}) {
       if (realtimeConnection.stopped) return;
       const generation = realtimeConnection.generation;
       const socket = realtimeConnection.socket;
+      const voiceRevision = brain2Speech.revision;
       try {
         await setMouthText({
           text: mouthText,
@@ -11731,7 +11717,7 @@
       logBrain2("mouth", mouthText);
       rememberBrain2Output("mouth", mouthText);
       if (options.speak !== false && brain2MouthBrainEnabled()) {
-        speakBrain2Monitor(mouthText);
+        speakBrain2Monitor(mouthText, { revision: voiceRevision });
       }
     }
 
@@ -11768,8 +11754,7 @@
         return;
       }
       if (!brain2DeferredSurface.voiceSpoken && brain2VoiceCanSpeak()) {
-        speakBrain2Monitor(brain2DeferredSurface.mouthText);
-        brain2DeferredSurface.voiceSpoken = true;
+        brain2DeferredSurface.voiceSpoken = speakBrain2Monitor(brain2DeferredSurface.mouthText);
       }
       if (!brain2MouthCanSurface()) {
         scheduleBrain2Surface();
@@ -19810,6 +19795,7 @@
     }
 
     async function playPcm16Bytes(bytes) {
+      cancelBrain2MonitorSpeech("B1 audio");
       await audioPlayback.play(bytes);
     }
 
@@ -19818,6 +19804,7 @@
     }
 
     function queueAudioDelta(b64) {
+      cancelBrain2MonitorSpeech("B1 audio");
       audioPlayback.enqueue(b64ToBytes(b64));
     }
 

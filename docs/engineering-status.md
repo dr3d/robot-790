@@ -13,17 +13,98 @@ served, and the gravity-restaurant run confirms subsequent ordinary connection,
 image/eye work, autonomous idle art and complete saving. These are scoped
 acceptance results, not a guarantee about every lifecycle transition.
 
-Next: reproduce and isolate the optional B2 spoken-monitor handoff, preserving
-private advice and existing idle behavior. See the
-[next-step scope](sts-lifecycle-ownership-plan.md#next-step-spoken-monitor-ownership).
+The current checkpoint includes optional B2 spoken-monitor ownership,
+preserving private advice and existing idle behavior. It passes offline/browser
+checks and the 21:36-21:53 ordinary live continuation. That run did not provoke
+a monitor cancellation race. See the
+[implementation and scope](sts-lifecycle-ownership-plan.md#implemented-step-spoken-monitor-ownership).
 Further Halt/Unload work is parked until needed. The earlier intermittent Windows
 note-write test observation remains documented below, separate from these repairs.
 
 Checkpoint verification: 760 JavaScript tests, all 1,002 Python tests and the
 isolated Edge suite pass. Python reports the existing Starlette/httpx deprecation
-warning; no test retry was needed in this run. Browser tests prohibit live model,
-backend-control and persistence calls, apart from their disposable test fixtures.
+warning; no test retry was needed in this run. Browser routes block live model,
+backend-control and persistence calls, apart from their disposable test fixtures;
+the later B2 checks exposed a page-exit beacon isolation gap, documented below.
 Logs: `logs/maintenance/lifecycle-review/checkpoint-restart-readiness-*.log`.
+
+### B2 Monitor Speech Ownership
+
+After checkpoint `1b9ce11`, `brain2-speech.js` owns the optional browser voice's
+queued/active utterance, stale callbacks and microphone echo tail. Human-turn
+activity and incoming B1 audio cancel that voice; delayed starts recheck current
+occupancy, including the pending turn after VAD stops. Old start/end/error events
+cannot cancel a replacement or clear its active state. A delayed mouth-display
+reply can still display text but cannot revive a superseded voice request.
+
+This changes execution only: no prompt, personality, private-advice, response
+length or idle-cadence changes. A currently speaking monitor aside may finish
+during B1 inference, but yields when B1 audio arrives. Existing monitor disable,
+Disconnect and session cleanup use the same owner. Actual cancellations get a
+short reason in the existing B2 log, without duplicating the utterance text.
+
+All 788 JavaScript tests and the isolated Edge suite pass, including 28 monitor
+tests. The browser uses native utterance objects with mocked dispatch, actual
+page events and save-stop quiescing, without live model/device requests or audible
+test speech. Correction: page-exit beacons did write test pane snapshots at 21:23,
+despite route interception. These are not conversation evidence; no corresponding
+session-note write was found. The checkpoint harness now intercepts beacons in
+its initialization script, before page code. A real pagehide dispatch exercises
+three intercepted snapshots; all latest-pane hashes remain unchanged after the
+suite. This changes test isolation only, not production page-exit behavior.
+Python is unchanged and was not rerun; its checkpoint result remains 1,002 passes.
+Evidence: `logs/maintenance/lifecycle-review/brain2-speech-*.log`.
+Checkpoint rerun: all 788 JavaScript tests and isolated Edge checks pass;
+`logs/maintenance/lifecycle-review/brain2-checkpoint-{suite,browser}.log`.
+
+The 21:36-21:53 continuation exercised four monitor asides, return from idle,
+a long answer and ordinary Disconnect, with no logged overlap with human speech
+or the recap. No cancellation race occurred; those cases remain offline coverage,
+not room-audio proof. No recording was supplied for audible-content verification.
+
+### Law Vending Acceptance
+
+September 22, 21:36-21:53: the Connect-time policy accepted nine middle-session
+excerpts, preserving the oldest and 13 newest sessions. Broad recall worked
+without file-reading tools; this is qualitative evidence, not a recall benchmark.
+All 26 source pins and three retained eye assets verify. Final measured context
+was 103,689/131,072 (79.11%), with no live compaction or overflow. Eric developed
+the invention during idle, made two further pictures and saved `tuesday.txt`.
+B2 later claimed the write receipt was absent; the receipt and file both exist.
+
+Scott's possible skipped lighthouse sentence has a concrete TTS match: its
+paragraph ends a 2,280-character coalesced input estimated at 3,112 codec tokens,
+above the configured 3,072 cap. Probable tail clipping, not proven missing words;
+the logs do not record actual cap exhaustion and no audio recording was supplied.
+The four recap batches generated 195.91 seconds of audio. Their drain timing
+explains the delayed spoken save confirmation; the file write itself succeeded.
+
+No runtime changes were made during the PM. Evidence:
+`logs/runs/20260922-2153-law-vending/postmortem.md`, with frozen sources, hashes
+and a reproducible analysis script.
+
+### TTS Budget and Next Work
+
+After the PM, Scott chose the small configuration adjustment: the launcher now
+passes 4,096 rather than 3,072 as the maximum audio-token budget per TTS request.
+PowerShell syntax and the one-line change are checked. Activation requires an
+STS restart; activation and another near-limit utterance are not verified here.
+No batching, answer-length or prompt change is included. Treat this as a practical
+mitigation, not proof that arbitrary-length inputs cannot truncate. Further TTS
+batching work is deferred unless clipping recurs; no forced stress run is needed.
+
+Next architecture task: isolate the deferred B2 mouth/voice item's timer and
+lifetime, beginning with offline stale-timer, replacement and reconnect fixtures.
+Keep the current timing, expiry and eligibility rules, private advice and idle
+initiative unchanged. This is proposed work, not an additional runtime repair.
+See the [bounded next step](sts-lifecycle-ownership-plan.md#next-step-deferred-b2-surface).
+
+Keep two evidence questions separate from that extraction: the 48-second
+image-associated B1 wait (cache refill remains unproven), and whether B2 receives
+the successful file-write receipt before advising that it is missing. Inspect
+existing request/receipt records first; do not add behavioral restrictions or a
+general logging expansion. Halt/Unload, recorder internals, a universal scheduler
+and further context-policy changes remain outside this next step.
 
 ### Connect Readiness
 

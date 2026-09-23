@@ -66,7 +66,7 @@ $qwenArgs = @(
     "--qwen3_tts_speaker", $Speaker,
     "--qwen3_tts_instruct", $TtsInstruct,
     "--qwen3_tts_language", "English",
-    "--qwen3_tts_max_new_tokens", "3072",
+    "--qwen3_tts_max_new_tokens", "4096",
     "--llm_backend", "chat-completions",
     "--responses_api_base_url", $LlmBaseUrl
 )

@@ -132,6 +132,12 @@ async function main() {
       return route.abort();
     });
     await context.addInitScript(() => {
+      // Exit beacons can outlive route interception during page teardown.
+      window.isolatedBeacons = [];
+      Object.defineProperty(navigator, 'sendBeacon', { value: (url, body) => {
+        window.isolatedBeacons.push({ url: String(url), bytes: body?.size || 0 });
+        return false;
+      } });
       const NativeSocket = WebSocket;
       window.isolatedNativeWebSocket = NativeSocket;
       window.WebSocket = class extends NativeSocket {
@@ -241,6 +247,20 @@ async function main() {
     await restartUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
     results.restartCleanup = await require('./helpers/sts_restart_browser.cjs').checkRestartCleanup(restartUi);
     await restartUi.close();
+    const monitorUi = await context.newPage();
+    monitorUi.on('pageerror', error => pageErrors.push(error.message));
+    await monitorUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.brain2Speech = await require('./helpers/sts_brain2_speech_browser.cjs').checkBrain2Speech(monitorUi);
+    results.exitBeaconIsolation = await monitorUi.evaluate(() => {
+      window.dispatchEvent(new Event('pagehide'));
+      return { intercepted: isolatedBeacons.length,
+        onlySnapshots: isolatedBeacons.every(item => new URL(item.url).pathname === '/api/logs/record'),
+        hasContent: isolatedBeacons.some(item => item.bytes > 0) };
+    });
+    assert(results.exitBeaconIsolation.intercepted > 0, 'exercise actual page-exit snapshot wiring');
+    assert.equal(results.exitBeaconIsolation.onlySnapshots, true);
+    assert.equal(results.exitBeaconIsolation.hasContent, true);
+    await monitorUi.close();
     const mapUi = await context.newPage();
     let mapReady = false;
     mapUi.on('pageerror', error => pageErrors.push(error.message));

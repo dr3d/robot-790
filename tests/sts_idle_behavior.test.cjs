@@ -10,6 +10,7 @@ function load(names, globals) {
   globals.toolScopeDenials ??= new Map();
   globals.toolFollowupTerminal ??= false;
   globals.lastUserTurnActivityAt ??= 0;
+  globals.cancelBrain2MonitorSpeech ??= noop;
   const c = vm.createContext(globals);
   require('./helpers/sts_tool_harness.cjs').loadFunctions(c, names);
   return c;

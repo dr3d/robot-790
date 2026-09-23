@@ -8,6 +8,7 @@ function installAudioPlayback(context) {
   context.setTimeout ??= setTimeout;
   context.clearTimeout ??= clearTimeout;
   context.audioContext ??= null;
+  context.cancelBrain2MonitorSpeech ??= () => {};
   const start = page.indexOf('    const audioPlayback = Robot790AudioPlayback.create({');
   const end = page.indexOf('\n    });', start);
   assert.ok(start >= 0 && end > start, 'production audio owner wiring');

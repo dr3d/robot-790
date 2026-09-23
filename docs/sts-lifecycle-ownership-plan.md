@@ -14,7 +14,42 @@ permissions, receipts, persistence and exclusive access to public speech.
 This work must not introduce English intent classifiers, prescribed dialogue,
 shorter answers, new quiet periods or a setup-card requirement.
 
-## Next Step: Spoken-Monitor Ownership
+## Next Step: Deferred B2 Surface
+
+Queued after the accepted spoken-monitor checkpoint, not implemented yet.
+`deferBrain2Surface`, `scheduleBrain2Surface` and `maybeSurfaceDeferredBrain2`
+still share a page-level pending mouth/voice item and timeout. Isolate that
+small delivery lifetime next; do not absorb private advisory generation or the
+whole idle scheduler into it. This is an ownership candidate, not a claim that
+the latest live run exposed a new defect here.
+
+1. Reproduce the existing behavior offline: ordinary deferred delivery, a newer
+   item replacing an older one, B2 disable, voice already delivered, current
+   busy/expiry handling, and Disconnect/reconnect while a timer or mouth request
+   is outstanding. Explicitly invoke captured old callbacks after replacement.
+2. Give the pending item and timer one owner. Old callbacks must not drain or
+   clear a replacement item or publish into a different session. Keep page
+   adapters for display, speech eligibility, logging and the current clock.
+3. Preserve the 1,200 ms retry, existing lab-speed/expiry calculation, latest-item
+   replacement behavior and mouth/voice distinction. No new cooldown, suppression
+   policy, content interpretation, replay of interrupted speech or B2 prompts.
+4. Run focused tests, the complete JavaScript suite and the beacon-isolated
+   browser checks. Stop and rescope if this needs private-advice freshness rules,
+   changes to B1 turn scheduling or new decisions about what Eric should say.
+5. After implementation, the live trial is ordinary: refresh disconnected,
+   resume the rich thread, have a multi-step exchange, leave a short idle gap,
+   return to talking and Disconnect. Existing tests exercise races; Scott need
+   not engineer failures or provoke another long TTS batch. Compare continuity,
+   initiative and public-speech handoffs with the law-vending baseline.
+
+Separate follow-ups: inspect B2's visibility of successful file-write receipts,
+and investigate the image-associated 48-second B1 delay using existing evidence.
+Neither is a prerequisite for this bounded extraction or a reason to change
+Eric's persona. Scott chose a 4,096 TTS cap as the clipping mitigation; batching
+redesign is parked unless the symptom returns. No further work on unused
+Halt/Unload paths, context policy or a universal scheduler is bundled here.
+
+## Implemented Step: Spoken-Monitor Ownership
 
 September 22 checkpoint scope: Restart cleanup and readiness are accepted on the
 exercised paths below. Move next to B2's optional browser-speech monitor, not a
@@ -38,6 +73,42 @@ another proven overlap: B2 finished just before B1's first audio.
 Stop and rescope if the repair requires redesigning B1 playback, backend turns,
 or advisory freshness. Further Halt/Unload, recorder-internal and page-crash
 work remain separate. Checkpoint this accepted state before implementation.
+
+Implemented after checkpoint `1b9ce11`. `brain2-speech.js` owns the optional
+browser monitor's utterance identity, cancellation and microphone echo tail.
+The page supplies voice settings and current eligibility. Admission and delayed
+`onstart` both check human-turn/B1 occupancy; a pending human turn counts even
+after VAD stops. Accepted human activity and arriving B1 audio invalidate the
+monitor immediately. B1 inference alone does not interrupt an already-running
+aside. Disconnect, monitor disable and existing session cleanup use the same
+owner. Old callbacks cannot cancel newer speech or change its microphone state.
+
+A mouth-display request captures the monitor revision before awaiting its device
+reply. The display still completes, but cannot launch stale voice after human/B1
+activity or replacement speech. Private advice, mouth text, existing deferred
+surface policy, prompts and idle scheduling are unchanged. There is no automatic
+replay of an interrupted monitor utterance. Normal completion keeps the existing
+500 ms microphone echo tail; explicit cancellation clears it as before.
+
+Verification: 13 of the initial 14 offline probes failed before the repair;
+all 28 monitor tests and all 788 JavaScript tests now pass. Isolated Edge checks
+real page/event wiring, native utterance objects and the stop path, with browser
+speech dispatch mocked: no live model, microphone or audible speech. Correction:
+page-exit beacons escaped route isolation and wrote 21:23 test pane snapshots;
+no corresponding session-note write was found. Those snapshots are excluded from
+live evidence. The checkpoint harness now intercepts beacons before page code;
+the rerun exercises three pagehide snapshots and leaves latest-pane hashes
+unchanged. All 788 tests and the isolated browser suite pass again. The tests
+establish callback ownership, not room-audio acceptance. Logs:
+`logs/maintenance/lifecycle-review/brain2-speech-{before,suite,browser}.log`.
+Python was not rerun for this page-only change; checkpoint coverage was 1,002
+passes. The 21:36-21:53 continuation passed the ordinary path: four monitor
+asides, return from idle, a long answer and normal Disconnect, without logged
+overlap. No monitor cancellation race occurred; those cases retain offline
+coverage only. Save integrity and continuity passed. The possible missing
+lighthouse sentence instead matches an oversized backend TTS batch, separate
+from this browser owner. Preserve that distinction and Eric's answer length.
+Evidence: `logs/runs/20260922-2153-law-vending/postmortem.md`.
 
 ## Accepted Step: Restart Cleanup
 
@@ -954,7 +1025,8 @@ PM: `logs/runs/20260922-1909-genius-recall-and-save/postmortem.md`.
 - Restart dispatch/cleanup now uses captured ownership and the connection
   transition, as specified above; offline checks and the exercised live
   continuation/stop paths pass. Readiness activation and the following normal
-  connection are verified. B2 spoken-monitor ownership is the next narrow scope.
+  connection are verified. B2 spoken-monitor ownership now passes its offline
+  checks and ordinary live continuation; deferred mouth/voice delivery is next.
   Already-submitted backend commands and recorder-internal finalization are
   separate lifetimes, not canceled by a feedback or connection guard. Halt and
   Unload remain deferred.
