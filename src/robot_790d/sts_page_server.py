@@ -128,6 +128,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/runtime-config":
             self._handle_runtime_config()
             return
+        if parsed.path == "/api/realtime/ready":
+            self._handle_realtime_ready()
+            return
         if parsed.path == "/api/camera/esp32/frame":
             self._handle_esp32_camera_frame()
             return
@@ -291,6 +294,21 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Camera-Rotation", str(config["rotation_degrees"]))
         self.end_headers()
         self.wfile.write(body)
+
+    def _handle_realtime_ready(self) -> None:
+        # This route exists only after pipeline warmup and claims no session slot.
+        try:
+            response = httpx.get("http://127.0.0.1:8765/v1/pool", timeout=1.0, trust_env=False)
+            response.raise_for_status()
+            pool = response.json()
+            units = pool.get("units") if isinstance(pool, dict) else None
+            if not isinstance(units, list) or not units or not all(isinstance(unit, dict) for unit in units):
+                raise ValueError("Invalid realtime pool response")
+            ready = any(unit.get("state") == "idle" for unit in units)
+        except (httpx.HTTPError, ValueError):
+            self._send_json(503, {"ready": False})
+            return
+        self._send_json(200, {"ready": ready})
 
     def _handle_operator_poll(self, query_string: str) -> None:
         params = parse_qs(query_string)

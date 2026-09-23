@@ -47,11 +47,13 @@ prompts and companion behavior. Resumed-thread trials preserve continuity and
 stop speech on Disconnect; isolated tests cover network loss and save recovery.
 Voice interruptions no longer hide a completed image thumbnail; Sensing Eye
 transfer remains Eric's separate action. Unused thread-reset controls are retired.
-The accepted feedback checkpoint passes 735 JavaScript and 990 Python tests on
+The current checkpoint passes 760 JavaScript and 1,002 Python tests on
 the full rerun, plus isolated browser checks. Backend-control status feedback
 now has its own owner so stale replies cannot overwrite newer operations.
-Restart cleanup is the next small scope; further Halt/Unload work is deferred
-until a practical need appears.
+Restart cleanup cannot act on a replacement session; live continuation and
+mid-speech Disconnect passed. Connect now checks service readiness instead of
+assuming that a launch acknowledgement means STS has finished warming up.
+Further Halt/Unload work is deferred until a practical need appears.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
 has the larger video collection. This site's media shelf is a curated selection,

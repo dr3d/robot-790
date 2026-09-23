@@ -2973,6 +2973,7 @@
   <script src="idle-art.js"></script>
   <script src="audio-playback.js"></script>
   <script src="realtime-connection.js"></script>
+  <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
   <script src="tool-continuation.js"></script>
   <script src="connection-context.js"></script>
@@ -3182,6 +3183,12 @@
     const settingsPanel = document.querySelector("#settingsPanel");
 
     const realtimeConnection = Robot790RealtimeConnection.create();
+    const realtimeReadiness = Robot790RealtimeReadiness.create({
+      probe: Robot790RealtimeReadiness.probeLocal,
+      canCheck: () => !realtimeConnection.busy && !restartServerButton.disabled
+        && ![WebSocket.OPEN, WebSocket.CONNECTING].includes(realtimeConnection.socket?.readyState),
+      onChange: () => setConnectionButtonsDisabled(connectionButtonsLocked)
+    });
     const backendControlFeedback = Robot790BackendControlFeedback.create({
       setTimer: (callback, ms) => setTimeout(callback, ms),
       clearTimer: timer => clearTimeout(timer),
@@ -6342,7 +6349,7 @@
       );
       const locked = connectionButtonsLocked || socketBusy || realtimeConnection.busy;
       if (archiveContinuitySessionButton) archiveContinuitySessionButton.disabled = locked || !hasSelection || continuitySessions.length <= 1;
-      if (connectSelectedContinuitySessionButton) connectSelectedContinuitySessionButton.disabled = locked || !hasSelection;
+      if (connectSelectedContinuitySessionButton) connectSelectedContinuitySessionButton.disabled = locked || !hasSelection || !realtimeReadiness.ready;
     }
 
     async function fetchContinuitySessionMetadata(filename, resumeForm = "raw") {
@@ -20013,7 +20020,7 @@
     function setConnectionButtonsDisabled(disabled) {
       connectionButtonsLocked = Boolean(disabled);
       [connectButton, previousConnectButton, emptyConnectButton].forEach((button) => {
-        if (button) button.disabled = connectionButtonsLocked || realtimeConnection.busy;
+        if (button) button.disabled = connectionButtonsLocked || realtimeConnection.busy || !realtimeReadiness.ready;
       });
       updateContinuitySessionActionButtons();
     }
@@ -20362,6 +20369,7 @@
         }
         await prepareConnectionContext();
         await ensurePlayback();
+        realtimeReadiness.invalidate();
         socket = new WebSocket(serverUrl.value.trim());
         idleArt.reset();
         continuitySaveHalted = false;
@@ -20521,52 +20529,89 @@
     }
 
     async function restartRealtimeServer() {
+      if (realtimeConnection.busy) {
+        log(events, "realtime restart skipped: connection change or cleanup is still in progress");
+        return;
+      }
+      const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
+      const payload = JSON.stringify(currentModelRestartPayload());
       log(events, "realtime restart requested");
+      realtimeReadiness.invalidate();
       const cleanupGeneration = beginIntentionalExitCleanup();
       const feedback = beginBackendControlFeedback("restart", cleanupGeneration);
       try {
-        if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
-          const stopResult = await runtimeStep("stop audio recording", () => stopAudioRecording({ reason: "realtime restart" }), { timeoutMs: 18000, prefix: "restart step" });
-          if (stopResult) log(events, `audio recording stopped for restart: ${stopResult.recording_name || stopResult.status || "done"}`);
+        const result = await runConnectionTransition("restart", () => restartRealtimeBackend({
+          socket, generation, cleanupGeneration, payload
+        }));
+        if (!result) {
+          feedback.complete();
+          log(events, "realtime restart canceled before dispatch: session or cleanup ownership changed");
+          return;
         }
-        if (micStream) await runtimeStep("stop mic", () => stopMic({ reason: "realtime restart" }), { timeoutMs: 6000, prefix: "restart step" });
-        await runtimeStep("save pane snapshots", () => recordExitPaneSnapshots("realtime restart"), { timeoutMs: 10000, prefix: "restart step" });
-      } catch (error) {
-        log(events, `recording/mic stop during restart error: ${error.message}`);
-      }
-      if (realtimeConnection.socket && realtimeConnection.socket.readyState === WebSocket.OPEN) realtimeConnection.socket.close();
-      clearAudioQueue();
-      endIntentionalExitCleanupSoon(cleanupGeneration);
-      feedback.update(() => {
-        setState("Restarting realtime", "warn");
-        setConnectionButtonsDisabled(true);
-        disconnectButton.disabled = true;
-      });
-
-      try {
-        const response = await fetch(new URL("/api/realtime/restart", location.href), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(currentModelRestartPayload()),
-          cache: "no-store"
+        feedback.update(() => {
+          setConnectionButtonsDisabled(true);
+          disconnectButton.disabled = continuitySaveHalted || !conversationLines.length;
         });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || result.status === "error") {
-          throw new Error(result.error || `${response.status} ${response.statusText}`);
-        }
         log(events, `realtime restart started: ${result.preset || currentModelPreset()} pid ${result.pid || "unknown"}`);
         feedback.defer(() => {
           setConnectionButtonsDisabled(false);
           setState("Disconnected");
-          log(events, "realtime restart launched; reconnect when ready");
+          log(events, "realtime restart launched; Connect waits for STS readiness");
         }, 5000);
       } catch (error) {
         feedback.complete(() => {
           setConnectionButtonsDisabled(false);
+          disconnectButton.disabled = continuitySaveHalted || !conversationLines.length;
           setState("Restart failed");
         });
         log(events, `realtime restart error: ${error.message}`);
+      } finally {
+        endIntentionalExitCleanupSoon(cleanupGeneration);
       }
+    }
+
+    async function restartRealtimeBackend({ socket, generation, cleanupGeneration, payload }) {
+      const isCurrent = () => socket === realtimeConnection.socket
+        && generation === realtimeConnection.generation
+        && cleanupGeneration === intentionalExitCleanupGeneration;
+      // runtimeStep defers its callback too: check before starting and after settling each step.
+      const step = (label, operation, timeoutMs) => runtimeStep(label,
+        () => isCurrent() ? operation() : null, { timeoutMs, prefix: "restart step" });
+      if (!isCurrent()) return null;
+      disconnectButton.disabled = true;
+      if (audioRecordingActive() || audioRecordFinalizing || audioRecordStopPromise) {
+        const stopResult = await step("stop audio recording", () => stopAudioRecording({ reason: "realtime restart" }), 18000);
+        if (!isCurrent()) return null;
+        if (stopResult) log(events, `audio recording stopped for restart: ${stopResult.recording_name || stopResult.status || "done"}`);
+      }
+      if (micStream) await step("stop mic", () => stopMic({ reason: "realtime restart" }), 6000);
+      if (!isCurrent()) return null;
+      await step("save pane snapshots", () => recordExitPaneSnapshots("realtime restart"), 10000);
+      if (!isCurrent()) return null;
+      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) socket.close();
+      clearAudioQueue();
+      setState("Restarting realtime", "warn");
+      setConnectionButtonsDisabled(true);
+      let receipt;
+      try {
+        receipt = await runtimeStep("request backend restart", async () => {
+          if (!isCurrent()) return null;
+          const response = await fetch(new URL("/api/realtime/restart", location.href), {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: payload, cache: "no-store"
+          });
+          return { response, result: await response.json().catch(() => ({})) };
+        }, { timeoutMs: 30000, required: true, prefix: "restart step" });
+      } catch (error) {
+        log(events, "realtime restart receipt missing: backend outcome unknown; no automatic retry");
+        throw error;
+      }
+      if (!receipt) return null;
+      const { response, result } = receipt;
+      if (!response.ok || result.status === "error") {
+        throw new Error(result.error || `${response.status} ${response.statusText}`);
+      }
+      return result;
     }
 
     async function haltRealtimeServer() {
@@ -22212,6 +22257,9 @@
     if (contextPanel.open) renderContextMap();
     scheduleLogPaneHeightUpdate();
     startGpuStatusPolling();
+    setConnectionButtonsDisabled(false);
+    void realtimeReadiness.check();
+    setInterval(() => { void realtimeReadiness.check(); }, 2000);
     startOperatorCommandPolling();
     startSensingEyeInboxPolling();
     setInterval(() => autosaveSessionLogs(), logAutosaveMs);

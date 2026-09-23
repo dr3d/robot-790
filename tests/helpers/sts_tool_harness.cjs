@@ -43,6 +43,8 @@ function fixture() {
 }
 
 function loadFunctions(context, names) {
+  // Readiness is exercised separately; these fixtures model an available service.
+  context.realtimeReadiness ??= { ready: true, invalidate() {} };
   require('./sts_continuation_harness.cjs').installToolContinuation(context);
   const dependencies = {
     connect: ['runConnectionTransition', 'openRealtimeConnection'],
@@ -51,6 +53,7 @@ function loadFunctions(context, names) {
     connectPrevious: ['runConnectionTransition', 'preparePreviousConnection'],
     connectSelectedContinuityFilename: ['runConnectionTransition', 'prepareSelectedConnection'],
     disconnectRealtime: ['runConnectionTransition', 'saveAndDisconnectRealtime'],
+    restartRealtimeServer: ['runConnectionTransition', 'restartRealtimeBackend'],
     performSessionMapMove: ['runConnectionTransition', 'completeSessionMapMove'],
   };
   function load(name) {

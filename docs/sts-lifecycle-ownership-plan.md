@@ -14,18 +14,44 @@ permissions, receipts, persistence and exclusive access to public speech.
 This work must not introduce English intent classifiers, prescribed dialogue,
 shorter answers, new quiet periods or a setup-card requirement.
 
-## Next Step: Restart Cleanup
+## Next Step: Spoken-Monitor Ownership
 
-Prepared September 22 after accepted feedback checkpoint `9b56e40`. This is the
-next implementation scope, not an already completed repair. Scott uses Restart
+September 22 checkpoint scope: Restart cleanup and readiness are accepted on the
+exercised paths below. Move next to B2's optional browser-speech monitor, not a
+general idle/scheduling rewrite. The 20:13-20:25 PM records a monitor utterance
+starting after human speech resumed. The gravity-restaurant run does not add
+another proven overlap: B2 finished just before B1's first audio.
+
+1. Reproduce delayed browser `onstart` and late end/error callbacks offline,
+   across human speech resumption, B1 audio, monitor disable and Disconnect.
+   Include interrupted/finalizing human turns, not just the current VAD flag.
+2. Give that monitor's queue/callback lifetime one owner outside the page.
+   Recheck permission to speak at actual dispatch/start; expired work must not
+   revive an old voice or clear a newer utterance's state.
+3. Preserve private B2 advice, mouth-display behavior, model selection, prompts,
+   idle cadence and Eric's response length. Do not use this repair to add quiet
+   policy, content filtering or a new universal scheduler.
+4. Verify in isolated browser fixtures before asking for a normal conversation:
+   long answer, a little idle, return to speaking, then ordinary Disconnect.
+   No deliberate mic noise, racing controls or risky unsaved exits needed.
+
+Stop and rescope if the repair requires redesigning B1 playback, backend turns,
+or advisory freshness. Further Halt/Unload, recorder-internal and page-crash
+work remain separate. Checkpoint this accepted state before implementation.
+
+## Accepted Step: Restart Cleanup
+
+Prepared September 22 after accepted feedback checkpoint `9b56e40`, then committed
+as plan `8555bce`. Implementation passes offline checks; the live pair confirms
+continuity/stop behavior and exposed a readiness gap, now addressed below. Scott uses Restart
 to reboot STS; he does not use Halt or Unload. Further work on those controls is
 parked until practical use exposes a problem. Keep their current implementation
 and existing regression tests, but do not expand this into a general exit rewrite.
 
-The remaining Restart risk is after asynchronous cleanup, not its status timer:
-`restartRealtimeServer` waits for recording, mic and pane snapshots, then reads
-the current global socket and clears audio. An old operation could resume after
-resources have changed. Characterize this offline before changing production.
+The reproduced Restart risk was after asynchronous cleanup, not its status timer:
+`restartRealtimeServer` waited for recording, mic and pane snapshots, then read
+the current global socket and cleared audio. An old operation could resume after
+resources had changed. The original implementation scope was:
 
 1. Extend `tests/helpers/sts_exit_harness.cjs` with delayed/rejected recording,
    mic and snapshot completion. Reproduce a late old Restart after a replacement
@@ -54,6 +80,71 @@ lifecycle, recorder design, Halt/Unload behavior, or a broad new command queue.
 No changes to prompts, B2 policy, idle cadence, speech length, context assembly,
 model settings or Eric's discretion over tool use belong in this work.
 
+Implementation: `restartRealtimeServer` uses the existing `runConnectionTransition`
+owner; `restartRealtimeBackend` is its captured-session cleanup/request adapter.
+Each deferred cleanup and the deferred HTTP dispatch rechecks socket/generation
+and intentional-cleanup identity. The model payload is captured at the click,
+not read after device waits. Repeated requests and competing Connect/Disconnect
+work are skipped, not queued. Already-running normal transitions take priority.
+
+The backend launch receipt has a 30-second wait, with unknown-outcome logging
+and no automatic retry if it is lost. This releases browser ownership without
+claiming to cancel an already-sent request. The existing five-second completion
+status delay remains, not a backend-ready probe. No automatic save or reconnect;
+retained unsaved words still require Disconnect/save before Connect.
+
+Verification: 21 added cases and all 756 JavaScript tests pass; 13 of the initial
+17 probes failed before repair. Isolated Edge passes real-button/mock-backend
+checks, including delayed cleanup and replaced-session cancellation, alongside
+the existing real Web Audio and TCP-loss suites. Initial browser failure was an
+incomplete fake socket (`send` missing), corrected before the successful rerun.
+Python was not rerun; its last full result remains 990 passes with the separately
+recorded intermittent note-replacement observation. Evidence:
+`logs/maintenance/lifecycle-review/restart-cleanup-*.log`.
+
+Live acceptance: refresh disconnected, Connect to the current thread, exchange
+a short story beat, Disconnect and confirm saving, Restart once, then Connect
+normally and continue that beat. A little idle and Disconnect during speech
+complete the check. Do not race controls or change model settings for this trial.
+See [Engineering Status](engineering-status.md#restart-cleanup-ownership).
+
+Still outside scope: recorder-internal late-finalization ownership, cancellation
+of already-submitted backend commands, Halt/Unload orchestration and page-crash
+persistence. No live backend was restarted in automated verification.
+
+September 22 live pair, 20:13-20:25: normal continuation across Restart and
+mid-playback Disconnect passed. Both journals/disk notes and all pin hashes
+match; the second run recalls the first run's new reflection idea. Two Connect
+attempts failed before STT/TTS startup completed: Restart requested 20:15:19,
+backend ready 20:16:42, successful connection 20:17:17. The five-second status
+delay is misleading in practical use. Next work is an actual readiness receipt,
+not a longer guessed timer, with stale-result protection and no restart retry or
+auto-connect. Separately note one B2 monitor callback starting after human speech
+resumed; preserve initiative and test voice handoff rather than tuning content.
+PM: `logs/runs/20260922-2025-restart-continuity-pair/postmortem.md`.
+
+Readiness follow-up, September 22: the small `realtime-readiness.js` owner now
+gates the main and session-map Connect controls on the existing warmed pool's
+free-slot response, proxied read-only by the page server. Checks are single-flight,
+bounded and discarded across Restart/socket acquisition; existing transition
+locks remain authoritative. No auto-connect, backend retry, model call or persona
+change. The five-second feedback timer no longer determines Connect availability.
+760 JavaScript tests, 156 focused Python tests and isolated browser readiness
+checks pass. Activated around 20:47 using the existing page-only stop/start
+scripts after the initial restart command was rejected. The stale page API had
+returned 404 despite realtime being ready; UI Restart does not restart that API.
+The real endpoint and enabled browser controls are now verified without opening
+a conversation or restarting the models again. See
+[Connect Readiness](engineering-status.md#connect-readiness).
+
+September 22 follow-on acceptance, 20:56-21:06: ordinary Connect, three successful
+image/eye chains (one autonomous idle render), normal speech-drain waits and a
+complete Disconnect save passed. All 25 pin hashes and three eye hashes match;
+final context was 75.42%. No new B2/human overlap was established. Preserve this
+as a baseline for the next narrowly scoped spoken-monitor ownership fixture;
+do not suppress private B2 work or change idle cadence. PM:
+`logs/runs/20260922-2106-gravity-restaurant/postmortem.md`.
+
 ## Current Ownership Map
 
 Functions below are in `web/sts/index.html` unless a module is named. These are
@@ -62,7 +153,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Responsibility | Current entry points / state | Boundary risk |
 | --- | --- | --- |
 | Connection identity | `realtime-connection.js` owns socket, generation and stopped state; page adapters `activeRealtimeSession`, `realtimeConnected`, `send` | An awaited operation retains an old socket or generation. A stop is not the same as a new connection. |
-| Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Backend controls remain separate; unused explicit-reset controls are retired. |
+| Normal connection transitions | `realtime-connection.js` owns the single operation token; `runConnectionTransition` adapts UI; Connect/Previous/selected/Disconnect wrappers compose preparation and save functions; Restart uses it through cleanup and launch receipt | Competing preparations must not mutate shared context. A session-map move needs the same token through save and destination arrival. Halt/Unload remain separate; unused explicit-reset controls are retired. |
 | Current-socket closure | `realtime-connection.js` owns the idempotent close promise and stopped state; `handleRealtimeClose` / `cleanupClosedRealtime` adapt page resources and recovery UI | Reconnect cannot race pending close cleanup. The stopped unsaved transcript must survive until Disconnect/save succeeds. Explicit backend controls and page exit are not a crash-save protocol. |
 | Backend-control feedback | `backend-control-feedback.js` owns latest feedback identity, status timer and button release; page adapters retain request/cleanup logic | Old replies/timers must not overwrite a newer connection or command. Feedback invalidation does not cancel an already submitted backend command. |
 | Stop, save, reconnect work | `saveAndDisconnectRealtime`, `saveEricContinuitySnapshot`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Snapshot preparation owns one bounded final-transcript wait and the empty/save decision; frozen retries do not wait again. Device cleanup and save orchestration remain page-owned. Final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
@@ -860,11 +951,13 @@ PM: `logs/runs/20260922-1909-genius-recall-and-save/postmortem.md`.
   handoff, B2 delivery and exact continuity save; Scott reports a good result.
   No backend controls were exercised, so race coverage remains offline.
   PM: `logs/runs/20260922-1944-glass-submarine-acceptance/postmortem.md`.
-- Backend command dispatch and awaited device cleanup still need separate
-  ownership work. In particular, suppressing an old status callback does not stop
-  its backend request or make late cleanup incapable of touching newer resources.
-  Do not declare those races resolved by the feedback extraction. The active
-  next scope is Restart only, as specified above; Halt and Unload are deferred.
+- Restart dispatch/cleanup now uses captured ownership and the connection
+  transition, as specified above; offline checks and the exercised live
+  continuation/stop paths pass. Readiness activation and the following normal
+  connection are verified. B2 spoken-monitor ownership is the next narrow scope.
+  Already-submitted backend commands and recorder-internal finalization are
+  separate lifetimes, not canceled by a feedback or connection guard. Halt and
+  Unload remain deferred.
 - Save HTTP/disk failure recovery is now covered above; real browser/socket/
   device teardown, full selected-session transitions and live acceptance remain.
 - B2 advisory revision/freshness, private-to-public delivery and idle arbitration

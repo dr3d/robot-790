@@ -88,10 +88,12 @@
         stop speech on Disconnect; isolated tests cover network loss and save
         recovery. Voice interruptions no longer hide a completed image thumbnail,
         while putting that image into Sensing Eye remains Eric's separate action.
-        Unused thread-reset controls are retired. The accepted checkpoint passes
-        735 JavaScript and 990 Python tests on the full rerun, plus isolated browser checks.
-        Backend-control status feedback now has its own owner; Restart cleanup
-        is the next small scope. Further Halt/Unload work is deferred until needed.
+        Unused thread-reset controls are retired. The current checkpoint passes
+        760 JavaScript and 1,002 Python tests on the full rerun, plus isolated browser checks.
+        Backend-control status feedback now has its own owner. Restart cleanup
+        passed live continuation and mid-speech Disconnect checks. Connect now
+        checks service readiness instead of assuming launch means warmup is done.
+        Further Halt/Unload work is deferred until needed.
         These are execution repairs,
         not changes to Eric's prompts or companion behavior; successful tools
         still do not guarantee consistent judgment. The extra deep-think

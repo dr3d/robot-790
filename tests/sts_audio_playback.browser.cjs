@@ -125,6 +125,9 @@ async function main() {
     const context = await browser.newContext();
     await context.route('**/*', route => {
       const request = route.request(), url = new URL(request.url());
+      if (request.method() === 'GET' && url.pathname === '/api/realtime/ready') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ready":true}' });
+      }
       if (['GET', 'HEAD'].includes(request.method()) && url.hostname === '127.0.0.1') return route.continue();
       return route.abort();
     });
@@ -160,6 +163,7 @@ async function main() {
       transition: null, legacySaveBusy: 'undefined',
       legacySocket: 'undefined', legacyGeneration: 'undefined', legacyStopped: 'undefined',
     });
+    await ui.waitForFunction(() => realtimeReadiness.ready);
     results.transitionControls = await ui.evaluate(async () => {
       let release;
       const gate = new Promise(resolve => { release = resolve; });
@@ -232,6 +236,27 @@ async function main() {
     results.imagePreview = await require('./helpers/sts_image_preview_browser.cjs').checkImagePreview(ui, artifacts);
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);
+    const restartUi = await context.newPage();
+    restartUi.on('pageerror', error => pageErrors.push(error.message));
+    await restartUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.restartCleanup = await require('./helpers/sts_restart_browser.cjs').checkRestartCleanup(restartUi);
+    await restartUi.close();
+    const mapUi = await context.newPage();
+    let mapReady = false;
+    mapUi.on('pageerror', error => pageErrors.push(error.message));
+    await mapUi.route('**/api/realtime/ready', route => route.fulfill({
+      status: mapReady ? 200 : 503, contentType: 'application/json',
+      body: JSON.stringify({ ready: mapReady })
+    }));
+    await mapUi.goto('http://127.0.0.1:8790/session-map.html', { waitUntil: 'domcontentloaded' });
+    await mapUi.waitForFunction(() => Boolean(selectedSession()));
+    assert.equal(await mapUi.locator('#connectInSts').isDisabled(), true);
+    mapReady = true;
+    await mapUi.waitForFunction(() => !connectButton.disabled);
+    mapReady = false;
+    await mapUi.waitForFunction(() => connectButton.disabled);
+    results.mapReadiness = { unavailable: 'disabled', ready: 'enabled', lostService: 'disabled' };
+    await mapUi.close();
     assert.deepEqual(pageErrors, []);
     await context.close();
     fs.writeFileSync(path.join(artifacts, 'results.json'), JSON.stringify(results, null, 2) + '\n');

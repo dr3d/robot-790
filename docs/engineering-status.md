@@ -6,14 +6,148 @@ expressive session is not a guarantee about extended live operation.
 
 ## Working Baseline
 
-Accepted checkpoint: `9b56e40`, including the feedback owner, updated public
-documents and the glass-submarine run's acceptance notes. The 735 JavaScript
-tests and isolated Edge suite were rerun successfully before committing;
-the prior complete Python rerun remains 990 passes with its intermittent
-note-write failure documented below. No new runtime changes were made during
-next-step preparation. The [Restart-only cleanup plan](sts-lifecycle-ownership-plan.md#next-step-restart-cleanup)
-defines the offline tests, preserved behavior and live acceptance sequence.
-Halt/Unload work is parked until needed.
+September 22 checkpoint, following `8555bce`: Restart cleanup ownership and
+Connect readiness are accepted on the exercised paths below. The live pair
+confirms continuity and mid-playback stopping; the readiness endpoint is now
+served, and the gravity-restaurant run confirms subsequent ordinary connection,
+image/eye work, autonomous idle art and complete saving. These are scoped
+acceptance results, not a guarantee about every lifecycle transition.
+
+Next: reproduce and isolate the optional B2 spoken-monitor handoff, preserving
+private advice and existing idle behavior. See the
+[next-step scope](sts-lifecycle-ownership-plan.md#next-step-spoken-monitor-ownership).
+Further Halt/Unload work is parked until needed. The earlier intermittent Windows
+note-write test observation remains documented below, separate from these repairs.
+
+Checkpoint verification: 760 JavaScript tests, all 1,002 Python tests and the
+isolated Edge suite pass. Python reports the existing Starlette/httpx deprecation
+warning; no test retry was needed in this run. Browser tests prohibit live model,
+backend-control and persistence calls, apart from their disposable test fixtures.
+Logs: `logs/maintenance/lifecycle-review/checkpoint-restart-readiness-*.log`.
+
+### Connect Readiness
+
+September 22: at Scott's request, Connect availability now checks the existing
+realtime `/v1/pool` endpoint through a same-origin, read-only
+`/api/realtime/ready` proxy. The standard local service on port 8765 only serves
+this endpoint after pipeline warmup. An idle slot means Connect may be offered;
+an unavailable, unresponsive, occupied or draining service keeps it disabled.
+This is not a model inference test or a promise of instant replies.
+
+`realtime-readiness.js` owns the single in-flight check and invalidation identity.
+The main page checks every two seconds while disconnected and outside connection
+or backend-control work; a Restart or socket acquisition invalidates an old
+result. Existing lifecycle locks still win. Connect, Previous, Empty, Selected
+and the separate session-map Connect button use the gate. Archiving is not
+blocked by service unavailability. Checks make no WebSocket/model requests,
+change no prompts, never retry Restart and never connect automatically.
+
+Verification: 760 JavaScript tests and 156 focused Python page-server/readiness
+tests pass. The isolated browser suite also checks that Restart's five-second
+feedback timer cannot enable Connect while readiness is false, and that the map
+button disables again if service readiness is lost. Evidence:
+`logs/maintenance/lifecycle-review/readiness-*.log`.
+
+Activated September 22, about 20:47. The initial page-server restart command was
+rejected before execution; refreshing against that old server left Connect
+disabled because the new endpoint returned 404. The UI's Restart button only
+restarts realtime, so using it did not update the page API. The existing
+`stop_sts.ps1 -PageOnly` and `start_sts_page.ps1` scripts completed activation
+without another model/backend restart. Verified HTTP 200 `{"ready": true}` and,
+in an isolated browser using the real endpoint, enabled Connect/Previous/Empty
+with no session opened. Already-refreshed pages recover on their next poll.
+
+### Gravity Restaurant Acceptance
+
+September 22, 20:56-21:06: ordinary Connect after readiness activation worked.
+The saved chain is `202505-220 -> 210637-965`; journal content, all 25 source-pin
+hashes and all three eye-asset hashes match disk. Three images rendered,
+displayed and were voluntarily staged; the third was autonomous idle art.
+Final measured context was 98,858/131,072 (75.42%), up 10,684 tokens. No live
+compaction, tool denial or image-preview failure appeared.
+
+First audio took 38.596 seconds after the opening utterance; later direct spoken
+replies took 2.203-2.696 seconds. Apparent minute-long image handoffs align with
+queued speech draining, including one 137.90-second answer. B2 supplied ten
+unclipped notes; the sphere question shows advisory uptake. No new B2/human
+overlap is established: the closest B2/B1 handoff ended about 83 ms before B1's
+first backend audio. The earlier over-human callback remains the next focused
+fixture candidate. Normal final Disconnect/save passed; this was not another
+mid-speech stop test. The physics/fiction boundary and repeated opening are
+content caveats, not reasons to reduce initiative. No runtime changes in this PM.
+Evidence: `logs/runs/20260922-2106-gravity-restaurant/postmortem.md`.
+
+### Restart Cleanup Ownership
+
+September 22, after checkpoint `8555bce`: Restart now uses the existing connection
+transition owner through cleanup and the backend launch receipt. Repeated Restart,
+Connect and Disconnect do not start competing work during that transition;
+Restart also defers to a save, connection preparation or socket cleanup already
+in progress. Nothing is queued to run later.
+
+The adapter captures socket/generation, intentional-cleanup identity and the
+requested model payload before waiting. It rechecks ownership before starting
+and after settling recording, mic and pane-snapshot steps, and immediately before
+dispatch. Expired work cannot close a replacement socket, clear its audio or send
+a stale restart request. Existing status-feedback ownership remains separate.
+
+The launch-receipt wait is bounded at 30 seconds so a lost HTTP reply releases
+the transition. This is not a model-startup, inference or speech limit; the
+endpoint acknowledges launching a separate restart process. A missing receipt
+logs an unknown backend outcome, not proof that no restart happened, and never
+automatically retries. Existing device wait budgets and the five-second status
+delay remain unchanged; that status delay is not a backend-readiness check.
+
+No automatic continuity save or reconnect was added. Unsaved words, parent and
+eye assets survive, with Disconnect available to save before reconnecting.
+No backend/Python, Halt/Unload, prompt, model-setting value, idle/B2 policy or
+speech behavior changed. The recorder's own late finalization callbacks and
+arbitrary already-submitted backend-command races are not solved by this change.
+
+Verification: 21 new unit/integration cases; the initial 17-case probe reproduced
+13 failures before repair. All 756 JavaScript tests pass. Isolated Edge exercises
+the real Restart button with delayed fake snapshots/HTTP, checks exclusion and
+stale-session cancellation, and retains audio, image-preview, network-loss and
+save-retry coverage. No live restart, model or persistence writes in these
+fixtures. The first browser attempt exposed a missing `send` method in its fake
+socket; after correcting the fixture, the complete suite passed. Python was not
+rerun for this browser-only change. Logs: `logs/maintenance/lifecycle-review/restart-cleanup-*.log`.
+
+Live acceptance, on the same thread:
+1. Refresh STS while disconnected, then ordinary **Connect**.
+2. Briefly continue the story, for example: "Let's pick up the glass submarine.
+   Give me the captain's next ridiculous problem."
+3. **Disconnect** and wait for the session-note save to finish.
+4. In **Server Management**, press **Restart** once. Let the normal backend
+   startup finish, then ordinary **Connect**, not Previous or Empty.
+5. Ask "Where did we leave the captain?" Have a short exchange, allow a little
+   idle, then **Disconnect** during speech if convenient.
+
+Check continuity, normal mic/speech, one voice, no old audio returning, and clean
+final saving. No racing controls, special setup card or forced image step is
+needed. A page refresh loads this JavaScript; the Restart is the acceptance
+exercise, not required to deploy browser code. Leave the prior checkpoint as the
+accepted baseline until this live run is reviewed.
+
+September 22, 20:13-20:25: both runs reviewed. The save chain is
+`194422-258 -> 201509-778 -> 202505-220`; both journals are complete, disk content
+matches exactly and all 23/24 pinned-source hashes match. Eric recalled the new
+lagging-reflection detail after Restart and developed the story in six idle
+responses with identifiable B2 contributions. The final Disconnect cut queued
+speech: cancellation at 20:25:05.136, socket close at .522, pipeline release at
+.563, with all accepted words saved. Final context was 67.92%; one older session
+was excerpted at connection time, with the newest 20 left intact.
+
+The Restart UX is not fully accepted: clicks to Connect failed at 20:15:46 and
+20:16:10 while STT/TTS were still starting. Backend readiness was 20:16:42, about
+83 seconds after the Restart click, versus the existing five-second UI timer.
+Launch acknowledgement is not readiness; that distinction is the next repair,
+without automatic restart retries or automatic reconnect. A separate B2 monitor
+aside began at 20:24:45 after human speech resumed at 20:24:44.921. Record this as
+a monitor-handoff test candidate, not two overlapping B1 voices or a reason to
+reduce initiative. Room-audio impact is unverified; recording was disabled.
+No runtime changes were made during this review. The PM and 25 evidence files:
+`logs/runs/20260922-2025-restart-continuity-pair/postmortem.md`.
 
 ### Backend-Control Feedback Ownership
 

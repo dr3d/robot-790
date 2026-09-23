@@ -1,6 +1,19 @@
 const vm = require('node:vm');
 const { closeFixture } = require('./sts_close_harness.cjs');
 const { loadFunctions, page } = require('./sts_tool_harness.cjs');
+const { deferred } = require('./sts_save_harness.cjs');
+
+// Delay completion, not the resource capture performed when cleanup starts.
+function holdExitStep(f, method) {
+  const gate = deferred(), started = deferred(), operation = f.c[method];
+  f.c[method] = async (...args) => {
+    const result = await operation(...args);
+    started.resolve();
+    await gate.promise;
+    return result;
+  };
+  return { ...gate, started: started.promise };
+}
 
 // Real page exits and current close owner; backend control, persistence, devices
 // and timers are simulated. This fixture cannot stop/restart/unload a real server.
@@ -64,4 +77,4 @@ function pageExitFixture() {
   return { c, calls, listeners };
 }
 
-module.exports = { exitFixture, pageExitFixture };
+module.exports = { exitFixture, pageExitFixture, holdExitStep };

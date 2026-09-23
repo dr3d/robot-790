@@ -203,10 +203,12 @@ save/reset controls are retired; normal Disconnect still saves, and Eric's note
 tools remain available. Voice interruptions no longer suppress a completed image
 thumbnail; Sensing Eye transfer remains a separate action chosen by Eric.
 Backend-control feedback now has a separate owner so old status timers cannot
-overwrite newer operations. Backend command/device cleanup and page exit remain
-separate work; the next cleanup scope is Restart, the backend control used in
-normal operation. Further Halt/Unload work is deferred until a practical need
-appears. Prompts and companion behavior are unchanged. See
+overwrite newer operations. Restart now shares the connection-transition owner
+and checks cleanup ownership before acting. Live continuation and mid-speech
+Disconnect passed. Connect availability now checks the warmed STS service for a
+free slot rather than treating the restart timer as readiness. Page exit,
+recorder-internal finalization and further Halt/Unload work remain separate. Prompts and companion
+behavior are unchanged. See
 [Engineering Status](docs/engineering-status.md).
 
 - `web/sts`: standalone Robot 790 STS page at `http://127.0.0.1:8790/`,

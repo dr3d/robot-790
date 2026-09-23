@@ -464,6 +464,7 @@
       <div id="details" class="details"></div>
     </section>
   </main>
+  <script src="realtime-readiness.js"></script>
   <script>
     const statusEl = document.querySelector("#status");
     const filterEl = document.querySelector("#filter");
@@ -483,6 +484,11 @@
     let preparationPollTimer = null;
     let sessionsFingerprint = "";
     let selectedFilename = "";
+    const realtimeReadiness = Robot790RealtimeReadiness.create({
+      probe: Robot790RealtimeReadiness.probeLocal,
+      canCheck: () => true,
+      onChange: updateConnectButton
+    });
     let currentFilename = "";
     let collapsedLineageNodes = new Set();
     let filteredCollapsedLineageNodes = new Set();
@@ -955,8 +961,11 @@
     function render() {
       renderList();
       renderGraph();
-      const hasSelection = Boolean(selectedSession());
-      connectButton.disabled = !hasSelection;
+      updateConnectButton();
+    }
+
+    function updateConnectButton() {
+      connectButton.disabled = !selectedSession() || !realtimeReadiness.ready;
     }
 
     function renderList() {
@@ -1373,6 +1382,8 @@
     }
 
     restorePanelLayout();
+    void realtimeReadiness.check();
+    setInterval(() => { void realtimeReadiness.check(); }, 2000);
 
     refreshSessions().catch((error) => setStatus(error.message));
   </script>
