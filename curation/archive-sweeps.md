@@ -4,6 +4,38 @@ This file records intentional moves from the active repo tree into the adjacent
 `robot-790-archive` folder. These are not deletions; they are index/search
 relief sweeps for bulky or high-count runtime artifacts.
 
+## 2026-09-23 Cold Workspace
+
+- Archive: `D:\_PROJECTS\robot-790-archive\20260923-cold-workspace`.
+  Preserved 6,601 files, 37,776,111,253 bytes (35.18 GiB), under original
+  repository-relative paths. Nothing was discarded; this is same-drive
+  organization, not freed disk space or an independent backup.
+- Moved 5,562 scratch files in 15 accessible old test directories, 733
+  unreferenced dated live snapshots, 60 old root diagnostics and seven completed
+  September 20 PM bundles. Eight Markdown paths retain forwarding notes.
+  Checked 3,089 retained source/document/note/evidence files for references.
+- The retired 37,581,674,972-byte camera page log was moved by same-volume
+  rename after an exclusive-open check. Its contents were not read or hashed:
+  NTFS file ID, byte length and modification time match after relocation.
+  All other archived files verify by SHA-256. The large log is at
+  `logs/live/sts-page-esp32-camera.err.log` beneath the archive directory.
+- Kept September 21 onward, existing forwarding notes, active service logs,
+  current and older open cache-refill/context-budget evidence, source, firmware
+  builds, environments, published material and original recordings. All 2,529
+  protected note/generated-image/sensing-eye/audio files retain their paths,
+  sizes and modification times. No session graph operation or note edit occurred.
+- Skipped 54 scratch directories because of access restrictions, references
+  or private-name fixtures. No permissions were changed. The private root
+  `notes-to-me.txt` was not read, changed, staged or moved.
+- Recovery: archive `README.md`, `manifest.json`, `moves.jsonl`, `skipped.json`,
+  `verification.json` and `protected-verification.json`. Procedure and test log:
+  `logs/maintenance/archive-cold-20260923.ps1` and
+  `logs/maintenance/archive-cold-20260923-tests.log`. Restore individual paths
+  only after verification and checking for newer work.
+- All 865 JavaScript tests pass after cleanup. Page, Browser Face, realtime and
+  LM Studio listeners retain the same PIDs; no server was restarted. This index
+  is the only tracked change. No commit or push performed for this sweep.
+
 ## 2026-09-22 Cold Diagnostics
 
 - Archive: `D:\_PROJECTS\robot-790-archive\20260922-cold-diagnostics`.
