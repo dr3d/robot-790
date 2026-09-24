@@ -49,6 +49,7 @@ function loadFunctions(context, names) {
   require('./sts_continuation_harness.cjs').installToolContinuation(context);
   require('./sts_b2_work_owner.cjs').installBrain2Work(context);
   require('./sts_advisory_owner.cjs').installBrain2Advisories(context);
+  require('./sts_completion_owner.cjs').installResponseCompletion(context);
   require('./sts_surface_harness.cjs').installBrain2Surface(context);
   const dependencies = {
     handleFunctionCall: ['recordFileWriteReceipt'],

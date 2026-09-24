@@ -38,6 +38,7 @@ function fixture() {
     events: {}, log: (_target, text) => logs.push(text), rememberSessionPromptSnapshot() {},
   });
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
+  require('./helpers/sts_completion_owner.cjs').installResponseCompletion(c, page);
   for (const name of ['runtimeContextProtocolInstructions', 'liveNoteEntries', 'sessionNotesForInstructions', 'buildSessionInstructions', 'buildRuntimeContextSections',
     'formatAloneStateForInstructions', 'formatRecentSearchContextForInstructions', 'appendRuntimeContextToConversation',
     'realtimeInterruptEnabled', 'sessionUpdateFingerprint', 'contextDiagnosticsEnabled', 'sessionPromptChange', 'updateSessionTools']) {

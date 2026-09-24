@@ -51,6 +51,9 @@ derivative was recovered with its original session intact. See Engineering Statu
 The subsequent private-advice owner passes automated, isolated browser and paired
 resume/idle/disconnect live checks. It moves candidate storage, freshness, formatting
 and delivery bookkeeping out of the main HTML without changing B2's prompts.
+A response-completion owner now passes automated, isolated-browser and paired
+live resume/tool-follow-up/stop checks. It preserves the distinction between a finished
+model response and speech still playing; no companion behavior is retuned.
 The Memory Jar report
 and its edited video remain the latest featured report; this update adds no new
 article. [Engineering Status](engineering-status.md) is the maintained source

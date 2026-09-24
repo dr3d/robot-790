@@ -44,6 +44,7 @@ function fixture(speed = 5) {
     userSpeechActive: false, userTurnPending: () => false,
   });
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
+  require('./helpers/sts_completion_owner.cjs').installResponseCompletion(c, page);
   for (const name of ['scheduleIdlePonder', 'clearAssistantFinishTimer',
     'armAssistantUtteranceFinished', 'checkAssistantUtteranceFinished', 'noteConversationActivity',
     'maybeCreateToolFollowup', 'brain2MouthCanSurface', 'brain2VoiceCanSpeak']) vm.runInContext(source(name), c);

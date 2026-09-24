@@ -4,7 +4,55 @@ Reviewed September 23, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
-Current uncommitted refactor after `ea5132f`: `brain2-advisories.js` owns the
+Accepted response-completion checkpoint after `84ff44e`: `response-completion.js` owns
+model-active state, pending utterance completion, idle provenance and the
+completion timer. It handles audio/model completion ordering through explicit
+page adapters. The real audio owner still determines whether speech is active;
+the page still validates socket/generation before dispatch. Tool continuation,
+routine rescheduling, cancellation receipts and idle policy are preserved.
+There are no prompt, cadence, cap, context or model-setting changes.
+
+Verification: 918 JavaScript tests, 147 page-server Python tests and the full
+isolated Edge suite pass. Twenty complete traces frozen from `84ff44e` compare
+state, timers and side-effect order, including queued speech, overlapping model
+work, idle/routine turns, tool follow-up, cancelled/failed responses, errors,
+duplicates and stale sockets. The baseline was independently reproduced from
+Git. The browser exercises real Web Audio and actual page dispatch: model done
+waits for playback, stop clears pending completion, old socket completion is
+ignored, and the next connection finishes normally. No live Eric run was touched.
+Logs: `logs/maintenance/lifecycle-review/response-completion-{suite,python,browser}.log`.
+
+Size: HTML 22,181 -> 22,156 lines, 1,001,458 -> 1,000,491 LF-normalized bytes.
+Five globals removed; page reduction 25 lines / 967 bytes. New module 68 lines /
+2,428 bytes; total production bytes grow by 1,461. This settles one lifecycle
+responsibility, not the much larger remaining page.
+
+Paired live acceptance September 23, 18:36-18:45 passes: successful draw/eye/
+explain chains, playback-drained tool follow-up, idle resumption, interrupted B1
+speech, meaningful reconnect continuity, then cancellation of B2 monitor voice
+after B1 had drained. Both journals, 12/13 pinned receipts and both eye assets
+verify; preparation ready in 5.156s/4.344s. No excerpts used. The final calendar
+render failed with the provider's HTTP 429 "no credits remaining"; failure
+follow-up waited for speech and reported the real error. Eric's promised
+automatic retry after top-up is not backed by a durable-job receipt. No runtime
+repair or behavioral tuning follows from this pair. Cold starts remain 31-32s;
+warm human-turn first audio 2.07-4.20s. No room-audio recording; callbacks and
+operator report support the cutoff findings. PM and 48-file frozen evidence:
+`logs/runs/20260923-1845-completion-pair/postmortem.md`. Included in this checkpoint.
+
+Follow-up 20:47-20:56: API credit recovery confirmed by one requested and two
+autonomous successful renders, all staged before description. B2 supplied a
+headline that B1 used; nine B1 idle turns, no tool/B2 errors. Save journal,
+14 pins and three eye assets verify; stop again landed after generation but
+during the playback window. Context 64.09% -> 73.98%; preparation ready 9.641s.
+Conversational watch: repeated interpretation of an ambiguous "honors" fragment,
+then "situation"; absent audio cannot distinguish intended speech from background
+or STT errors. Three private-output suppression warnings, no visible think tag.
+Small separate issue: 96-character B2 mouth text is also used for monitor speech,
+and one line ended mid-word. Private advice remained intact. No runtime changes.
+PM: `logs/runs/20260923-2056-credit-recovery-idle/postmortem.md`.
+
+Checkpoint `b622597`: `brain2-advisories.js` owns the
 three private candidate lists, accepted-advice bookkeeping, guidance filtering,
 snapshot formatting, per-socket delivery deduplication, and evidence-based loop
 counts. Five former page globals are removed. The page supplies live-state and

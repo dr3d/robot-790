@@ -3,6 +3,7 @@ const vm = require('node:vm');
 const { page } = require('./sts_tool_harness.cjs');
 
 function installAudioPlayback(context) {
+  require('./sts_completion_owner.cjs').installResponseCompletion(context, page);
   require('./sts_connection_harness.cjs').installRealtimeConnection(context);
   context.Robot790AudioPlayback = require('../../web/sts/audio-playback.js');
   context.setTimeout ??= setTimeout;

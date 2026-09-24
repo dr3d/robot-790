@@ -22,7 +22,7 @@ async function checkBrain2Speech(page) {
     realtimeConnection.adopt(socket);
     brain2VoiceMonitor.checked = true;
     clearUserTurnPending();
-    responseActive = false;
+    responseCompletion.active = false;
     const dispatch = type => handleEvent({ type });
     const outcome = {};
     try {
@@ -49,7 +49,7 @@ async function checkBrain2Speech(page) {
       outcome.b1Audio = { activeDuringInference, monitorMuted: brain2MonitorAudioShouldMuteMic(),
         audioBusy: outputAudioActive() };
       stopPlaybackNow();
-      responseActive = false;
+      responseCompletion.active = false;
 
       let finishDisplay;
       setMouthText = () => new Promise(resolve => { finishDisplay = resolve; });

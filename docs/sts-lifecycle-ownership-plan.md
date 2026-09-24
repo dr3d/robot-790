@@ -120,6 +120,65 @@ this roughly half-window branch. Do not optimize that startup cost as part of
 the refactor. Preserve initiative, continuity and responsive warm turns;
 unexpected post-idle cache rebuilds remain a distinct investigation.
 
+### Implemented Step: Response Completion Ownership
+
+Implemented after `84ff44e`, following accepted B2 checkpoint `b622597` and a
+separate archive-documentation commit. `response-completion.js` owns the active
+model-response flag and the four utterance-finish fields. The page no longer
+mirrors them. It routes validated audio/model completion events to the owner;
+the owner waits for both model work and the audio owner's queue to settle before
+marking utterance completion. Actual waveform playback stays in `audio-playback.js`.
+
+The completion dispatcher preserves cancellation handling, tool continuation,
+routine-specific completion, image-protection release, face-idle scheduling and
+diagnostic order via explicit page adapters. The page retains socket/generation
+validation, transcript handling, lane-origin flags and policy-specific effects.
+This is not a wholesale event-handler or scheduler rewrite. The active-state
+read/write substitutions in other page functions are mechanical, not new guards.
+
+Preserved details: initial 100ms completion check, 150ms busy recheck, idle
+provenance ORed across rearming, no utterance-duration ceiling, and the existing
+distinction between clearing the timer and clearing pending state. Error/stop
+paths clear the same state at the same points. Model completion with outstanding
+tools is still owned by the tool-follow-up path. No prompts, greetings, response
+lengths, idle pacing, cache settings or permission policy changed.
+
+Before production edits, 20 cases were frozen from committed `84ff44e`. They
+compare complete resulting state and ordered effects, not only callback counts:
+text/audio completion, delayed audio, repeated settlement, new model work before
+drain, idle origin, routine origins, pending tools, image protection, cancelled
+navigation, missing response IDs, bounded suppression history, errors, stopped
+and replaced sockets, rejected flushes, timer-only clear and duplicate done.
+Independent replay from Git reproduces the fixture. Existing lifecycle/tool
+replays, attention pacing, B2 and context-order suites continue to pass with
+legacy test inputs aliased to the real owner, not parallel test state.
+
+All 918 JavaScript tests, 147 page-server tests and isolated Edge checks pass.
+The browser uses real Web Audio through the actual page adapters, verifies that
+model completion leaves pending state while queued audio drains, then emits one
+finish. A subsequent stop clears pending work/audio; an old socket's done event
+cannot release new work. Live sockets and mutating/external requests are blocked,
+including exit beacons. Logs:
+`logs/maintenance/lifecycle-review/response-completion-{suite,python,browser}.log`.
+
+Size checkpoint: main HTML 22,181 -> 22,156 lines; 1,001,458 -> 1,000,491 bytes.
+Net page reduction 25 lines / 967 bytes; new module 68 lines / 2,428 bytes.
+Total production bytes grow 1,461. State ownership is improved; overall source
+size is not reduced, and the giant HTML remains substantial. Keep reporting
+this honestly rather than counting moved lines as net deletion.
+
+Paired live acceptance September 23, 18:36-18:45 passes. Two successful draw/
+stage/explain sequences, ordinary idle development, actual B1 mid-speech stop,
+specific reconnect continuity and B2 monitor cancellation all behaved correctly.
+Tool continuation waited for playback, including a real HTTP 429 image-credit
+failure. The second stop was B2 monitor speech after B1 drained, not a second
+B1 interruption. Both journals and every pinned-note/eye-asset receipt verify;
+derivatives ready in about 4-5s. No room-audio recording, so acoustic claims
+remain limited to the operator report and playback callbacks. PM/evidence:
+`logs/runs/20260923-1845-completion-pair/postmortem.md`.
+Accepted for checkpoint; image lifecycle is the next larger extraction candidate,
+with scheduling policy left until its component owners are better separated.
+
 ### Implemented Step: B2 Private Advisory Ownership
 
 Implemented after `ea5132f`; automated and exercised live acceptance pass.
@@ -593,11 +652,11 @@ current responsibilities, not a claim that they already form isolated modules.
 | Current-socket closure | `realtime-connection.js` owns the idempotent close promise and stopped state; `handleRealtimeClose` / `cleanupClosedRealtime` adapt page resources and recovery UI | Reconnect cannot race pending close cleanup. The stopped unsaved transcript must survive until Disconnect/save succeeds. Explicit backend controls and page exit are not a crash-save protocol. |
 | Backend-control feedback | `backend-control-feedback.js` owns latest feedback identity, status timer and button release; page adapters retain request/cleanup logic | Old replies/timers must not overwrite a newer connection or command. Feedback invalidation does not cancel an already submitted backend command. |
 | Stop, save, reconnect work | `saveAndDisconnectRealtime`, `saveEricContinuitySnapshot`, `quiesceRealtimeForSave`, `haltRealtimeActivity`, `openRealtimeConnection`, `resetSessionContextForConnection`, `clearHotConversationState` | Snapshot preparation owns one bounded final-transcript wait and the empty/save decision; frozen retries do not wait again. Device cleanup and save orchestration remain page-owned. Final transcription must survive stop, but new speech and effects must not. Failed saving must block destructive reset. |
-| Response dispatch | `handleEvent`, `responseActive`, `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
+| Response dispatch | `handleEvent` validates events; `response-completion.js` owns model-active state and completion dispatch; page retains `suppressedResponseIds` | Provider response completion is not audible completion. Canceled responses and old events must not revive work. |
 | Tool batch and continuation | `tool-continuation.js` owns pending count, done flag, drain timer, call-ID deduplication, user activity timestamp and round state; page adapters execute tools and dispatch requests | Results and response completion arrive in either order. Receipts may survive an interruption while automatic continuation must not. |
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
 | Optional B2 monitor | `brain2-speech.js` owns browser utterances and echo tail; `brain2-surface.js` owns deferred mouth/voice delivery and its timer | Old timers or device replies must not publish into a replacement item/session. Already-submitted device commands cannot be unsent. Private advice remains separate. |
-| Turn completion | `armAssistantUtteranceFinished`, `checkAssistantUtteranceFinished`, `noteConversationActivity` | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
+| Turn completion | `response-completion.js` owns pending state, idle provenance and timer; thin page adapters retain activity/idle policy | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
 | Generated-image presentation | `generateImage`, `showGeneratedImage`, `moveGeneratedImageToSensingEye`, preview/eye generations | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
 | Idle/B2 opportunities | `brain2BlockedReason`, idle/reengagement scheduling, B2 advisory and speech queues | Private advice and public speech have different readiness conditions. Fixing ownership must not suppress useful parallel thought or proactive conversation. |

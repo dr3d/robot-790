@@ -59,6 +59,7 @@ function setup(overrides = {}, extraFunctions = []) {
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
   require('./helpers/sts_b2_work_owner.cjs').installBrain2Work(context);
   require('./helpers/sts_advisory_owner.cjs').installBrain2Advisories(context);
+  require('./helpers/sts_completion_owner.cjs').installResponseCompletion(context, page);
   for (const name of [
     'brain2HeadlinesEnabled', 'brain2HeadlinesDue', 'brain2BlockedReason', 'brain2DelayMs',
     'fetchIdleHeadlines', 'requestBrain2Mull', 'acceptBrain2Headline', 'triggerBrain2Mull',

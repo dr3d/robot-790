@@ -26,6 +26,7 @@ function fixture() {
     postFaceTo: async (...args) => { calls.push(args); return { status: 'accepted', ok: true }; },
   });
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
+  require('./helpers/sts_completion_owner.cjs').installResponseCompletion(c, page);
   for (const name of ['brain2BodyContext', 'clearBrain2BodyCue', 'brain2BodyCueBlockedReason', 'scheduleBrain2BodyCue', 'surfaceBrain2BodyCue']) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);

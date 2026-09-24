@@ -50,6 +50,7 @@ function fixture() {
   });
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   require('./helpers/sts_b2_work_owner.cjs').installBrain2Work(c);
+  require('./helpers/sts_completion_owner.cjs').installResponseCompletion(c, page);
   for (const name of [
     'idleTiming', 'conversationAttentionEnabled', 'conversationAttentionState', 'conversationIdleDelayMs',
     'conversationAttentionInstruction', 'conversationPauseHoldUntil', 'conversationReengagePolicy', 'conversationReengageWindowActive',

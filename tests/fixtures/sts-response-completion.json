@@ -1,0 +1,1440 @@
+{
+  "commit": "84ff44e",
+  "cases": [
+    {
+      "name": "text completion",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 1100,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "audio still draining",
+      "active": false,
+      "pending": true,
+      "idle": false,
+      "armedAt": 1000,
+      "timer": 3,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [
+        [
+          3,
+          150
+        ]
+      ],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "setTimer",
+          2,
+          150
+        ],
+        [
+          "clearTimer",
+          2
+        ],
+        [
+          "setTimer",
+          3,
+          150
+        ]
+      ]
+    },
+    {
+      "name": "audio settlement finishes once",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 5000,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "setTimer",
+          2,
+          150
+        ],
+        [
+          "clearTimer",
+          2
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "audio done is not model done",
+      "active": true,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.output_audio.done"
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.output_audio.done"
+        ]
+      ]
+    },
+    {
+      "name": "new model response keeps completion waiting",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 1200,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "usage",
+          {
+            "type": "response.created"
+          }
+        ],
+        [
+          "clearUser"
+        ],
+        [
+          "resetMouth"
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response started"
+          }
+        ],
+        [
+          "face",
+          "thinking",
+          0.45
+        ],
+        [
+          "log",
+          "response.created"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "setTimer",
+          2,
+          150
+        ],
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "clearTimer",
+          2
+        ],
+        [
+          "setTimer",
+          3,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          3
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "idle completion preserves human response anchor",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 500,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "sessionTools",
+          {
+            "quiet": true
+          }
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "rearm preserves idle provenance",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "setTimer",
+          2,
+          100
+        ],
+        [
+          "clearTimer",
+          2
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "tool continuation owns completion",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 waiting for tool followup"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "followup",
+          {
+            "socket": {
+              "id": "socket"
+            },
+            "generation": 1
+          }
+        ],
+        [
+          "log",
+          "response.done"
+        ]
+      ]
+    },
+    {
+      "name": "idle image protection cleared after response",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "clearImage"
+        ],
+        [
+          "sessionTools",
+          {
+            "quiet": true
+          }
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "gpuWatch routine",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "gpuTick"
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 watch response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ]
+      ]
+    },
+    {
+      "name": "standing routine",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "standingTick"
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 standing routine response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ]
+      ]
+    },
+    {
+      "name": "cancel clears tool followup and pending map move",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 1100,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [
+        "r1"
+      ],
+      "epoch": 6,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "cancelled"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "cancelTools"
+        ],
+        [
+          "log",
+          "Session move canceled with its response; destination not entered."
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "failed response without id",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 1100,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 6,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "",
+            "response": {
+              "status": "failed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "cancelTools"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "activity"
+        ]
+      ]
+    },
+    {
+      "name": "suppression set remains bounded",
+      "active": false,
+      "pending": true,
+      "idle": false,
+      "armedAt": 1000,
+      "timer": 1,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [
+        "old1",
+        "old2",
+        "old3",
+        "old4",
+        "old5",
+        "old6",
+        "old7",
+        "old8",
+        "old9",
+        "old10",
+        "old11",
+        "old12",
+        "old13",
+        "old14",
+        "old15",
+        "old16",
+        "old17",
+        "old18",
+        "old19",
+        "old20",
+        "old21",
+        "old22",
+        "old23",
+        "old24",
+        "old25",
+        "old26",
+        "old27",
+        "old28",
+        "old29",
+        "old30",
+        "old31",
+        "old32",
+        "old33",
+        "old34",
+        "old35",
+        "old36",
+        "old37",
+        "old38",
+        "old39",
+        "old40",
+        "old41",
+        "old42",
+        "old43",
+        "old44",
+        "old45",
+        "old46",
+        "old47",
+        "old48",
+        "old49",
+        "old50",
+        "old51",
+        "old52",
+        "old53",
+        "old54",
+        "old55",
+        "old56",
+        "old57",
+        "old58",
+        "old59",
+        "old60",
+        "old61",
+        "old62",
+        "old63",
+        "r1"
+      ],
+      "epoch": 6,
+      "move": null,
+      "timers": [
+        [
+          1,
+          100
+        ]
+      ],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "cancelled"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "cancelTools"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ]
+      ]
+    },
+    {
+      "name": "error clears pending finish",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "usage",
+          {
+            "type": "error",
+            "error": {
+              "type": "backend",
+              "message": "failure"
+            }
+          }
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "clearUser"
+        ],
+        [
+          "pressure",
+          {
+            "reason": "response error cleared lanes"
+          }
+        ],
+        [
+          "gpuTick"
+        ],
+        [
+          "standingTick"
+        ],
+        [
+          "reengage"
+        ],
+        [
+          "idleSchedule"
+        ],
+        [
+          "log",
+          "ERROR backend: failure"
+        ],
+        [
+          "log",
+          "error"
+        ]
+      ]
+    },
+    {
+      "name": "stopped session ignores late completion",
+      "active": true,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": []
+    },
+    {
+      "name": "old socket ignored",
+      "active": true,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": []
+    },
+    {
+      "name": "flush error logged without blocking completion",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 1100,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "activity"
+        ],
+        [
+          "log",
+          "audio playback error: fixture flush"
+        ]
+      ]
+    },
+    {
+      "name": "clear timer alone preserves pending state",
+      "active": true,
+      "pending": true,
+      "idle": false,
+      "armedAt": 1000,
+      "timer": null,
+      "responseAt": 0,
+      "lanes": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "clearTimer",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "duplicate model done before playback drain",
+      "active": false,
+      "pending": false,
+      "idle": false,
+      "armedAt": 0,
+      "timer": null,
+      "responseAt": 1100,
+      "lanes": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "suppressed": [],
+      "epoch": 5,
+      "move": null,
+      "timers": [],
+      "trace": [
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "setTimer",
+          1,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "usage",
+          {
+            "type": "response.done",
+            "response_id": "r1",
+            "response": {
+              "status": "completed"
+            }
+          }
+        ],
+        [
+          "flush"
+        ],
+        [
+          "completeTools"
+        ],
+        [
+          "clearGoal"
+        ],
+        [
+          "clearTimer",
+          1
+        ],
+        [
+          "setTimer",
+          2,
+          100
+        ],
+        [
+          "pressure",
+          {
+            "reason": "B1 response done"
+          }
+        ],
+        [
+          "idleStatus"
+        ],
+        [
+          "faceIdle"
+        ],
+        [
+          "log",
+          "response.done"
+        ],
+        [
+          "clearTimer",
+          2
+        ],
+        [
+          "activity"
+        ]
+      ]
+    }
+  ]
+}

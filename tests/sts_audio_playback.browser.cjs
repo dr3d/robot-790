@@ -279,6 +279,11 @@ async function main() {
     await advisoryUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
     results.brain2Advisories = await require('./helpers/sts_advisory_browser.cjs').checkBrain2Advisories(advisoryUi);
     await advisoryUi.close();
+    const completionUi = await context.newPage();
+    completionUi.on('pageerror', error => pageErrors.push(error.message));
+    await completionUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.responseCompletion = await require('./helpers/sts_completion_browser.cjs').checkResponseCompletion(completionUi);
+    await completionUi.close();
     const mapUi = await context.newPage();
     let mapReady = false;
     mapUi.on('pageerror', error => pageErrors.push(error.message));

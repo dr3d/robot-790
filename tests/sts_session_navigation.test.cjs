@@ -251,7 +251,9 @@ test('runtime wiring keeps navigation out of idle and retains normal connect eye
   assert.doesNotMatch(idleNames, /enter_session|list_session_map/);
   assert.match(source('executeTool'), /requestEnterSession\(args\)/);
   assert.match(source('haltRealtimeActivity'), /pendingSessionMapMove = null/);
-  assert.match(source('handleEvent'), /event.response.status !== "completed"/);
+  assert.match(source('handleEvent'), /responseCompletion.audioDone\(event, \{ socket, generation \}\)/);
+  assert.match(fs.readFileSync('web/sts/response-completion.js', 'utf8'), /event.response.status !== "completed"/);
+  assert.match(source('createResponseCompletionOwner'), /Session move canceled with its response/);
   assert.match(source('prepareSelectedConnection'), /loadFreshContinuityContext/);
   assert.match(source('resetSessionContextForConnection'), /clearSensingEyeState/);
 });

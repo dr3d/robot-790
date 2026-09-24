@@ -27,6 +27,7 @@ function load(names, globals = {}) {
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
   require('./helpers/sts_b2_work_owner.cjs').installBrain2Work(context);
   require('./helpers/sts_advisory_owner.cjs').installBrain2Advisories(context);
+  require('./helpers/sts_completion_owner.cjs').installResponseCompletion(context, page);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     assert.notEqual(start, -1, name);

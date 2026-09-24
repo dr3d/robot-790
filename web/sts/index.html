@@ -2978,6 +2978,7 @@
   <script src="brain2-request.js"></script>
   <script src="brain2-work.js"></script>
   <script src="brain2-advisories.js"></script>
+  <script src="response-completion.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -3266,7 +3267,7 @@
       getSessionGeneration: () => realtimeConnection.generation,
       isStopped: () => realtimeConnection.stopped,
       decodePcm16: bytes => pcm16ToFloat32(bytes),
-      onSettled: () => { if (assistantFinishPending && !outputAudioActive()) checkAssistantUtteranceFinished(); },
+      onSettled: () => { if (responseCompletion.pending && !outputAudioActive()) checkAssistantUtteranceFinished(); },
       onError: error => log(events, `audio playback error: ${error.message}`),
       setTimer: (callback, ms) => setTimeout(callback, ms),
       clearTimer: timer => clearTimeout(timer)
@@ -3357,7 +3358,7 @@
     let browserFaceWindowUrl = "";
     const faceControllerStorageKey = "robot790.faceController.v1";
     let connectionButtonsLocked = false;
-    let responseActive = false;
+    const responseCompletion = createResponseCompletionOwner();
     const deliberateThinkingEnabled = false;
     let deliberateTurnInFlight = false;
     const suppressedResponseIds = new Set();
@@ -3372,10 +3373,6 @@
     let micStoppedAt = 0;
     let lastMicBufferResetAt = 0;
     let micFreshnessTimer = null;
-    let assistantFinishTimer = null;
-    let assistantFinishPending = false;
-    let assistantFinishWasIdle = false;
-    let assistantFinishArmedAt = 0;
     let reengageTimer = null;
     let reengageInFlight = false;
     let reengageAttempts = 0;
@@ -7621,7 +7618,7 @@
     function appendRuntimeContextToConversation({ reason = "runtime update", toolBoundary = false } = {}) {
       if (!realtimeConnected() || realtimeConnection.stopped || firstContactModeEnabled()) return false;
       // Never insert context between an unfinished tool call and its receipt.
-      if (toolContinuation.pending > 0 || (!toolBoundary && (responseActive || toolContinuation.needed))) return false;
+      if (toolContinuation.pending > 0 || (!toolBoundary && (responseCompletion.active || toolContinuation.needed))) return false;
       const sections = buildRuntimeContextSections();
       const notePlan = liveNotes.socket === realtimeConnection.socket ? liveNotes.plan(liveNoteEntries()) : null;
       for (const change of notePlan?.changes || []) sections[`pinned_note ${JSON.stringify(change.filename)}`] = change.text;
@@ -9880,7 +9877,7 @@
         names.push("B1-watch");
       } else if (standingRoutineInFlight) {
         names.push("B1-task");
-      } else if (responseActive) {
+      } else if (responseCompletion.active) {
         names.push("B1");
       }
       if (brain2Work.busy) names.push("B2");
@@ -10616,32 +10613,58 @@
       scheduleConversationReengage();
     }
 
-    function clearAssistantFinishTimer() {
-      if (assistantFinishTimer) clearTimeout(assistantFinishTimer);
-      assistantFinishTimer = null;
+    function createResponseCompletionOwner() {
+      return Robot790ResponseCompletion.create({
+        now: () => Date.now(), setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: id => clearTimeout(id),
+        audioActive: () => outputAudioActive(),
+        finished: wasIdle => {
+          if (!wasIdle) lastAssistantResponseDoneAt = Date.now();
+          noteConversationActivity();
+        },
+        flush: () => flushAudioQueue(), error: error => log(events, `audio playback error: ${error.message}`),
+        cancelResponse: event => {
+          const canceledId = eventResponseId(event);
+          if (canceledId) {
+            suppressedResponseIds.add(canceledId);
+            while (suppressedResponseIds.size > 64) suppressedResponseIds.delete(suppressedResponseIds.values().next().value);
+          }
+          toolContinuation.cancelFollowup();
+          sessionMapRequestEpoch += 1;
+          if (pendingSessionMapMove) {
+            pendingSessionMapMove = null;
+            log(events, "Session move canceled with its response; destination not entered.");
+          }
+        },
+        lanes: () => ({ idle: idleInFlight, gpuWatch: gpuWatchInFlight, standing: standingRoutineInFlight }),
+        completeTools: () => toolContinuation.completeResponse(),
+        clearLanes: () => {
+          idleInFlight = false;
+          idleExhaustionScoredThisResponse = false;
+          reengageInFlight = false;
+          gpuWatchInFlight = false;
+          standingRoutineInFlight = false;
+        },
+        clearGoal: () => clearLabGoalAfterOneShotResponse(),
+        clearImageProtection: () => { if (imageToolProtectionEnabled) clearImageToolProtection(); },
+        updateTools: () => updateSessionTools({ quiet: true }),
+        resumeGpu: () => { if (gpuWatchRoutine) scheduleGpuWatchTick(); },
+        resumeStanding: () => { if (standingRoutine) scheduleStandingRoutineTick(); },
+        pressure: reason => updateLanePressure({ reason }), idleStatus: () => updateIdleSchedulerStatus(),
+        followup: session => maybeCreateToolFollowup(session), needsFollowup: () => toolContinuation.needed,
+        faceIdle: () => scheduleFaceIdle()
+      });
     }
 
-    function armAssistantUtteranceFinished({ wasIdle = false } = {}) {
-      assistantFinishPending = true;
-      assistantFinishWasIdle = Boolean(assistantFinishWasIdle || wasIdle);
-      assistantFinishArmedAt = Date.now();
-      clearAssistantFinishTimer();
-      assistantFinishTimer = setTimeout(checkAssistantUtteranceFinished, 100);
+    function clearAssistantFinishTimer() {
+      responseCompletion.clearTimer();
+    }
+
+    function armAssistantUtteranceFinished(options) {
+      responseCompletion.arm(options);
     }
 
     function checkAssistantUtteranceFinished() {
-      clearAssistantFinishTimer();
-      if (!assistantFinishPending) return;
-      if (responseActive || outputAudioActive()) {
-        assistantFinishTimer = setTimeout(checkAssistantUtteranceFinished, 150);
-        return;
-      }
-      const wasIdle = assistantFinishWasIdle;
-      assistantFinishPending = false;
-      assistantFinishWasIdle = false;
-      assistantFinishArmedAt = 0;
-      if (!wasIdle) lastAssistantResponseDoneAt = Date.now();
-      noteConversationActivity();
+      responseCompletion.check();
     }
 
     function noteUserTurnActivity({ pendingMs = idlePendingUserTurnMs } = {}) {
@@ -10721,7 +10744,7 @@
       if (!lastAcceptedUserTranscriptAt) return "no user turn";
       if (Date.now() - lastAcceptedUserTranscriptAt >= reengageGoneAfterMs) return "user away";
       if (lastAssistantResponseDoneAt <= lastAcceptedUserTranscriptAt) return "waiting for assistant reply";
-      if (responseActive || outputAudioActive()) return "assistant busy";
+      if (responseCompletion.active || outputAudioActive()) return "assistant busy";
       if (idleInFlight || reengageInFlight) return "already in flight";
       if (toolContinuation.needed || toolContinuation.pending > 0) return "tool followup pending";
       if (userSpeechActive) return "user speaking";
@@ -10747,7 +10770,7 @@
       if (fireAt >= goneAt) return;
       reengageTimer = setTimeout(() => {
         triggerConversationReengage().catch((error) => {
-          responseActive = false;
+          responseCompletion.active = false;
           reengageInFlight = false;
           updateIdleSchedulerStatus();
           scheduleIdlePonder();
@@ -10763,7 +10786,7 @@
       if (!manual && conversationPauseHoldUntil() > Date.now()) return "leaving room for the operator";
       if (!manual && idleHardBrakeActive() && !idleHeadlineBrakePassAvailable()) return "hard loop brake";
       if (Date.now() < idleCooldownUntil) return "cooldown";
-      if (responseActive || outputAudioActive()) return "assistant busy";
+      if (responseCompletion.active || outputAudioActive()) return "assistant busy";
       if (idleInFlight) return "idle already in flight";
       if (brain2Work.headlines) return "Brain 2 reading headlines";
       if (toolContinuation.needed || toolContinuation.pending > 0) return "tool followup pending";
@@ -11471,19 +11494,19 @@
     }
 
     function brain2MouthCanSurface() {
-      return brain2MouthBrainEnabled() && !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
+      return brain2MouthBrainEnabled() && !responseCompletion.active && !outputAudioActive() && !userSpeechActive && !userTurnPending();
     }
 
     function brain2VoiceCanSpeak(options = {}) {
       return (options.kind === "voice test" || brain2MouthBrainEnabled()) && brain2VoiceMonitorEnabled()
-        && !responseActive && !outputAudioActive() && !userSpeechActive && !userTurnPending();
+        && !responseCompletion.active && !outputAudioActive() && !userSpeechActive && !userTurnPending();
     }
 
     function brain2UserPresentButBusy() {
       return Boolean(
         userSpeechActive
         || userTurnPending()
-        || responseActive
+        || responseCompletion.active
         || outputAudioActive()
         || (micStream && lastUserTurnActivityAt && Date.now() - lastUserTurnActivityAt < compressIdleMs(90000, { floorMs: 12000 }))
       );
@@ -11710,7 +11733,7 @@
 
     function brain2HeadlinesDue() {
       if (!brain2HeadlinesEnabled() || !realtimeConnected()) return false;
-      if (userSpeechActive || userTurnPending() || responseActive || outputAudioActive() || idleInFlight || toolContinuation.pending > 0 || toolContinuation.needed) return false;
+      if (userSpeechActive || userTurnPending() || responseCompletion.active || outputAudioActive() || idleInFlight || toolContinuation.pending > 0 || toolContinuation.needed) return false;
       if (currentLabGoal() || activeIdleSelfTasks().length || lmStudioPromptBusy()) return false;
       const now = Date.now();
       const quietSince = Math.max(brain2HeadlineStartedAt, lastUserTurnActivityAt, lastAcceptedUserTranscriptAt);
@@ -11815,7 +11838,7 @@
       if (toolContinuation.pending > 0 || toolContinuation.needed) return "tool work";
       if (faceVisualHoldActive() || gazeHoldActive()) return "explicit hold";
       if (brain2LastBodyCueAt && Date.now() - brain2LastBodyCueAt < 30000) return "cooldown";
-      if (responseActive || outputAudioActive()) return "playback";
+      if (responseCompletion.active || outputAudioActive()) return "playback";
       return "";
     }
 
@@ -12302,7 +12325,7 @@
 
       const policy = conversationReengagePolicy();
       reengageInFlight = true;
-      responseActive = true;
+      responseCompletion.active = true;
       updateLanePressure({ reason: "B1 re-engage started" });
       reengageAttempts += 1;
       lastReengageAt = Date.now();
@@ -12403,7 +12426,7 @@
       }
       idleInFlight = true;
       idleExhaustionScoredThisResponse = false;
-      responseActive = true;
+      responseCompletion.active = true;
       lastIdlePonderAt = Date.now();
       updateLanePressure({ reason: "B1 idle ponder started" });
       updateIdleSchedulerStatus();
@@ -13104,7 +13127,7 @@
     function checkMicFreshness() {
       micFreshnessTimer = null;
       if (!micStream || micMutedForNarration || !realtimeConnected()) return;
-      if (userSpeechActive || responseActive || outputAudioActive() || idleInFlight || reengageInFlight) {
+      if (userSpeechActive || responseCompletion.active || outputAudioActive() || idleInFlight || reengageInFlight) {
         scheduleMicFreshnessCheck();
         return;
       }
@@ -13356,7 +13379,7 @@
           content: [{ type: "input_text", text }]
         }
       });
-      responseActive = true;
+      responseCompletion.active = true;
       rememberPromptLedger({
         kind: "response.create",
         source: "B1 typed user turn",
@@ -13384,7 +13407,7 @@
         return;
       }
       if (deliberateTurnInFlight) return;
-      if (responseActive || outputAudioActive()) {
+      if (responseCompletion.active || outputAudioActive()) {
         typedStatus.textContent = "Wait for Eric";
         return;
       }
@@ -13410,7 +13433,7 @@
           content: [{ type: "input_text", text }]
         }
       });
-      responseActive = true;
+      responseCompletion.active = true;
       deliberateTurnInFlight = true;
       const effortLabel = deliberateEffortLabel(snapshot.thinking);
       setDeliberateIndicator(
@@ -13478,7 +13501,7 @@
       } catch (error) {
         const detail = String(error?.message || error || "unavailable").replace(/\s+/g, " ").slice(0, 180);
         if (!realtimeConnected()) {
-          responseActive = false;
+          responseCompletion.active = false;
           typedStatus.textContent = "Disconnected";
           settleDeliberateIndicator("bad", "THINK STOPPED", "The deliberate pass finished after realtime disconnected.");
         } else {
@@ -13519,7 +13542,7 @@
       addConversation(`Pronunciation: ${text}`);
       noteConversationActivity();
       cueFaceMode("speaking", 0.55, { force: true });
-      responseActive = true;
+      responseCompletion.active = true;
       const input = [
         {
           type: "message",
@@ -13575,7 +13598,7 @@
 
     function operatorCommandBusyReason() {
       if (!realtimeConnected()) return "connect first";
-      if (responseActive) return "response active";
+      if (responseCompletion.active) return "response active";
       if (toolContinuation.pending > 0) return "tool pending";
       if (userSpeechActive) return "user speaking";
       return "";
@@ -15451,7 +15474,7 @@
       ];
       const instructions = gpuWatchCueInstructions(sample, routine);
       gpuWatchInFlight = true;
-      responseActive = true;
+      responseCompletion.active = true;
       routine.lastCueAt = Date.now();
       cueFaceMode("thinking", 0.36, { force: true });
       log(events, `gpu watch cue to Eric: ${gpuWatchSampleText(sample)} / ${routine.style}`);
@@ -15616,7 +15639,7 @@
     function runtimeCueBlockedReason({ inFlight = false, inFlightText = "runtime cue already in flight" } = {}) {
       if (!realtimeConnected()) return "disconnected";
       if (inFlight) return inFlightText;
-      if (responseActive || outputAudioActive()) return "assistant busy";
+      if (responseCompletion.active || outputAudioActive()) return "assistant busy";
       if (idleInFlight || reengageInFlight) return "B1 lane busy";
       if (toolContinuation.needed || toolContinuation.pending > 0) return "tool followup pending";
       if (userSpeechActive || userTurnPending()) return "user turn pending";
@@ -15688,7 +15711,7 @@
       ];
       const instructions = standingRoutineCueInstructions(routine);
       standingRoutineInFlight = true;
-      responseActive = true;
+      responseCompletion.active = true;
       routine.lastCueAt = Date.now();
       cueFaceMode("thinking", 0.36, { force: true });
       log(events, `standing routine cue to Eric: ${standingRoutineLabel(routine)}`);
@@ -16751,13 +16774,11 @@
       imageToolProtectionTimer = null;
       imageToolProtectionUntil = 0;
       imageToolProtectionEnabled = false;
-      assistantFinishPending = false;
-      assistantFinishWasIdle = false;
-      assistantFinishArmedAt = 0;
+      responseCompletion.clearPending();
       clearAssistantFinishTimer();
       resetConversationReengageCycle();
       clearMicFreshnessTimer();
-      responseActive = false;
+      responseCompletion.active = false;
       idleInFlight = false;
       brain2Work.reset();
       reengageInFlight = false;
@@ -19017,7 +19038,7 @@
       rememberPromptLedger({ kind: "response.create", source: `B1 tool follow-up ${sources.join("+") || "unknown"}`,
         instructions, tools, toolChoice, conversation: "default", modalities: ["audio", "text"], extra: { prompt_kind: "general", exhausted } });
       appendRuntimeContextToConversation({ reason: "tool receipts complete", toolBoundary: true });
-      responseActive = true;
+      responseCompletion.active = true;
       send({ type: "response.create", response: { modalities: ["audio", "text"], tools, tool_choice: toolChoice,
         robot790_tool_followup: instructions, ...ttsRuntimeConfig() } }, { socket, generation });
     }
@@ -19756,51 +19777,7 @@
         return;
       }
       if (event.type === "response.output_audio.done" || event.type === "response.done") {
-        flushAudioQueue().catch((error) => log(events, `audio playback error: ${error.message}`));
-        if (event.type === "response.done") {
-          if (event.response?.status && event.response.status !== "completed") {
-            const canceledId = eventResponseId(event);
-            if (canceledId) {
-              suppressedResponseIds.add(canceledId);
-              while (suppressedResponseIds.size > 64) suppressedResponseIds.delete(suppressedResponseIds.values().next().value);
-            }
-            toolContinuation.cancelFollowup();
-            sessionMapRequestEpoch += 1;
-            if (pendingSessionMapMove) {
-              pendingSessionMapMove = null;
-              log(events, "Session move canceled with its response; destination not entered.");
-            }
-          }
-          const wasIdleInFlight = idleInFlight;
-          const wasGpuWatchInFlight = gpuWatchInFlight;
-          const wasStandingRoutineInFlight = standingRoutineInFlight;
-          const wasRuntimeRoutineInFlight = wasGpuWatchInFlight || wasStandingRoutineInFlight;
-          const awaitingToolFollowup = toolContinuation.completeResponse();
-          responseActive = false;
-          idleInFlight = false;
-          idleExhaustionScoredThisResponse = false;
-          reengageInFlight = false;
-          gpuWatchInFlight = false;
-          standingRoutineInFlight = false;
-          if (!awaitingToolFollowup && !wasRuntimeRoutineInFlight) clearLabGoalAfterOneShotResponse();
-          if (!awaitingToolFollowup && !wasRuntimeRoutineInFlight) armAssistantUtteranceFinished({ wasIdle: wasIdleInFlight });
-          if (!awaitingToolFollowup && imageToolProtectionEnabled) clearImageToolProtection();
-          if (!awaitingToolFollowup && wasIdleInFlight) updateSessionTools({ quiet: true });
-          if (!awaitingToolFollowup && wasGpuWatchInFlight && gpuWatchRoutine) scheduleGpuWatchTick();
-          if (!awaitingToolFollowup && wasStandingRoutineInFlight && standingRoutine) scheduleStandingRoutineTick();
-          updateLanePressure({
-            reason: awaitingToolFollowup
-              ? "B1 waiting for tool followup"
-              : wasGpuWatchInFlight
-              ? "B1 watch response done"
-              : wasStandingRoutineInFlight
-              ? "B1 standing routine response done"
-              : "B1 response done"
-          });
-          updateIdleSchedulerStatus();
-          if (awaitingToolFollowup) maybeCreateToolFollowup({ socket, generation });
-        }
-        if (!toolContinuation.needed) scheduleFaceIdle();
+        responseCompletion.audioDone(event, { socket, generation });
       }
       if (event.type === "input_audio_buffer.speech_started") {
         unidentifiedOutputSuppressed = false;
@@ -19842,7 +19819,7 @@
         }
         unidentifiedOutputSuppressed = false;
         clearUserTurnPending();
-        responseActive = true;
+        responseCompletion.active = true;
         resetSpeechMouthCue();
         updateLanePressure({ reason: "B1 response started" });
         cueFaceMode("thinking", 0.45);
@@ -19905,15 +19882,13 @@
         if (String(event.error?.message || "").includes("robot790_private_output_suppressed")) {
           addConversation("System: Eric's reply could not be delivered after one recovery attempt. Please try again.", { touchActivity: false });
         }
-        responseActive = false;
+        responseCompletion.active = false;
         idleInFlight = false;
         idleExhaustionScoredThisResponse = false;
         reengageInFlight = false;
         gpuWatchInFlight = false;
         standingRoutineInFlight = false;
-        assistantFinishPending = false;
-        assistantFinishWasIdle = false;
-        assistantFinishArmedAt = 0;
+        responseCompletion.clearPending();
         clearAssistantFinishTimer();
         clearUserTurnPending();
         updateLanePressure({ reason: "response error cleared lanes" });
@@ -20012,7 +19987,7 @@
       lastUserConversationIndex = -1;
       lastUserTurnActivityAt = 0;
       lastAssistantResponseDoneAt = 0;
-      responseActive = false;
+      responseCompletion.active = false;
       idleInFlight = false;
       brain2Work.reset();
       reengageInFlight = false;
@@ -21501,7 +21476,7 @@
         eligible: idleArtEnabled.checked && llmImageTools.checked
           && !firstContactModeEnabled() && !performanceModeEnabled(),
         proposalsEnabled: brain2MouthBrainEnabled(),
-        blocked: userSpeechActive || userTurnPending() || responseActive || outputAudioActive()
+        blocked: userSpeechActive || userTurnPending() || responseCompletion.active || outputAudioActive()
           || idleInFlight || toolContinuation.pending > 0 || toolContinuation.needed || generatedImageStatusState === "generating"
           || pendingSessionMapMove || sessionMapMoveBusy,
         quietMs: Date.now() - Math.max(lastUserTurnActivityAt, lastAcceptedUserTranscriptAt),
