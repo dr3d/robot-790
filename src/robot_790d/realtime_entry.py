@@ -838,6 +838,9 @@ def _chat_text_max_tokens_from_env() -> int | None:
 
 
 def main() -> None:
+    from robot_790d.local_model_startup import configure_local_model_startup
+
+    configure_local_model_startup()
     from robot_790d.realtime_lifecycle import apply_native_response_lifecycle_patch
 
     apply_native_response_lifecycle_patch()

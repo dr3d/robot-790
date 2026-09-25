@@ -429,6 +429,18 @@ Start the realtime backend:
 .\scripts\start_realtime_gold.ps1
 ```
 
+Voice startup uses already-installed local resources by default: speech
+recognition, turn detection and Qwen TTS do not check model-hosting sites.
+With LM Studio serving the downloaded model locally, ordinary conversation can
+run without internet. Web search and cloud image generation still need internet;
+this setting does not disable them when connectivity returns.
+
+For first installation or intentionally downloading a new voice model, launch
+with `$env:ROBOT_790_ALLOW_MODEL_DOWNLOADS = "1"` in that PowerShell session.
+After setup, remove it with `Remove-Item Env:\ROBOT_790_ALLOW_MODEL_DOWNLOADS`
+before the next launch to restore cache-only startup. Missing local resources
+are errors, not a reason to silently substitute another model.
+
 For a hidden background launch, route output to the canonical files used by
 runtime status and the amber synthesis overlay in STS and BrowserFace:
 
