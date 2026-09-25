@@ -34,8 +34,8 @@
       }, 1200);
     }
 
-    function defer(mouthText, reason) {
-      pending = { mouthText, reason, createdAt: now(), voiceSpoken: false,
+    function defer(mouthText, reason, monitorText = mouthText) {
+      pending = { mouthText, monitorText, reason, createdAt: now(), voiceSpoken: false,
         session: getSession(), revision: ++revision };
       onHeld(reason, mouthText);
       schedule();
@@ -57,7 +57,7 @@
       }
       const isCurrent = () => revision === item.revision && isCurrentSession(item.session) && isEnabled();
       if (!item.voiceSpoken && canSpeak()) {
-        const admitted = speak(item.mouthText);
+        const admitted = speak(item.monitorText);
         if (pending !== item || !isCurrent()) return;
         item.voiceSpoken = admitted;
       }
@@ -65,7 +65,7 @@
       pending = null;
       stopWaiting();
       // The device call may finish later; its receipt cannot revive superseded work.
-      await display(item.mouthText, { speak: !item.voiceSpoken, isCurrent });
+      await display(item.mouthText, { speak: !item.voiceSpoken, monitorText: item.monitorText, isCurrent });
     }
 
     return {

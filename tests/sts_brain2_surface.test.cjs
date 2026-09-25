@@ -41,6 +41,36 @@ test('deferred B2 keeps its 1200ms retry and delivers mouth/voice once', async (
   assert.equal(f.displays.length, 1);
 });
 
+test('deferred B2 speaks the full aside once while keeping the display compact', async () => {
+  const f = fixture();
+  const full = 'An aside that continues beyond the display boundary. '.repeat(3);
+  const compact = full.slice(0, 96);
+  f.c.mouthReady = false;
+  f.c.deferBrain2Surface(compact, 'busy', full);
+  await f.fire(f.timers[0]);
+  await f.fire(f.timers[1]);
+  assert.deepEqual(f.voices, [full]);
+  f.c.mouthReady = true;
+  await f.fire(f.timers[2]);
+  assert.deepEqual(f.displays, [{ text: compact, speak: false }]);
+  assert.deepEqual(f.voices, [full]);
+});
+
+test('deferred display fallback carries full monitor text when voice admission waits', async () => {
+  const f = fixture();
+  const full = 'The public aside continues all the way to its original ending. '.repeat(3);
+  const compact = full.slice(0, 96);
+  Object.assign(f.c, {
+    voiceReady: false, brain2Speech: { revision: 0 }, setMouthText: async () => {},
+    rememberBrain2Output: (kind, text) => f.displays.push({ kind, text }),
+  });
+  loadFunctions(f.c, ['surfaceBrain2MouthText']);
+  f.c.deferBrain2Surface(compact, 'busy', full);
+  await f.c.maybeSurfaceDeferredBrain2();
+  assert.deepEqual(f.voices, [full]);
+  assert.deepEqual(f.displays, [{ kind: 'mouth', text: compact }]);
+});
+
 test('a captured canceled timer cannot deliver its replacement early', async () => {
   const f = fixture();
   f.c.deferBrain2Surface('Old.', 'busy');
@@ -167,7 +197,7 @@ for (const change of ['replacement', 'reset', 'stop', 'new session', 'disabled']
       rememberBrain2Output: (kind, text) => f.displays.push({ kind, text }),
     });
     loadFunctions(f.c, ['surfaceBrain2MouthText']);
-    f.c.deferBrain2Surface('In flight.', 'busy');
+    f.c.deferBrain2Surface('In flight.', 'busy', 'Complete old monitor aside must not leak after replacement.');
     const work = f.c.maybeSurfaceDeferredBrain2();
     if (change === 'replacement') f.c.deferBrain2Surface('Replacement.', 'busy');
     if (change === 'reset') f.reset();

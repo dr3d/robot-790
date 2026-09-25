@@ -575,6 +575,7 @@ def test_brain2_private_advice_has_shared_1000_character_delivery_receipt(brain2
         "limit": 1000, "truncated": length > 1000,
     }
     assert result["mouth_text"] == ("" if mode == "headlines" else "m" * 96)
+    assert result["monitor_text"] == ("" if mode == "headlines" else "m" * 120)
 
 
 def test_brain2_advice_receipt_counts_normalized_characters_not_bytes():
@@ -839,6 +840,7 @@ def test_brain2_cue_without_text_is_valid_and_does_not_request_a_mouth(brain2_co
     assert result["status"] == "ok"
     assert result["body_beat"] == "slow_smile"
     assert result["mouth_text"] == ""
+    assert result["monitor_text"] == ""
     assert result["body_choice"] == {"status": "selected", "proposed": "slow_smile"}
     prompt = result["prompt_debug"]
     assert "An optional body_beat is available; no mouth display is available" in prompt["user"]
@@ -871,7 +873,7 @@ def test_mull_second_brain_accepts_deliberate_silence(brain2_completion) -> None
     assert result["status"] == "ok"
     assert result["should_surface"] is False
     assert result["reason"] == "Nothing new to add."
-    for field in ("mouth_text", "note_for_eric", "question", "revision_candidate"):
+    for field in ("mouth_text", "monitor_text", "note_for_eric", "question", "revision_candidate"):
         assert result[field] == ""
 
 
@@ -896,6 +898,7 @@ def test_mull_second_brain_never_surfaces_invalid_output(brain2_completion, cont
 
     assert result["status"] == "error"
     assert result.get("mouth_text", "") == ""
+    assert result.get("monitor_text", "") == ""
     assert result.get("should_surface", False) is False
     assert result["raw_text"] == content.strip()[:1000]
     assert "prompt_debug" in result
@@ -911,8 +914,38 @@ def test_mull_second_brain_surfaces_only_the_validated_mouth_field(brain2_comple
 
     assert result["status"] == "ok"
     assert result["mouth_text"] == "A small aside."
+    assert result["monitor_text"] == "A small aside."
     assert result["note_for_eric"] == "Private advisory, not speech."
     assert result["should_surface"] is True
+
+
+@pytest.mark.parametrize("field", ["mouth_text", "text"])
+@pytest.mark.parametrize("length", [95, 96, 97, 1200])
+def test_brain2_monitor_keeps_full_public_aside_without_private_fallback(brain2_completion, field, length):
+    aside = "\u597d" * length + "."
+    result = brain2_completion(json.dumps({
+        field: "  " + aside + "  ", "should_surface": True,
+        "monitor_text": "Unvalidated model-supplied monitor field.",
+        "note_for_eric": "Private advisory, not speech.",
+    }))
+    assert result["status"] == "ok"
+    assert result["mouth_text"] == aside[:96]
+    assert result["monitor_text"] == aside
+    assert result["note_for_eric"] == "Private advisory, not speech."
+
+
+def test_brain2_monitor_normalizes_but_does_not_truncate_live_regression(brain2_completion):
+    aside = "The hybrid grid idea makes me wonder what an 'ordinary day' looks like when it's quietly powering a good evening."
+    result = brain2_completion(json.dumps({"mouth_text": "mouth_text:  " + aside,
+                                          "should_surface": True}))
+    assert result["mouth_text"].endswith("powerin")
+    assert result["monitor_text"] == aside
+
+
+def test_brain2_monitor_does_not_promote_private_only_advice_to_speech(brain2_completion):
+    result = brain2_completion(json.dumps({"note_for_eric": "Private only.", "should_surface": False}))
+    assert result["status"] == "ok"
+    assert result["mouth_text"] == result["monitor_text"] == ""
 
 
 def test_deliberate_once_runs_one_local_thinking_pass(monkeypatch) -> None:

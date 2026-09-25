@@ -62,6 +62,19 @@ async function checkBrain2Surface(page) {
       await fire(timers.at(-1));
       outcome.once = voices.filter(text => text === 'Once while held.').length;
 
+      const full = 'The public aside continues beyond the display boundary, keeping its original ending intact. '.repeat(2);
+      const compact = full.slice(0, 96);
+      await surfaceBrain2MouthText(compact, { monitorText: full });
+      outcome.fullImmediate = voices.at(-1) === full && displayed.at(-1).text === compact;
+      mouthReady = false;
+      deferBrain2Surface(compact, 'busy', full);
+      await fire(timers.at(-1));
+      await fire(timers.at(-1));
+      mouthReady = true;
+      await fire(timers.at(-1));
+      outcome.fullDeferred = voices.filter(text => text === full).length === 2
+        && displayed.at(-1).text === compact && brain2Surface.pending === null;
+
       deferBrain2Surface('Text only.', 'busy');
       brain2VoiceMonitor.checked = false;
       brain2VoiceMonitor.dispatchEvent(new Event('change'));
@@ -85,6 +98,8 @@ async function checkBrain2Surface(page) {
     stop: { empty: true, stopped: true },
     reconnect: { pending: 'Reconnected.', spoken: 1 },
     once: 1,
+    fullImmediate: true,
+    fullDeferred: true,
     disabledVoiceMarked: true,
     textOnly: { addedVoices: 0, text: 'Text only.' },
     errors: [],

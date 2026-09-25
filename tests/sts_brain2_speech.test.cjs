@@ -36,6 +36,19 @@ function fixture() {
   return { c, utterances, logs, cancels: () => cancels, advance: ms => { now += ms; } };
 }
 
+test('immediate surface speaks the full public aside, not its compact display text', async () => {
+  const f = fixture();
+  const full = 'The hybrid grid idea makes me wonder what an ordinary day looks like when it is quietly powering a good evening.';
+  const displayed = [];
+  f.c.setMouthText = async value => displayed.push(value.text);
+  await f.c.surfaceBrain2MouthText(full.slice(0, 96), { monitorText: full });
+  assert.deepEqual(displayed, [full.slice(0, 96)]);
+  assert.equal(f.utterances[0].text, full);
+  f.c.cancelBrain2MonitorSpeech('test reset');
+  await f.c.surfaceBrain2MouthText('Display only.', { monitorText: '' });
+  assert.equal(f.utterances.length, 1);
+});
+
 for (const blocker of ['userSpeechActive', 'userTurnPendingUntil', 'responseActive', 'audioBusy']) {
   test(`monitor cannot queue during ${blocker}`, () => {
     const { c, utterances } = fixture();

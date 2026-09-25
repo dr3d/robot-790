@@ -11688,7 +11688,7 @@
       logBrain2("mouth", mouthText);
       rememberBrain2Output("mouth", mouthText);
       if (options.speak !== false && brain2MouthBrainEnabled()) {
-        speakBrain2Monitor(mouthText, { revision: voiceRevision });
+        speakBrain2Monitor(options.monitorText ?? mouthText, { revision: voiceRevision });
       }
     }
 
@@ -11714,8 +11714,8 @@
       });
     }
 
-    function deferBrain2Surface(mouthText, reason) {
-      brain2Surface.defer(mouthText, reason);
+    function deferBrain2Surface(mouthText, reason, monitorText = mouthText) {
+      brain2Surface.defer(mouthText, reason, monitorText);
     }
 
     function scheduleBrain2Surface() {
@@ -11980,6 +11980,7 @@
         }
         if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return;
         const mouthText = String(result.mouth_text || "").trim();
+        const monitorText = typeof result.monitor_text === "string" ? result.monitor_text : mouthText;
         const noteForEric = String(result.note_for_eric || "").trim();
         if (result.note_delivery && (noteForEric || result.note_delivery.truncated)) {
           logBrain2("advice delivery", JSON.stringify(result.note_delivery));
@@ -11991,10 +11992,10 @@
           logBrain2("held echo", mouthText);
           rememberBrain2Output("held echo", mouthText);
         } else if (mouthText && shouldSurface && brain2MouthCanSurface()) {
-          await surfaceBrain2MouthText(mouthText);
+          await surfaceBrain2MouthText(mouthText, { monitorText });
           if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return;
         } else if (mouthText && shouldSurface) {
-          deferBrain2Surface(mouthText, "waiting for pause");
+          deferBrain2Surface(mouthText, "waiting for pause", monitorText);
           rememberBrain2Output("deferred", mouthText);
         } else if (mouthText) {
           bumpBrain2Counter("held");

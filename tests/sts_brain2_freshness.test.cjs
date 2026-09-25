@@ -264,6 +264,35 @@ test('a loop guard cannot count the same Eric output repeatedly or carry pressur
   assert.equal(context.recentBrain2LoopGuardCount(), 0);
 });
 
+for (const mode of ['immediate', 'deferred', 'held', 'legacy']) {
+  test(`B2 dispatcher preserves separate public monitor text: ${mode}`, async () => {
+    const full = 'The complete public aside continues past the physical display boundary. '.repeat(2);
+    const compact = full.slice(0, 96);
+    const surfaced = [], deferred = [];
+    const context = load(['triggerBrain2Mull'], {
+      Date, realtimeSessionGeneration: 1, ws: {}, brain2InFlight: false,
+      brain2EvidenceGeneration: 0, brain2HeadlinesDue: () => false,
+      lastUserTurnActivityAt: 0, userSpeechActive: false, brain2BlockedReason: () => '',
+      updateBrain2Controls() {}, updateLanePressure() {}, bumpBrain2Counter() {},
+      logBrain2() {}, rememberBrain2Output() {},
+      brain2EchoesRecentVoice: () => false, brain2EchoesRecentBrain2: () => false,
+      brain2MouthCanSurface: () => mode !== 'deferred',
+      surfaceBrain2MouthText: async (text, options) => surfaced.push([text, options.monitorText]),
+      deferBrain2Surface: (text, reason, monitorText) => deferred.push([text, monitorText]),
+      requestBrain2Mull: async () => ({ status: 'ok', mouth_text: compact,
+        ...(mode === 'legacy' ? {} : { monitor_text: full }),
+        should_surface: mode !== 'held', note_for_eric: 'Private advice must not become speech.',
+        raw_text: 'Raw output must not become speech.',
+      }),
+    });
+    context.brain2Advisories.accept = () => {};
+    await context.triggerBrain2Mull();
+    assert.deepEqual(surfaced, mode === 'immediate' ? [[compact, full]]
+      : mode === 'legacy' ? [[compact, compact]] : []);
+    assert.deepEqual(deferred, mode === 'deferred' ? [[compact, full]] : []);
+  });
+}
+
 test('fresh outside evidence retires old loop pressure without losing new loop evidence', () => {
   const c = load(['brain2LoopGuardText', 'recentBrain2LoopGuardCount'], {
     lastUserTurnActivityAt: 0, brain2NoteCandidates: [

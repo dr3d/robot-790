@@ -2245,7 +2245,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             **_brain2_advice_delivery(parsed.get("note_for_eric", "") if url else ""),
             "question": _clean_second_brain_text(parsed.get("question"), 140)
             if url and isinstance(parsed.get("question"), str) else "",
-            "mouth_text": "", "revision_candidate": "", "should_surface": False,
+            "mouth_text": "", "monitor_text": "", "revision_candidate": "", "should_surface": False,
             "prompt_debug": prompt_debug, "raw_text": raw_text[:1000],
         }
     content_fields = ("mouth_text", "text", "note_for_eric", "question", "revision_candidate", "body_beat")
@@ -2261,13 +2261,18 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             "error": "Brain 2 returned invalid structured output; nothing was surfaced.",
             "body_choice": {**body_choice, "status": "invalid output"},
             "mouth_text": "",
+            "monitor_text": "",
             "should_surface": False,
             "prompt_debug": prompt_debug,
             "raw_text": raw_text[:1000],
         }
-    mouth_text = _clean_second_brain_text(parsed.get("mouth_text", parsed.get("text", "")), 96)
+    # Speech uses only the validated public aside, never private advice or raw JSON.
+    public_aside = parsed.get("mouth_text", parsed.get("text", ""))
+    monitor_text = _clean_second_brain_text(public_aside, len(public_aside))
+    mouth_text = monitor_text[:96].rstrip()
     if body_beats:
         mouth_text = ""
+        monitor_text = ""
     question = _clean_second_brain_text(parsed.get("question") or "", 140)
     revision_candidate = _clean_second_brain_text(parsed.get("revision_candidate") or "", 240)
     advice_delivery = _brain2_advice_delivery(parsed.get("note_for_eric") or "")
@@ -2290,6 +2295,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "mode": mode,
         "person_focus": person_focus,
         "mouth_text": mouth_text,
+        "monitor_text": monitor_text,
         "question": question,
         "revision_candidate": revision_candidate,
         **advice_delivery,
