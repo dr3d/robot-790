@@ -16,6 +16,40 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
+### Next Bounded Step: Generated-Image Preview Ownership
+
+September 25 preflight: the accepted response-completion extraction is the
+structural baseline. Checkpoint the intervening transport/startup/history-order
+repairs before changing image ownership. No image extraction is implemented by
+this preflight.
+
+The first boundary is the five generated-preview fields: URL, name, status,
+status label and request revision. Their writes currently live in show, clear,
+status rendering and generation completion/failure paths. Extract one owner,
+not a second mirrored state object; page adapters retain DOM and recording
+effects. Sensing-eye state and explicit staging stay separate.
+
+1. Capture complete state and ordered effects from the checkpoint before edits:
+   normal success, HTTP/JSON/network failure, retained results, speech interruption,
+   clear/replacement during a request, and late failure after a newer preview.
+2. Preserve the difference between turn freshness and preview freshness. A new
+   spoken turn can invalidate follow-up speech without hiding its completed
+   thumbnail. Clear/replacement must still prevent a late thumbnail overwrite.
+3. Preserve foreground waiting for idle rendering, original request settings,
+   submission counts, revision guards and recording-cover rollover order. Reuse
+   the existing image transport, retained-image, idle handoff and browser tests.
+4. Move only preview/request-state ownership first. Leave generation HTTP,
+   idle-art scheduling/permission policy, eye persistence, tool continuation and
+   Eric's choice to stage or describe where they are. No new gates or prompts.
+5. Compare the frozen traces and run JS/Python/browser checks. Report main-page
+   lines/bytes and total production size honestly. Then one ordinary resumed
+   draw/interruption/idle/Disconnect run is sufficient for initial acceptance;
+   late-result races belong in automated tests, not an operator timing exercise.
+
+The unresolved long LLM wait around headline/image arrival is independent.
+Passive metrics can record a normal run while this refactor proceeds; do not
+attempt a cache or behavioral repair inside the preview extraction.
+
 Checkpoint `5bcccbe` contains the file-write receipt path, waiting foreground
 image admission, numeric cache diagnostics and updated acceptance notes.
 The preceding full verification passed 817 JavaScript / 1,005 Python tests and
@@ -119,6 +153,22 @@ Acceptance decision: Scott accepts the roughly 21-second initial response on
 this roughly half-window branch. Do not optimize that startup cost as part of
 the refactor. Preserve initiative, continuity and responsive warm turns;
 unexpected post-idle cache rebuilds remain a distinct investigation.
+
+### Follow-Up Repair: B2 Monitor Text
+
+After checkpoint `dfee4ff`, a narrow transport repair separates complete public
+monitor speech from the existing 96-character mouth display. `monitor_text` is
+server-derived from the validated public aside, not a new model instruction and
+never a fallback to private advice or raw output. The existing surface owner
+carries it beside display text through deferred/once-only/stale-session paths;
+the speech owner and its cancellation rules are unchanged. Body-only/headline
+modes remain silent, and old-server responses retain their previous behavior.
+
+925 JavaScript tests, 157 page-server tests and isolated Edge checks pass.
+The page/API server was restarted while disconnected. Subsequent September 24
+runs exercised ordinary resumed/idle B2-monitor speech successfully; the
+greater-than-96-character live boundary remains unexercised and covered offline.
+This repair does not broaden the ongoing image-lifecycle extraction scope.
 
 ### Implemented Step: Response Completion Ownership
 

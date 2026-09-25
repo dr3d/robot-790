@@ -1,10 +1,119 @@
 # Engineering Status
 
-Reviewed September 23, 2026. This is the maintained engineering view; session
+Reviewed September 25, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
-Accepted response-completion checkpoint after `84ff44e`: `response-completion.js` owns
+September 25 publication recheck: 929 JavaScript tests, all 1,033 Python tests
+and the isolated Edge suite pass. The focused startup/history/page-server run
+also passes 215 tests. Python reports one dependency deprecation warning for
+Starlette's httpx test client, not a failing test. Logs are under
+`logs/maintenance/lifecycle-review/20260925-checkpoint-{js,python,python-full,browser}.log`.
+Separate repair commits: `b585e6c` cache-only voice startup, `1fffb8a` complete
+public B2 monitor speech, and `c1be7e8` chronological restored-session presentation.
+No live conversation, model settings or behavioral prompts were changed by
+these checks. This morning's normal startup also reached readiness after STT,
+LLM and TTS warmup; passive engine metrics are recording for eight hours.
+
+The next structural step is generated-image preview/request-state ownership,
+scoped in the lifecycle plan. The preflight identifies five shared fields and
+existing race coverage; implementation and its live acceptance are still ahead.
+Keep the known long LLM wait separate, and retain the outstanding live checks
+for an actual internet outage and a B2 monitor aside beyond 96 characters.
+
+September 24 chronological startup repair: B1 now receives dated saved sessions
+oldest-to-newest, instead of the loader's newest-first inventory. Source save
+timestamps order derivatives too; transcript text, note identity, pins, card
+routing, lineage, live note updates and budget protections are unchanged. The
+picker and condensation selector retain their established internal order.
+One shared formatter serves both token measurement and outgoing session updates.
+Undated notes stay in place rather than receiving an invented timestamp.
+
+Verification: 929 JavaScript tests, 205 focused Python tests and isolated Edge
+pass. The browser captures actual measurement and session.update payloads and
+proves exact instruction equality, oldest-to-newest session order, unchanged
+transcripts and unchanged newest-first inventory. Offline replay of the latest
+PM's 16 pinned files preserves every body and places its 12 sessions from
+September 18 through the September 23 evening Hatch Shell session. Logs:
+`logs/maintenance/lifecycle-review/history-order-{suite,browser}.log`.
+Refresh disconnected to activate; no server restart required. A live recall
+answer is not proof of this mechanism and no recall cure is claimed. The prior
+PM showed incorrect chronology despite available history; delivery order was
+an apparatus issue worth correcting without retuning Eric's behavior.
+
+Live follow-up 14:37-14:56, September 24: Connect Previous restored the identical
+September 23 Hatch Shell source and same older excerpt. Scott accepts improved
+Hatch Shell recall. Trace qualification: Eric first used the pinned-note index,
+not a pure no-tool probe; the following calendar recap still muddled chronology.
+He completed two requested diagrams plus `context-ordering-for-codex.txt`, then
+an idle third diagram. All 17 pins/three eye assets and the complete save verify;
+return after lunch 4.450s. Context 64.60% -> 86.86%, including a full reread of
+already-loaded history. One 60.212s idle B1 request overlapped a B2 timeout, then
+both recovered; the delay preceded B1's web search, not its HTTP execution or
+TTS. Engine capture was not current, so cache/queue cause remains unresolved.
+The note's attention gradients are explanatory schematics, not measured weights;
+its catalogue-order claim is not evidence of prompt order. No behavioral change.
+PM and preserved artifacts: `logs/runs/20260924-1456-eric-explains-context/postmortem.md`.
+
+Offline-startup repair: the realtime entry configures local model loading before
+speech/Transformers imports. Hugging Face resources use the installed cache;
+Silero loads its cached Torch Hub repository directly. A narrow adapter corrects
+the upstream NLTK tagger lookup (it checked `tokenizers/` instead of `taggers/`),
+eliminating its redundant download attempt. Dependency files are untouched.
+`ROBOT_790_ALLOW_MODEL_DOWNLOADS=1` restores downloads for first installation or
+intentional model changes. The default affects this voice process, not search,
+cloud image tools, prompts, cadence or personality.
+
+Verification: 235 focused Python startup/lifecycle/readiness tests pass. The
+real STT/VAD/turn detector/Qwen TTS pipeline warmed on isolated port 18765 in
+36.22 seconds while a Python audit hook rejected non-loopback DNS/socket calls;
+readiness was true and there were zero external attempts. Probe evidence:
+`logs/maintenance/lifecycle-review/offline-startup-probe.log`. This is model
+startup/warmup evidence, not an unplugged live conversation test; the existing
+local LM Studio service was outside that probe process. We have identified
+unnecessary network dependencies, not proven which one caused the earlier outage.
+
+Current small repair after `dfee4ff`: B2 monitor speech no longer inherits the
+96-character physical mouth-display cut. The server returns `monitor_text`
+derived only from the complete validated public `mouth_text` (or legacy `text`)
+field, while `mouth_text` keeps its existing display limit. No new model field
+or prompt instruction is requested. Private advice/raw output never supplies
+monitor speech; body-only and headline modes still have no public text.
+
+Immediate and deferred delivery carry both forms through the existing owners.
+Stop/session guards, monitor opt-out, echo/admission policy, once-only voice,
+display expiry, private advice and B1 remain unchanged. Older server responses
+fall back to their existing mouth text; no recovery of a suffix already lost
+upstream is claimed. Voice logs now receive the complete public aside.
+
+Verification: 925 JavaScript tests, 157 page-server tests and isolated Edge pass.
+Coverage includes the observed "quietly powerin" regression, Unicode/96-character
+boundaries, long public text, private-only/invalid output, model-supplied fake
+monitor fields, immediate/deferred routing, should-surface false, old servers,
+display fallback, stop/replacement and once-only speech. The isolated browser
+checks actual page adapters with fake speech/device sinks; this is not a live
+acoustic test. Logs: `logs/maintenance/lifecycle-review/b2-monitor-text-{suite,python,browser}.log`.
+Page/API server restarted disconnected at 21:14; readiness true and updated
+assets HTTP 200. LLM, TTS and face services were not restarted. Refresh STS before
+the next Connect; ordinary conversation/idle with B2 monitor on is sufficient.
+Later ordinary live acceptance is recorded below; no need to manufacture a
+long aside solely to exercise the automated boundary coverage.
+
+September 24 follow-up, 13:52-14:13: normal online conversation after cache-only
+startup passes. Fifteen idle starts, 28 B2 requests, two headline fetches (Poland
+used), one autonomous image staged before description, and a 3.743s human return
+after about 15 minutes away. Sixteen pins and one eye asset verify; derivatives
+ready in 9.547s; settled stop released the pipeline. Context 64.59% -> 76.70%,
+one older session excerpted at connection. B2 monitor asides of 75/92 characters
+completed normally: the >96-character repair boundary remains untested live.
+Actual internet outage was not exercised. Content observations: confused latest
+session chronology, circular acoustic-memory theory, six private-output/markup
+suppression warnings. Idle policy denied face-beat/UI lookup without a retry
+loop; the roughly 10K-character brain-status receipt is a separate efficiency
+candidate. No behavioral tuning or runtime changes from this PM. Evidence:
+`logs/runs/20260924-1413-local-startup-idle/postmortem.md`.
+
+Accepted checkpoint `dfee4ff` after `84ff44e`: `response-completion.js` owns
 model-active state, pending utterance completion, idle provenance and the
 completion timer. It handles audio/model completion ordering through explicit
 page adapters. The real audio owner still determines whether speech is active;
