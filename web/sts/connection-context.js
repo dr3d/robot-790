@@ -1,6 +1,26 @@
 (function (root) {
   "use strict";
 
+  function chronologicalPromptNotes(notes) {
+    const contexts = Array.isArray(notes) ? notes : [];
+    const dated = [];
+    contexts.forEach((note, index) => {
+      if (note.brain_context?.version === 1) return;
+      const content = String(note.content || "");
+      const variant = /^STS Session Variant\r?$/m.test(content);
+      if (!variant && !/^(?:STS Session Note|Robot 790 Session Note|Robot 790 Continuity Session)\r?$/m.test(content)) return;
+      const label = content.match(variant ? /^Source created:\s*([^\r\n]+)/m : /^Created:\s*([^\r\n]+)/m);
+      const at = label ? Date.parse(label[1].trim()) : NaN;
+      if (Number.isFinite(at)) dated.push({ note, index, at });
+    });
+    // Sort only dated session slots. Pins, cards and undated notes keep their
+    // places; the newest-first inventory used for budgeting is never mutated.
+    const ordered = dated.slice().sort((a, b) => a.at - b.at || a.index - b.index);
+    const result = contexts.slice();
+    dated.forEach(({ index }, i) => { result[index] = ordered[i].note; });
+    return result;
+  }
+
   async function prepare({ notes, measure, compact, progress = () => {} }) {
     const original = notes.map(note => ({ ...note }));
     let candidate = original.map(note => ({ ...note }));
@@ -61,7 +81,7 @@
       })) } };
   }
 
-  const api = { prepare };
+  const api = { prepare, chronologicalPromptNotes };
   if (typeof module === "object" && module.exports) module.exports = api;
   root.Robot790ConnectionContext = api;
 })(typeof globalThis === "object" ? globalThis : this);

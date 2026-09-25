@@ -210,6 +210,7 @@ test('old server configuration and live connections fail explicitly; disabled bu
 test('token-budgeted history is not silently truncated by legacy character caps', () => {
   const c = vm.createContext({ maxLoadedNoteChars: 50, maxLoadedNoteCharsPerFile: 25,
     maxTranscriptNoteChars: 50, baseStartupNoteFilenames: [], Robot790NoteBrains: {},
+    Robot790ConnectionContext: require('../web/sts/connection-context.js'),
     noteFilenameInSet: () => false, loadEricMemoriesEnabled: () => true,
     loadedNoteRestoreEnvelope: () => '', loadedNotePromptContent: item => item.content,
     loadedNoteLooksLikeTranscript: () => false });

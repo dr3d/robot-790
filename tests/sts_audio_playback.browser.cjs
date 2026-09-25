@@ -284,6 +284,11 @@ async function main() {
     await completionUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
     results.responseCompletion = await require('./helpers/sts_completion_browser.cjs').checkResponseCompletion(completionUi);
     await completionUi.close();
+    const historyUi = await context.newPage();
+    historyUi.on('pageerror', error => pageErrors.push(error.message));
+    await historyUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.historyOrder = await require('./helpers/sts_history_order_browser.cjs').checkHistoryOrder(historyUi);
+    await historyUi.close();
     const mapUi = await context.newPage();
     let mapReady = false;
     mapUi.on('pageerror', error => pageErrors.push(error.message));

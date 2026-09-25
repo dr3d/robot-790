@@ -1302,6 +1302,7 @@ test('a deliberate quiet Brain2 result succeeds without speech, advisories, or f
 
 // Exercise the shipped functions without starting a socket, microphone, or device.
 function loadFunctions(names, globals, source = page) {
+  globals.Robot790ConnectionContext ??= require('../web/sts/connection-context.js');
   globals.Robot790Brain2Request ??= require('../web/sts/brain2-request.js');
   globals.continuitySessions ??= [];
   globals.toolScopeDenials ??= new Map();

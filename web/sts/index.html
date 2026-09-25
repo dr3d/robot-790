@@ -6991,7 +6991,7 @@
         "If a loaded note begins with World:, treat it as a playable imagined scenario. Narrate actions inside that world; do not use real robot drive tools for fictional movement unless the user explicitly says to move the real or physical robot."
       ]
     } = {}) {
-      const contexts = Array.isArray(noteContexts) ? noteContexts : [];
+      const contexts = Robot790ConnectionContext.chronologicalPromptNotes(noteContexts);
       if (!contexts.length) return "";
       const routed = contexts.filter(item => item.brain_context?.version === 1);
       const cards = routed.length ? Robot790NoteBrains.admit(routed, typeof runtimeConfig === "undefined" ? {} : runtimeConfig.note_cards) : null;

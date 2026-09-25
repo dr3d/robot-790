@@ -113,6 +113,11 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 24 history-order repair: restored sessions are presented to B1
+oldest-to-newest using source save timestamps. Transcript contents and context
+budget protections are unchanged; the picker can still list newest first.
+Refresh STS while disconnected to activate.
+
 September 21 note-context repair: ordinary pinned notes are included whole in
 the connection budget instead of being silently cut at 4,500 characters. Live
 note reads/pins append revisions without rewriting the established conversation

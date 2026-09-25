@@ -11,6 +11,7 @@ function setup(notes, source = page) {
     maxLoadedNoteCharsPerFile: 4500, maxTranscriptNoteChars: 64000,
     baseStartupNoteFilenames: ['core/erics_memories.txt'], loadEricMemoriesEnabled: () => true,
     Robot790NoteBrains: require('../web/sts/note-brains.js'),
+    Robot790ConnectionContext: require('../web/sts/connection-context.js'),
     continuitySessions: [],
     textTail: (text, length) => text.slice(-length), loadedNoteRestoreEnvelope: () => '',
   });

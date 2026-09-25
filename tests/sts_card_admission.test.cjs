@@ -13,6 +13,7 @@ function fixture(notes = []) {
     maxTranscriptNoteChars: 64000, runtimeConfig: {},
     baseStartupNoteFilenames: [], loadEricMemoriesEnabled: () => true, ericMemoryNoteContexts: () => [],
     Robot790NoteBrains: router, textTail: (text, length) => text.slice(-length), loadedNoteRestoreEnvelope: () => '',
+    Robot790ConnectionContext: require('../web/sts/connection-context.js'),
     noteFilenameIsCurrentContinuitySession: () => false, log() {}, events: {},
     updateLoadedNoteControls() {}, contextPanel: null,
   });

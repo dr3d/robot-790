@@ -19,6 +19,17 @@ away the transcript's ending.
 
 ## What Happens
 
+Saved sessions are presented to B1 oldest-to-newest by their source save
+timestamps, followed by the new live conversation. Each session's transcript
+stays in its original order. Swept/summary/excerpt variants use the source
+timestamp, not their preparation date. Ordinary pins, routed cards and undated
+notes keep their positions; no date is invented for an undated note.
+
+The session picker and budget-selection inventory remain newest-first internally.
+That is separate from prompt presentation: both tokenizer measurement and the
+outgoing B1 session use the same chronological formatter. This preserves the
+existing protected opening/newest sessions and condensation selection.
+
 1. Load the selected branch and current pinned notes as usual.
 2. Count the assembled startup instructions, native tool definitions, STS voice
    wrapper and initial runtime using the selected loaded model's tokenizer and
