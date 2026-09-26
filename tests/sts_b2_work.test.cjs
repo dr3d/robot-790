@@ -131,10 +131,12 @@ test('page has one busy owner and unchanged scheduling policy functions', () => 
     const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = source.indexOf('\n    }\n', start);
     assert(start >= 0 && end > start, name);
-    // September 25: the reading receipt now labels undated encyclopedia excerpts honestly.
-    // Its behavioral coverage lives in sts_headlines; all other extraction guards stay frozen.
-    const currentExpected = name === 'acceptBrain2Headline'
-      ? '9ecf4557f5823de4578294e8a26fb170d20eb68036e80f23e9dd828ebc705a76' : expected;
+    // Reviewed evidence additions; scheduling/extraction guards otherwise stay frozen.
+    // Headline coverage: sts_headlines. Shared playback evidence: sts_music.
+    const currentExpected = {
+      acceptBrain2Headline: '9ecf4557f5823de4578294e8a26fb170d20eb68036e80f23e9dd828ebc705a76',
+      brain2EvidenceSnapshot: '17d73091ed3db8502bc17c685fb403fabdaff813ba568e3d07db8e9b00687bbc',
+    }[name] || expected;
     assert.equal(createHash('sha256').update(source.slice(start, end + 6)).digest('hex'), currentExpected, name);
   }
 });

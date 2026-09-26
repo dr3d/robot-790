@@ -784,6 +784,17 @@ proposes; deterministic tool and firmware layers decide what is actually safe
 and timed. Chassis motion is floor-first, speed-capped, and enforced outside the
 model before the treaded body is trusted anywhere interesting.
 
+Eric can also compose and play music on a local sampled piano. `play_music`
+accepts a versioned, multi-part score with MIDI pitches, beat timing and dynamics;
+`stop_music` stops it. Scores are saved as unpinned notes and can be revised or
+replayed. The Music panel provides a piano roll, transport, volume and score
+download; selecting a saved tune previews it without starting playback. Both
+brains receive the controller's latest playback receipt, not a claim of hearing.
+No few-second composition limit, cloud music service or extra GPU
+model is involved. Playback is not musical hearing: the initial creative loop
+is Eric composing and Scott listening. See [Eric's Piano](docs/music.md) for the
+first trial, lifecycle behavior, format and growth path.
+
 Smart-home control uses the same rule: Eric gets simple aliases and reversible
 verbs, while the local proxy owns the real entity IDs and safety policy. The
 first backend is Home Assistant:

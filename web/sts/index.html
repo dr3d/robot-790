@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RObot-790 STS</title>
+  <link rel="stylesheet" href="music.css">
   <style>
     :root {
       color-scheme: dark;
@@ -2577,6 +2578,28 @@
             </section>
           </div>
         </details>
+        <details id="musicPanel" class="runtime-settings-expando">
+          <summary>
+            <span class="runtime-settings-label">Music</span>
+            <span class="subtle">Piano compositions</span>
+          </summary>
+          <div class="music-controls">
+            <div class="music-heading">
+              <label><input data-music="enabled" type="checkbox" checked> Music enabled</label>
+              <span class="subtle">Grand piano</span>
+            </div>
+            <select data-music="scores" aria-label="Saved compositions"></select>
+            <canvas data-music="roll" aria-label="Composition piano roll" role="img"></canvas>
+            <div class="music-transport">
+              <button data-music="play" type="button" title="Replay composition" aria-label="Replay composition" disabled><img src="assets/music/play.svg" alt=""></button>
+              <button data-music="pause" type="button" title="Pause music" aria-label="Pause music" disabled><img src="assets/music/pause.svg" alt=""></button>
+              <button data-music="stop" type="button" title="Stop music" aria-label="Stop music" disabled><img src="assets/music/square.svg" alt=""></button>
+              <button data-music="download" type="button" title="Download score" aria-label="Download score" disabled><img src="assets/music/download.svg" alt=""></button>
+              <label class="music-volume">Volume <input data-music="volume" aria-label="Music volume" type="range" min="0" max="100" value="65"></label>
+            </div>
+            <span data-music="status" role="status">Ready</span>
+          </div>
+        </details>
         <details id="audioRecordingExpando" class="runtime-settings-expando audio-recording-expando">
           <summary>
             <span class="runtime-settings-label">Audio Recording</span>
@@ -2980,6 +3003,9 @@
   <script src="network-camera.js"></script>
   <script src="idle-art.js"></script>
   <script src="audio-playback.js"></script>
+  <script src="assets/music/Tone-14.8.49.js"></script>
+  <script src="music.js"></script>
+  <script src="music-panel.js"></script>
   <script src="brain2-speech.js"></script>
   <script src="brain2-surface.js"></script>
   <script src="brain2-evidence.js"></script>
@@ -3284,6 +3310,26 @@
       clearTimer: timer => clearTimeout(timer)
     });
     let lastBargeInAt = 0;
+    const musicPanel = Robot790MusicPanel.create({
+      element: document.querySelector("#musicPanel"),
+      read: filename => readMusicScore(filename),
+      toolsChanged: () => updateSessionTools(),
+    });
+    const music = Robot790Music.create({
+      engine: Robot790Music.createEngine({
+        Tone, ensurePlayback: () => ensurePlayback(), getContext: () => audioContext,
+        destination: () => ensureEricPlaybackGain(), recording: () => recordingDestination,
+        volume: () => musicPanel.volume(),
+        speechBusy: () => userSpeechActive || audioPlayback.isActive(),
+      }),
+      enabled: () => musicPanel.enabled(), connected: () => realtimeConnected() && !realtimeConnection.stopped,
+      generation: () => realtimeConnection.generation, id: () => crypto.randomUUID(),
+      read: filename => readMusicScore(filename),
+      save: (filename, content) => writeTextFile({ filename, content }),
+      retained: item => musicPanel.retained(item), changed: state => musicPanel.changed(state),
+      log: message => log(events, message),
+    });
+    musicPanel.attach(music);
     let micInterruptActiveMs = 0;
     let micInterruptGapMs = 0;
     let continuityRestoreAt = Date.now();
@@ -3714,6 +3760,9 @@
     const legacyContinuityBookmarkNoteFilename = "core/continuity.txt";
     const labGoalOneShotStorageKey = "robot790.labGoalOneShot.v1";
     const idleToolAllowedNames = new Set([
+      "play_music",
+      "read_music",
+      "stop_music",
       "get_body_sensors",
       "search_web",
       "get_weather",
@@ -7620,6 +7669,7 @@
     function buildRuntimeContextSections() {
       return {
         runtime: formatRuntimeStateForInstructions(),
+        ...(typeof music !== "undefined" ? { music: JSON.stringify(music.evidence()) } : {}),
         sensing_text: formatSensingTextForInstructions() || "Current sensing-eye text: absent.",
         ...searchReceiptRuntimeSections(),
         ...(typeof idleArt !== "undefined" && idleArt.history.length ? { idle_art: JSON.stringify(idleArt.snapshot(1)) } : {}),
@@ -10835,6 +10885,7 @@
     function idleBlockedReason({ manual = false } = {}) {
       if (pendingSessionMapMove || sessionMapMoveBusy) return "session transition";
       if (!realtimeConnected()) return "disconnected";
+      if (typeof music !== "undefined" && music.isActive()) return "music playing";
       if (!manual && currentIdleDrift() <= 0) return "idle off";
       if (!manual && conversationPauseHoldUntil() > Date.now()) return "leaving room for the operator";
       if (!manual && idleHardBrakeActive() && !idleHeadlineBrakePassAvailable()) return "hard loop brake";
@@ -11418,6 +11469,7 @@
           ? "The sensing eye is empty. You may remember an earlier picture, but it is not still in your eye and you are not seeing it now."
           : "Only the current supplied sensing content is present-tense sensory evidence.",
         `Microphone: ${micRuntimeLabel()}. Browser audio recorder: ${audioRecordingActive() ? "recording" : "not recording"}.`,
+        typeof music !== "undefined" ? `Music controller: ${JSON.stringify(music.evidence())}` : "",
         "These fields support factual status answers, not continuous acoustic analysis. Imaginative body talk and playful servo bragging are welcome and need no 'I imagine' preface or disclaimer; do not turn them into verified measurements or action receipts.",
         "Old statements about a body, picture, or completed action are historical claims, not current sensor readings or tool receipts."
       ].join("\n");
@@ -11475,6 +11527,7 @@
         sensing_eye_image: visionImageUrl ? visionImageName : null,
         image_task_receipts: imageTaskReceipt,
         file_write_receipts: fileWriteReceipts.filter(row => row.session_generation === realtimeConnection.generation),
+        ...(typeof music !== "undefined" ? { music: music.evidence() } : {}),
         ...(typeof idleArt !== "undefined" && idleArt.history.length ? { idle_art: idleArt.snapshot(6) } : {}),
         sensing_eye_text: sensingTextContent ? sensingTextName : null,
         camera_active: visionCameraActive(),
@@ -18560,6 +18613,9 @@
         throw new Error("Tool is not enabled by the operator: " + name);
       }
       const args = parseToolArguments(rawArguments);
+      if (name === "play_music") return music.play(args);
+      if (name === "read_music") return music.read(args.filename);
+      if (name === "stop_music") return music.stop("Eric requested stop");
       if (name === "set_voice") return setVoice(args);
       if (name === "deliberate_once") return deliberateOnceForEric(args);
       if (name === "get_ui_controls") return getUiControls(args);
@@ -19198,6 +19254,7 @@
     function enabledToolList() {
       if (firstContactModeEnabled()) return [];
       return [
+        ...(typeof musicPanel !== "undefined" && musicPanel.enabled() ? Robot790Music.tools : []),
         ...(deliberateThinkingEnabled ? deliberationTools : []),
         ...(llmVoiceTools?.checked ? voiceTools : []),
         ...(llmUiControlTools?.checked ? uiControlTools : []),
@@ -19232,6 +19289,16 @@
       audioContext ||= new AudioContext({ sampleRate: 16000 });
       if (audioContext.state === "suspended") await audioContext.resume();
       ensureEricPlaybackGain();
+    }
+
+    async function readMusicScore(filename) {
+      if (!/^music\/[a-zA-Z0-9][a-zA-Z0-9._-]*\.txt$/.test(filename)) throw new Error("Invalid music score filename");
+      const url = new URL("/api/notes/read", location.href);
+      url.searchParams.set("filename", filename);
+      const response = await fetch(url);
+      const result = await response.json();
+      if (!response.ok || result.status === "error") throw new Error(result.error || "Score unavailable");
+      return result.content;
     }
 
     function clearAudioQueue() {
@@ -19770,6 +19837,7 @@
     function stopPlaybackNow() {
       resetMicInterruptCandidate();
       audioPlayback.stop();
+      if (typeof music !== "undefined") music.stop("speech interruption or runtime stop");
       stopSpeechMouthCue();
     }
 
@@ -19783,7 +19851,7 @@
     }
 
     function outputAudioPlaying() {
-      return audioPlayback.isPlaying();
+      return audioPlayback.isPlaying() || (typeof music !== "undefined" && music.isPlaying());
     }
 
     function maybeBargeInFromMicFrame(peak, rms, durationMs) {
@@ -19861,6 +19929,7 @@
         responseCompletion.audioDone(event, { socket, generation });
       }
       if (event.type === "input_audio_buffer.speech_started") {
+        if (typeof music !== "undefined" && music.isActive()) music.stop("user speech");
         unidentifiedOutputSuppressed = false;
         clearConversationReengageTimer();
         lastSpeechStartedAt = Date.now();

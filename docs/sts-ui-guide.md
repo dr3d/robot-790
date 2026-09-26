@@ -1,6 +1,6 @@
 # STS UI Operator Guide
 
-Updated: 2026-09-22. Screenshots: the local STS build on 2026-09-10;
+Updated: 2026-09-26. Screenshots: the local STS build on 2026-09-10;
 some panel layouts have since changed. Current control descriptions take precedence.
 
 This is the operating guide for the STS browser page: where to click, what
@@ -28,6 +28,7 @@ make these pictures.
 - [Idle And Lab Work](#idle-and-lab-work)
 - [Memory, Pins, And Latest Thread](#memory-pins-and-latest-thread)
 - [Session Map](#session-map)
+- [Music](#music)
 - [Tools And Context Inspection](#tools-and-context-inspection)
 - [When Something Looks Wrong](#when-something-looks-wrong)
 
@@ -698,6 +699,24 @@ Archiving is not a rewrite of later notes. Descendants may still reference an
 archived source; the loader's partial-load warning is where you decide whether
 to proceed without it or cancel. This is also not a command to archive every
 unrelated generated image or PM automatically.
+
+## Music
+
+Open **Realtime Server > Music** for the sampled piano. Eric can compose during
+conversation or idle when music and note-file tools are enabled. Scores are
+saved as editable JSON text under `notes/music/`, without automatically pinning
+them into future conversations.
+
+Choose a saved tune to preview its piano roll without playing. Play starts the
+selected score; Pause/Resume and Stop control the active performance. Browsing
+another score does not interrupt music already playing. Volume affects music;
+Download exports the score, not an audio recording. Replay works disconnected.
+
+Your speech interrupts music. Eric's speech ducks it, so narration can overlap
+a performance; there is no automatic silence requirement. Both brains receive
+controller playback evidence, not confirmation that you heard it. Eric does
+not have musical hearing. See [Eric's Piano](music.md) for the format, boundaries
+and verification. Refresh disconnected to pick up browser-side changes.
 
 ## Tools And Context Inspection
 

@@ -4,6 +4,100 @@ Reviewed September 26, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 26 piano checkpoint: sampled-piano tools, saved-score browser/preview,
+local assets and documentation checkpointed after three live trials.
+The narrow PM repair now supplies B1 runtime context and B2 evidence with the
+same compact controller state and latest performance started in this connection.
+Pause, resume, completion and interruption update the receipt; reading a score,
+an unfinished save, clock ticks and an older connection cannot fabricate fresh
+playback. B1 uses existing changed-section append boundaries, not instruction
+prefix rewrites. No score bodies or playhead polling enter this evidence.
+No persona, composition-length or speech/music coordination policy changed.
+All 973 JavaScript and 1090 Python tests pass (one existing dependency warning).
+Real Edge checks verify shared B1/B2 evidence, actual sampled signal, completion,
+pause/resume, stop silence, selection preview and desktop/mobile layout.
+The new receipt path has automated/browser acceptance, not a new live-dialogue
+verdict. Refresh disconnected; no server restart needed. Music-analysis errors,
+incomplete Eric-authored indexes and narration overlap remain separate
+observations, not silently corrected behavior.
+
+September 26, 10:54-11:25 idle-piano trial: 13 distinct saved scores and 16 Eric
+playback calls with completion receipts. Scott liked "River Bend"; Eric extended
+it, wrote an answer, then used an idle-generated day/night image to develop a
+night version and closing revision. No duration truncation. Playback happened,
+but "playing now" claims often outlived these short pieces; audibility cannot
+be reconstructed without a recording. B2 twice falsely reported no playback
+receipts; its runtime evidence packet lacks music state/receipts. Read-back
+worked, but several asserted pitch/contour facts are wrong; the final index
+lists ten of thirteen files. These are evidence/interpretation gaps, not a
+mandate to suppress speech or idle music. Context 37.4% -> 61.9%; 109 completed
+TTS batches all EOS, two decoder cancellations, four fully filtered reply
+retries. No B2 errors; return response in about one transcript second. Exact
+session/five pin hashes/eye asset verify; summary ready in 14.266s; pipeline
+released. No production changes during PM. The preview repair below still needs
+refresh for live acceptance. Evidence:
+`logs/runs/20260926-1126-idle-piano-river-bend/postmortem.md`.
+
+September 26 music-library preview repair: selecting a saved composition now
+reads and validates its score into the piano roll without starting playback.
+Preview selection is separate from the active performance; browsing does not
+stop it, pause/completion do not reclaim the dropdown, and stale reads/errors
+cannot replace a newer selection. Twenty-seven focused music/panel tests pass.
+Real Edge checks verify preview before any playback, selection surviving another
+score's completion, audio, transport, score download and desktop/mobile layout.
+Only panel preview behavior changed; no persona, music generation or audio
+coordination changes. Refresh after disconnect to use it; no restart required.
+
+September 26, 10:05-10:10 piano length/silence trial: three scores saved and
+completed; `read_music` supported a two-part revision without pinning it. Scott
+praised "Slow Tide." None met the requested 64 beats (40.5, 44.5, 44.5), and B1
+spoke during all three. There is no duration truncation. Coordination gaps are
+now observed: introduction/music overlap, immediate tool follow-ups, B2 monitor
+voice overlooking active music, and a fully filtered follow-up retry producing
+the third performance's spoken apology. Original suppressed content is unknown;
+do not claim deliberate silence was filtered. Music remains uncommitted pending
+review of these explicit playback/lifecycle semantics. Fifteen TTS batches all
+EOS, no tool failure; context 35.9% -> 42.6%. Exact session/four pin hashes verify,
+summary ready in 6.813s, pipeline released. No production change during PM.
+Evidence: `logs/runs/20260926-1011-piano-silence-trial/postmortem.md`.
+
+September 26, 09:59-10:01 first live piano trial: Eric authored and saved
+"Little Light" (two parts, 32 notes, 14.375s); playback started and completed
+without interruption. The introduction and tool-follow-up speech overlap much
+of the performance, invoking the existing music ducking. This is a playback
+plumbing pass, not yet listening-quality acceptance. No duration cap shortened
+the score. B2's later "is playing" wording was stale, not a listening receipt.
+Context 35.9% -> 37.1%; five TTS batches all EOS; no backend warnings/errors.
+Session/journal and four pin hashes match; summary ready in 2.547s; pipeline
+released cleanly. Replay without narration, feedback-driven revision and a
+live music interruption remain useful trials. No production change during PM.
+Evidence: `logs/runs/20260926-1001-first-live-piano/postmortem.md`.
+
+September 26 piano trial ready: stable speech-marker/summary repairs checkpointed
+as `eaa2738` on master (local commit, not pushed). New music work remains a
+separate, uncommitted live-acceptance candidate. `music.js` owns versioned scores,
+sampled-piano playback and cancellation; `music-panel.js` owns controls/library.
+Play/read/stop tools support named parts, chords, rests, timing and dynamics.
+No few-second duration cap, automatic sound effects, harmonic correction or new
+GPU model. Local Tone.js and Salamander assets; unique unpinned score notes;
+`read_music` does not pin revisions. Speech ducks playback, user speech stops
+active/pending music, and runtime shutdown cancels it. B1 automatic idle waits
+while the performance plays; B2 is not globally stopped. This adds playback,
+not musical perception. README, `docs/music.md` and private `eric-project.txt`
+describe the boundary and trial.
+
+Verification: all 961 JavaScript and 1090 Python tests pass (existing Python
+deprecation warning). Real Edge checks cover sampled audio signal, completion,
+pause/resume, zero signal after runtime halt, score download, local assets,
+desktop/mobile layout and nonblank piano roll. An isolated local Qwen probe
+authored a valid two-part, 89-note, 16.875s score; the same browser checks passed
+with that score. Tests stub disk-note writes and do not insert trial music into
+Eric's history. Artifacts: `logs/maintenance/music-browser` and
+`logs/maintenance/music-model`. Refresh disconnected, then resume; no service
+restart needed. Actual live tool choice is now verified in the first trial
+above; operator listening feedback, microphone echo behavior and feedback-driven
+musical revision remain open.
+
 September 26, 09:18-09:35 music-resume acceptance: explicit video/chemistry
 correction accepted immediately; B2 actively developed the music discussion.
 Context 31.7% -> 41.0%; 47 completed TTS batches all EOS, one interruption

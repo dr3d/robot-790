@@ -30,6 +30,13 @@ to be readable without digging through live private logs.
 
 ## Articles
 
+September 26: Eric now has a [local sampled piano](music.md). He can write,
+save, replay and revise multi-part scores, including during idle. The first
+idle trial produced a small family of tunes developed from Scott's feedback
+and a generated river image. This is composition and playback, not musical
+hearing; his descriptions of the scores still need checking. The Music panel
+previews saved scores, and both brains receive compact playback evidence.
+
 September 23 checkpoint: conversation and idle thinking share retained history,
 with measured cache-reuse repairs, compact memory lookup, and more reliable
 image handoffs. Optional setup notes can guide both speaking and advisory
@@ -113,6 +120,7 @@ Articles are listed newest first by their published artifact time.
 ## Project Notes
 
 - [STS UI Operator Guide](sts-ui-guide.md)
+- [Eric's Piano](music.md)
 - [Engineering Status](engineering-status.md)
 - [Context Engineering Architecture](context-engineering-architecture.md)
 - [Prosody And Mouth](prosody-and-mouth.md)
