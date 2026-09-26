@@ -4,6 +4,14 @@ Reviewed September 26, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 26 music-library ordering repair: compositions sort newest-created
+first and keep that order through selection, replay and reload. Older browser
+entries recover dates from a music-folder-only metadata endpoint; cached dates
+survive later opens and no score bodies enter LLM context for sorting. All 977
+JavaScript tests, 160 page-server tests and the real Edge replay/reload check
+pass. Page server restarted while disconnected; live metadata returns 17 saved
+scores. Realtime, model and face services were left running. Refresh STS to use.
+
 September 26 piano checkpoint: sampled-piano tools, saved-score browser/preview,
 local assets and documentation checkpointed after three live trials.
 The narrow PM repair now supplies B1 runtime context and B2 evidence with the

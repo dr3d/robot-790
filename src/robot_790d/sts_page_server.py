@@ -48,6 +48,7 @@ from robot_790d.note_files import (
     MAX_NOTE_CHARS,
     list_note_files,
     list_note_files_page,
+    notes_root_for_instance,
     read_note_file,
     write_note_file,
 )
@@ -161,6 +162,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/notes/list":
             self._handle_note_list(parsed.query)
+            return
+        if parsed.path == "/api/music/files":
+            self._handle_music_files()
             return
         if parsed.path == "/api/operator/poll":
             self._handle_operator_poll(parsed.query)
@@ -428,6 +432,30 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         self._send_json(200, {"status": "ok", "tool": "list_text_files", **result})
+
+    def _handle_music_files(self) -> None:
+        root = notes_root_for_instance().resolve()
+        directory = root / "music"
+        files = []
+        try:
+            if not directory.resolve().is_relative_to(root):
+                raise ValueError("Music directory must stay inside the notes folder.")
+            for path in directory.glob("*.txt"):
+                if not path.resolve().is_relative_to(root) or not path.is_file():
+                    continue
+                if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]*\.txt", path.name):
+                    continue
+                try:
+                    stat = path.stat()
+                except FileNotFoundError:
+                    continue
+                # Birth time on Windows/macOS; immutable score versions can use mtime elsewhere.
+                created = getattr(stat, "st_birthtime", stat.st_ctime if os.name == "nt" else stat.st_mtime)
+                files.append({"filename": f"music/{path.name}", "created_at_ms": round(created * 1000)})
+        except (OSError, ValueError) as exc:
+            self._send_json(400, {"status": "error", "error": str(exc)})
+            return
+        self._send_json(200, {"status": "ok", "files": files})
 
     def _handle_note_write(self) -> None:
         try:

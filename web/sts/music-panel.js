@@ -18,15 +18,31 @@
       catch { status.textContent = "Browser settings could not be saved; scores remain on disk."; }
     }
     function refreshList(selected = scores.value) {
+      library.sort((left, right) => createdAt(right) - createdAt(left) || left.filename.localeCompare(right.filename));
       scores.replaceChildren(new Option("Choose a composition", ""));
       for (const item of library) scores.add(new Option(item.title, item.filename));
       scores.value = selected;
       play.disabled = !scores.value || !enabled.checked;
       download.disabled = !scores.value;
     }
+    function createdAt(item) {
+      return Number.isFinite(item.created_at_ms) && item.created_at_ms > 0 ? item.created_at_ms : 0;
+    }
+    async function recoverDates() {
+      if (!a.dates || !library.some(item => !createdAt(item))) return;
+      try {
+        const dates = new Map((await a.dates()).filter(item => createdAt(item)).map(item => [item.filename, item.created_at_ms]));
+        // Keep the latest library and selection if a new score arrived during the request.
+        library = library.map(item => createdAt(item) || !dates.has(item.filename)
+          ? item : { ...item, created_at_ms: dates.get(item.filename) });
+        persist(); refreshList();
+      } catch { /* Cached order survives unavailable metadata; a later addition can retry. */ }
+    }
     function retained(item) {
-      library = [item, ...library.filter(s => s.filename !== item.filename)];
+      const existing = library.find(s => s.filename === item.filename);
+      library = [...library.filter(s => s.filename !== item.filename), { ...existing, ...item }];
       persist(); refreshList(item.filename);
+      recoverDates();
     }
     function updateStatus() {
       const runtime = last?.error || `${!last || last.state === "empty" ? "Ready" : last.state[0].toUpperCase() + last.state.slice(1)}${last?.score ? `: ${last.score.title}` : ""}`;
@@ -131,6 +147,7 @@
     new ResizeObserver(draw).observe(canvas);
     setInterval(() => { if (last?.state === "playing" && element.open) draw(); }, 120);
     refreshList();
+    recoverDates();
     return { enabled: () => enabled.checked, volume: () => +volume.value / 100, retained,
       changed: render, attach(value) { owner = value; render(owner.snapshot()); } };
   }

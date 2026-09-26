@@ -11,6 +11,11 @@ the right-side Realtime Server controls contains the enable checkbox, saved
 compositions, piano roll, replay, pause/resume, stop, score download and volume.
 Music and local note-file tools must be enabled to save a new composition.
 Selecting a saved composition loads its piano-roll preview without playing it.
+Compositions stay newest-created first; replay never promotes an older tune.
+Existing browser entries recover dates from score-file metadata, not last-open
+time. Dates are cached locally; systems without file birth times use the saved
+version's modification time as the fallback. No score bodies enter model context
+for this UI sorting.
 Browsing other scores does not stop the current performance; pause/stop still
 control that performance, and the playhead only appears on its own score.
 

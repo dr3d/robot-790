@@ -23,6 +23,7 @@ async function main() {
     page.on('console',message=>{if(message.type()==='error') console.error('browser:',message.text());});
     await page.route('**/api/**', async route=>{
       const r=route.request(), url=new URL(r.url());
+      if(url.pathname==='/api/music/files') return route.fulfill({json:{status:'ok',files:[...files.keys()].map((filename,index)=>({filename,created_at_ms:1700000000000+index*1000}))}});
       if(url.pathname==='/api/notes/write') {
         const p=r.postDataJSON(); files.set(p.filename,p.content); writes++;
         return route.fulfill({json:{status:'ok',filename:p.filename,characters:p.content.length}});
@@ -34,7 +35,9 @@ async function main() {
       if(r.method()!=='GET') return route.fulfill({json:{status:'ok'}});
       return route.continue();
     });
-    await page.addInitScript(({filename,title})=>localStorage.setItem('robot790.music.v1',JSON.stringify({library:[{filename,title}]})),
+    await page.addInitScript(({filename,title})=>{
+      if(!localStorage.getItem('robot790.music.v1')) localStorage.setItem('robot790.music.v1',JSON.stringify({library:[{filename,title}]}));
+    },
       {filename:previewFilename,title:previewScore.title});
     await page.goto('http://127.0.0.1:8790/');
     await page.waitForFunction(()=>typeof Robot790Music!=='undefined');
@@ -115,6 +118,20 @@ async function main() {
     results.errors=errors; assert.deepEqual(errors,[]);
     results.noExternalAssets=await page.evaluate(()=>performance.getEntriesByType('resource').filter(r=>/Tone|piano\//.test(r.name)).every(r=>new URL(r.name).origin===location.origin));
     assert(results.noExternalAssets); assert.equal(files.size,2); assert.equal(writes,1);
+    const expectedOrder=[results.receipt.filename,previewFilename];
+    const order=()=>page.locator('[data-music="scores"]').evaluate(el=>Array.from(el.options,o=>o.value).filter(Boolean));
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('robot790.music.v1')).library.every(item=>item.created_at_ms>0));
+    assert.deepEqual(await order(),expectedOrder);
+    await page.locator('[data-music="scores"]').selectOption(previewFilename);
+    await page.getByRole('button',{name:'Replay composition',exact:true}).click();
+    await page.waitForFunction(filename=>music.snapshot().filename===filename && music.isPlaying(),previewFilename);
+    assert.deepEqual(await order(),expectedOrder);
+    await page.evaluate(()=>music.stop('browser sort test'));
+    await page.reload();
+    await page.waitForFunction(()=>typeof Robot790Music!=='undefined');
+    assert.deepEqual(await order(),expectedOrder);
+    assert.equal(writes,1);
+    results.creationOrderSurvivesReplayAndReload=true;
     fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(results,null,2));
     console.log(JSON.stringify(results,null,2));
   } finally { await browser.close(); }

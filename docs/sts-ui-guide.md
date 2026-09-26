@@ -707,7 +707,8 @@ conversation or idle when music and note-file tools are enabled. Scores are
 saved as editable JSON text under `notes/music/`, without automatically pinning
 them into future conversations.
 
-Choose a saved tune to preview its piano roll without playing. Play starts the
+The list stays newest-created first; opening or replaying a tune does not move
+it to the top. Choose a saved tune to preview its piano roll without playing. Play starts the
 selected score; Pause/Resume and Stop control the active performance. Browsing
 another score does not interrupt music already playing. Volume affects music;
 Download exports the score, not an audio recording. Replay works disconnected.

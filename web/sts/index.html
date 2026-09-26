@@ -3313,6 +3313,12 @@
     const musicPanel = Robot790MusicPanel.create({
       element: document.querySelector("#musicPanel"),
       read: filename => readMusicScore(filename),
+      dates: async () => {
+        const response = await fetch("/api/music/files", { cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok || result.status !== "ok") throw new Error(result.error || "Music dates unavailable");
+        return result.files;
+      },
       toolsChanged: () => updateSessionTools(),
     });
     const music = Robot790Music.create({

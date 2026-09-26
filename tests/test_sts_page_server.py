@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -40,6 +41,44 @@ def test_note_list_keeps_operator_shelf_complete_and_tool_pages_bounded(tmp_path
     for invalid in ("offset=bad", "limit=100", "directory=..%2F"):
         handler._handle_note_list(invalid)
         assert replies[-1][0] == 400
+
+
+def test_music_files_reports_dates_without_score_bodies_or_unrelated_notes(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    music = tmp_path / "music"
+    music.mkdir()
+    score = music / "river.txt"
+    score.write_text('PRIVATE SCORE BODY', encoding="utf-8")
+    (music / "ignore.json").write_text("{}", encoding="utf-8")
+    (music / "nested").mkdir()
+    (music / "nested" / "ignore.txt").write_text("Nested", encoding="utf-8")
+    (tmp_path / "unrelated.txt").write_text("Private note", encoding="utf-8")
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+    handler.path = "/api/music/files"
+    handler.do_GET()
+    status, payload = replies[-1]
+    assert status == 200
+    stat = score.stat()
+    created = getattr(stat, "st_birthtime", stat.st_ctime if os.name == "nt" else stat.st_mtime)
+    assert payload["files"] == [{"filename": "music/river.txt", "created_at_ms": round(created * 1000)}]
+    score.read_text(encoding="utf-8")
+    handler._handle_music_files()
+    assert replies[-1][1] == payload
+    assert "PRIVATE SCORE BODY" not in json.dumps(payload)
+
+
+def test_music_files_empty_directory_and_storage_error(tmp_path, monkeypatch):
+    monkeypatch.setenv("ROBOT_790_NOTES_PATH", str(tmp_path))
+    replies = []
+    handler = object.__new__(sts_page_server.StsPageHandler)
+    monkeypatch.setattr(handler, "_send_json", lambda status, payload: replies.append((status, payload)))
+    handler._handle_music_files()
+    assert replies[-1] == (200, {"status": "ok", "files": []})
+    monkeypatch.setattr(Path, "glob", lambda *_: (_ for _ in ()).throw(PermissionError("Denied")))
+    handler._handle_music_files()
+    assert replies[-1] == (400, {"status": "error", "error": "Denied"})
 
 
 def test_image_continuation_config_is_opt_in_and_bounded(tmp_path) -> None:
