@@ -171,6 +171,7 @@ def test_private_advisory_filter_handles_single_character_chunks_and_case() -> N
     "Loop pressure means repetition; that is what you asked about.",
     "Here is a list: [one, two]. A [B2 battery] is not a protocol marker.",
     "An unfinished bracket [",
+    "STT noise is something we can discuss. [STT noises] is not a marker.",
     "Regular conversation without punctuation",
     "",
 ])
@@ -208,6 +209,8 @@ def test_explicit_thinking_boundary_handles_every_split_without_language_guessin
     ("<think>unfinished private analysis", ""),
     ("[STS sensing image]\n{\"source\":\"generated image\"}", ""),
     ("[STS tool continuation] private directions", ""),
+    ("[STT noise:", ""),
+    ("Public answer. [STT noise: background audio]", "Public answer. "),
 ])
 def test_provider_boundary_preserves_tools_usage_and_clean_history(streaming, raw, expected):
     from speech_to_speech.LLM.base_openai_compatible_language_model import (

@@ -33,6 +33,8 @@ from robot_790d.continuity import (
 from robot_790d.note_files import read_note_file, resolve_note_path, write_note_file
 from robot_790d.runtime_model import local_runtime_model
 
+logger = logging.getLogger(__name__)
+
 SUMMARY_PROMPT = (
     "Summarize this recorded session for future continuity. "
     "Speaker labels: 'You' is the human operator; 'Robot 790' is Eric, the robot. "
@@ -64,6 +66,7 @@ SUMMARY_PROMPT = (
 )
 MAX_SUMMARY_INPUT_CHARS = 96_000
 MAX_SUMMARY_OUTPUT_CHARS = 16_000
+PREPARATION_OUTPUT_TOKENS = (4096, 8192)
 ACTIVE_LEASE_SECONDS = 180
 SWEEP_VERSION = "Conservative semantic sweep v3"
 SWEEP_RECENT_TURNS = 16
@@ -218,7 +221,7 @@ def preparation_request(transcript: str) -> dict[str, Any]:
     if not alternatives:
         raise ValueError("No speaker turns to summarize; original retained.")
     schema["properties"]["summary"]["items"] = {"anyOf": alternatives}
-    request["max_tokens"] = 2400
+    request["max_tokens"] = PREPARATION_OUTPUT_TOKENS[0]
     return request
 
 
@@ -359,12 +362,16 @@ def summary_result(payload: dict[str, Any]) -> tuple[str, str]:
     return header + "\n\n" + "\n\n".join(lines), title
 
 
-class PreparationValidationError(ValueError):
-    """A complete response with a valid title but rejected continuity content."""
+class PreparationResponseError(ValueError):
+    """Rejected provider output with an auditable receipt, never loadable text."""
 
     def __init__(self, message: str, receipt: dict[str, Any]) -> None:
         super().__init__(message)
         self.receipt = receipt
+
+
+class PreparationValidationError(PreparationResponseError):
+    """A complete response with a valid title but rejected continuity content."""
 
 
 async def request_summary(transcript: str) -> tuple[str, dict[str, Any]]:
@@ -372,20 +379,30 @@ async def request_summary(transcript: str) -> tuple[str, dict[str, Any]]:
     if urlsplit(base).hostname not in {"localhost", "127.0.0.1", "::1"}:
         raise ValueError("Session summaries require a local loopback LLM endpoint; no transcript was sent.")
     request = preparation_request(transcript)
+    attempts = []
     async with httpx.AsyncClient(timeout=httpx.Timeout(120, connect=5), trust_env=False) as client:
-        response = await client.post(
-            f"{base}/chat/completions",
-            json=request,
-            headers={"Authorization": f"Bearer {os.getenv('ROBOT_790_SUMMARY_API_KEY') or 'lm-studio'}"},
-        )
-        response.raise_for_status()
-        result = response.json()
+        for budget in PREPARATION_OUTPUT_TOKENS:
+            request["max_tokens"] = budget
+            response = await client.post(
+                f"{base}/chat/completions",
+                json=request,
+                headers={"Authorization": f"Bearer {os.getenv('ROBOT_790_SUMMARY_API_KEY') or 'lm-studio'}"},
+            )
+            response.raise_for_status()
+            result = response.json()
+            choices = result.get("choices") if isinstance(result, dict) else None
+            reason = (choices[0].get("finish_reason") if isinstance(choices, list)
+                      and choices and isinstance(choices[0], dict) else None)
+            attempts.append({"max_output_tokens": budget, "finish_reason": reason,
+                             "usage": result.get("usage") if isinstance(result, dict) else None})
+            if reason != "length":
+                break
+            # Retry the original request, never continue or salvage partial JSON.
+            # The preparer's cancellation task covers both requests.
+            logger.warning("Session preparation reached output budget %s", budget)
     if not isinstance(result, dict):
         raise ValueError("Summary server returned a non-object response.")
-    fields = summary_fields(result)
-    title = validate_continuity_session_title(fields["title"])
     receipt = {
-        "title": title,
         "model": request["model"],
         "usage": result.get("usage"),
         "prompt": request["messages"][0]["content"],
@@ -397,7 +414,16 @@ async def request_summary(transcript: str) -> tuple[str, dict[str, Any]]:
         "llm_input_characters": len(request["messages"][1]["content"]),
         "input_sha256": digest(transcript),
         "preparation_version": 3,
+        "attempts": attempts,
     }
+    try:
+        fields = summary_fields(result)
+        title = validate_continuity_session_title(fields["title"])
+    except ValueError as exc:
+        raise PreparationResponseError(str(exc), {
+            **receipt, "response": result, "validation_error": str(exc),
+        }) from exc
+    receipt["title"] = title
     # A usable caption must not depend on the stricter continuity validators.
     try:
         body, _ = summary_result(result)
@@ -641,7 +667,7 @@ class SessionPreparer:
             started = time.monotonic()
             try:
                 body, receipt = asyncio.run(self._summarize(text))
-            except PreparationValidationError as exc:
+            except PreparationResponseError as exc:
                 with self.lock:
                     if self.cancel.is_set() or self.closed:
                         raise PreparationPaused() from exc
@@ -650,12 +676,14 @@ class SessionPreparer:
                         raise ValueError(
                             "Source changed during inference; no title saved. Retry preparation."
                         ) from exc
-                    save_continuity_session_title(
-                        exc.receipt["title"], filename, self.instance_path,
-                        expected_source_sha256=digest(source.content), reviewed=False,
-                    )
+                    if isinstance(exc, PreparationValidationError):
+                        save_continuity_session_title(
+                            exc.receipt["title"], filename, self.instance_path,
+                            expected_source_sha256=digest(source.content), reviewed=False,
+                        )
+                        self._update(filename, title="available")
                     self._update(
-                        filename, title="available", failure_receipt=exc.receipt,
+                        filename, failure_receipt=exc.receipt,
                         elapsed_seconds=round(time.monotonic() - started, 3),
                     )
                 raise

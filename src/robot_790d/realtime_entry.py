@@ -33,6 +33,7 @@ class _PrivateAdvisoryTextFilter:
     markers = (
         "[b2 advisory]", "[sts runtime]", "[sts idle continuation]",
         "[sts tool continuation]", "[sts response recovery]", "[sts sensing image]",
+        "[stt noise:",
     )
 
     def __init__(self) -> None:

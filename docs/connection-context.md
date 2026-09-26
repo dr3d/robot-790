@@ -48,6 +48,14 @@ It cannot guarantee retention of every valuable exchange. It does not use the
 older, unreliable prose summaries. Cached selections are tied to source content,
 model identifier and selection request; changed sources require new preparation.
 
+The separate post-session summary/sweep job has 4096 output tokens available,
+with one retry at 8192 if the provider reports an output-limit stop. It retries
+the original input, not partial JSON. Both attempts remain cancellable when
+connecting. Only complete, validated output can become a derivative; an
+unfinished result leaves the original and conservative scrubbed form intact.
+Attempt budgets, stop reasons and token usage are recorded in preparation status.
+This does not change Connect's excerpt selection or the live context window.
+
 Original notes, pins, timestamps, images and lineage are not rewritten. Core
 notes and setup cards are not compacted by this mechanism. Existing card
 admission and ordinary-note file-service limits still apply. Ordinary pinned

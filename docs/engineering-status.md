@@ -1,8 +1,49 @@
 # Engineering Status
 
-Reviewed September 25, 2026. This is the maintained engineering view; session
+Reviewed September 26, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+September 26, 09:18-09:35 music-resume acceptance: explicit video/chemistry
+correction accepted immediately; B2 actively developed the music discussion.
+Context 31.7% -> 41.0%; 47 completed TTS batches all EOS, one interruption
+cancellation, no capacity stop or timeout. Ten generic private-output warnings,
+no public protocol leak; exact suppressed markers are not captured. Generated
+thumbnail survived a superseding speech turn; eye staging succeeded on request.
+Source/journal, three pins and eye hash verify; pipeline released. Summary
+completed in 8.063s, 722 output tokens, first 4096-token attempt. Music hearing
+claims and some B2-supplied premises remain speculative, not new capabilities.
+No production changes during PM. Evidence:
+`logs/runs/20260926-0936-music-resume/postmortem.md`.
+
+September 26 morning repairs: the exact `[STT noise:` protocol marker is now
+recognized by the existing speech/history boundary, including split streaming
+chunks. Ordinary discussion of STT noise remains untouched. Post-session
+preparation now allows 4096 output tokens and retries the original request once
+at 8192 only for `finish_reason=length`; partial output is never continued,
+loaded or used to salvage a title. Attempt budgets, finish reasons and usage
+are recorded; rejected responses retain a failure receipt. Connect cancellation,
+source-hash protection and reviewed derivatives retain their existing ownership.
+No persona, idle, microphone interpretation or connection-context policy change.
+All 1090 Python tests pass (one existing Starlette/httpx warning); diff whitespace
+checks pass. Targeted lint still reports eight pre-existing import/line-length
+issues outside these edits. Live retry of `session-20260925-230456-585` completed
+in 24.813s with 2735 output tokens, clean stop and validated derivatives, without
+needing the second attempt. Page/realtime services restarted with the existing
+model/settings; Browser Face and LM Studio were not restarted. Marker suppression
+is covered automatically; normal live conversation remains the acceptance trial.
+
+September 25, 22:20-23:05 project-note/music/YouTube run: complete 15,051-character
+note read verified; spontaneous B2-proposed image rendered, staged and retained.
+Context 14.4% -> 42.9%; no B1/B2 timeout. All 119 completed TTS batches ended on
+EOS, with 43 cancelled decoder calls and no capacity/budget stops. Exact session
+save, two pins and eye asset verify; pipeline released. Post-save summary failed
+with finish reason `length`; source and scrubbed form remain available. Public
+`[STT noise:` fragment reached synthesis at 22:54:21. Background YouTube speech
+was labeled as operator input, and both brains retained the mistaken attribution
+after Scott clarified it; unsafe chemistry assurances and false empty-eye claims
+are documented separately from transport findings. No code or behavior change
+during PM. Evidence: `logs/runs/20260925-2305-eric-project-conversation/postmortem.md`.
 
 September 25 evening checkpoint: generated-preview ownership, optional outside
 reading, search-receipt deduplication, transcript speaker colors/same-second

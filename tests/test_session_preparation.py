@@ -577,14 +577,90 @@ def test_invalid_title_is_not_salvaged(root, llm_response, bad_title):
 
 
 def test_truncated_completion_does_not_salvage_title(root, llm_response):
-    _, response, _ = llm_response
+    _, response, requests = llm_response
     response["choices"][0]["finish_reason"] = "length"
     filename = session(root)
+    original = resolve_note_path(filename, root).read_bytes()
     worker = prep.SessionPreparer(root)
     try:
         worker.enqueue(filename)
         wait_until(lambda: worker.status(filename)["state"] == "failed")
         assert "did not finish cleanly" in worker.status(filename)["error"]
+        receipt = worker.status(filename)["failure_receipt"]
+        assert [a["finish_reason"] for a in receipt["attempts"]] == ["length", "length"]
+        assert [r["max_tokens"] for r in requests] == list(prep.PREPARATION_OUTPUT_TOKENS)
+        assert "title" not in receipt
+        assert resolve_note_path(filename, root).read_bytes() == original
+        forms = continuity_session_variant_records(filename, root)
+        assert [form["status"] for form in forms] == ["available", "available", "missing"]
+        assert not list(resolve_note_path(filename, root).parent.glob("variants/*.title.json"))
+    finally:
+        worker.close()
+
+
+@pytest.mark.parametrize("retry_result", ["stop", "length", "content_filter"])
+def test_output_limit_retry_uses_original_input_and_validates_completion(monkeypatch, retry_result):
+    requests = []
+    fields = {"title": "Memory request and repeated replies", "summary": [
+        {"speaker": "operator", "text": "Requested a memory.", "source_turn_ids": [0]}],
+        "drop_turn_ids": []}
+
+    def handler(request):
+        requests.append(json.loads(request.content))
+        reason = "length" if len(requests) == 1 else retry_result
+        return httpx.Response(200, json={"choices": [{"finish_reason": reason,
+            "message": {"content": json.dumps(fields) if reason == "stop" else '{"title":'}}]})
+
+    client_type = httpx.AsyncClient
+    monkeypatch.setenv("ROBOT_790_SUMMARY_BASE_URL", "http://127.0.0.1:1234/v1")
+    monkeypatch.setattr(prep.httpx, "AsyncClient", lambda **kwargs: client_type(
+        **kwargs, transport=httpx.MockTransport(handler)))
+    if retry_result == "stop":
+        body, receipt = asyncio.run(prep.request_summary(TRANSCRIPT))
+        assert "Requested a memory." in body
+        assert len(receipt["attempts"]) == 2
+    else:
+        with pytest.raises(prep.PreparationResponseError):
+            asyncio.run(prep.request_summary(TRANSCRIPT))
+    assert len(requests) == 2
+    assert requests[0]["messages"] == requests[1]["messages"]
+    assert requests[0]["response_format"] == requests[1]["response_format"]
+    assert [r["max_tokens"] for r in requests] == [4096, 8192]
+
+
+def test_connect_cancels_output_limit_retry(root, monkeypatch):
+    retry_started = threading.Event()
+    retry_cancelled = threading.Event()
+    calls = []
+
+    async def handler(request):
+        calls.append(json.loads(request.content))
+        if len(calls) == 1:
+            return httpx.Response(200, json={"choices": [{"finish_reason": "length",
+                "message": {"content": "partial"}}]})
+        retry_started.set()
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            retry_cancelled.set()
+            raise
+
+    client_type = httpx.AsyncClient
+    monkeypatch.setenv("ROBOT_790_SUMMARY_BASE_URL", "http://127.0.0.1:1234/v1")
+    monkeypatch.setattr(prep.httpx, "AsyncClient", lambda **kwargs: client_type(
+        **kwargs, transport=httpx.MockTransport(handler)))
+    filename = session(root)
+    original = resolve_note_path(filename, root).read_bytes()
+    worker = prep.SessionPreparer(root)
+    try:
+        worker.enqueue(filename)
+        assert retry_started.wait(5)
+        worker.activity("test-connect", True)
+        assert retry_cancelled.wait(5)
+        wait_until(lambda: worker.idle.is_set())
+        assert len(calls) == 2
+        assert resolve_note_path(filename, root).read_bytes() == original
+        assert not list(resolve_note_path(filename, root).parent.glob("variants/*.summary.txt"))
         assert not list(resolve_note_path(filename, root).parent.glob("variants/*.title.json"))
     finally:
         worker.close()
