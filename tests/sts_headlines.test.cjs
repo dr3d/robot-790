@@ -26,6 +26,8 @@ function setup(overrides = {}, extraFunctions = []) {
     brain2HeadlineCache: [], brain2HeadlineRefreshRequested: false, brain2HeadlineLastSelectionAt: 0,
     idleHeadlineQuietMs: 120000, idleHeadlineGapMs: 600000, brain2HeadlinesInFlight: false,
     currentIdleDrift: () => 7, currentIdleWonder: () => 5, llmWebSearchTools: { checked: true },
+    idleExploration: { value: '5' }, idleExplorationValue: {},
+    localStorage: { getItem: () => null, setItem: () => {} },
     firstContactModeEnabled: () => false, performanceModeEnabled: () => false, idleSubstrateTestEnabled: () => false,
     realtimeConnected: () => true, userSpeechActive: false, userTurnPending: () => false,
     responseActive: false, outputAudioActive: () => false, idleInFlight: false, pendingToolCalls: 0, toolFollowupNeeded: false,
@@ -46,7 +48,7 @@ function setup(overrides = {}, extraFunctions = []) {
     idleDiscoveryWeight: () => 0,
     fetch: async (url, options) => {
       calls.push({ url: String(url), options });
-      if (String(url).endsWith('/api/headlines')) return {
+      if (String(url).includes('/api/exploration?')) return {
         ok: true, json: async () => ({ status: 'ok', retrieved_at: '2026-09-10T12:00:00+00:00', results: [headline] }),
       };
       return { ok: true, json: async () => ({
@@ -61,6 +63,7 @@ function setup(overrides = {}, extraFunctions = []) {
   require('./helpers/sts_advisory_owner.cjs').installBrain2Advisories(context);
   require('./helpers/sts_completion_owner.cjs').installResponseCompletion(context, page);
   for (const name of [
+    'currentIdleExploration', 'idleExplorationGapMs', 'loadIdleExploration', 'updateIdleExplorationUi',
     'brain2HeadlinesEnabled', 'brain2HeadlinesDue', 'brain2BlockedReason', 'brain2DelayMs',
     'fetchIdleHeadlines', 'requestBrain2Mull', 'acceptBrain2Headline', 'triggerBrain2Mull',
     'idleHeadlineSeedAvailable', 'formatIdleHeadlineContext',
@@ -87,6 +90,75 @@ test('12x lab speed does not compress headline quiet time or fetch cooldown; no 
   assert.equal(c.brain2HeadlinesDue(), true);
   c.lastUserTurnActivityAt = 720001;
   assert.equal(c.brain2HeadlinesDue(), false);
+});
+
+test('exploration appetite persists including zero and defaults to the previous reading pace', () => {
+  const saved = new Map();
+  const { context: c } = setup({ localStorage: {
+    getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value),
+  } });
+  c.loadIdleExploration();
+  assert.equal(c.currentIdleExploration(), 5);
+  assert.equal(c.idleExplorationGapMs(), 600000);
+  for (const value of [0, 10, 7]) {
+    c.idleExploration.value = String(value);
+    c.updateIdleExplorationUi();
+    c.idleExploration.value = '5';
+    c.loadIdleExploration();
+    assert.equal(c.currentIdleExploration(), value);
+  }
+  saved.set('robot790.idleExploration.v1', 'broken');
+  c.loadIdleExploration();
+  assert.equal(c.currentIdleExploration(), 5);
+});
+
+test('high appetite offers cached candidates each minute, not on every B2 scheduler check', async () => {
+  const { context: c, calls, time } = setup({ idleExploration: { value: '10' } });
+  time(60000);
+  assert.equal(c.brain2HeadlinesDue(), false);
+  time(60001);
+  await c.triggerBrain2Mull();
+  const second = { ...headline, title: 'New lead', url: 'https://example.com/lead' };
+  c.brain2HeadlineCache.push(second);
+  time(120000);
+  assert.equal(c.brain2HeadlinesDue(), false);
+  time(120001);
+  assert.equal(c.brain2HeadlinesDue(), true);
+  const candidates = await c.fetchIdleHeadlines();
+  c.acceptBrain2Headline({ headline_url: second.url }, candidates);
+  assert.equal(calls.length, 2, 'reuse cached feed, no second network fetch');
+  assert.equal(c.brain2HeadlinesDue(), false);
+  time(180001);
+  assert.equal(c.brain2HeadlinesDue(), true);
+  await c.fetchIdleHeadlines();
+  assert.equal(calls.length, 3, 'exhausted feed can refresh at the selected appetite');
+});
+
+test('off stops automatic exploration without changing the web-search switch or Wonder', () => {
+  const { context: c } = setup({ idleExploration: { value: '0' } });
+  assert.equal(c.brain2HeadlinesEnabled(), false);
+  assert.equal(c.brain2HeadlinesDue(), false);
+  assert.equal(c.llmWebSearchTools.checked, true);
+  assert.equal(c.currentIdleWonder(), 5);
+});
+
+test('all three sources can be offered and Wikipedia retains honest provenance through B2 to B1', async () => {
+  for (const [random, source] of [[0, 'bbc'], [0.4, 'hn'], [0.9, 'wikipedia']]) {
+    const article = { ...headline, source: 'Wikipedia', kind: 'encyclopedia', published_at: '' };
+    const { context: c, calls, receipts } = setup();
+    vm.runInContext(`Math.random = () => ${random}`, c);
+    const original = c.fetch;
+    c.fetch = async (url, options) => {
+      if (!String(url).includes('/api/exploration?')) return original(url, options);
+      calls.push({ url: String(url), options });
+      return { ok: true, json: async () => ({ status: 'ok', retrieved_at: '2026-09-25', results: [article] }) };
+    };
+    await c.triggerBrain2Mull();
+    assert.match(calls[0].url, new RegExp(`source=${source}$`));
+    assert.equal(JSON.parse(calls[1].options.body).headlines[0].published_at, '');
+    assert.match(c.formatIdleHeadlineContext(), /Wikipedia is background reading, not fresh news/);
+    assert.match(receipts[0].result.results[0].snippet, /publication date not supplied/);
+  }
 });
 
 test('headline reading respects switches, special modes, user work, active goals and GPU work', () => {
@@ -207,7 +279,7 @@ for (const phase of ['fetch', 'mull']) {
       const original = c.fetch;
       let complete;
       c.fetch = (url, options) => {
-        const isFetch = String(url).endsWith('/api/headlines');
+        const isFetch = String(url).includes('/api/exploration?');
         if (isFetch !== (phase === 'fetch')) return original(url, options);
         return new Promise(resolve => { complete = async () => resolve(await original(url, options)); });
       };

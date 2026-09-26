@@ -51,6 +51,7 @@ function loadFunctions(context, names) {
   require('./sts_advisory_owner.cjs').installBrain2Advisories(context);
   require('./sts_completion_owner.cjs').installResponseCompletion(context);
   require('./sts_surface_harness.cjs').installBrain2Surface(context);
+  require('./sts_preview_owner.cjs').installGeneratedPreview(context);
   const dependencies = {
     handleFunctionCall: ['recordFileWriteReceipt'],
     connect: ['runConnectionTransition', 'openRealtimeConnection'],

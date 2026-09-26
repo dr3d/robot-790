@@ -10,6 +10,25 @@ reveals the seams.
 
 ## Current Controls
 
+`Exploration appetite` (Lab Run) controls optional outside-reading opportunities
+for B2, separately from speaking pace and Lab speed. It persists across reloads.
+`5` preserves the former ten-minute cadence; `8` is three minutes and `10` one
+minute, after at least that much human quiet (two minutes at settings 1-9).
+`0` disables automatic reading only: Eric can still choose `search_web`.
+B2, Web search, positive Drift and positive Wonder remain prerequisites; current
+tasks, speech and tool work take precedence. These are opportunities, not a
+promise to speak or browse on the exact minute.
+
+Each fresh batch samples BBC News, Hacker News or random Wikipedia introductions
+without a topic dictionary. B2 may choose a lead or pass on all of it. Unused
+candidates can be reused for up to ten minutes without another source fetch.
+At most eight compact candidates enter a B2 reading pass; only the selected
+item and its suggestion enter B1. Wikipedia carries retrieval time, not an
+invented publication date; HN dates are submission dates and its linked articles
+have not been read. All external material stays untrusted data. The existing
+`headlines fetch/selected/passed` logs retain their names for continuity and now
+include the source and exploration setting. No new speaking timer is added.
+
 `deliberate_once` is a bounded mental action available to Eric in an ordinary
 connected session. He can take one private pass when the operator asks him to
 think harder or when a question clearly needs a multi-step diagnosis, tradeoff,

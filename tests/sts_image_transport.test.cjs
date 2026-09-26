@@ -64,6 +64,7 @@ function fixture() {
       ok: true, json: async () => ({ status: 'ok', filename: 'draw.png', url: '/draw.png', files: [], next_offset: 20 }),
     }; },
   });
+  require('./helpers/sts_preview_owner.cjs').installGeneratedPreview(c, page);
   for (const name of ['generateImage', 'showGeneratedImage', 'clearGeneratedImage', 'listTextFiles']) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);

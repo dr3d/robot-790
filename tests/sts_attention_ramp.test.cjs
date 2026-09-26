@@ -106,7 +106,7 @@ test('configured active baseline preserves breathing room, busy guards and disco
     ['responseActive', true, 'assistant busy'],
     ['outputAudioActive', () => true, 'assistant busy'],
     ['pendingToolCalls', 1, 'tool followup pending'],
-    ['brain2HeadlinesInFlight', true, 'Brain 2 reading headlines'],
+    ['brain2HeadlinesInFlight', true, 'Brain 2 exploring'],
     ['realtimeConnected', () => false, 'disconnected'],
   ]) {
     const previous = c[key];
@@ -448,7 +448,7 @@ test('old conversation pause hold cannot veto a new discovery, but foreground an
   for (const [name, value, expected] of [
     ['responseActive', true, 'assistant busy'], ['outputAudioActive', () => true, 'assistant busy'],
     ['userSpeechActive', true, 'user speaking'], ['pendingToolCalls', 1, 'tool followup pending'],
-    ['brain2HeadlinesInFlight', true, 'Brain 2 reading headlines'],
+    ['brain2HeadlinesInFlight', true, 'Brain 2 exploring'],
     ['idleHardBrakeActive', () => true, 'hard loop brake'],
     ['idleCooldownUntil', 2030000, 'cooldown'],
   ]) {

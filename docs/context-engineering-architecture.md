@@ -1091,9 +1091,13 @@ revision fields in this task. It is contributing a possible interest, not
 judging the operator or issuing loop guards. News text is external data, not
 instructions; B2's proposed angle remains fallible advice.
 
-The selected source becomes a normal search receipt plus a one-use private
-seed in Eric's next eligible idle prompt. Eric may develop it or move elsewhere;
-he is not asked to read a bulletin or return everything to the previous subject.
+The selected source becomes a one-time, source-labeled runtime search receipt
+plus a one-use private seed in Eric's next eligible idle prompt. Each outside
+receipt is appended once under a unique timestamped section. B1-initiated and
+idle `search_web` calls already have canonical paired tool outputs in the
+conversation, so STS retains them for B2 and idle evidence without copying them
+into runtime snapshots. Eric may develop a selection or move elsewhere; he is
+not asked to read a bulletin or return everything to the previous subject.
 Seed delivery is logged, and the selected seed is included in the PM state.
 The root B2 prompt specimens describe the ordinary observer pass; actual
 headline-pass prompts are captured in the existing prompt ledger.

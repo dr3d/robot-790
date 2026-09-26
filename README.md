@@ -113,6 +113,13 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 25 structural work: generated-image preview state and request revision
+now have a dedicated owner instead of five shared page globals. Automated
+state/race and browser checks pass, plus a live resumed run with interjections
+during both renders, successful eye moves and verified continuity saving. Drawing policy,
+speech interruption behavior and explicit movement into the sensing eye are
+unchanged. Refresh STS while disconnected to load the client update.
+
 September 24 history-order repair: restored sessions are presented to B1
 oldest-to-newest using source save timestamps. Transcript contents and context
 budget protections are unchanged; the picker can still list newest first.
@@ -440,6 +447,11 @@ With LM Studio serving the downloaded model locally, ordinary conversation can
 run without internet. Web search and cloud image generation still need internet;
 this setting does not disable them when connectivity returns.
 
+Long CustomVoice answers are partitioned into synthesis batches that fit the
+accelerated TTS decoder's actual input-plus-audio buffer. Every part remains
+queued in order; this does not limit answer length. The voice log reports each
+batch's capacity and whether decoding ended normally or reached a limit.
+
 For first installation or intentionally downloading a new voice model, launch
 with `$env:ROBOT_790_ALLOW_MODEL_DOWNLOADS = "1"` in that PowerShell session.
 After setup, remove it with `Remove-Item Env:\ROBOT_790_ALLOW_MODEL_DOWNLOADS`
@@ -671,6 +683,15 @@ exists for exhausted loops; finer per-topic retirement is still in progress.
 The related controls matter:
 
 - `Wonder`: raises the chance of curiosity, unresolved, and lookup lanes.
+- `Exploration appetite`: supplies B2 with optional outside reading from BBC,
+  Hacker News, or random Wikipedia introductions. `5` keeps the former ten-minute
+  pace; `10` offers reading about once a minute when idle. This saved setting is
+  independent of Lab speed and does not set speech frequency. `Off` stops these
+  automatic offers, not Eric's own web searches. B2 and Web search must be enabled,
+  with Drift and Wonder above zero; active work still takes priority. Selected
+  outside reading reaches B1 once as a timestamped receipt. Results from Eric's
+  own searches already exist as paired tool outputs and are not copied into
+  repeated runtime snapshots.
 - `Self-focus`: controls how much Eric centers body, identity, and self-model.
 - `Notes`: controls how strongly loaded notes shape idle material.
 - `Substrate test`: suppresses ordinary Robot 790 self-reference so a loaded

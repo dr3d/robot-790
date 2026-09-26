@@ -1,0 +1,7412 @@
+{
+  "baseline": "a793cbc",
+  "cases": [
+    {
+      "name": "empty status normalization",
+      "snapshots": [
+        {
+          "label": "ready without URL",
+          "state": [
+            "",
+            "",
+            "empty",
+            "a b",
+            0
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "empty",
+            "a b",
+            0
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "show recording=false eye=false",
+      "snapshots": [
+        {
+          "label": "old",
+          "state": [
+            "http://example.test/old.png",
+            "old.png",
+            "ready",
+            "old.png",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "old.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: old.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: old.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            }
+          },
+          "trace": [
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "clear",
+          "state": [
+            "",
+            "",
+            "empty",
+            "",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "No generated image yet"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/new.png",
+            "new",
+            "ready",
+            "new",
+            3
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "new - test / model"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: new"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: new"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            }
+          },
+          "trace": [
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "new - test / model"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "show recording=false eye=true",
+      "snapshots": [
+        {
+          "label": "old",
+          "state": [
+            "http://example.test/old.png",
+            "old.png",
+            "ready",
+            "old.png",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "old.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: old.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: old.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            }
+          },
+          "trace": [
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "clear",
+          "state": [
+            "",
+            "",
+            "empty",
+            "",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "No generated image yet"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/new.png",
+            "new",
+            "ready",
+            "new",
+            3
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "new - test / model"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: new"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: new"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            }
+          },
+          "trace": [
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "new - test / model"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "show recording=true eye=false",
+      "snapshots": [
+        {
+          "label": "old",
+          "state": [
+            "http://example.test/old.png",
+            "old.png",
+            "ready",
+            "old.png",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "old.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: old.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: old.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            }
+          },
+          "trace": [
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              1
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": {
+                  "name": "previous"
+                }
+              }
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "clear",
+          "state": [
+            "",
+            "",
+            "empty",
+            "",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "No generated image yet"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              1
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": {
+                  "name": "previous"
+                }
+              }
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/new.png",
+            "new",
+            "ready",
+            "new",
+            3
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "new - test / model"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: new"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: new"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            }
+          },
+          "trace": [
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              1
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": {
+                  "name": "previous"
+                }
+              }
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              3
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "new - test / model"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": {
+                  "name": "previous"
+                }
+              }
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "show recording=true eye=true",
+      "snapshots": [
+        {
+          "label": "old",
+          "state": [
+            "http://example.test/old.png",
+            "old.png",
+            "ready",
+            "old.png",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "old.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: old.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: old.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/old.png"
+            }
+          },
+          "trace": [
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              1
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "clear",
+          "state": [
+            "",
+            "",
+            "empty",
+            "",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "No generated image yet"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              1
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/new.png",
+            "new",
+            "ready",
+            "new",
+            3
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "new - test / model"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: new"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: new"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            }
+          },
+          "trace": [
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              1
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "old.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: old.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/old.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "cover",
+              {
+                "includePlaceholder": true
+              },
+              3
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "new - test / model"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: new"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "normal success",
+      "snapshots": [
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/draw.png",
+            "draw.png",
+            "ready",
+            "draw.png",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/draw.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "draw.png - test / model"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: draw.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: draw.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/draw.png"
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating a title..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining a title..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining a title..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: a title (test-model / low)"
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/draw.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "draw.png - test / model"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: draw.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: draw.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/draw.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ],
+            [
+              "log",
+              "image generated: draw.png"
+            ]
+          ],
+          "requests": [
+            {
+              "url": "http://example.test/api/images/generate",
+              "body": {
+                "prompt": "a picture",
+                "title": "a title",
+                "size": "1024x1024",
+                "model": "test-model",
+                "quality": "low"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HTTP failure",
+      "snapshots": [
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "failed",
+            "credits",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Image generation failed"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image failed: credits"
+              },
+              "hidden": false,
+              "title": "Imagined image failed: credits"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG FAIL"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Image generation failed"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "failed"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image failed: credits"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image failed: credits"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG FAIL"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "error",
+              "credits"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "JSON failure",
+      "snapshots": [
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "failed",
+            "429 Limited",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Image generation failed"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image failed: 429 Limited"
+              },
+              "hidden": false,
+              "title": "Imagined image failed: 429 Limited"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG FAIL"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Image generation failed"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "failed"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image failed: 429 Limited"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image failed: 429 Limited"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG FAIL"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "error",
+              "429 Limited"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "network failure",
+      "snapshots": [
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "failed",
+            "network",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Image generation failed"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image failed: network"
+              },
+              "hidden": false,
+              "title": "Imagined image failed: network"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG FAIL"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Image generation failed"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "failed"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image failed: network"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image failed: network"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG FAIL"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "error",
+              "network"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "voice then success",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/late.png",
+            "late.png",
+            "ready",
+            "late.png",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/late.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "late.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: late.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: late.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/late.png"
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/late.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "late.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: late.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: late.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/late.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ],
+            [
+              "log",
+              "image preview ready after superseded turn: late.png"
+            ],
+            [
+              "result",
+              {
+                "status": "ok",
+                "filename": "late.png",
+                "url": "http://example.test/late.png",
+                "local_url": "/late.png",
+                "displayed": true,
+                "staged": false,
+                "retained": true,
+                "retrieval": {
+                  "tool": "move_generated_image_to_sensing_eye",
+                  "arguments": {
+                    "filename": "late.png"
+                  }
+                }
+              }
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "voice then failure",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "failed",
+            "late",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Image generation failed"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image failed: late"
+              },
+              "hidden": false,
+              "title": "Imagined image failed: late"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG FAIL"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Image generation failed"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "failed"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image failed: late"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image failed: late"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG FAIL"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "error",
+              "late"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "session then success",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "empty",
+            "",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Image retained on disk"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Image retained on disk"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image retained on disk after superseded request: late.png"
+            ],
+            [
+              "result",
+              {
+                "status": "ok",
+                "filename": "late.png",
+                "url": "http://example.test/late.png",
+                "local_url": "/late.png",
+                "displayed": false,
+                "staged": false,
+                "retained": true,
+                "retrieval": {
+                  "tool": "move_generated_image_to_sensing_eye",
+                  "arguments": {
+                    "filename": "late.png"
+                  }
+                }
+              }
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "session then failure",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "failed",
+            "late",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Image generation failed"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image failed: late"
+              },
+              "hidden": false,
+              "title": "Imagined image failed: late"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG FAIL"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Image generation failed"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "failed"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image failed: late"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image failed: late"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG FAIL"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "error",
+              "late"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "clear then success",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "empty",
+            "",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "No generated image yet"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image retained on disk after superseded request: late.png"
+            ],
+            [
+              "result",
+              {
+                "status": "ok",
+                "filename": "late.png",
+                "url": "http://example.test/late.png",
+                "local_url": "/late.png",
+                "displayed": false,
+                "staged": false,
+                "retained": true,
+                "retrieval": {
+                  "tool": "move_generated_image_to_sensing_eye",
+                  "arguments": {
+                    "filename": "late.png"
+                  }
+                }
+              }
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "clear then failure",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "",
+            "",
+            "empty",
+            "",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "No generated image yet"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "No imagined image yet"
+              },
+              "hidden": false,
+              "title": "No imagined image yet"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG --"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "No generated image yet"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "empty"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "No imagined image yet"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "No imagined image yet"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG --"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "error",
+              "late"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "replace then success",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/new.png",
+            "new.png",
+            "ready",
+            "new.png",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "new.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: new.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: new.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "new.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: new.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: new.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ],
+            [
+              "log",
+              "image retained on disk after superseded request: late.png"
+            ],
+            [
+              "result",
+              {
+                "status": "ok",
+                "filename": "late.png",
+                "url": "http://example.test/late.png",
+                "local_url": "/late.png",
+                "displayed": false,
+                "staged": false,
+                "retained": true,
+                "retrieval": {
+                  "tool": "move_generated_image_to_sensing_eye",
+                  "arguments": {
+                    "filename": "late.png"
+                  }
+                }
+              }
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "replace then failure",
+      "snapshots": [
+        {
+          "label": "pending",
+          "state": [
+            "",
+            "",
+            "generating",
+            "image",
+            1
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageCard": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "Generating image..."
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": true
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagining image..."
+              },
+              "hidden": false,
+              "title": "Imagining image..."
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG BUSY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": true
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ]
+          ],
+          "requests": []
+        },
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/new.png",
+            "new.png",
+            "ready",
+            "new.png",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "new.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: new.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: new.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/new.png"
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": false
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "new.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: new.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: new.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/new.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ],
+            [
+              "error",
+              "late"
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    },
+    {
+      "name": "retained idle result",
+      "snapshots": [
+        {
+          "label": "end",
+          "state": [
+            "http://example.test/idle.png",
+            "idle.png",
+            "ready",
+            "idle.png",
+            2
+          ],
+          "elements": {
+            "generatedImagePreview": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/idle.png"
+            },
+            "generatedImageCard": {
+              "classes": [
+                "ready"
+              ],
+              "attributes": {},
+              "hidden": false
+            },
+            "generatedImageHint": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "idle.png"
+            },
+            "generatedImageOpenButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageToEyeButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "generatedImageClearButton": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "disabled": false
+            },
+            "topImageStatus": {
+              "classes": [],
+              "attributes": {
+                "aria-label": "Imagined image ready: idle.png"
+              },
+              "hidden": false,
+              "title": "Imagined image ready: idle.png"
+            },
+            "topImageLabel": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "textContent": "IMG READY"
+            },
+            "topImagePreview": {
+              "classes": [],
+              "attributes": {},
+              "hidden": false,
+              "src": "http://example.test/idle.png"
+            }
+          },
+          "trace": [
+            [
+              "admit",
+              {
+                "requirePermission": true
+              }
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "Generating image..."
+            ],
+            [
+              "generatedImageCard",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "remove",
+              "ready"
+            ],
+            [
+              "generatedImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              true
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "generating"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagining image..."
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagining image..."
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG BUSY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              true
+            ],
+            [
+              "topImagePreview",
+              "removeAttribute",
+              "src"
+            ],
+            [
+              "log",
+              "image generation: picture (test-model / low)"
+            ],
+            [
+              "generatedImagePreview",
+              "set",
+              "src",
+              "http://example.test/idle.png"
+            ],
+            [
+              "generatedImagePreview",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageCard",
+              "add",
+              "ready"
+            ],
+            [
+              "generatedImageHint",
+              "set",
+              "textContent",
+              "idle.png"
+            ],
+            [
+              "generatedImageOpenButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageToEyeButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "generatedImageClearButton",
+              "set",
+              "disabled",
+              false
+            ],
+            [
+              "topImageStatus",
+              "dataset",
+              "state",
+              "ready"
+            ],
+            [
+              "topImageStatus",
+              "set",
+              "title",
+              "Imagined image ready: idle.png"
+            ],
+            [
+              "topImageStatus",
+              "attribute",
+              "aria-label",
+              "Imagined image ready: idle.png"
+            ],
+            [
+              "topImageLabel",
+              "set",
+              "textContent",
+              "IMG READY"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "src",
+              "http://example.test/idle.png"
+            ],
+            [
+              "topImagePreview",
+              "set",
+              "hidden",
+              false
+            ],
+            [
+              "rollover",
+              "generated image changed",
+              {
+                "cover": null
+              }
+            ],
+            [
+              "log",
+              "image preview ready after superseded turn: idle.png"
+            ],
+            [
+              "result",
+              {
+                "status": "ok",
+                "filename": "idle.png",
+                "url": "http://example.test/idle.png",
+                "retained": true,
+                "local_url": "/idle.png",
+                "displayed": true,
+                "staged": false,
+                "retrieval": {
+                  "tool": "move_generated_image_to_sensing_eye",
+                  "arguments": {
+                    "filename": "idle.png"
+                  }
+                }
+              }
+            ]
+          ],
+          "requests": []
+        }
+      ]
+    }
+  ]
+}

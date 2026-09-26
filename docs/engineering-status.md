@@ -4,6 +4,152 @@ Reviewed September 25, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 25 evening checkpoint: generated-preview ownership, optional outside
+reading, search-receipt deduplication, transcript speaker colors/same-second
+grouping, and capacity-aware long speech are ready to commit together. Final
+verification passes all 941 JavaScript and 1,057 Python tests; Python reports
+one existing Starlette test-client deprecation warning. Live image and Nimbus
+acceptance are recorded below. Eric's persona and answer length are unchanged;
+images still require an explicit route into the sensing eye. Exact extended-run
+cache behavior remains an investigation, not a claimed fix in this checkpoint.
+
+September 25, 21:25-21:30 Nimbus live TTS acceptance: the requested tour
+generated 185.57s audio in four batches, each ending on EOS with headroom in
+the unchanged 2048-position buffer. No cutoff reported. The second story was
+intentionally interrupted during playback; backend TTS stopped 76ms after
+response cancellation, and Eric's new reply began 1.069s after detected speech
+end. Eleven normal decoder stops and one cancellation; no backend warnings,
+errors or limit stops. Context 14.4% -> 17.4%; map generation/eye staging,
+same-second saved transcript grouping, exact session save and one eye asset
+verify. Derivatives ready in 8.141s. Together with GPU replay and focused tests,
+this accepts the repair for ordinary use and the evening checkpoint. No commit
+or production changes during PM. Evidence:
+`logs/runs/20260925-2130-nimbus-tts-acceptance/postmortem.md`.
+
+September 25 TTS capacity repair: `tts_capacity.py` now partitions coalesced
+CustomVoice speech to fit the existing CUDA input-plus-audio buffer, preserving
+all text and checking cancellation before each part. Decoder logs distinguish
+EOS, token-budget, sequence-capacity, cancellation and error stops. No larger
+VRAM allocation or answer-length restriction. 216 focused Python tests pass.
+Actual GPU replay confirmed the diagnosis: original 2,192-character batch
+stopped at exactly 497 input + 1,551 generated positions = 2,048 capacity,
+producing 124.0 seconds and missing its conclusion. The repaired first passage
+produced 166.688 seconds; the second failed-run passage produced 195.872 seconds.
+All repaired batches ended on EOS, and Parakeet transcribed both intended final
+sentences from the recorded audio. Evidence: `logs/maintenance/tts-capacity-replay/`;
+reproducer: `tests/helpers/tts_capacity_probe.py`. The Nimbus live check above
+subsequently exercised long delivery and mid-speech interruption.
+
+September 25, 20:33-21:08 Connect Empty exploration: six images generated and
+staged, all six saved eye assets verified, and requested `Research.txt` saved
+with 8,928 characters. Context 18,877 -> 54,516 tokens (14.4% -> 41.6%) over
+about 35 minutes; human return first speech 3.486s, no B1/B2 timeout. This is
+encouraging live operation after search-receipt deduplication; no current-run
+wire/engine capture exists to quantify its exact savings or cache reuse.
+Two operator-confirmed mid-sentence speech cutoffs are the next repair priority.
+Both backend responses report completed, with final TTS batches of 123.82s and
+124.86s and remaining transcript text. Installed accelerated TTS silently stops
+at a separate 2048-position input-plus-audio buffer; the configured 4096 output
+budget does not enlarge it. Buffer exhaustion is the leading diagnosis, but
+stop reason is not logged. Fix capacity-aware batching and stop diagnostics;
+retain full answer content. B2 delivered 42 advisories without timeout/clipping;
+later content mostly refined the initial set and contains source overclaims.
+Save and preparation verified (10.953s). No repair or commit during PM.
+`logs/runs/20260925-2108-exploration-speech-cutoffs/postmortem.md`.
+
+September 25 search-receipt transport repair: ordinary B1 and idle searches
+keep their canonical paired function outputs and remain in the rolling evidence
+window for B2/idle use, but STS no longer copies them into additional runtime
+snapshots. Outside-reading selections without a B1 tool output are delivered to
+B1 once each as uniquely named, timestamped `search_receipt` sections. Runtime
+history remains append-only, so the repair does not delete old conversation
+items or force a live prefix rebuild. Replay of the 18:26 captured wire reduces
+the measured runtime search body from 53,944 characters to the three required
+outside-reading receipts totaling 907 characters (98.3%), while retaining the
+15,788 characters of canonical search tool outputs. The rolling receipt window,
+B2 evidence and idle context retain all twelve findings. All 939 JavaScript
+tests pass; isolated Edge verifies that tool results stay out of runtime deltas
+while outside reading remains available exactly once. The subsequent 20:33
+Connect Empty run exercised the repair without a timeout, as recorded above;
+exact live savings and cache reuse remain unmeasured.
+
+September 25, 18:26-18:51 bounded Connect Empty repeat: materially healthier
+than the preceding extended run. First/last B1 input was 18,864 -> 51,628
+tokens (14.4% -> 39.4%); no B1/B2 timeout or cache-reprocess event, and return
+after absence began speech in 3.686s. Thirty-two complete B1 wire captures now
+identify a concrete context-growth source: the final history contains thirteen
+overlapping full `search_receipts` runtime snapshots totaling 53,944 characters,
+in addition to the canonical paired search tool outputs. This is redundant
+controller presentation, not a reason to reduce initiative. Three image files
+exist, but only the B2 idle-art octopus image has a sensing-eye stage event;
+B1 incorrectly claimed the two generated-preview images were also in his eye
+and repeated that in `just_friday.txt`. Save, requested note and one eye asset
+verify; derivatives ready in 13.375s. TTS is separately accounted for (54
+batches, 351.70s synthesis), including 31.31s and 26.99s long amber workloads.
+The search-receipt repair described above addresses the measured dominant
+duplicate bucket; generated/displayed versus eye-staged receipts remains
+separate. Preserve proactive speech, B2, search and art. PM and 87-file frozen evidence:
+`logs/runs/20260925-1851-empty-exploration-repeat/postmortem.md`.
+No production repairs or commit made during this PM.
+
+September 25, 17:22-18:12 Connect Empty exploration: not an extended-run
+acceptance. First measured context 18,883 -> 123,286 tokens (14.4% -> 94.1%)
+in 50 minutes, with no old sessions loaded. Nineteen searches, thirteen
+shortlist overwrites plus the final requested note, and four B2-proposed
+idle-art images all completed; all four eye assets and continuity save verify.
+BBC/HN/Wikipedia intake is now live-exercised (thirteen selections), but B1/B2
+repeatedly returned to the locked shortlist and amplified unsupported claims.
+Five B1 60-second timeouts and five B2 timeouts; initial human return was
+5.427s. Engine capture rearmed at 18:08:39: one failing B1 request selected
+by LRU; successful retry reused ~95.3%, with 5.267s prefill plus 18.903s
+generation of the requested note. Exact failed-prefix/cache cause remains
+open. Full wire capture was off, so the 104K growth is not fully attributed.
+Source inspection confirms appended overlapping search-receipt snapshots and
+superseded runtime state as redundancy mechanisms to measure next, not proof
+of their exact token share. Prioritize payload accounting/cache diagnosis;
+do not substitute forced silence or reduced initiative. PM, verified save,
+content provenance findings and frozen evidence:
+`logs/runs/20260925-1812-empty-exploration/postmortem.md`.
+No production repairs or commit made during this PM.
+
+September 25, 16:40-16:56 exploration trial: HN delivery verified at appetite
+10. Two B2 selections (Alan Kay/Shannon, orbital data center) from one fetched
+batch reached B1; his five web searches were separate model tool choices.
+Six generated images, five saved eye assets, and the requested 2,775-character
+`friday-cool-things.txt` verify. Return after absence took 2.673s. Five pin
+receipts and the complete continuity save verify; derivatives ready in 9.547s.
+Context 26.4% -> 55.4%; no overflow or B2 timeout. Breadth remained limited:
+he chose three subjects early and repeatedly announced readiness while B2
+refined the same comparison. Random-Wikipedia intake was not tested live.
+Two concrete follow-ups: the ninth initial tool receipt reached the existing
+eight-round speech-only boundary (blocked-tool retry; 24.890s generation), and
+the 16:53 picture question got a one-token/no-speech reply before idle wrote
+an unsupported "I answered" note and voiced a waiting line. It was corrected
+after Scott repeated the question. Another post-headline-plus-image B1 span
+was 22.631s; engine metrics were off, so no cache-cause verdict. Longer return
+TTS batches are accounted for (18.61s / 20.08s synthesis). No production change
+or commit made during PM. Evidence and scope:
+`logs/runs/20260925-1656-exploration/postmortem.md`.
+
+September 25 outside-reading experiment (separate from the accepted preview
+extraction): added a persistent Exploration appetite slider under Lab Run.
+Default 5 preserves the ten-minute B2 reading interval; 10 makes opportunities
+eligible each real minute, independent of Lab speed. Off disables automatic
+reading, not model-initiated searches. Existing foreground/task/busy guards
+remain. Fresh batches randomly sample BBC, HN RSS or Wikipedia random-article
+introductions; B2 still chooses an interest or passes, with no forced speech.
+Cached unused candidates avoid repeat network fetches; only selected snippets
+reach B1, not the whole batch. Encyclopedia retrieval is not presented as a
+publication date, and HN submissions are not claims of having read an article.
+All three live source fetches passed. All 937 JS and 1,045 Python tests pass
+(one existing Starlette deprecation warning); isolated Edge verifies desktop
+and mobile fit plus persistence of values 0/8/10. Logs:
+`logs/maintenance/exploration-{js,python}.log`; screenshots under
+`logs/maintenance/exploration-browser/`. Live source plumbing is exercised;
+extended-run quality/performance acceptance remains blocked by the findings
+above. Speech pacing and persona are unchanged;
+the outside-reading guidance now describes the additional sources.
+
 September 25 publication recheck: 929 JavaScript tests, all 1,033 Python tests
 and the isolated Edge suite pass. The focused startup/history/page-server run
 also passes 215 tests. Python reports one dependency deprecation warning for
@@ -15,11 +161,37 @@ No live conversation, model settings or behavioral prompts were changed by
 these checks. This morning's normal startup also reached readiness after STT,
 LLM and TTS warmup; passive engine metrics are recording for eight hours.
 
-The next structural step is generated-image preview/request-state ownership,
-scoped in the lifecycle plan. The preflight identifies five shared fields and
-existing race coverage; implementation and its live acceptance are still ahead.
+The next structural step, generated-image preview/request-state ownership, is
+implemented after `a793cbc`; scoped live acceptance now passes below. The new
+`generated-preview.js` owns URL, name, status, label and revision, removing five
+page globals without changing rendering choices, idle policy or eye staging.
+Eighteen pre-edit traces reproduce from Git and match complete state/effect
+order after extraction. All 933 JS tests, 177 focused Python tests and isolated
+Edge pass, including actual thumbnail pixel checks and delayed-result races.
+The HTML shrinks 16 lines / 1,033 bytes; total production grows 1,223 bytes.
+September 25, 14:27-14:33 resumed trial: both images completed across human
+interjections with displayed/retained receipts and then explicit eye staging.
+A provider 400 was followed by a successful image request; a duplicate render
+was rejected while the original finished normally. All three pins/two eye
+assets verify; settled Disconnect released the pipeline and derivatives were
+ready in 8.485s. One fully filtered B1 reply recovered through its existing
+one-shot retry. No B1 idle or mid-speech Disconnect occurred in this trial.
+The metrics collector expired at 14:04, so no cache-performance inference.
+Accepted for checkpoint; see `logs/runs/20260925-1433-preview-acceptance/postmortem.md`.
 Keep the known long LLM wait separate, and retain the outstanding live checks
 for an actual internet outage and a B2 monitor aside beyond 96 characters.
+
+September 25, 09:08-09:36 Connect Empty follow-up: complete save, two pin receipts
+and three eye assets verify; derivatives ready in 16.766s. B1 context grew
+14.32% -> 34.76%. First speech 5.837s cold, then 1.034-3.334s on observed human
+turns. Live engine/request metrics worked: longest B1 request 7.078s, no B2
+timeout, late idle partial-prefill 0.822/1.229s. Longer GPU stretches included
+14-18s TTS batches; post-stop work was verified derivative preparation. This
+does not reproduce the previous rich-context/B2-headline stall: B1 searched,
+B2 did not fetch headlines. Initial unsupported recall, an unsolicited B1 idle
+status lookup, and a spoiled first guessing round are content/task observations;
+round two and profile lookup succeeded. No new runtime repair or behavioral
+gate. PM: `logs/runs/20260925-0936-empty-headlines-family/postmortem.md`.
 
 September 24 chronological startup repair: B1 now receives dated saved sessions
 oldest-to-newest, instead of the loader's newest-first inventory. Source save

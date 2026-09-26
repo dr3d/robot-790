@@ -16,18 +16,17 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
-### Next Bounded Step: Generated-Image Preview Ownership
+### Implemented Step: Generated-Image Preview Ownership
 
-September 25 preflight: the accepted response-completion extraction is the
-structural baseline. Checkpoint the intervening transport/startup/history-order
-repairs before changing image ownership. No image extraction is implemented by
-this preflight.
+September 25: the accepted response-completion extraction is the structural
+baseline. The intervening transport/startup/history-order repairs were committed
+separately and published through `a793cbc` before image ownership changed.
 
-The first boundary is the five generated-preview fields: URL, name, status,
-status label and request revision. Their writes currently live in show, clear,
-status rendering and generation completion/failure paths. Extract one owner,
-not a second mirrored state object; page adapters retain DOM and recording
-effects. Sensing-eye state and explicit staging stay separate.
+`generated-preview.js` now owns the five generated-preview fields: URL, name,
+status, status label and request revision. Show, clear, begin, failure, retention
+and status normalization mutate that owner, not mirrored page globals. Page
+adapters retain DOM and recording effects. Sensing-eye state and explicit
+staging remain separate. The following was the extraction/acceptance plan:
 
 1. Capture complete state and ordered effects from the checkpoint before edits:
    normal success, HTTP/JSON/network failure, retained results, speech interruption,
@@ -49,6 +48,32 @@ effects. Sensing-eye state and explicit staging stay separate.
 The unresolved long LLM wait around headline/image arrival is independent.
 Passive metrics can record a normal run while this refactor proceeds; do not
 attempt a cache or behavioral repair inside the preview extraction.
+
+Verification: 18 complete state/ordered-effect traces were frozen from `a793cbc`
+before production edits and independently reproduced from Git. All 933
+JavaScript tests, 177 focused image/idle-art/page-server Python tests and the
+isolated Edge suite pass. Existing foreground-waits-for-idle, retained retrieval,
+speech interruption, socket replacement and eye-write races remain covered.
+The browser exercises the actual page adapters, checks thumbnail pixels and
+desktop/mobile rendering, and checks late success/failure after clear, newer
+preview and invalidated session callbacks. No paid image, live socket or device
+call is used. Logs: `logs/maintenance/lifecycle-review/generated-preview-{suite,python,browser}.log`.
+
+Size checkpoint (LF-normalized): main HTML 22,157 -> 22,141 lines and
+1,000,702 -> 999,669 bytes. New module 66 lines / 2,256 bytes; total production
+size grows 1,223 bytes. Five shared globals are removed, not copied to a second
+state store. This step improves ownership more than overall source size.
+
+Live acceptance September 25, 14:27-14:33 passes the exercised paths. The new
+module was served before Connect. Two thumbnails survived human interjections
+during generation and both explicit eye moves succeeded. The run also recovered
+after a provider 400 and rejected an extra render while the second was active,
+without hiding the completed image. Scott reports images worked well. Three
+pins/two eye assets and draft-to-disk equality verify; settled Disconnect
+released the pipeline and derivatives were ready in 8.485s. This was not an
+idle run or a fresh mid-speech-disconnect test. PM and frozen evidence:
+`logs/runs/20260925-1433-preview-acceptance/postmortem.md`. Ready for checkpoint;
+manual clear/replacement races remain covered by the offline/browser checks.
 
 Checkpoint `5bcccbe` contains the file-write receipt path, waiting foreground
 image admission, numeric cache diagnostics and updated acceptance notes.

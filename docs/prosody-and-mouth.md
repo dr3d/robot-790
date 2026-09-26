@@ -2,6 +2,31 @@
 
 Status: working architecture note.
 
+## Long Speech Delivery
+
+The realtime launcher streams LLM text one sentence at a time, but the TTS
+handler can combine queued sentences before synthesis. Its 4096-token output
+allowance is separate from faster-qwen3-tts's 2048-position CUDA buffer, which
+also holds the text input. Increasing only the output allowance cannot prevent
+that smaller buffer from filling during a long utterance.
+
+`src/robot_790d/tts_capacity.py` partitions coalesced CustomVoice text using
+tokenized input length and the handler's audio-duration estimate, leaving a
+20% buffer reserve plus prompt overhead. It prefers sentence boundaries,
+falls back to whitespace or characters, and preserves all text in order.
+Cancellation abandons the remaining parts. The CUDA buffer and VRAM allocation
+are unchanged. Other TTS backends keep their existing path.
+
+The decoder logs input positions, generated audio tokens, configured budget,
+buffer capacity and completion reason (`eos`, `sequence_capacity`,
+`token_budget`, `cancelled`, or `error`). Unexpected limit stops are warnings.
+The diagnostic wrapper classifies normal returns using the installed decoder's
+loop boundaries; it does not claim that the audio spoke every word merely
+because EOS was emitted. A real replay and speech-recognized ending check live
+in `tests/helpers/tts_capacity_probe.py` (voice worker must be stopped first).
+
+## Embodiment Channels
+
 Robot 790's speech loop has two small embodiment channels wrapped around the
 words:
 

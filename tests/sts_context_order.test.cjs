@@ -39,8 +39,9 @@ function fixture() {
   });
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(c);
   require('./helpers/sts_completion_owner.cjs').installResponseCompletion(c, page);
-  for (const name of ['runtimeContextProtocolInstructions', 'liveNoteEntries', 'sessionNotesForInstructions', 'buildSessionInstructions', 'buildRuntimeContextSections',
-    'formatAloneStateForInstructions', 'formatRecentSearchContextForInstructions', 'appendRuntimeContextToConversation',
+  for (const name of ['compactSearchText', 'runtimeContextProtocolInstructions', 'liveNoteEntries', 'sessionNotesForInstructions', 'buildSessionInstructions', 'buildRuntimeContextSections',
+    'formatAloneStateForInstructions', 'formatSearchContextReceiptForInstructions', 'formatRecentSearchContextForInstructions',
+    'searchReceiptRuntimeSectionName', 'searchReceiptRuntimeSections', 'appendRuntimeContextToConversation',
     'realtimeInterruptEnabled', 'sessionUpdateFingerprint', 'contextDiagnosticsEnabled', 'sessionPromptChange', 'updateSessionTools']) {
     const start = page.search(new RegExp(`^    function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
@@ -160,12 +161,50 @@ test('reconnect sends a fresh snapshot; disconnect and first-contact cannot appe
 
 test('search receipts use fixed timestamps in live history; relative ages remain available for idle', () => {
   const { c, clock } = fixture();
-  c.searchContextReceipts = [{at:1000,source:'idle',query:'News',results:[]}];
-  const initial = c.buildRuntimeContextSections().search_receipts;
-  assert.match(initial, /1970-01-01T00:00:01.000Z/);
+  c.searchContextReceipts = [{at:1000,source:'idle-headline',query:'News',results:[],runtime_delivery:true}];
+  const initial = c.searchReceiptRuntimeSections();
+  const key = Object.keys(initial)[0];
+  assert.match(key, /^search_receipt /);
+  assert.match(initial[key], /1970-01-01T00:00:01.000Z/);
   clock(120000);
-  assert.equal(c.buildRuntimeContextSections().search_receipts, initial);
+  assert.deepEqual(c.searchReceiptRuntimeSections(), initial);
   assert.match(c.formatRecentSearchContextForInstructions(), /2m ago/);
+});
+
+test('runtime search context sends outside reading once and never copies search tool outputs', () => {
+  const { c, sent } = fixture();
+  c.updateSessionTools();
+  const baseline = sent.length;
+  const toolReceipt = { at: 1100, source: 'idle', query: 'Tool result already paired', results: [
+    { source: 'example.org', title: 'Canonical tool output', snippet: 'Already in conversation.', url: 'https://example.org/tool' }
+  ], runtime_delivery: false };
+  c.searchContextReceipts = [toolReceipt];
+  assert.equal(c.appendRuntimeContextToConversation({ toolBoundary: true }), false);
+  assert.equal(sent.length, baseline);
+
+  const firstOutside = { at: 1200, source: 'idle-headline', query: 'Outside one', results: [
+    { source: 'news.example', title: 'First outside item', snippet: 'Selected beyond the B1 tool lane.', url: 'https://news.example/one' }
+  ], runtime_delivery: true };
+  c.searchContextReceipts = [firstOutside, toolReceipt];
+  assert.equal(c.appendRuntimeContextToConversation({ toolBoundary: true }), true);
+  const firstText = sent.at(-1).item.content[0].text;
+  assert.match(firstText, /First outside item/);
+  assert.doesNotMatch(firstText, /Canonical tool output/);
+
+  const secondOutside = { at: 1300, source: 'idle-headline', query: 'Outside two', results: [
+    { source: 'encyclopedia.example', title: 'Second outside item', snippet: 'A later independent selection.', url: 'https://encyclopedia.example/two' }
+  ], runtime_delivery: true };
+  c.searchContextReceipts = [secondOutside, firstOutside, toolReceipt];
+  assert.equal(c.appendRuntimeContextToConversation({ toolBoundary: true }), true);
+  const secondText = sent.at(-1).item.content[0].text;
+  assert.match(secondText, /Second outside item/);
+  assert.doesNotMatch(secondText, /First outside item|Canonical tool output/);
+
+  const runtimeText = sent.filter(event => event.type === 'conversation.item.create')
+    .map(event => event.item.content[0].text).join('\n');
+  assert.equal((runtimeText.match(/First outside item/g) || []).length, 1);
+  assert.equal((runtimeText.match(/Second outside item/g) || []).length, 1);
+  assert.doesNotMatch(runtimeText, /Canonical tool output/);
 });
 
 test('live note load, revision and unpin leave the initial system prefix unchanged', () => {

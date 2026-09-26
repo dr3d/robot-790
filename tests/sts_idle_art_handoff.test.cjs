@@ -32,6 +32,7 @@ async function fixture() {
     }, receipt: row => receipts.push({ ...row }), id: () => `test-${++next}`, now: () => 100000,
   });
   c.idleArt = controller;
+  require('./helpers/sts_preview_owner.cjs').installGeneratedPreview(c, page);
   for (const name of ['generateImage', 'moveGeneratedImageToSensingEye']) {
     const start = page.indexOf(`    async function ${name}(`);
     vm.runInContext(page.slice(start, page.indexOf('\n    }\n', start) + 6), c);

@@ -33,7 +33,7 @@ async function checkImagePreview(page, artifacts) {
       paint.drawImage(generatedImagePreview, 0, 0);
       const pixel = Array.from(paint.getImageData(100, 80, 1, 1).data);
       return { calls, displayed: receipt.displayed, retained: receipt.retained, staged: receipt.staged,
-        eyeUnchanged: visionImageUrl === eye, state: generatedImageStatusState,
+        eyeUnchanged: visionImageUrl === eye, state: generatedPreview.state,
         imageWidth: generatedImagePreview.naturalWidth, pixel,
         controlsReady: !generatedImageOpenButton.disabled && !generatedImageToEyeButton.disabled && !generatedImageClearButton.disabled,
         headerReady: topImageStatus.dataset.state === 'ready' && !topImagePreview.hidden,
@@ -59,8 +59,45 @@ async function checkImagePreview(page, artifacts) {
     assert.equal(fits, true, `${name} thumbnail fits`);
     await panel.screenshot({ path: path.join(artifacts, `image-preview-${name}.png`) });
   }
-  await page.evaluate(() => clearGeneratedImage());
-  return result;
+  const races = await page.evaluate(async () => {
+    const originalFetch = window.fetch, eye = visionImageUrl, outcomes = [];
+    try {
+      for (const action of ['clear', 'replace', 'disconnect']) {
+        for (const fail of [false, true]) {
+          clearGeneratedImage();
+          let finish, current = true, calls = 0;
+          window.fetch = (target, options) => {
+            if (new URL(target, location.href).pathname !== '/api/images/generate') throw Error('Unexpected image test route');
+            calls++;
+            return new Promise((resolve, reject) => { finish = () => fail ? reject(Error('late failure'))
+              : resolve({ok:true,json:async()=>({status:'ok',filename:'old.png',url:'/old.png'})}); });
+          };
+          const pending = generateImage({prompt:'Offline race',_isCurrent:()=>current,_isPreviewCurrent:()=>current});
+          if (action === 'clear') clearGeneratedImage();
+          if (action === 'replace') showGeneratedImage({filename:'new.png',url:'/new.png'});
+          if (action === 'disconnect') current = false;
+          finish();
+          let receipt, error;
+          try { receipt = await pending; } catch (e) { error = e.message; }
+          outcomes.push({action,fail,calls,state:generatedPreview.state,name:generatedPreview.name,
+            displayed:receipt?.displayed ?? null,error:error || null,eyeUnchanged:visionImageUrl===eye,
+            disabled:generatedImageOpenButton.disabled,header:topImageStatus.dataset.state});
+        }
+      }
+    } finally { window.fetch = originalFetch; clearGeneratedImage(); }
+    return outcomes;
+  });
+  for (const row of races) {
+    assert.equal(row.calls,1);
+    assert.equal(row.eyeUnchanged,true);
+    assert.equal(row.state,row.action==='replace'?'ready':row.fail&&row.action==='disconnect'?'failed':'empty');
+    assert.equal(row.header,row.state);
+    assert.equal(row.name,row.action==='replace'?'new.png':'');
+    assert.equal(row.disabled,row.action!=='replace');
+    assert.equal(row.displayed,row.fail?null:false);
+    assert.equal(row.error,row.fail?'late failure':null);
+  }
+  return {...result,races};
 }
 
 module.exports = { checkImagePreview };

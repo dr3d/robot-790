@@ -27,7 +27,7 @@ function fixture() {
     logSnapshotHeader: () => 'Snapshot',
   });
   for (const name of ['conversationDisplayTextRange', 'conversationDisplayText',
-    'conversationVisibleText', 'conversationLineMetadataFromDate', 'conversationLine',
+    'conversationVisibleText', 'transcriptLineClass', 'conversationLineMetadataFromDate', 'conversationLine',
     'addConversation', 'replaceConversation', 'transcriptToken',
     'addSensingEyeVisualNoteTranscriptMarker', 'recordingSnapshotPaneText',
     'recordLogPane', 'autosaveLogPane', 'beaconLogSnapshot',
@@ -98,6 +98,57 @@ test('details default off, persist independently, and both visible surfaces use 
   c.transcriptControlDetails.checked = false;
   c.loadLogDisplayControls();
   assert.equal(c.transcriptControlDetails.checked, true);
-  assert.match(source('renderConversation'), /conversationVisibleText\(\)/);
+  assert.match(source('renderConversation'), /renderTranscript\(conversation, conversationVisibleText\(\)\)/);
   assert.match(source('logPanePopoutConfig'), /conversationVisibleText\(\)/);
+  assert.match(source('renderLogPopout'), /renderTranscript\(logPane, config\.text\(\)\)/);
+});
+
+test('visible transcript styling identifies only operator lines', () => {
+  const { c } = fixture();
+  assert.equal(c.transcriptLineClass('[1:02:03 PM] You: Try that again.'), 'transcript-line-user');
+  assert.equal(c.transcriptLineClass('[1:02:03 PM] You ... still speaking'), 'transcript-line-user');
+  assert.equal(c.transcriptLineClass('[1:02:04 PM] Robot 790: I am here.'), '');
+  assert.equal(c.transcriptLineClass('  [v: l>m/mid/steady]'), '');
+  assert.match(page, /\.transcript-line-user\s*\{\s*color: var\(--warn\);/);
+});
+
+test('same-second speech shares a label in display and saved context without changing event rows', () => {
+  const { c } = fixture();
+  c.conversationLines = [
+    '[1:02:03 PM] Robot 790: First sentence.',
+    '[1:02:03 PM] Robot 790: Second sentence.',
+    '[1:02:04 PM] Robot 790: Next second.',
+    '[1:02:04 PM] You: Right.',
+    '[1:02:04 PM] Robot 790: Agreed.',
+  ];
+  c.conversationLineMetadata = [3, 3, 4, 4, 4].map(second => ({
+    iso: `2026-09-25T17:02:0${second}.100Z`, channel: 'dialogue',
+  }));
+  c.conversationProsodyByIndex = {};
+  const original = JSON.stringify(c.conversationLines);
+  const expected = '[1:02:03 PM] Robot 790: First sentence. Second sentence.\n';
+  assert.ok(c.conversationVisibleText().startsWith(expected));
+  assert.ok(c.recordingSnapshotPaneText('conversation').startsWith(expected));
+  assert.ok(c.conversationTranscriptSinceCleanConnect().startsWith(expected));
+  assert.equal(c.conversationDisplayTextRange(1, 2), '[1:02:03 PM] Robot 790: Second sentence.\n');
+  assert.equal(c.conversationDisplayText().split('\n').filter(Boolean).length, 4);
+  assert.equal(JSON.stringify(c.conversationLines), original);
+});
+
+test('receipt boundaries, different dates, and differing prosody keep speech entries separate', () => {
+  const { c } = fixture();
+  c.conversationLines = [
+    '[1:02:03 PM] Robot 790: First.',
+    '[1:02:03 PM] System: [eye loaded]',
+    '[1:02:03 PM] Robot 790: Second.',
+    '[1:02:03 PM] Robot 790: Third.',
+    '[1:02:03 PM] Robot 790: Tomorrow.',
+  ];
+  c.conversationLineMetadata = c.conversationLines.map((_, index) => ({
+    iso: `2026-09-${index === 4 ? '26' : '25'}T17:02:03.100Z`,
+    channel: index === 1 ? 'control' : 'dialogue',
+  }));
+  c.conversationProsodyByIndex = { 3: 'v: warm', 4: 'v: warm' };
+  assert.equal((c.conversationVisibleText().match(/Robot 790:/g) || []).length, 4);
+  assert.match(c.conversationDisplayText(), /System: \[eye loaded\]/);
 });

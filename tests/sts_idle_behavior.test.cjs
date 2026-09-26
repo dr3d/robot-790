@@ -205,12 +205,12 @@ function aloneContext() {
 
 test('return ledger retains the whole quiet interval and latest headline through follow-up questions', () => {
   const { c, time } = aloneContext();
-  assert.match(c.formatAloneStateForInstructions(), /selected feed headlines since then: 7/);
+  assert.match(c.formatAloneStateForInstructions(), /selected reading candidates since then: 7/);
   c.noteUserTurnActivity();
   const returned = c.formatAloneStateForInstructions();
   assert.match(returned, /Last operator turn activity: 0s ago/);
   assert.match(returned, /duration 223m 40s/);
-  assert.match(returned, /0 controller web searches; 7 selected feed headlines/);
+  assert.match(returned, /0 controller web searches; 7 selected reading candidates/);
   assert.match(returned, /LATEST_BETEL_NUT/);
   const snapshot = JSON.stringify(c.completedAloneInterval);
   time(13431000);
@@ -335,7 +335,7 @@ test('first operator words after a silent start retain quiet work without invent
   c.lastUserTurnActivityAt = 0;
   c.noteUserTurnActivity();
   assert.match(c.formatCompletedAloneInterval(), /no prior operator turn/);
-  assert.match(c.formatCompletedAloneInterval(), /7 selected feed headlines/);
+  assert.match(c.formatCompletedAloneInterval(), /7 selected reading candidates/);
 });
 
 test('a session-map load cannot erase a stopped unsaved run', async () => {

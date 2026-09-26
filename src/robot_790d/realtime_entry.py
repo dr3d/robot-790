@@ -633,6 +633,9 @@ def _format_voice_shape_range(start_s: float, end_s: float, tag: str) -> str:
 
 
 def apply_qwen3_tts_runtime_instruct_patch() -> None:
+    from robot_790d.tts_capacity import install_tts_capacity_patch
+
+    install_tts_capacity_patch()
     from speech_to_speech.TTS.qwen3_tts_handler import Qwen3TTSHandler
 
     if getattr(Qwen3TTSHandler, "_robot_790_runtime_instruct_patch", False):

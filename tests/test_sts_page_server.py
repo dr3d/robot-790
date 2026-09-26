@@ -673,6 +673,16 @@ def test_brain2_headline_input_bounded_and_requires_a_dated_source():
         sts_page_server.mull_second_brain({"mode": "headlines", "conversation": "A normal conversation"})
 
 
+def test_brain2_accepts_retrieved_encyclopedia_without_fabricating_a_date():
+    article = {"title": "An old invention", "url": "https://en.wikipedia.org/wiki/Example",
+               "kind": "encyclopedia", "source": "Wikipedia", "retrieved_at": "2026-09-25"}
+    items = sts_page_server._brain2_headlines([article])
+    assert len(items) == 1
+    assert items[0]["kind"] == "encyclopedia"
+    assert items[0]["published_at"] == ""
+    assert sts_page_server._brain2_headlines([{**article, "kind": "discussion"}]) == []
+
+
 def test_brain2_evidence_bounds_and_attributes_runtime_and_speech() -> None:
     evidence = json.loads(sts_page_server._brain2_evidence_context({
         "sampled_at": "2026-09-09T22:26:00-04:00",
