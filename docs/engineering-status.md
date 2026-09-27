@@ -4,6 +4,57 @@ Reviewed September 27, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 27: accepted generated-image handoff and live notes committed as
+`7ff12f5` on `master` (local checkpoint, not yet pushed). The accepted extraction,
+`sensing-eye-persistence.js`, owns the two image/text save requests. Page adapters
+retain the existing eye generation, inbox cursors and session asset set; there
+is no mirrored state, extra retry, new limit, scheduling change or prompt edit.
+Late visual receipts still prevent inbox echo, but cannot join a newer session.
+
+Verification: 52 request/error/race cases compare full results and ordered effects
+against immutable `7ff12f5`, plus explicit stale-save, concurrent-save and unchanged
+neighbor checks. All 1,039 JavaScript and 180 focused Python tests pass. Isolated
+Edge checks cover real image/text setters, eight fetch/JSON-clear races, unsaved
+fallback on transport failure, plus the previous image handoff and desktop/mobile
+pixel/layout checks. No live model or real file writes are used by these fixtures.
+HTML loses 40 lines / 1,886 bytes; total production source grows 1,168 bytes.
+The short and long live runs below accept the exercised ordinary paths; this
+checkpoint includes the extraction, regression coverage and acceptance notes.
+The 1,039 JavaScript tests pass again before checkpoint. No restart is needed.
+Evidence and boundaries:
+[Sensing-Eye Save Requests](sts-lifecycle-ownership-plan.md#implemented-step-sensing-eye-save-requests).
+
+September 27, 05:26-05:31 acceptance: fresh render -> explicit eye move -> dropped
+text -> dropped image all succeeded. The saved session matches its journal draft;
+ten pin hashes and all three eye asset hashes/sizes verify. Face paint and its
+clear were exercised, not a mid-session eye Clear or late-save race. Barge-ins
+and final Disconnect stopped activity cleanly; pipeline released at 05:30:58.914.
+Preparation ready in 7.704s, all 36 turns retained. B1 context 55.2% -> 60.6%; first
+LLM handler 27.390s, subsequent intervals at most 2.918s; 20 EOS TTS batches and
+two canceled decodes, no tool/save/backend errors. B2 delivered one intact note,
+discarded two stale results. No B1 idle ponder fired, so this is not an idle trial.
+The Chamber Seven recall gap is consistent with the loaded branch: none of the
+eight raw/scrubbed sessions or project/core pins mentions that story; the dropped
+rehearsal is only its opening. No memory repair inferred. Source-hash attestation
+and acoustic recording remain absent. Exercised paths accepted for this checkpoint;
+no production edits from this PM. Evidence:
+`logs/runs/20260927-0531-eye-persistence-acceptance/postmortem.md`.
+
+September 27, 11:34-12:31 longer acceptance: Connect Empty/core only, story
+development across 17 B1 idle opportunities, three B2-proposed idle renders,
+and a seven-image walkthrough. Eight renders total; seven staged and all seven
+saved asset hashes/sizes verify. Ten later selections succeeded; one historical
+`eye-1` lookup failed before name search/durable file ID recovered it. No
+eye-save error; draft/pin/source hashes verify, preparation retained 261/261
+turns, disconnect released the pipeline. First speech out on return was 2.326s.
+Context grew 19,631 -> 80,895 tokens; repeated visual opens and continuation
+traffic remain an accounting watch, not a diagnosed leak. No TTS capacity stop.
+The ID mismatch is a separate small retrieval follow-up; rushed presentation,
+an extra render after misunderstanding, and premature staging claims do not
+authorize behavioral gates. Persistence extraction still passes exercised paths;
+no production edits from this PM. Evidence:
+`logs/runs/20260927-1232-signal-story/postmortem.md`.
+
 September 27, 04:52-05:00 handoff acceptance: three original eye images recalled
 and one new image generated/displayed/explicitly staged, with no tool errors.
 Chip-tube initially missed because an all-words query included `Pringles`, absent

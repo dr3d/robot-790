@@ -11,10 +11,11 @@ test('image handoff preserves complete baseline receipts, errors, state and orde
   assert.deepEqual(await characterize(page, installImageHandoff), baseline.cases);
 });
 
-test('eye persistence, staging, clearing, idle delivery and prompts stay unchanged', () => {
+test('eye staging, clearing, idle delivery and prompts stay unchanged', () => {
   const { extract } = require('./helpers/sts_completion_harness.cjs');
   const original = cp.execFileSync('git', ['show', `${baseline.baseline}:web/sts/index.html`], { encoding: 'utf8' }).replace(/\r\n/g, '\n');
-  for (const name of ['saveSensingEyeVisualNote', 'saveSensingEyeTextNote', 'setVisionImageFromDrawable',
+  // Save transport now has its own committed-baseline comparisons in sts_eye_persistence.test.cjs.
+  for (const name of ['setVisionImageFromDrawable',
     'stageVisionImage', 'clearSensingEyeState', 'selectSensingEyeImage', 'buildSessionInstructions',
     'handleFunctionCall', 'triggerIdlePonder', 'generateImage']) {
     assert.equal(extract(page, name), extract(original, name), name);

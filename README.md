@@ -113,6 +113,13 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 27 accepted extraction: sensing-eye image/text save requests now live in
+`sensing-eye-persistence.js`, retaining the same file receipts, session attachment
+checks and inbox echo protection. Automated and isolated browser checks pass,
+plus live image-text-image replacement and sustained idle/illustration runs with
+verified saved assets. Eric's prompts, drawing choices and idle cadence remain
+unchanged.
+
 September 27 structural work: explicit generated-image transfer to the sensing
 eye now has a separate workflow module, preserving existing image identities,
 late-result checks and staging receipts. Automated and browser checks pass,

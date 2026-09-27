@@ -3016,6 +3016,7 @@
   <script src="generated-preview.js"></script>
   <script src="image-request.js"></script>
   <script src="generated-image-handoff.js"></script>
+  <script src="sensing-eye-persistence.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -4019,6 +4020,7 @@
     const generatedPreview = createGeneratedPreviewOwner();
     const imageRequest = createImageRequestOwner();
     const generatedImageHandoff = createGeneratedImageHandoff();
+    const sensingEyePersistence = createSensingEyePersistence();
     let sensingTextContent = "";
     let sensingTextName = "";
     let sensingTextOpenUrl = "";
@@ -17524,71 +17526,29 @@
       return result;
     }
 
-    async function saveSensingEyeTextNote({ content, name, source = "operator text", memoryContext = null } = {}) {
-      const generation = sensingEyeGeneration;
-      const text = String(content || "");
-      if (!text) return null;
-      const context = memoryContext && typeof memoryContext === "object" ? memoryContext : sensingEyeMemoryContext();
-      try {
-        const response = await fetch(new URL("/api/sensing-eye/text", location.href), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source,
-            filename: name || "sensing-eye-text.txt",
-            content: text,
-            memory_context: context
-          }),
-          cache: "no-store"
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || result.status === "error") {
-          throw new Error(result.error || `${response.status} ${response.statusText}`);
-        }
-        if (generation === sensingEyeGeneration) rememberSensingEyeSessionAsset(result.saved_filename);
-        return result;
-      } catch (error) {
-        log(events, `sensing-eye text note save error: ${error.message}`);
-        return null;
-      }
-    }
-
-    async function saveSensingEyeVisualNote({ dataUrl, name, source = "operator", reason = "", memoryContext = null } = {}) {
-      const generation = sensingEyeGeneration;
-      const imageDataUrl = String(dataUrl || "");
-      if (!imageDataUrl) return null;
-      const context = memoryContext && typeof memoryContext === "object" ? memoryContext : sensingEyeMemoryContext();
-      try {
-        const response = await fetch(new URL("/api/sensing-eye/inbox", location.href), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source,
-            filename: name || "sensing-eye.jpg",
-            image_data_url: imageDataUrl,
-            client_id: sensingEyeClientId,
-            client_eye_generation: generation,
-            reason: reason || "sensing-eye visual note",
-            memory_context: context
-          }),
-          cache: "no-store"
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || result.status === "error") {
-          throw new Error(result.error || `${response.status} ${response.statusText}`);
-        }
-        const seq = Number(result.seq) || 0;
-        if (seq) {
+    function createSensingEyePersistence() {
+      return Robot790SensingEyePersistence.create({
+        generation: () => sensingEyeGeneration,
+        clientId: () => sensingEyeClientId,
+        memoryContext: () => sensingEyeMemoryContext(),
+        url: path => new URL(path, location.href),
+        fetch: (...args) => fetch(...args),
+        observeInboxSeq: seq => {
           sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
           sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, seq);
           handledSensingEyeInboxSeqs.add(String(seq));
-        }
-        if (generation === sensingEyeGeneration) rememberSensingEyeSessionAsset(result.saved_filename);
-        return result;
-      } catch (error) {
-        log(events, `sensing-eye visual note save error: ${error.message}`);
-        return null;
-      }
+        },
+        rememberAsset: filename => rememberSensingEyeSessionAsset(filename),
+        log: message => log(events, message)
+      });
+    }
+
+    function saveSensingEyeTextNote(args = {}) {
+      return sensingEyePersistence.saveText(args);
+    }
+
+    function saveSensingEyeVisualNote(args = {}) {
+      return sensingEyePersistence.saveVisual(args);
     }
 
     function sensingEyeSavedRemarks() {

@@ -16,9 +16,70 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
+### Implemented Step: Sensing-Eye Save Requests
+
+September 27, after accepted checkpoint `7ff12f5`: image/text persistence requests
+are extracted into `sensing-eye-persistence.js`. It owns payload construction,
+transport, response parsing, error handling and receipt routing. The page retains
+eye generation, inbox cursors and the session asset set behind explicit adapters.
+No additional state, timer, retry or permission is introduced. Eye contents,
+history, file lookup, Clear, staging, camera routes, idle delivery and prompts
+remain unchanged. The two page save functions directly return the module promises.
+
+The important existing distinction is preserved: a stale image receipt still
+advances/marks inbox consumption, preventing a local upload from being echoed
+back into the eye, but only a current-generation receipt attaches its saved file
+to the session. Neither disk persistence nor an attached asset means the image
+was staged; those remain separate operations. Existing save-error behavior also
+remains: log/return null, allowing the caller to display unsaved content rather
+than claiming a saved filename. No new failure recovery is being claimed.
+
+Before production edits, 52 image/text cases passed against the old functions.
+They now compare complete requests, results, errors, state and ordered effects
+directly with immutable Git baseline `7ff12f5`, avoiding another large duplicate
+trace fixture. Additional assertions cover stale receipt ownership and mixed,
+out-of-order saves; adjacent eye/staging/search/decision functions and existing
+image modules are checked byte-for-byte against the checkpoint.
+
+Verification: 1,039 JavaScript tests and 180 focused Python tests pass. The isolated
+Edge suite passes actual-page image/text saving, eight Clear/startup-clear races
+during fetch or JSON parsing, failure-with-unsaved-display behavior and the earlier
+image handoff races. Desktop/mobile eye screenshots and decoded pixels pass.
+All writes and body commands are intercepted; no live model, paid generation,
+real saved note or device command is used. Evidence:
+`logs/maintenance/lifecycle-review/eye-persistence-{before,focused,suite,python,browser}.log`
+and `logs/maintenance/audio-owner-browser/results.json`.
+
+Size (LF-normalized): HTML 22,235 -> 22,195 lines; 1,004,101 -> 1,002,215 bytes.
+New module: 76 lines / 3,054 bytes. Total production grows 1,168 bytes. This removes
+the save workflow from the page, not the remaining current-eye/history state.
+
+Live acceptance September 27, 05:26-05:31: a new render was explicitly staged,
+then replaced by dropped rehearsal text, then by a dropped image. Ten pin hashes,
+three eye asset hashes/sizes and saved draft verify; derivatives ready in 7.704s
+with all 36 turns retained. Face painting/paint clear also worked; the actual
+eye Clear happened only at startup, and no late-save collision was induced.
+Those races remain offline/browser coverage. Three playback barge-ins and final
+Disconnect were clean; no tool/save/backend errors. The loaded branch did not
+include Chamber Seven history, supporting Eric's limited recall without implying
+a missing note. No client source hash or acoustic recording was available.
+Exercised paths accepted; extraction, regression coverage and acceptance notes
+are included in the September 27 persistence checkpoint.
+PM: `logs/runs/20260927-0531-eye-persistence-acceptance/postmortem.md`.
+
+Further live acceptance, 11:34-12:31: cold-start story work, sustained idle art,
+seven staged/saved images and ten successful recall selections. Saved assets,
+pin, draft and preparation source verify; all 261 turns retained, disconnect
+released cleanly. One old transcript `eye-1` identifier failed lookup and was
+recovered by name/file ID; lookup/history behavior was not changed by this
+extraction. Long speech delayed some staging, but no persistence error occurred.
+Context growth and premature action claims are separate observations, not reasons
+to add staging or silence rules. No live stale-save race or source-hash attestation.
+PM: `logs/runs/20260927-1232-signal-story/postmortem.md`.
+
 ### Implemented Step: Generated-Image Eye Handoff
 
-September 27, after published checkpoint `7833d90`: the generated-image-to-eye
+September 27, committed as `7ff12f5` after published checkpoint `7833d90`: the generated-image-to-eye
 workflow is extracted into `generated-image-handoff.js`. It validates the
 requested identity, delegates pending idle-art delivery to its existing owner,
 loads the chosen artifact, carries the existing freshness checks through eye
@@ -831,7 +892,8 @@ current responsibilities, not a claim that they already form isolated modules.
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
 | Optional B2 monitor | `brain2-speech.js` owns browser utterances and echo tail; `brain2-surface.js` owns deferred mouth/voice delivery and its timer | Old timers or device replies must not publish into a replacement item/session. Already-submitted device commands cannot be unsent. Private advice remains separate. |
 | Turn completion | `response-completion.js` owns pending state, idle provenance and timer; thin page adapters retain activity/idle policy | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
-| Image requests and presentation | `image-request.js` owns generation; `generated-preview.js` owns preview state/revision; `generated-image-handoff.js` owns explicit transfer; page adapters retain eye persistence/staging and DOM/recording effects | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. Request handling must reuse the preview/idle owners, not introduce another busy flag. |
+| Image requests and presentation | `image-request.js` owns generation; `generated-preview.js` owns preview state/revision; `generated-image-handoff.js` owns explicit transfer; page adapters retain eye staging and DOM/recording effects | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. Request handling must reuse the preview/idle owners, not introduce another busy flag. |
+| Eye-note save requests | `sensing-eye-persistence.js` owns image/text save transport and receipt routing; page retains generation, inbox cursors and session asset set | A late save must be consumed by the inbox without attaching to a newer session. Persistence is not eye staging. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
 | Idle/B2 opportunities | `brain2BlockedReason`, idle/reengagement scheduling, B2 advisory and speech queues | Private advice and public speech have different readiness conditions. Fixing ownership must not suppress useful parallel thought or proactive conversation. |
 

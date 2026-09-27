@@ -245,6 +245,11 @@ async function main() {
     await handoffUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
     results.imageHandoff = await require('./helpers/sts_image_handoff_browser.cjs').checkImageHandoff(handoffUi, artifacts);
     await handoffUi.close();
+    const persistenceUi = await context.newPage();
+    persistenceUi.on('pageerror', error => pageErrors.push(error.message));
+    await persistenceUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.eyePersistence = await require('./helpers/sts_eye_persistence_browser.cjs').checkEyePersistence(persistenceUi);
+    await persistenceUi.close();
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);
     const restartUi = await context.newPage();
