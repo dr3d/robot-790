@@ -53,6 +53,7 @@ function loadFunctions(context, names) {
   require('./sts_surface_harness.cjs').installBrain2Surface(context);
   require('./sts_preview_owner.cjs').installGeneratedPreview(context);
   require('./sts_image_request_owner.cjs').installImageRequest(context);
+  require('./sts_image_handoff_owner.cjs').installImageHandoff(context);
   const dependencies = {
     handleFunctionCall: ['recordFileWriteReceipt'],
     connect: ['runConnectionTransition', 'openRealtimeConnection'],

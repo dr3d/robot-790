@@ -4,6 +4,32 @@ Reviewed September 27, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 27, 04:52-05:00 handoff acceptance: three original eye images recalled
+and one new image generated/displayed/explicitly staged, with no tool errors.
+Chip-tube initially missed because an all-words query included `Pringles`, absent
+from filename/reason metadata; a shorter query recovered the existing file.
+The new render was initiated on the second idle opportunity, after two spoken
+promises; delivery itself succeeded. B2's enabled voice monitor named its subject
+before display. Neither observation changes staging or speech policy. Context
+51.4% -> 61.6%; 40 completed TTS batches all EOS, three cancelled decodes, no
+backend warnings. Real barge-in recorded; final playback interrupted by clean
+Disconnect. Draft/nine pins/four eye assets verify, derivatives ready in 9.141s,
+pipeline released. Ordinary exercised paths accepted and included in this
+checkpoint. Scott reports that recovery through conversation felt normal;
+those moments are observations, not behavioral repair mandates.
+PM: `logs/runs/20260927-0500-image-handoff-acceptance/postmortem.md`.
+
+September 27 generated-image eye-handoff extraction, after published `7833d90`:
+`generated-image-handoff.js` now owns explicit artifact selection/loading and
+staging receipts through existing eye/preview/idle-art adapters. No duplicated
+state, automatic staging, new guards, prompt edits or schedule changes. Sixty
+frozen baseline cases match; all 984 JavaScript tests, 180 focused Python tests
+and isolated Edge checks pass, including ten late-fetch/save races and actual
+eye pixels/layout at desktop/mobile sizes. HTML loses 36 lines / 2,518 bytes;
+total production source grows 1,213 bytes. The live run above passes its exercised
+paths; extraction and acceptance notes are checkpointed together. No server restart needed. Scope and evidence:
+[STS Lifecycle Ownership](sts-lifecycle-ownership-plan.md#implemented-step-generated-image-eye-handoff).
+
 September 27 checkpoint: the accepted image-request extraction and current
 music experiment findings are included in this update. All 981 JavaScript tests
 pass again before commit; the earlier focused Python and isolated browser

@@ -16,6 +16,57 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
+### Implemented Step: Generated-Image Eye Handoff
+
+September 27, after published checkpoint `7833d90`: the generated-image-to-eye
+workflow is extracted into `generated-image-handoff.js`. It validates the
+requested identity, delegates pending idle-art delivery to its existing owner,
+loads the chosen artifact, carries the existing freshness checks through eye
+saving, and returns the same staging receipt. The page supplies read-only access
+to current eye state and adapters for transport, decoding, staging and UI.
+There is no new state store, busy flag, timer, retry, permission or auto-staging
+rule. Eye persistence, general recall, Clear, camera routes, idle delivery,
+prompts and tool continuation stay unchanged.
+
+Before production edits, 60 complete handoff cases were captured from `7833d90`
+and checked against the original page. They reproduce independently from Git
+and match after extraction: preview/exact/data-URL retrieval, missing/invalid
+filenames, expected-identity checks, idle busy/ready delegation, transport and
+decode/save failures, incomplete staging, and user/session/preview/eye/text
+changes at all five asynchronous loading/saving steps. The earlier 27 request
+and 18 preview traces remain unchanged. Existing real idle-art-owner tests
+continue to cover claimed delivery, cancellation and retained artifacts.
+
+Verification: all 984 JavaScript and 180 focused Python tests pass. The isolated
+Edge suite exercises the real page's decode/save/stage path with fake transport
+receipts and a non-network socket: explicit staging sends one image, retained
+retrieval leaves a different preview intact, and ten fetch/save races cannot
+overwrite a cleared/replaced eye or replacement session. Desktop/mobile eye
+screenshots and decoded pixels pass. No live model, paid render, device command
+or persistence write is used by the browser fixture. Evidence:
+`logs/maintenance/lifecycle-review/image-handoff-{suite,python}.log`,
+`image-handoff-browser.json`, `image-handoff-size.json` and
+`logs/maintenance/audio-owner-browser/image-handoff-{desktop,mobile}.png`.
+
+Size checkpoint (LF-normalized): HTML 22,271 -> 22,235 lines and
+1,006,619 -> 1,004,101 bytes. The new module is 71 lines / 3,731 bytes;
+total production size grows 1,213 bytes. This removes one workflow from the
+page, not the broader sensing-eye state and persistence machinery.
+
+Live acceptance September 27, 04:52-05:00: three older pictures recalled through
+the general eye catalogue, plus one new render displayed and explicitly moved
+through the extracted generated-image handoff. No tool errors. The initial
+chip-tube search miss was an over-specific query, recovered without regeneration.
+Two speech-only promises preceded the new render, eventually initiated in idle;
+no failed image submission or transfer occurred. Real barge-in and final
+mid-playback Disconnect worked; draft/nine pins/four eye hashes verify and the
+pipeline released. Derivatives ready in 9.141s. No live pending-art collision or
+late-save/reconnect race was induced; those remain offline/browser coverage.
+Run logs do not attest the client source hash. Exercised paths accepted and
+included in this checkpoint. Scott confirms the conversational recovery felt
+normal; it does not call for a behavior change. PM and frozen evidence:
+`logs/runs/20260927-0500-image-handoff-acceptance/postmortem.md`.
+
 ### Implemented Step: Image Request Ownership
 
 September 26: the stable music-library ordering repair was checkpointed as
@@ -780,7 +831,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
 | Optional B2 monitor | `brain2-speech.js` owns browser utterances and echo tail; `brain2-surface.js` owns deferred mouth/voice delivery and its timer | Old timers or device replies must not publish into a replacement item/session. Already-submitted device commands cannot be unsent. Private advice remains separate. |
 | Turn completion | `response-completion.js` owns pending state, idle provenance and timer; thin page adapters retain activity/idle policy | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
-| Image requests and presentation | `image-request.js` owns the generation workflow; `generated-preview.js` owns preview state/revision; page adapters retain DOM/recording effects and `moveGeneratedImageToSensingEye` | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. Request handling must reuse the preview/idle owners, not introduce another busy flag. |
+| Image requests and presentation | `image-request.js` owns generation; `generated-preview.js` owns preview state/revision; `generated-image-handoff.js` owns explicit transfer; page adapters retain eye persistence/staging and DOM/recording effects | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. Request handling must reuse the preview/idle owners, not introduce another busy flag. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
 | Idle/B2 opportunities | `brain2BlockedReason`, idle/reengagement scheduling, B2 advisory and speech queues | Private advice and public speech have different readiness conditions. Fixing ownership must not suppress useful parallel thought or proactive conversation. |
 

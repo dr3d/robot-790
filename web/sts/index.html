@@ -3015,6 +3015,7 @@
   <script src="response-completion.js"></script>
   <script src="generated-preview.js"></script>
   <script src="image-request.js"></script>
+  <script src="generated-image-handoff.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -4017,6 +4018,7 @@
     const sensingEyeSessionAssetFilenames = new Set();
     const generatedPreview = createGeneratedPreviewOwner();
     const imageRequest = createImageRequestOwner();
+    const generatedImageHandoff = createGeneratedImageHandoff();
     let sensingTextContent = "";
     let sensingTextName = "";
     let sensingTextOpenUrl = "";
@@ -9371,63 +9373,25 @@
       log(events, opened ? `generated image opened: ${generatedPreview.url}` : "generated image popup blocked");
     }
 
-    async function moveGeneratedImageToSensingEye({ filename = "", reason = "", _expectedFilename = "", _isCurrent = () => true, _usePending = false } = {}) {
-      const generation = sensingEyeGeneration;
-      if (!_isCurrent()) throw new Error("Image request was superseded.");
-      const requestedName = String(filename || "").trim();
-      if (requestedName && (!/^[a-zA-Z0-9._-]{1,160}$/.test(requestedName) || !/\.(png|jpe?g|webp|svg)$/i.test(requestedName))) {
-        throw new Error("Use an exact generated-image filename, not a path or URL.");
-      }
-      if (requestedName && _expectedFilename && requestedName !== _expectedFilename) {
-        throw new Error("The generated image changed; the requested artifact was not staged.");
-      }
-      if (_usePending && typeof idleArt !== "undefined" && idleArt.busy) {
-        throw new Error("An idle-art generation or delivery is already in progress.");
-      }
-      if (_usePending && typeof idleArt !== "undefined" && idleArt.ready) {
-        return idleArt.stageReady({ isCurrent: _isCurrent, expectedFilename: requestedName || _expectedFilename });
-      }
-      if (!requestedName && !generatedPreview.url) throw new Error("No generated image is in the preview. A saved image can be retrieved with its exact filename from the generation receipt.");
-      const imageUrl = requestedName
-        ? new URL(`/generated-images/${encodeURIComponent(requestedName)}`, location.href).href
-        : generatedPreview.url;
-      const imageName = requestedName || generatedPreview.name || filenameFromPath(imageUrl) || "generated-image.jpg";
-      if (_expectedFilename && imageName !== _expectedFilename) throw new Error("The generated image changed; the requested artifact was not staged.");
-      const previewGeneration = generatedPreview.revision;
-      const eyeUrl = visionImageUrl, eyeText = sensingTextContent;
-      // Exact retrieval is a new request, but cannot overwrite newer activity while loading/saving.
-      const current = () => _isCurrent() && generation === sensingEyeGeneration
-        && previewGeneration === generatedPreview.revision
-        && eyeUrl === visionImageUrl && eyeText === sensingTextContent;
-      let imageDataUrl = imageUrl;
-      if (!/^data:image\//i.test(imageUrl)) {
-        const response = await fetch(imageUrl, { cache: "no-store" });
-        if (!response.ok) throw new Error(`Could not read generated image: ${response.status} ${response.statusText}`);
-        imageDataUrl = await blobToDataUrl(await response.blob());
-      }
-      const image = await loadImage(imageDataUrl);
-      if (!current()) throw new Error("Image request was superseded before staging.");
-      const historyItem = await setVisionImageFromDrawable(image, imageName, {
-        eyeGeneration: generation,
-        isCurrent: current,
-        source: "generated image",
-        reason: String(reason || "generated image moved to sensing eye").slice(0, 120),
-        openUrl: imageUrl,
-        transcriptAction: "generated image moved into eye"
+    function createGeneratedImageHandoff() {
+      return Robot790GeneratedImageHandoff.create({
+        preview: generatedPreview,
+        idle: () => typeof idleArt === "undefined" ? undefined : idleArt,
+        eye: {
+          get generation() { return sensingEyeGeneration; },
+          get url() { return visionImageUrl; }, get text() { return sensingTextContent; },
+          get name() { return visionImageName; }, get staged() { return visionImageStaged; }
+        },
+        url: path => new URL(path, location.href), filenameFromPath: path => filenameFromPath(path),
+        fetch: (...args) => fetch(...args), blobToDataUrl: blob => blobToDataUrl(blob),
+        loadImage: url => loadImage(url), stage: (...args) => setVisionImageFromDrawable(...args),
+        movedHint: name => { generatedImageHint.textContent = `${name} - moved to sensing eye`; },
+        updateButtons: () => updateGeneratedImageButtons()
       });
-      if (!historyItem || !visionImageStaged || visionImageName !== imageName) throw new Error("Generated image staging was not completed.");
-      if (generatedPreview.name === imageName) generatedImageHint.textContent = `${imageName} - moved to sensing eye`;
-      updateGeneratedImageButtons();
-      return {
-        status: "ok",
-        tool: "move_generated_image_to_sensing_eye",
-        filename: visionImageName,
-        saved_filename: historyItem?.savedFilename || "",
-        saved_url: historyItem?.openUrl || "",
-        staged: visionImageStaged,
-        source_image: imageName,
-        reason: String(reason || "")
-      };
+    }
+
+    function moveGeneratedImageToSensingEye(args = {}) {
+      return generatedImageHandoff.move(args);
     }
 
     function ttsRuntimeConfig() {

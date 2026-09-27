@@ -113,6 +113,12 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 27 structural work: explicit generated-image transfer to the sensing
+eye now has a separate workflow module, preserving existing image identities,
+late-result checks and staging receipts. Automated and browser checks pass,
+plus a resumed drawing/recall/Disconnect run. Eric still chooses when to use the eye. See
+[STS Lifecycle Ownership](docs/sts-lifecycle-ownership-plan.md).
+
 September 26 structural work: image-generation request handling now lives in
 its own module, using the existing preview and idle-art state owners. Frozen
 before/after traces and browser checks pass, plus a resumed six-image trial

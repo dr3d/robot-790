@@ -1,0 +1,2957 @@
+{
+  "baseline": "7833d90",
+  "cases": [
+    {
+      "name": "current preview and matching hint",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "preview.png - moved to sensing eye",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "preview.png",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "preview.png",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "preview.png",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "exact retained image leaves different preview intact",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "older.png",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/older.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "older.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "Recall it",
+              "openUrl": "http://fixture.test/generated-images/older.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "older.png",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "older.png",
+            "reason": "Recall it"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "exact retrieval without preview or idle owner",
+      "preview": {
+        "revision": 4,
+        "name": "",
+        "url": ""
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "older.png",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/older.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "older.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/older.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "older.png",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "older.png",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "empty preview without filename rejects",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": ""
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "No generated image is in the preview. A saved image can be retrieved with its exact filename from the generation receipt."
+        ]
+      ]
+    },
+    {
+      "name": "data URL bypasses transport",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "data:image/png;base64,inline"
+      },
+      "hint": "preview.png - moved to sensing eye",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "preview.png",
+        true
+      ],
+      "trace": [
+        [
+          "decode",
+          "data:image/png;base64,inline"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "openUrl": "data:image/png;base64,inline",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "preview.png",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "preview.png",
+            "reason": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "name falls back to URL basename",
+      "preview": {
+        "revision": 4,
+        "name": "",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "preview.png",
+        true
+      ],
+      "trace": [
+        [
+          "filename",
+          "http://fixture.test/generated-images/preview.png"
+        ],
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "preview.png",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "preview.png",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "name falls back to default",
+      "preview": {
+        "revision": 4,
+        "name": "",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "generated-image.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "generated-image.jpg",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "generated-image.jpg",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "generated-image.jpg",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "filename is trimmed",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "older.WEBP",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/older.WEBP",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "older.WEBP",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/older.WEBP",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "older.WEBP",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "older.WEBP",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "invalid filename ../x.png",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Use an exact generated-image filename, not a path or URL."
+        ]
+      ]
+    },
+    {
+      "name": "invalid filename path/x.png",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Use an exact generated-image filename, not a path or URL."
+        ]
+      ]
+    },
+    {
+      "name": "invalid filename path\\x.png",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Use an exact generated-image filename, not a path or URL."
+        ]
+      ]
+    },
+    {
+      "name": "invalid filename https://host/x.png",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Use an exact generated-image filename, not a path or URL."
+        ]
+      ]
+    },
+    {
+      "name": "invalid filename x.png?q",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Use an exact generated-image filename, not a path or URL."
+        ]
+      ]
+    },
+    {
+      "name": "invalid filename x.txt",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Use an exact generated-image filename, not a path or URL."
+        ]
+      ]
+    },
+    {
+      "name": "invalid filename xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.png",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Use an exact generated-image filename, not a path or URL."
+        ]
+      ]
+    },
+    {
+      "name": "stale request rejects before validation",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "Image request was superseded."
+        ]
+      ]
+    },
+    {
+      "name": "explicit expected mismatch wins over pending busy",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "The generated image changed; the requested artifact was not staged."
+        ]
+      ]
+    },
+    {
+      "name": "preview expected mismatch",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "The generated image changed; the requested artifact was not staged."
+        ]
+      ]
+    },
+    {
+      "name": "preview expected match",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "preview.png - moved to sensing eye",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "preview.png",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "preview.png",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "preview.png",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "pending busy wins over ready",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "error",
+          "An idle-art generation or delivery is already in progress."
+        ]
+      ]
+    },
+    {
+      "name": "pending delivery {}",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "idle stage",
+          {
+            "expectedFilename": "",
+            "sameGuard": true
+          }
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "staged": true,
+            "source_image": "pending.png",
+            "saved_filename": "idle-eye.jpg"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "pending delivery {\"filename\":\"pending.png\"}",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "idle stage",
+          {
+            "expectedFilename": "pending.png",
+            "sameGuard": true
+          }
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "staged": true,
+            "source_image": "pending.png",
+            "saved_filename": "idle-eye.jpg"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "pending delivery {\"_expectedFilename\":\"pending.png\"}",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "idle stage",
+          {
+            "expectedFilename": "pending.png",
+            "sameGuard": true
+          }
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "staged": true,
+            "source_image": "pending.png",
+            "saved_filename": "idle-eye.jpg"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "pending ignored without explicit use",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "preview.png - moved to sensing eye",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "preview.png",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "preview.png",
+            "saved_filename": "saved.jpg",
+            "saved_url": "/sensing-eye/saved.jpg",
+            "staged": true,
+            "source_image": "preview.png",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "pending failure propagates without fallback",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "idle stage",
+          {
+            "expectedFilename": "",
+            "sameGuard": true
+          }
+        ],
+        [
+          "error",
+          "idle delivery failed"
+        ]
+      ]
+    },
+    {
+      "name": "fetch failure",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "error",
+          "fetch failed"
+        ]
+      ]
+    },
+    {
+      "name": "HTTP failure",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "error",
+          "Could not read generated image: 404 Not Found"
+        ]
+      ]
+    },
+    {
+      "name": "blob failure",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "error",
+          "blob failed"
+        ]
+      ]
+    },
+    {
+      "name": "data failure",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "error",
+          "data failed"
+        ]
+      ]
+    },
+    {
+      "name": "decode failure",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "decode failed"
+        ]
+      ]
+    },
+    {
+      "name": "save failure",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "error",
+          "save failed"
+        ]
+      ]
+    },
+    {
+      "name": "eye receipt null",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "error",
+          "Generated image staging was not completed."
+        ]
+      ]
+    },
+    {
+      "name": "eye receipt wrong name",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "other.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "error",
+          "Generated image staging was not completed."
+        ]
+      ]
+    },
+    {
+      "name": "eye receipt unstaged",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "preview.png",
+        false
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "error",
+          "Generated image staging was not completed."
+        ]
+      ]
+    },
+    {
+      "name": "eye receipt no metadata",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "preview.png - moved to sensing eye",
+      "eye": [
+        2,
+        "/saved.jpg",
+        "",
+        "preview.png",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/preview.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "preview.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/preview.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "save guard",
+          true
+        ],
+        [
+          "buttons"
+        ],
+        [
+          "result",
+          {
+            "status": "ok",
+            "tool": "move_generated_image_to_sensing_eye",
+            "filename": "preview.png",
+            "saved_filename": "",
+            "saved_url": "",
+            "staged": true,
+            "source_image": "preview.png",
+            "reason": ""
+          }
+        ]
+      ]
+    },
+    {
+      "name": "user during fetch",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "user"
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "session during fetch",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        3,
+        "",
+        "",
+        "",
+        false
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "session"
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "preview during fetch",
+      "preview": {
+        "revision": 5,
+        "name": "new.png",
+        "url": "/new.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "preview"
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "eye during fetch",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/new-eye.jpg",
+        "",
+        "new-eye.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "eye"
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "text during fetch",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "New operator text",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "text"
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "user during blob",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "mutate",
+          "user"
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "session during blob",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        3,
+        "",
+        "",
+        "",
+        false
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "mutate",
+          "session"
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "preview during blob",
+      "preview": {
+        "revision": 5,
+        "name": "new.png",
+        "url": "/new.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "mutate",
+          "preview"
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "eye during blob",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/new-eye.jpg",
+        "",
+        "new-eye.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "mutate",
+          "eye"
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "text during blob",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "New operator text",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "mutate",
+          "text"
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "user during data",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "mutate",
+          "user"
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "session during data",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        3,
+        "",
+        "",
+        "",
+        false
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "mutate",
+          "session"
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "preview during data",
+      "preview": {
+        "revision": 5,
+        "name": "new.png",
+        "url": "/new.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "mutate",
+          "preview"
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "eye during data",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/new-eye.jpg",
+        "",
+        "new-eye.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "mutate",
+          "eye"
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "text during data",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "New operator text",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "mutate",
+          "text"
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "user during decode",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "mutate",
+          "user"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "session during decode",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        3,
+        "",
+        "",
+        "",
+        false
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "mutate",
+          "session"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "preview during decode",
+      "preview": {
+        "revision": 5,
+        "name": "new.png",
+        "url": "/new.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "mutate",
+          "preview"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "eye during decode",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/new-eye.jpg",
+        "",
+        "new-eye.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "mutate",
+          "eye"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "text during decode",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "New operator text",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "mutate",
+          "text"
+        ],
+        [
+          "error",
+          "Image request was superseded before staging."
+        ]
+      ]
+    },
+    {
+      "name": "user during save",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "retained.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/retained.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "user"
+        ],
+        [
+          "save guard",
+          false
+        ],
+        [
+          "error",
+          "Image request was superseded."
+        ]
+      ]
+    },
+    {
+      "name": "session during save",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        3,
+        "",
+        "",
+        "",
+        false
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "retained.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/retained.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "session"
+        ],
+        [
+          "save guard",
+          false
+        ],
+        [
+          "error",
+          "Image request was superseded."
+        ]
+      ]
+    },
+    {
+      "name": "preview during save",
+      "preview": {
+        "revision": 5,
+        "name": "new.png",
+        "url": "/new.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "retained.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/retained.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "preview"
+        ],
+        [
+          "save guard",
+          false
+        ],
+        [
+          "error",
+          "Image request was superseded."
+        ]
+      ]
+    },
+    {
+      "name": "eye during save",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/new-eye.jpg",
+        "",
+        "new-eye.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "retained.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/retained.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "eye"
+        ],
+        [
+          "save guard",
+          false
+        ],
+        [
+          "error",
+          "Image request was superseded."
+        ]
+      ]
+    },
+    {
+      "name": "text during save",
+      "preview": {
+        "revision": 4,
+        "name": "preview.png",
+        "url": "http://fixture.test/generated-images/preview.png"
+      },
+      "hint": "Preview ready",
+      "eye": [
+        2,
+        "/before.jpg",
+        "New operator text",
+        "before.jpg",
+        true
+      ],
+      "trace": [
+        [
+          "fetch",
+          {
+            "url": "http://fixture.test/generated-images/retained.png",
+            "options": {
+              "cache": "no-store"
+            }
+          }
+        ],
+        [
+          "blob",
+          null
+        ],
+        [
+          "data",
+          {
+            "image": "bytes"
+          }
+        ],
+        [
+          "decode",
+          "data:image/png;base64,fixture"
+        ],
+        [
+          "save",
+          {
+            "image": {
+              "width": 12,
+              "height": 8
+            },
+            "name": "retained.png",
+            "options": {
+              "eyeGeneration": 2,
+              "isCurrent": true,
+              "source": "generated image",
+              "reason": "generated image moved to sensing eye",
+              "openUrl": "http://fixture.test/generated-images/retained.png",
+              "transcriptAction": "generated image moved into eye"
+            }
+          }
+        ],
+        [
+          "mutate",
+          "text"
+        ],
+        [
+          "save guard",
+          false
+        ],
+        [
+          "error",
+          "Image request was superseded."
+        ]
+      ]
+    }
+  ]
+}

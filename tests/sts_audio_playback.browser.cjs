@@ -240,6 +240,11 @@ async function main() {
     assert.deepEqual(results.backendFeedback,
       { haltAvailable: true, lockedForHalt: true, staleUpdates: 0, released: true });
     results.imagePreview = await require('./helpers/sts_image_preview_browser.cjs').checkImagePreview(ui, artifacts);
+    const handoffUi = await context.newPage();
+    handoffUi.on('pageerror', error => pageErrors.push(error.message));
+    await handoffUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.imageHandoff = await require('./helpers/sts_image_handoff_browser.cjs').checkImageHandoff(handoffUi, artifacts);
+    await handoffUi.close();
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);
     const restartUi = await context.newPage();

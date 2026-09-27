@@ -34,6 +34,7 @@ async function fixture() {
   c.idleArt = controller;
   require('./helpers/sts_preview_owner.cjs').installGeneratedPreview(c, page);
   require('./helpers/sts_image_request_owner.cjs').installImageRequest(c, page);
+  require('./helpers/sts_image_handoff_owner.cjs').installImageHandoff(c, page);
   for (const name of ['generateImage', 'moveGeneratedImageToSensingEye']) {
     vm.runInContext(require('./helpers/sts_completion_harness.cjs').extract(page,name), c);
   }
