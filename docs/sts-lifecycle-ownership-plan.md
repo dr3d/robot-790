@@ -16,6 +16,54 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
+### Implemented Step: Image Request Ownership
+
+September 26: the stable music-library ordering repair was checkpointed as
+`c25d67b` on `master` before this extraction. This step is included in the
+September 27 checkpoint after live acceptance of the exercised paths below.
+All 981 JavaScript tests pass again at checkpoint; no further production edits.
+
+`image-request.js` now owns the generation request workflow: validation, waiting
+for an active idle render, admission, HTTP submission/parsing and late-result
+receipts. The page supplies explicit adapters for current settings, transport,
+logging and presentation. `generated-preview.js` remains the sole preview-state
+owner; `idle-art.js` retains its existing job and permission ownership. The
+request module adds no independent busy flag or mirrored state.
+
+Twenty-seven complete request traces were frozen from `c25d67b` before editing
+production code and independently reproduced from Git. Exact HTTP bodies,
+returned results, preview states and ordered effects match. Cases include
+foreground/idle routes, errors, deferred JSON, retained results, waiting behind
+idle art, competing waiters, cancellation and settings changed during a wait.
+The earlier 18 preview traces also remain unchanged. Eye loading, idle policy,
+prompts and tool dispatch are checked against the checkpoint without edits.
+
+Verification: all 981 JavaScript tests, 180 focused image/idle-art/page-server
+Python tests and the isolated Edge suite pass. Actual-page browser checks cover
+interrupted speech retaining a thumbnail without eye staging, six late-result
+races, waiting/cancellation and desktop/mobile thumbnail pixels and layout.
+No live model, paid render or device call is used. Evidence:
+`logs/maintenance/lifecycle-review/image-request-{suite,browser}.log` and
+`logs/maintenance/audio-owner-browser/results.json`.
+
+Size checkpoint (LF-normalized): HTML 22,320 -> 22,271 lines and
+1,009,863 -> 1,006,619 bytes. The new module is 80 lines / 4,094 bytes;
+total production size grows 850 bytes. The page loses 49 lines and one complete
+request workflow, not the eye/persistence workflow. No drawing policy, automatic
+eye staging, retry, persona, speech-length or idle-cadence change is included.
+
+Live acceptance September 26, 12:48-13:02: six successful renders and six later
+explicit eye moves. Human speech superseded the recliner generation while its
+thumbnail still appeared; the receipt correctly reported displayed, retained
+and not staged. Later staging reused the same file. Four saved-score replays
+also completed. Six pin/six eye hashes and session draft verify; derivatives
+ready in 11.844s, pipeline released cleanly. No idle-art collision occurred;
+that path remains covered offline. The run logs do not attest the client source
+hash. Eric's premature staging claims and secret-headline spoilers are recorded
+separately from successful apparatus behavior, with no proposed persona repair.
+PM and frozen evidence:
+`logs/runs/20260926-1302-image-request-headline-music/postmortem.md`.
+
 ### Implemented Step: Generated-Image Preview Ownership
 
 September 25: the accepted response-completion extraction is the structural
@@ -732,7 +780,7 @@ current responsibilities, not a claim that they already form isolated modules.
 | Audible output | `audio-playback.js` owns playback state; page adapters `playPcm16Bytes`, `flushAudioQueue`, `outputAudioActive`, `stopPlaybackNow` | Audio setup is asynchronous; scheduled audio can outlive inference. Wall-clock time cannot prove playback has finished. |
 | Optional B2 monitor | `brain2-speech.js` owns browser utterances and echo tail; `brain2-surface.js` owns deferred mouth/voice delivery and its timer | Old timers or device replies must not publish into a replacement item/session. Already-submitted device commands cannot be unsent. Private advice remains separate. |
 | Turn completion | `response-completion.js` owns pending state, idle provenance and timer; thin page adapters retain activity/idle policy | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
-| Generated-image presentation | `generateImage`, `showGeneratedImage`, `moveGeneratedImageToSensingEye`, preview/eye generations | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. |
+| Image requests and presentation | `image-request.js` owns the generation workflow; `generated-preview.js` owns preview state/revision; page adapters retain DOM/recording effects and `moveGeneratedImageToSensingEye` | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. Request handling must reuse the preview/idle owners, not introduce another busy flag. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
 | Idle/B2 opportunities | `brain2BlockedReason`, idle/reengagement scheduling, B2 advisory and speech queues | Private advice and public speech have different readiness conditions. Fixing ownership must not suppress useful parallel thought or proactive conversation. |
 

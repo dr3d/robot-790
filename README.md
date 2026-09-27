@@ -113,6 +113,13 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 26 structural work: image-generation request handling now lives in
+its own module, using the existing preview and idle-art state owners. Frozen
+before/after traces and browser checks pass, plus a resumed six-image trial
+including an interrupted render whose preview survived. Drawing choices,
+speech interruption and explicit eye staging remain
+unchanged. See [STS Lifecycle Ownership](docs/sts-lifecycle-ownership-plan.md).
+
 September 25 structural work: generated-image preview state and request revision
 now have a dedicated owner instead of five shared page globals. Automated
 state/race and browser checks pass, plus a live resumed run with interjections

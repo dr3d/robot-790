@@ -104,6 +104,21 @@ This is composition/playback, not musical hearing. Parakeet-to-text does not
 supply Eric a reliable perception of harmony or timbre. Scott's listening and
 feedback are the first evaluation loop.
 
+An operator can also give Eric a screenshot of the piano roll through the
+existing sensing eye. The first manual probe (September 26) showed broad visual
+recognition but an incorrect note/bar count: displayed seconds were treated as
+notes. No score read or revision was attempted in that run, so an improvement
+over JSON-only reasoning is not established. Use `read_music` for exact pitches
+and timing; a screenshot is an additional view, not musical hearing. Automatic
+score-to-eye rendering is not implemented or required by this experiment.
+
+The September 27 follow-up did read the saved score and extend only the final
+melody note and accompaniment chord, preserving all earlier events. That is a
+verified narrow revision, not proof that the screenshot improved musical taste.
+Silent playback took several attempts; the final tool-only start and zero-audio
+follow-up worked, confirmed by the operator. Narration remains permitted; no
+automatic music mute or new speech/music coordination policy was added.
+
 ## Verification
 
 - `node --test tests/sts_music.test.cjs`: validation, long scores, receipts,

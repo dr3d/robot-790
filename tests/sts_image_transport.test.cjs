@@ -65,6 +65,7 @@ function fixture() {
     }; },
   });
   require('./helpers/sts_preview_owner.cjs').installGeneratedPreview(c, page);
+  require('./helpers/sts_image_request_owner.cjs').installImageRequest(c, page);
   for (const name of ['generateImage', 'showGeneratedImage', 'clearGeneratedImage', 'listTextFiles']) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);

@@ -4,6 +4,9 @@ const path = require('node:path');
 // Actual page renderer and DOM; simulated generation/turn callbacks, no paid request or eye delivery.
 async function checkImagePreview(page, artifacts) {
   const result = await page.evaluate(async () => {
+    if (typeof Robot790ImageRequest?.create !== 'function' || typeof imageRequest?.generate !== 'function') {
+      throw Error('Image request owner was not loaded by the page');
+    }
     const originalFetch = window.fetch, eye = visionImageUrl;
     const canvas = document.createElement('canvas');
     canvas.width = 300; canvas.height = 192;

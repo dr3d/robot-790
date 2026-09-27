@@ -35,6 +35,7 @@ function fixture(page, install) {
   c.fetch = async (url,options)=> {requests.push({url:String(url),body:JSON.parse(options.body)});
     return {ok:true,json:async()=>({status:'ok',filename:'draw.png',url:'/draw.png',provider:'test',model:'model'})};};
   install?.(c,page);
+  require('./sts_image_request_owner.cjs').installImageRequest(c,page);
   for (const n of ['updateGeneratedImageButtons','updateTopGeneratedImageStatus','showGeneratedImage','clearGeneratedImage','generateImage'])
     vm.runInContext(extract(page,n),c);
   const snapshots=[];
@@ -69,7 +70,7 @@ async function characterize(page, install) {
   await run('retained idle result',async f=>{f.c.idleArt.renderRequested=async()=>({status:'ok',filename:'idle.png',url:'/idle.png',retained:true});f.trace.push(['result',await f.c.generateImage({prompt:'picture',_idleArt:true})]);});
   return cases;
 }
-module.exports={characterize};
+module.exports={characterize,fixture};
 
 if(require.main===module) {
   const fs=require('node:fs'),cp=require('node:child_process');

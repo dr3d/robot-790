@@ -3014,6 +3014,7 @@
   <script src="brain2-advisories.js"></script>
   <script src="response-completion.js"></script>
   <script src="generated-preview.js"></script>
+  <script src="image-request.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -4015,6 +4016,7 @@
     let sensingEyeTextHistorySeq = 0;
     const sensingEyeSessionAssetFilenames = new Set();
     const generatedPreview = createGeneratedPreviewOwner();
+    const imageRequest = createImageRequestOwner();
     let sensingTextContent = "";
     let sensingTextName = "";
     let sensingTextOpenUrl = "";
@@ -16553,72 +16555,21 @@
       };
     }
 
-    async function generateImage({ prompt, title, size = "1024x1024", _isCurrent = () => true, _isPreviewCurrent = _isCurrent, _idleArt = false } = {}) {
-      const text = String(prompt || "").replace(/\s+/g, " ").trim();
-      if (!text) throw Object.assign(new Error("Missing image prompt"), { generationSubmitted: false });
-      if (!_isCurrent()) throw Object.assign(new Error("Image request was superseded."), { generationSubmitted: false });
-      if (!_idleArt && typeof idleArt !== "undefined" && idleArt.busy) {
-        // Keep the request pending, not submitted; a changed turn/session cancels the wait.
-        const previewRevision = generatedPreview.revision;
-        log(events, "image request waiting for active idle render");
-        while (idleArt.busy) {
-          if (!_isCurrent() || generatedPreview.revision !== previewRevision || !llmImageTools.checked) {
-            throw Object.assign(new Error("Image request was superseded or disabled while waiting."), { generationSubmitted: false });
-          }
-          await new Promise(resolve => setTimeout(resolve, 250));
-        }
-        if (!_isCurrent() || generatedPreview.revision !== previewRevision || !llmImageTools.checked) {
-          throw Object.assign(new Error("Image request was superseded or disabled while waiting."), { generationSubmitted: false });
-        }
-      }
-      if (generatedPreview.state === "generating" || (typeof idleArt !== "undefined" && idleArt.busy)) {
-        throw Object.assign(new Error("An image generation is already in progress."), { generationSubmitted: false });
-      }
-      if (typeof idleArt !== "undefined") idleArt.assertCanRender({ requirePermission: _idleArt });
-      const { revision: requestGeneration, title: shortTitle } = generatedPreview.begin(title);
-      const ownsProgress = () => generatedPreview.owns(requestGeneration);
-      const selectedModel = currentImageModel();
-      const selectedQuality = currentImageQuality();
-      log(events, `image generation: ${shortTitle || text.slice(0, 80)} (${imageSettingLabel()})`);
-      let result;
-      try {
-        if (_idleArt) {
-          result = await idleArt.renderRequested({ prompt: text, title: shortTitle || "Image" }, { size, isCurrent: _isCurrent });
-        } else {
-          const response = await fetch(new URL("/api/images/generate", location.href), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: text, title: shortTitle, size: String(size || "1024x1024"),
-              model: selectedModel, quality: selectedQuality })
-          });
-          result = await response.json().catch(() => ({}));
-          if (!response.ok || result.status === "error") {
-            throw new Error(result.error || `${response.status} ${response.statusText}`);
-          }
-        }
-      } catch (error) {
-        generatedPreview.fail(requestGeneration, error);
-        throw error;
-      }
-      const absoluteUrl = new URL(String(result.url || ""), location.href).href;
-      const hydrated = { ...result, local_url: result.url, url: absoluteUrl, displayed: true };
-      // Speech can supersede a turn without superseding its artifact preview.
-      const canPreview = _isPreviewCurrent() && ownsProgress();
-      if (!_isCurrent() || result.retained || !canPreview) {
-        if (canPreview) {
-          showGeneratedImage(hydrated);
-        } else if (ownsProgress()) {
-          generatedPreview.retain(requestGeneration);
-        }
-        log(events, canPreview
-          ? `image preview ready after superseded turn: ${hydrated.filename}`
-          : `image retained on disk after superseded request: ${hydrated.filename}`);
-        return { ...hydrated, displayed: canPreview, staged: false, retained: true,
-          retrieval: { tool: "move_generated_image_to_sensing_eye", arguments: { filename: hydrated.filename } } };
-      }
-      showGeneratedImage(hydrated);
-      log(events, `image generated: ${hydrated.filename || absoluteUrl}`);
-      return hydrated;
+    function createImageRequestOwner() {
+      return Robot790ImageRequest.create({
+        preview: generatedPreview,
+        idle: () => typeof idleArt === "undefined" ? undefined : idleArt,
+        enabled: () => llmImageTools.checked,
+        model: () => currentImageModel(), quality: () => currentImageQuality(),
+        settingLabel: () => imageSettingLabel(),
+        url: path => new URL(path, location.href), fetch: (...args) => fetch(...args),
+        wait: ms => new Promise(resolve => setTimeout(resolve, ms)),
+        show: result => showGeneratedImage(result), log: message => log(events, message)
+      });
+    }
+
+    function generateImage(args = {}) {
+      return imageRequest.generate(args);
     }
 
     async function castMedia({

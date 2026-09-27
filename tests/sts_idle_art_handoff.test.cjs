@@ -33,9 +33,9 @@ async function fixture() {
   });
   c.idleArt = controller;
   require('./helpers/sts_preview_owner.cjs').installGeneratedPreview(c, page);
+  require('./helpers/sts_image_request_owner.cjs').installImageRequest(c, page);
   for (const name of ['generateImage', 'moveGeneratedImageToSensingEye']) {
-    const start = page.indexOf(`    async function ${name}(`);
-    vm.runInContext(page.slice(start, page.indexOf('\n    }\n', start) + 6), c);
+    vm.runInContext(require('./helpers/sts_completion_harness.cjs').extract(page,name), c);
   }
   await controller.arm({});
   controller.offer({ title: 'Background picture', prompt: 'No network in tests' });

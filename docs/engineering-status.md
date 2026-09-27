@@ -1,8 +1,61 @@
 # Engineering Status
 
-Reviewed September 26, 2026. This is the maintained engineering view; session
+Reviewed September 27, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+September 27 checkpoint: the accepted image-request extraction and current
+music experiment findings are included in this update. All 981 JavaScript tests
+pass again before commit; the earlier focused Python and isolated browser
+checks remain the supporting results. No new production behavior changes.
+
+September 27, 03:55-04:05 music revision trial: one developed B1 idle reflection
+produced 126.29s of speech, beginning before fresh B2 advice. Eric then read the
+saved score and changed only its title and two ending durations, preserving all
+pitches/earlier events; duration 22.174 -> 23.478s. His "final G" explanation was
+wrong (C5). Five plays completed: early attempts overlapped speech; the fifth
+had a tool-only start and zero-audio follow-up, with operator confirmation.
+General tool continuation already permits silence; one private-output retry
+occurred, but suppressed content is unknown. Context 48.7% -> 56.6%; 31 TTS
+completions all EOS, two cancellations, no capacity stop. Session/eight pins/eye
+asset verify; preparation ready in 8.000s, pipeline released. No code or policy
+changes. PM: `logs/runs/20260927-0405-music-revision-silence/postmortem.md`.
+
+September 26, 13:53-13:57 piano-roll probe: operator screenshot reached B1 and
+Eric recognized the piece, 92 BPM, two parts and broad contour without claiming
+to hear it. "Five bars of twenty-three notes" was unsupported: the image says
+0s of 23s; the source has 75 pitched notes, 43 events and 34 beats. No score read,
+playback or revision occurred, so his claim that the image helps more than text
+is untested. B2's only result was stale. Context 47.2% -> 49.2%; fourteen TTS
+batches all EOS; no backend warnings/errors. Session, seven pins and eye asset
+verify; preparation ready in 5.719s and pipeline released. No code changes.
+Evidence: `logs/runs/20260926-1358-piano-roll-perception/postmortem.md`.
+
+September 26, 12:48-13:02 image-request trial: six renders and six later eye moves
+succeeded. The recliner render survived a human interruption as a visible,
+unstaged thumbnail and was explicitly staged later without regeneration. Four
+saved-score replays completed; an invalid initial music filename recovered via
+targeted lookup. Session draft, six pins and six eye assets verify; derivatives
+ready in 11.844s and pipeline released. Context 41.2% -> 60.3%; 63 completed TTS
+batches all EOS, two cancellations, one filtered-reply retry. No image failure.
+Eric repeatedly spoiled the secret headline or claimed staging early; these
+are dialogue observations, not a reason to automate staging or silence him.
+No unattended idle-art collision occurred. Exercised paths pass; extraction
+accepted for the September 27 checkpoint. PM and frozen evidence:
+`logs/runs/20260926-1302-image-request-headline-music/postmortem.md`.
+
+September 26 image-request extraction: stable music-library ordering committed
+as `c25d67b` on master (local, not pushed), then generation request handling moved
+to `image-request.js`. The existing preview and idle-art owners retain their
+state; the new module owns validation, waiting, submission and result handling
+through page adapters. No eye automation, persona, prompt or scheduling changes.
+Twenty-seven frozen request traces and the earlier 18 preview traces match;
+all 981 JavaScript tests, 180 focused Python tests and isolated Edge checks pass.
+HTML is 49 lines / 3,244 bytes smaller; total production source grows 850 bytes.
+The resumed drawing/interjection/eye-move/Disconnect trial above passes the
+exercised paths; extraction is included in this checkpoint. Refresh STS while disconnected
+to load client updates; no server restart needed. Details and evidence in
+[STS Lifecycle Ownership](sts-lifecycle-ownership-plan.md).
 
 September 26 music-library ordering repair: compositions sort newest-created
 first and keep that order through selection, replay and reload. Older browser
