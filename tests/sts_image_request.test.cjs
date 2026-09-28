@@ -18,8 +18,9 @@ test('surrounding eye, idle, prompt and tool policies remain byte-for-byte uncha
   const {extract}=require('./helpers/sts_completion_harness.cjs');
   const original=cp.execFileSync('git',['show',`${baseline.baseline}:web/sts/index.html`],{encoding:'utf8'}).replace(/\r\n/g,'\n');
   // The handoff now has its own frozen before/after traces in sts_image_handoff.test.cjs.
+  // Current-eye loading/clear is compared against its checkpoint in sts_eye_content.test.cjs.
   for(const name of ['createGeneratedPreviewOwner','stageVisionImage',
-    'setVisionImageFromDrawable','idleBlockedReason','idleEnabledToolList','enabledToolList',
+    'idleBlockedReason','idleEnabledToolList','enabledToolList',
     'buildSessionInstructions','handleFunctionCall']) {
     assert.equal(extract(page,name),extract(original,name),name);
   }

@@ -113,6 +113,14 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 28 structural work, live exercised paths accepted: current sensing-eye
+image/text loading and Clear now share `sensing-eye-content.js`. Existing state,
+staging choices, saved history and late-result checks are preserved. The page
+loses 146 lines; this is workflow extraction, not a change to Eric's behavior.
+Automated and isolated browser checks pass, plus a resumed recall/draw/text/Clear
+run with verified saved assets and a clean interrupted Disconnect. See
+[STS Lifecycle Ownership](docs/sts-lifecycle-ownership-plan.md).
+
 September 28 checkpoint: scheduled idle input now stays request-local at the
 realtime service boundary instead of accumulating as synthetic user turns.
 Replies and tool receipts still persist; prompts and idle cadence are unchanged.

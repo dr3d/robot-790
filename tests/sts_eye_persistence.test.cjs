@@ -171,9 +171,9 @@ test('out-of-order visual/text saves keep monotonic cursors and independent sess
   assert.deepEqual(actual.final.handled, ['5', '14', '12']);
 });
 
-test('eye save extraction leaves staging, clear, lookup, context and decisions byte-for-byte unchanged', () => {
-  for (const name of ['setVisionImageFromDrawable', 'setSensingTextContent', 'clearSensingEyeState',
-    'stageVisionImage', 'selectSensingEyeImage', 'fetchSensingEyeFilePage', 'sensingEyeMemoryContext',
+test('eye save extraction leaves staging, lookup, context and decisions byte-for-byte unchanged', () => {
+  // Current-eye loading/clear now has ordered-effect comparisons in sts_eye_content.test.cjs.
+  for (const name of ['stageVisionImage', 'selectSensingEyeImage', 'fetchSensingEyeFilePage', 'sensingEyeMemoryContext',
     'rememberSensingEyeSessionAsset', 'pollSensingEyeInbox', 'applySensingEyeInboxItem',
     'buildSessionInstructions', 'handleFunctionCall', 'triggerIdlePonder', 'generateImage',
     'createGeneratedImageHandoff', 'moveGeneratedImageToSensingEye']) {

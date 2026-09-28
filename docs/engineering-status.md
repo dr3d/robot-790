@@ -4,6 +4,59 @@ Reviewed September 28, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 28, after checkpoint `8786837`: current sensing-eye image/text loading
+and Clear sequencing move into `sensing-eye-content.js`. Page wrappers return the
+module promises directly; live accessors retain the existing single state rather
+than copying it. The module coordinates persistence, freshness checks, content
+replacement, UI/history receipts and existing staging callbacks. Retrieval,
+history ownership, camera lifetimes, prompts, permissions, idle scheduling and
+Eric's choice to stage remain unchanged. This is not full image-state migration.
+
+Verification: 46 baseline/scope cases first passed on the old functions, then
+matched their results and ordered effects against immutable `8786837` after
+extraction; a further wrapper test checks promise identity. All 1,097 JavaScript
+and 1,101 Python tests pass (one existing dependency deprecation warning).
+Isolated Edge checks pass image/text saves, eight fetch/JSON Clear/startup-clear
+races, guarded replacements, overlapping Clears without history loss, unsaved
+display on save failure, and the existing generated-image handoff races and
+desktop/mobile pixel/layout checks. Test writes and device commands are
+intercepted; no model or paid image generation is used. Evidence:
+`logs/maintenance/lifecycle-review/eye-content-{node-tests,python,browser}.txt`
+and `logs/maintenance/audio-owner-browser/results.json`.
+
+The existing concurrency distinction is deliberate in this extraction: Clear
+invalidates pending loads; callers supplying `isCurrent` can reject a replacement
+that finishes late. Concurrent ordinary operator loads without that guard still
+commit in completion order. No broader latest-request-wins policy was added.
+HTML loses 146 lines / 5,139 LF-normalized bytes; the 223-line module adds 9,737
+bytes, so total production grows 4,598 bytes. The benefit is a separately testable
+workflow boundary, not total source compression.
+
+Live acceptance September 28, 12:15-12:24: two archive recalls, two explicit
+generated-image moves, dropped text replaced by an image, two tool Clears and
+an interrupted Disconnect all completed. Four pin receipts and five eye assets
+verify; saved note equals the draft, preparation retains 77/77 entries. Context
+rose 25.96% -> 41.80%; 47 TTS batches ended normally, four were canceled, with
+no capacity stop or backend warning/error. Exercised mechanical paths accepted;
+live late-save races and exact client-source attestation remain untested.
+
+Eric's initial zero-match search was wrongly generalized into an empty archive.
+He also promised to inspect generated images before actually requesting their
+eye moves; both moves worked once called. Text loaded/saved correctly, but he
+briefly claimed the eye was empty before a catalogue check corrected him. There
+is no raw request-body capture to settle attention versus delivery for that
+answer. No mandatory staging or behavioral change follows from these stumbles.
+The web-open receipt again reports blocked, separately from eye operations.
+PM: `logs/runs/20260928-1224-eye-content-acceptance/postmortem.md`.
+
+The preceding 11:19-11:29 run is the ordinary
+behavior baseline: recalled/generated images, two Clears, dropped text, restored
+image, and speech interruptions; four image assets and one text asset verify.
+It predates this refactor and did not induce a stale-load race. The browser-tab
+opening failure is separate and unchanged, as are large full-note rewrites and
+eye-only catalogue limitations. PM:
+`logs/runs/20260928-1130-eye-state-baseline/postmortem.md`.
+
 September 28 checkpoint of the activated idle-input boundary repair: the native realtime
 service was committing `response.input` to shared history before the project LM
 handler added the same scheduled cue to its temporary request tail. Captured

@@ -16,17 +16,68 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
-September 28 checkpoint: accept the independently verified idle-input service
-boundary and browser transcript-revision repairs before further extraction.
+September 28 checkpoint `8786837` records the independently verified idle-input
+service boundary and browser transcript-revision repairs before further extraction.
 The [engineering status](engineering-status.md) records automated and live
 acceptance, including the unresolved repeated-language investigation. No new
 persona, idle policy, or eye-staging behavior is part of that checkpoint.
 
-Next candidate, not yet implemented: current sensing-eye image/text loading,
-replacement and Clear ownership. Characterize delayed-load, replacement and
-disconnect races before moving that workflow out of the page. Preserve Eric's
-choice of whether and when to stage an image; keep retrieval, saved history,
-camera lifetimes and behavioral changes outside the initial extraction.
+Current step: sensing-eye image/text loading, replacement and Clear workflow
+extracted, automatically checked and accepted for the exercised live paths.
+Keep retrieval, saved history, camera lifetimes and behavioral changes outside
+this step. Checkpoint the extraction and acceptance before the next ownership boundary.
+
+### Implemented Step: Current-Eye Content Workflows
+
+September 28, baseline `8786837`: `sensing-eye-content.js` owns the image/text
+setter and Clear workflows, including their existing freshness checks, save
+ordering, exclusive current content, history/receipt emission and UI updates.
+Page wrappers delegate directly. Explicit live accessors bridge the existing
+page state without mirroring it; history/camera/retrieval ownership and the
+actual model-staging function stay on their established paths. No new timer,
+retry, permission, prompt, automatic staging or idle policy is introduced.
+
+Clear still advances the eye generation before awaiting server queues. A late
+load cannot refill a cleared/new-session eye; an older Clear cannot release a
+newer Clear's in-flight flag. Guarded handoff/recall replacements still reject
+superseded requests. Unguarded concurrent operator loads still follow completion
+order: this extraction does not silently introduce a new replacement policy.
+Failed startup queue-clearing still aborts Connect; an ordinary Clear logs that
+failure as before. History survives Clear. Save failure can still leave visible
+unsaved content without claiming a saved file.
+
+Verification: 46 tests ran before production edits and now compare complete
+state/effect traces or unchanged neighboring functions with immutable `8786837`;
+one additional check verifies that wrappers return owner promises directly.
+All 1,097 JavaScript and 1,101 Python tests pass, with one existing Python
+dependency warning. Isolated Edge tests cover actual-page image/text loading,
+eight delayed-save Clear/startup-clear races, both guarded replacement paths,
+overlapping Clears, unsaved fallback, and prior handoff/reconnect/staging tests.
+Desktop/mobile screenshots and decoded image pixels pass. Writes and device
+commands are intercepted; no live model or paid image call is used.
+Evidence: `logs/maintenance/lifecycle-review/eye-content-{node-tests,python,browser}.txt`
+and `logs/maintenance/audio-owner-browser/results.json`.
+
+Size (LF-normalized): HTML 22,215 -> 22,069 lines; 1,003,643 -> 998,504 bytes.
+Module: 223 lines / 9,737 bytes. Total production grows 4,598 bytes. The HTML
+shrinks by 146 lines / 5,139 bytes, but this is only workflow ownership, not yet
+removal of the page's current-eye or history variables.
+
+Live acceptance September 28, 12:15-12:24: recalled two older images, generated
+and explicitly staged two new ones, cleared the eye twice, loaded text and
+replaced it with an image; interrupted speech and Disconnect released normally.
+Four pins, five assets, saved draft and preparation source verify; 77/77 entries
+retained. No failed eye call or observed extraction regression. Delayed moves
+were absent tool calls, not rejected ones. A zero-result search was overclaimed
+as an empty archive; a loaded text was briefly overlooked before a catalogue
+check. That text answer has no raw B1 input capture to settle its internal cause.
+No behavioral change or automatic staging is warranted. Stale-load races remain
+automated coverage; the live client has no exact source-hash attestation.
+PM: `logs/runs/20260928-1224-eye-content-acceptance/postmortem.md`.
+
+The 11:19-11:29 baseline predates this extraction; its open-tab failure, full-note
+rewrite cost and catalogue gaps remain separate work, not bundled fixes.
+Baseline PM: `logs/runs/20260928-1130-eye-state-baseline/postmortem.md`.
 
 ### Implemented Step: Sensing-Eye Save Requests
 

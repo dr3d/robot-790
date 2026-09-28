@@ -4,8 +4,9 @@ const assert = require('node:assert/strict');
 async function checkEyePersistence(page) {
   const result = await page.evaluate(async () => {
     if (typeof Robot790SensingEyePersistence?.create !== 'function') throw Error('Eye persistence module missing');
+    if (typeof Robot790SensingEyeContent?.create !== 'function') throw Error('Eye content module missing');
     const original = { fetch: window.fetch, postFace, scheduleIdlePonder };
-    const writes = [], races = [], failures = [];
+    const writes = [], races = [], failures = [], replacements = [];
     let seq = 20000, hold = '', release, fail = false, savedName = '';
     const canvas = document.createElement('canvas');
     canvas.width = 120; canvas.height = 80;
@@ -35,9 +36,9 @@ async function checkEyePersistence(page) {
       return { status: 'ok', latest_seq: seq };
     };
     scheduleIdlePonder = () => {};
-    const set = kind => kind === 'text'
-      ? setSensingTextContent(' First line\r\nSecond line ', 'fixture.txt', { source: 'operator drop' })
-      : setVisionImageFromDrawable(canvas, 'fixture.jpg', { source: 'operator drop' });
+    const set = (kind, options = {}) => kind === 'text'
+      ? setSensingTextContent(' First line\r\nSecond line ', 'fixture.txt', { source: 'operator drop', ...options })
+      : setVisionImageFromDrawable(canvas, 'fixture.jpg', { source: 'operator drop', ...options });
     try {
       await clearSensingEyeState();
       const text = await set('text');
@@ -68,6 +69,39 @@ async function checkEyePersistence(page) {
           }
         }
       }
+      for (const kind of ['text', 'visual']) {
+        let current = true;
+        release = null; hold = 'json';
+        const pending = set(kind, { isCurrent: () => current }).then(() => '', error => error.message);
+        for (let i = 0; !release && i < 200; i++) await new Promise(resolve => setTimeout(resolve, 5));
+        if (!release) throw Error('Replacement save did not reach JSON');
+        const finish = release; hold = '';
+        await set(kind === 'text' ? 'visual' : 'text', { saveToFilesystem: false });
+        current = false;
+        const expected = { image: visionImageUrl, text: sensingTextContent,
+          images: sensingEyeImageHistory.length, texts: sensingEyeTextHistory.length };
+        finish();
+        const error = await pending;
+        replacements.push({ kind, error, retained: visionImageUrl === expected.image && sensingTextContent === expected.text,
+          noLateHistory: sensingEyeImageHistory.length === expected.images && sensingEyeTextHistory.length === expected.texts });
+      }
+      const clearInbox = clearSensingEyeInboxOnServer, clearFace = clearBrowserFaceCaptureQueue;
+      const queue = [];
+      let overlappingClear;
+      try {
+        clearSensingEyeInboxOnServer = () => new Promise(resolve => queue.push(resolve));
+        clearBrowserFaceCaptureQueue = async () => null;
+        const images = sensingEyeImageHistory.length, texts = sensingEyeTextHistory.length;
+        const first = clearSensingEyeState(), second = clearSensingEyeState();
+        queue[0]({ latest_seq: seq }); await first;
+        const held = sensingEyeInboxClearInFlight;
+        queue[1]({ latest_seq: seq }); await second;
+        overlappingClear = { held, released: !sensingEyeInboxClearInFlight,
+          historyKept: sensingEyeImageHistory.length === images && sensingEyeTextHistory.length === texts,
+          empty: !visionImageUrl && !sensingTextContent && !visionPreview.hasAttribute('src') };
+      } finally {
+        clearSensingEyeInboxOnServer = clearInbox; clearBrowserFaceCaptureQueue = clearFace;
+      }
       fail = true;
       for (const kind of ['text', 'visual']) {
         const count = writes.length;
@@ -76,7 +110,7 @@ async function checkEyePersistence(page) {
           notAttached: !sensingEyeSessionAssetFilenames.has(savedName),
           visible: kind === 'text' ? sensingTextContent === 'First line\nSecond line' : !!visionImageUrl });
       }
-      return { textResult, imageResult, races, failures, connected: realtimeConnected() };
+      return { textResult, imageResult, races, replacements, overlappingClear, failures, connected: realtimeConnected() };
     } finally {
       window.fetch = original.fetch; postFace = original.postFace; scheduleIdlePonder = original.scheduleIdlePonder;
     }
@@ -106,6 +140,12 @@ async function checkEyePersistence(page) {
     assert.equal(failure.notAttached, true);
     assert.equal(failure.visible, true);
   }
+  for (const replacement of result.replacements) {
+    assert.match(replacement.error, /superseded/);
+    assert.equal(replacement.retained, true);
+    assert.equal(replacement.noLateHistory, true);
+  }
+  assert.deepEqual(result.overlappingClear, { held: true, released: true, historyKept: true, empty: true });
   return result;
 }
 

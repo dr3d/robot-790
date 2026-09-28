@@ -3017,6 +3017,7 @@
   <script src="image-request.js"></script>
   <script src="generated-image-handoff.js"></script>
   <script src="sensing-eye-persistence.js"></script>
+  <script src="sensing-eye-content.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -4021,6 +4022,7 @@
     const imageRequest = createImageRequestOwner();
     const generatedImageHandoff = createGeneratedImageHandoff();
     const sensingEyePersistence = createSensingEyePersistence();
+    const sensingEyeContent = createSensingEyeContent();
     let sensingTextContent = "";
     let sensingTextName = "";
     let sensingTextOpenUrl = "";
@@ -17546,6 +17548,49 @@
       return result;
     }
 
+    function createSensingEyeContent() {
+      return Robot790SensingEyeContent.create({
+        state: {
+          get sensingEyeGeneration() { return sensingEyeGeneration; }, set sensingEyeGeneration(value) { sensingEyeGeneration = value; },
+          get sensingEyeInboxClearInFlight() { return sensingEyeInboxClearInFlight; }, set sensingEyeInboxClearInFlight(value) { sensingEyeInboxClearInFlight = value; },
+          get visionImageUrl() { return visionImageUrl; }, set visionImageUrl(value) { visionImageUrl = value; },
+          get visionImageName() { return visionImageName; }, set visionImageName(value) { visionImageName = value; },
+          get visionImageStaged() { return visionImageStaged; }, set visionImageStaged(value) { visionImageStaged = value; },
+          get visionImageOpenUrl() { return visionImageOpenUrl; }, set visionImageOpenUrl(value) { visionImageOpenUrl = value; },
+          get sensingTextContent() { return sensingTextContent; }, set sensingTextContent(value) { sensingTextContent = value; },
+          get sensingTextName() { return sensingTextName; }, set sensingTextName(value) { sensingTextName = value; },
+          get sensingTextOpenUrl() { return sensingTextOpenUrl; }, set sensingTextOpenUrl(value) { sensingTextOpenUrl = value; },
+          get sensingTextSavedFilename() { return sensingTextSavedFilename; }, set sensingTextSavedFilename(value) { sensingTextSavedFilename = value; },
+        },
+        ui: () => ({ visionPreview, visionDrop, visionHint, visionFile, contextPanel }),
+        get visionMaxEdgePx() { return visionMaxEdgePx; },
+        get visionJpegQuality() { return visionJpegQuality; },
+        get maxSensingTextChars() { return maxSensingTextChars; },
+        createCanvas: () => document.createElement("canvas"),
+        absoluteUrl: value => new URL(value, location.href).href,
+        log: message => log(events, message),
+        audioRecordingActive: (...args) => audioRecordingActive(...args),
+        audioRecordingCurrentVisualCover: (...args) => audioRecordingCurrentVisualCover(...args),
+        sensingEyeMemoryContext: (...args) => sensingEyeMemoryContext(...args),
+        saveSensingEyeVisualNote: (...args) => saveSensingEyeVisualNote(...args),
+        saveSensingEyeTextNote: (...args) => saveSensingEyeTextNote(...args),
+        rememberSensingEyeImage: (...args) => rememberSensingEyeImage(...args),
+        rememberSensingEyeText: (...args) => rememberSensingEyeText(...args),
+        updateVisionButtons: (...args) => updateVisionButtons(...args),
+        updateSessionTools: (...args) => updateSessionTools(...args),
+        recordUiEvent: (...args) => recordUiEvent(...args),
+        addSensingEyeVisualNoteTranscriptMarker: (...args) => addSensingEyeVisualNoteTranscriptMarker(...args),
+        stageVisionImage: (...args) => stageVisionImage(...args),
+        rolloverAudioRecordingForVisualChange: (...args) => rolloverAudioRecordingForVisualChange(...args),
+        renderContextMap: (...args) => renderContextMap(...args),
+        approximateTextTokens: (...args) => approximateTextTokens(...args),
+        scheduleIdlePonder: (...args) => scheduleIdlePonder(...args),
+        sensingInputLabel: (...args) => sensingInputLabel(...args),
+        clearSensingEyeInboxOnServer: (...args) => clearSensingEyeInboxOnServer(...args),
+        clearBrowserFaceCaptureQueue: (...args) => clearBrowserFaceCaptureQueue(...args),
+      });
+    }
+
     function createSensingEyePersistence() {
       return Robot790SensingEyePersistence.create({
         generation: () => sensingEyeGeneration,
@@ -17912,94 +17957,11 @@
     }
 
     function requireCurrentSensingEyeLoad(generation) {
-      if (generation !== sensingEyeGeneration) {
-        throw new Error("Sensing-eye load canceled: the eye was cleared or a new session began.");
-      }
+      return sensingEyeContent.requireCurrent(generation);
     }
 
-    async function setVisionImageFromDrawable(drawable, name, options = {}) {
-      const generation = options.eyeGeneration ?? sensingEyeGeneration;
-      requireCurrentSensingEyeLoad(generation);
-      if (options.isCurrent && !options.isCurrent()) throw new Error("Image request was superseded.");
-      const naturalWidth = drawable.videoWidth || drawable.naturalWidth || drawable.width;
-      const naturalHeight = drawable.videoHeight || drawable.naturalHeight || drawable.height;
-      if (!naturalWidth || !naturalHeight) {
-        throw new Error("Camera frame is not ready yet.");
-      }
-      const previousCover = audioRecordingActive() ? audioRecordingCurrentVisualCover({ includePlaceholder: true }) : null;
-      const scale = Math.min(1, visionMaxEdgePx / Math.max(naturalWidth, naturalHeight));
-      const width = Math.max(1, Math.round(naturalWidth * scale));
-      const height = Math.max(1, Math.round(naturalHeight * scale));
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#101114";
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(drawable, 0, 0, width, height);
-      const imageUrl = canvas.toDataURL("image/jpeg", visionJpegQuality);
-      const imageName = name || "image";
-      let openUrl = String(options.openUrl || "");
-      const memoryContext = options.memoryContext && typeof options.memoryContext === "object"
-        ? options.memoryContext
-        : sensingEyeMemoryContext();
-      let savedResult = null;
-      if (options.saveToFilesystem !== false) {
-        savedResult = await saveSensingEyeVisualNote({
-          dataUrl: imageUrl,
-          name: imageName,
-          source: options.source || "operator",
-          reason: options.reason || "sensing-eye visual note",
-          memoryContext
-        });
-        if (savedResult?.saved_url) {
-          openUrl = new URL(String(savedResult.saved_url), location.href).href;
-        }
-      }
-      requireCurrentSensingEyeLoad(generation);
-      if (options.isCurrent && !options.isCurrent()) throw new Error("Image request was superseded.");
-      sensingTextContent = "";
-      sensingTextName = "";
-      sensingTextOpenUrl = "";
-      sensingTextSavedFilename = "";
-      visionImageUrl = imageUrl;
-      visionImageName = imageName;
-      visionImageStaged = false;
-      visionImageOpenUrl = openUrl;
-      const historyItem = rememberSensingEyeImage({
-        dataUrl: visionImageUrl,
-        name: visionImageName,
-        width,
-        height,
-        source: options.source || "operator",
-        openUrl: visionImageOpenUrl,
-        savedFilename: options.savedFilename || savedResult?.saved_filename || "",
-        memoryContext
-      });
-      visionPreview.src = visionImageUrl;
-      visionPreview.classList.add("ready");
-      visionDrop.classList.remove("text-ready");
-      visionHint.textContent = `${visionImageName} (${width}x${height})`;
-      updateVisionButtons();
-      updateSessionTools();
-      log(events, `sensing-eye image loaded: ${visionHint.textContent}`);
-      recordUiEvent("sensing input image", visionHint.textContent, {
-        name: visionImageName,
-        width,
-        height,
-        source_width: naturalWidth,
-        source_height: naturalHeight,
-        staged: visionImageStaged,
-        history_id: historyItem?.id || ""
-      });
-      addSensingEyeVisualNoteTranscriptMarker(
-        options.transcriptAction || "loaded into eye",
-        historyItem,
-        { touchActivity: false }
-      );
-      if (options.autoStage !== false) stageVisionImage();
-      rolloverAudioRecordingForVisualChange("sensing-eye image changed", { cover: previousCover });
-      return historyItem;
+    function setVisionImageFromDrawable(drawable, name, options = {}) {
+      return sensingEyeContent.setImage(drawable, name, options);
     }
 
     async function startVisionCamera() {
@@ -18246,70 +18208,8 @@
       }
     }
 
-    async function setSensingTextContent(raw, name = "text", options = {}) {
-      const generation = options.eyeGeneration ?? sensingEyeGeneration;
-      requireCurrentSensingEyeLoad(generation);
-      if (options.isCurrent && !options.isCurrent()) throw new Error("Sensing-eye text request was superseded.");
-      const content = String(raw || "").replace(/\r\n/g, "\n").trim();
-      if (!content) throw new Error("Text file is empty.");
-      let savedResult = null;
-      let openUrl = String(options.openUrl || "");
-      let savedFilename = String(options.savedFilename || "");
-      const memoryContext = options.memoryContext && typeof options.memoryContext === "object"
-        ? options.memoryContext
-        : sensingEyeMemoryContext();
-      if (options.saveToFilesystem !== false) {
-        savedResult = await saveSensingEyeTextNote({
-          content,
-          name,
-          source: options.source || "operator text",
-          memoryContext
-        });
-        if (savedResult?.saved_url) openUrl = new URL(String(savedResult.saved_url), location.href).href;
-        if (savedResult?.saved_filename) savedFilename = String(savedResult.saved_filename);
-      }
-      requireCurrentSensingEyeLoad(generation);
-      if (options.isCurrent && !options.isCurrent()) throw new Error("Sensing-eye text request was superseded.");
-      visionImageUrl = "";
-      visionImageName = "";
-      visionImageStaged = false;
-      visionImageOpenUrl = "";
-      visionPreview.removeAttribute("src");
-      visionPreview.classList.remove("ready");
-      sensingTextContent = content;
-      sensingTextName = name || "text";
-      sensingTextOpenUrl = openUrl;
-      sensingTextSavedFilename = savedFilename;
-      const textItem = rememberSensingEyeText({
-        content,
-        name: sensingTextName,
-        source: options.source || "operator text",
-        openUrl,
-        savedFilename,
-        memoryContext
-      });
-      visionDrop.classList.add("text-ready");
-      const clipped = content.length > maxSensingTextChars;
-      visionHint.textContent = `${sensingTextName} - ${approximateTextTokens(content).toLocaleString()} tok eye text${clipped ? " clipped" : ""}`;
-      updateVisionButtons();
-      updateSessionTools();
-      if (contextPanel?.open) renderContextMap();
-      log(events, `sensing text loaded: ${sensingTextName} (${content.length} chars${savedFilename ? `, saved ${savedFilename}` : ""}${clipped ? `, clipped to ${maxSensingTextChars}` : ""})`);
-      recordUiEvent("sensing input text", visionHint.textContent, {
-        name: sensingTextName,
-        characters: content.length,
-        clipped,
-        max_chars: maxSensingTextChars,
-        saved_filename: savedFilename,
-        history_id: textItem?.id || ""
-      });
-      addSensingEyeVisualNoteTranscriptMarker(
-        options.transcriptAction || "loaded into eye",
-        textItem,
-        { touchActivity: false }
-      );
-      scheduleIdlePonder();
-      return textItem;
+    function setSensingTextContent(raw, name = "text", options = {}) {
+      return sensingEyeContent.setText(raw, name, options);
     }
 
     async function prepareSensingText(file) {
@@ -18340,54 +18240,8 @@
       }
     }
 
-    async function clearSensingEyeState({ source = "ui", reason = "" } = {}) {
-      const generation = ++sensingEyeGeneration;
-      const previous = sensingInputLabel();
-      sensingEyeInboxClearInFlight = true;
-      visionImageUrl = "";
-      visionImageName = "";
-      visionImageStaged = false;
-      visionImageOpenUrl = "";
-      sensingTextContent = "";
-      sensingTextName = "";
-      sensingTextOpenUrl = "";
-      sensingTextSavedFilename = "";
-      visionFile.value = "";
-      visionPreview.removeAttribute("src");
-      visionPreview.classList.remove("ready");
-      visionDrop.classList.remove("text-ready");
-      visionHint.textContent = "Drop image or text, then speak";
-      updateVisionButtons();
-      updateSessionTools();
-      if (contextPanel?.open) renderContextMap();
-      recordUiEvent("sensing input cleared", previous || "none", {
-        current: sensingInputLabel(),
-        source,
-        reason: String(reason || "").slice(0, 120) || null
-      });
-      await Promise.allSettled([
-        clearSensingEyeInboxOnServer(),
-        clearBrowserFaceCaptureQueue()
-      ]).then((results) => {
-        if (generation !== sensingEyeGeneration) return;
-        const inboxResult = results[0];
-        const faceResult = results[1];
-        if (inboxResult.status === "fulfilled") {
-          log(events, `sensing-eye inbox cleared: seq ${inboxResult.value.latest_seq || 0}`);
-        } else {
-          log(events, `sensing-eye inbox clear error: ${inboxResult.reason?.message || inboxResult.reason}`);
-        }
-        if (faceResult.status === "fulfilled" && faceResult.value) {
-          log(events, `browser-face mirror queue cleared: seq ${faceResult.value.latest_seq || 0}`);
-        } else if (faceResult.status === "rejected") {
-          log(events, `browser-face mirror queue clear error: ${faceResult.reason?.message || faceResult.reason}`);
-        }
-        sensingEyeInboxClearInFlight = false;
-        if (source === "session_connect" && results.some((result) => result.status === "rejected")) {
-          throw new Error("Could not clear the sensing-eye inbox or mirror queue. Retry Connect.");
-        }
-      });
-      return previous;
+    function clearSensingEyeState(options = {}) {
+      return sensingEyeContent.clear(options);
     }
 
     function clearVisionImage() {
