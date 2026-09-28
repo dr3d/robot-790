@@ -1,8 +1,88 @@
 # Engineering Status
 
-Reviewed September 27, 2026. This is the maintained engineering view; session
+Reviewed September 28, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+September 28 checkpoint of the activated idle-input boundary repair: the native realtime
+service was committing `response.input` to shared history before the project LM
+handler added the same scheduled cue to its temporary request tail. Captured
+requests show accumulated `[STS scheduled opportunity]` user messages. Existing
+LM-only tests missed the earlier service mutation. A project-owned entry wrapper
+now carries shared-idle input privately to the LM handler; ordinary operator
+input, isolated experiments, actual replies, and tool receipts keep their paths.
+There is no text matching, history scrubbing, persona/prompt-wording change, idle throttle,
+or new completion policy. This also prevents temporary idle images from being
+submitted twice or retained unintentionally; explicitly staged images still use
+their existing persistent path.
+
+Verification: nine new entry-through-LM cases cover repeated turns, temporary
+media, ordinary input, isolated idle, invalid roles, cancellation, provider error,
+active-response rejection, and tool receipt/follow-up continuity. The initial two
+regressions failed before the fix; all 1,101 Python tests pass afterward, including
+294 focused cases, with one dependency deprecation warning. All 1,050 JavaScript
+tests also pass. Focused lint and `git diff --check` pass.
+
+Checkpoint verification September 28: the full 1,101 Python and 1,050 JavaScript
+tests pass again, with the same dependency warning. Repository-wide Ruff reports
+48 existing findings; comparison with `3aa8915` matches file, rule, message and
+count, with no added finding. Unrelated lint cleanup is not part of this repair.
+
+Live acceptance after activation: September 27, 21:17-21:46, resumed history,
+and September 28, 09:41-10:18, Connect Empty/core only. Across all 65 captured B1
+predictions, each of the 23 idle requests contains exactly one temporary cue
+and one idle direction; the 42 non-idle requests contain neither. Actual replies
+and tool receipts persist. The second capture covers all 37 completed B1
+predictions; the first covers 28, ending about a minute before disconnect.
+Long spoken assignments coalesce, note and eye-file receipts verify, and
+mid-speech disconnect releases the pipeline. The structural repair is accepted
+for this checkpoint, not a claim that all cognitive symptoms are resolved.
+
+Repetition remains separate: the resumed trial had 15 exact greetings; the empty
+trial had none of that exact phrase, but one availability reset, a near-identical
+paragraph across a read/write continuation, and recurrent draft-summary closings.
+No production change separated those trials. Historical context is not required
+for new repeated wording; this does not establish one cause for every recurrence.
+The empty trial also produced three private-runtime echoes, all suppressed before
+speech/history by the existing filter. No new dispatch/deduplication or behavioral
+policy was introduced. Topic exhaustion and productive revisiting are hypotheses
+to distinguish, not grounds for automatic silence or shorter answers.
+
+Empty-trial context rose 19,644 -> 55,856 tokens (15.0% -> 42.61%); subsequent
+cache reuse stayed at least 86.18%, with at most 5.065s prefill and no whole-prompt
+refill. Seventy-two completed TTS batches ended normally, generating 29.6 minutes
+of audio; the final batch was canceled by Disconnect. Temporary raw/engine
+captures are stopped; no additional permanent instrumentation was added.
+Local acceptance evidence: `logs/runs/20260927-idle-boundary-activation/` and
+`logs/runs/20260928-empty-verbose-challenge/`. Earlier reproduction:
+`logs/runs/20260927-greeting-third-trial/`. No service restart is part of this
+checkpoint; the live-tested backend and browser repairs are already active.
+
+September 27 transcript repair, after checkpoint `3aa8915`: the browser now uses
+the realtime input-item/content identity to revise one user transcript row.
+Recognition can change earlier words, shorten text, or resume after a long gap
+without leaving successive drafts in the saved session. The row keeps its
+original timestamp; different items with identical words remain distinct. The
+latest recent-user-text entry is also refreshed on a continuing revision.
+Identity belongs to the row metadata and clears with the conversation; current
+Disconnect finals still settle, while stale sockets/generations stay excluded.
+Providers without item IDs retain the existing fallback. No microphone threshold,
+response cancellation, STT/backend behavior, prompt, or idle policy changed.
+
+Verification: all 1,050 JavaScript tests pass, including 11 new revision cases;
+isolated full-page Edge checks pass at desktop and narrow width (sidebar hidden),
+with every service request intercepted. A local replay matched all 37 saved
+video-period user rows to backend STT turn IDs and retained 10 final utterances:
+8,141 -> 3,758 text characters, a 53.8% reduction, with every final transcript
+preserved. These are reconstructed protocol identities from matching logged
+text/time/turn IDs, not a raw WebSocket capture. September 27 evening live trials
+also retained each long spoken assignment as one revised utterance, including
+three coalesced revisions in the 20:40-20:53 run and eleven revisions of the
+September 28 empty-context assignment. The original continuous-video case has
+not been repeated. Old session files are untouched. The September 28 trial
+exercised the refreshed page; other already-open older pages need a refresh to
+activate this browser repair, which does not itself require a server restart.
+Evidence: `logs/runs/20260927-transcript-revisions-repair/` and the greeting trials.
 
 September 27: accepted generated-image handoff and live notes committed as
 `7ff12f5` on `master` (local checkpoint, not yet pushed). The accepted extraction,

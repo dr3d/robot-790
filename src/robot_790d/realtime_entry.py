@@ -184,7 +184,10 @@ def apply_interruptible_chat_generation_patch() -> None:
             self._apply_config(active_chat, turn.runtime_config.session.instructions, True)
             active_chat.add_item(make_user_message(
                 "[STS idle continuation]\n" + (turn.response.instructions or "")))
-            for item in turn.response.input or []:
+            idle_input = _extra_value(turn.response, "robot790_idle_input")
+            if idle_input is None:
+                idle_input = turn.response.input
+            for item in idle_input or []:
                 if getattr(item, "type", None) != "message" or getattr(item, "role", None) != "user":
                     yield EndOfResponse(turn_id=turn.turn_id, turn_revision=turn.turn_revision,
                                         error="Shared idle input must contain only temporary user messages.")

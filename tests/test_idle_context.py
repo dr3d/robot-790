@@ -1,8 +1,10 @@
+from queue import Queue
 from types import SimpleNamespace
 
 import pytest
 from openai.types.realtime import ConversationItemCreateEvent, ResponseCreateEvent
 from openai.types.responses import ResponseFunctionToolCall
+from speech_to_speech.api.openai_realtime.service import RealtimeService
 from speech_to_speech.LLM.base_openai_compatible_language_model import AssistantMessage, TextDelta, ToolCall
 from speech_to_speech.LLM.chat import Chat, make_assistant_message, make_user_message
 from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
@@ -15,6 +17,7 @@ from robot_790d.realtime_entry import (
     apply_unbounded_live_chat_patch,
     apply_visual_history_patch,
 )
+from robot_790d.realtime_lifecycle import apply_native_response_lifecycle_patch
 
 
 @pytest.fixture
@@ -79,6 +82,146 @@ def run(runtime, response):
         audio=None, runtime_config=SimpleNamespace(chat=runtime.chat, session=runtime.session),
         response=response, language_code=None, turn_id=None, turn_revision=None, speech_stopped_at_s=None,
     )))
+
+
+@pytest.fixture
+def entry(runtime, monkeypatch):
+    for name in ("_on_transcription_completed", "_on_audio_input_completed", "_on_token_usage",
+                 "handle_response_create"):
+        monkeypatch.setattr(RealtimeService, name, getattr(RealtimeService, name))
+    monkeypatch.setattr(RealtimeService, "_robot_790_native_response_lifecycle_patch", False, raising=False)
+    apply_native_response_lifecycle_patch()
+    service = RealtimeService(text_prompt_queue=Queue(), chat_size=0)
+    conn = service.register()
+    cfg = service._state(conn).runtime_config
+    cfg.chat = runtime.chat
+    cfg.session = cfg.session.model_copy(update={
+        "instructions": runtime.session.instructions, "tools": runtime.session.tools, "tool_choice": "auto",
+    })
+    yield service, conn
+    service.unregister(conn)
+
+
+def test_shared_idle_entry_keeps_cues_request_local_across_repeated_turns(runtime, entry):
+    service, conn = entry
+    for _ in range(3):
+        before = runtime.handler._serialize(runtime.chat)
+        response = idle_response(conversation="default", tools=runtime.session.tools, tool_choice="auto")
+        event = ResponseCreateEvent(type="response.create", response=response)
+        original_event = event.model_dump()
+        assert service.handle_response_create(conn, event).type == "response.created"
+        assert runtime.handler._serialize(runtime.chat) == before
+        output = list(runtime.handler.process(service.text_prompt_queue.get_nowait()))
+        assert not any(item.error for item in output if isinstance(item, EndOfResponse))
+        messages = runtime.requests[-1][0]
+        assert messages[:-2] == before
+        assert str(messages).count("temporary idle cue") == 1
+        saved = runtime.handler._serialize(runtime.chat)
+        assert saved[:-1] == before
+        assert "temporary idle cue" not in str(saved)
+        assert event.model_dump() == original_event
+        service.response.finish_response(conn)
+    assert str(runtime.handler._serialize(runtime.chat)).count("An older connection.") == 3
+
+
+def test_shared_idle_entry_supplies_image_once_without_saving_temporary_input(runtime, entry):
+    service, conn = entry
+    before = runtime.handler._serialize(runtime.chat)
+    response = idle_response(conversation="default", input=[{
+        "type": "message", "role": "user", "content": [
+            {"type": "input_text", "text": "Private current-image cue."},
+            {"type": "input_image", "image_url": "data:image/png;base64,cGl4ZWxz"},
+        ],
+    }])
+    service.handle_response_create(conn, ResponseCreateEvent(type="response.create", response=response))
+    list(runtime.handler.process(service.text_prompt_queue.get_nowait()))
+    messages = runtime.requests[-1][0]
+    assert messages[:-2] == before
+    assert str(messages).count("data:image/png;base64,cGl4ZWxz") == 1
+    assert "data:image/png;base64,cGl4ZWxz" not in str(runtime.handler._serialize(runtime.chat))
+
+
+def test_normal_in_band_entry_still_commits_operator_input(runtime, entry):
+    service, conn = entry
+    before = runtime.handler._serialize(runtime.chat)
+    response = idle_response(conversation="default", robot790_idle_continuation=False)
+    service.handle_response_create(conn, ResponseCreateEvent(type="response.create", response=response))
+    assert "temporary idle cue" in str(runtime.handler._serialize(runtime.chat))
+    list(runtime.handler.process(service.text_prompt_queue.get_nowait()))
+    saved = runtime.handler._serialize(runtime.chat)
+    assert saved[:len(before)] == before
+    assert str(saved).count("temporary idle cue") == 1
+    assert str(saved).count("An older connection.") == 1
+
+
+def test_isolated_idle_entry_remains_isolated(runtime, entry):
+    service, conn = entry
+    before = runtime.handler._serialize(runtime.chat)
+    service.handle_response_create(conn, ResponseCreateEvent(type="response.create", response=idle_response()))
+    list(runtime.handler.process(service.text_prompt_queue.get_nowait()))
+    assert str(runtime.requests[-1][0]).count("temporary idle cue") == 1
+    assert runtime.handler._serialize(runtime.chat) == before
+
+
+@pytest.mark.parametrize("case", ["invalid_input", "cancelled", "provider_error", "active_response"])
+def test_shared_idle_entry_errors_cannot_leave_controller_input_in_history(runtime, entry, case):
+    service, conn = entry
+    before = runtime.handler._serialize(runtime.chat)
+    response = idle_response(conversation="default")
+    if case == "invalid_input":
+        response = idle_response(conversation="default", input=[{
+            "type": "message", "role": "system", "content": [
+                {"type": "input_text", "text": "An invalid idle system replacement."},
+            ],
+        }])
+    elif case == "provider_error":
+        def fail_request(*_):
+            raise RuntimeError("test provider error")
+        runtime.handler._request = fail_request
+    elif case == "active_response":
+        service._state(conn).in_response = True
+    created = service.handle_response_create(conn, ResponseCreateEvent(type="response.create", response=response))
+    if case == "active_response":
+        assert created.type == "error"
+        assert service.text_prompt_queue.empty()
+    else:
+        if case == "cancelled":
+            service.handle_response_cancel(conn)
+            runtime.handler._turn_is_latest = lambda *_: False
+        output = list(runtime.handler.process(service.text_prompt_queue.get_nowait()))
+        if case != "cancelled":
+            assert any(item.error for item in output if isinstance(item, EndOfResponse))
+        if case != "provider_error":
+            assert runtime.requests == []
+    assert runtime.handler._serialize(runtime.chat) == before
+
+
+def test_shared_idle_entry_keeps_tool_receipts_but_not_temporary_input(runtime, entry):
+    service, conn = entry
+    del runtime.handler._record_tool_call
+    runtime.replies[:] = [[tool_event()]]
+    response = idle_response(conversation="default", tools=runtime.session.tools, tool_choice="auto")
+    service.handle_response_create(conn, ResponseCreateEvent(type="response.create", response=response))
+    list(runtime.handler.process(service.text_prompt_queue.get_nowait()))
+    service.response.finish_response(conn)
+    runtime.chat.add_item(ConversationItemCreateEvent.model_validate({
+        "type": "conversation.item.create", "item": {
+            "type": "function_call_output", "call_id": "call_test",
+            "output": '{"status":"ok","filename":"retained.png"}',
+        },
+    }).item)
+    saved = runtime.handler._serialize(runtime.chat)
+    assert "retained.png" in str(saved)
+    assert "temporary idle cue" not in str(saved)
+    runtime.replies[:] = [[AssistantMessage(content=[{"type": "output_text", "text": "A result."}])]]
+    followup = ResponseCreateEvent.model_validate({"type": "response.create", "response": {
+        "robot790_tool_followup": "Choose what follows from the receipt.",
+        "tools": runtime.session.tools, "tool_choice": "auto", "output_modalities": ["audio"],
+    }})
+    service.handle_response_create(conn, followup)
+    list(runtime.handler.process(service.text_prompt_queue.get_nowait()))
+    assert runtime.requests[-1][0][:-1] == saved
+    assert "STS tool continuation" not in str(runtime.handler._serialize(runtime.chat))
 
 
 @pytest.mark.parametrize("stream", [False, True])

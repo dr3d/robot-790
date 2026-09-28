@@ -113,6 +113,16 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 28 checkpoint: scheduled idle input now stays request-local at the
+realtime service boundary instead of accumulating as synthetic user turns.
+Replies and tool receipts still persist; prompts and idle cadence are unchanged.
+Automated entry-path tests and 65 captured live B1 requests across resumed and
+empty-context trials verify the boundary. Long spoken assignments also retain
+one revised transcript entry instead of successive STT drafts. Repeated language
+remains a separate, unresolved investigation; this is not a demonstrated loop
+cure. No new behavioral limits or automatic eye staging were added. See
+[Engineering Status](docs/engineering-status.md).
+
 September 27 accepted extraction: sensing-eye image/text save requests now live in
 `sensing-eye-persistence.js`, retaining the same file receipts, session attachment
 checks and inbox echo protection. Automated and isolated browser checks pass,
@@ -645,7 +655,9 @@ The browser page is the main live control surface. It includes:
   volume, monitor pace, person-lane intensity, and manual mulling.
 - Idle controls for drift, wonder, self-focus, notes-focus, and substrate tests.
 - Focus control for manual sensing-eye salience and matching preview opacity.
-- Conversation and event panes with copy and record buttons.
+- Conversation and event panes with copy and record buttons. Speech-recognition
+  revisions with the same input-item ID update one transcript entry, including
+  the saved session, rather than retaining each increasingly long draft.
 - Context Map for a rough view of what Eric can draw from, including the active
   base prompt source, runtime state, loaded notes, memory, enabled tools, and
   recent context.

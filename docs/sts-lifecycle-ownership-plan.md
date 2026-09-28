@@ -16,6 +16,18 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
+September 28 checkpoint: accept the independently verified idle-input service
+boundary and browser transcript-revision repairs before further extraction.
+The [engineering status](engineering-status.md) records automated and live
+acceptance, including the unresolved repeated-language investigation. No new
+persona, idle policy, or eye-staging behavior is part of that checkpoint.
+
+Next candidate, not yet implemented: current sensing-eye image/text loading,
+replacement and Clear ownership. Characterize delayed-load, replacement and
+disconnect races before moving that workflow out of the page. Preserve Eric's
+choice of whether and when to stage an image; keep retrieval, saved history,
+camera lifetimes and behavioral changes outside the initial extraction.
+
 ### Implemented Step: Sensing-Eye Save Requests
 
 September 27, after accepted checkpoint `7ff12f5`: image/text persistence requests

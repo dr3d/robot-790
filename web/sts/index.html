@@ -12963,9 +12963,10 @@
       return conversationLines.length - 1;
     }
 
-    function replaceConversation(index, text, { touchActivity = true } = {}) {
+    function replaceConversation(index, text, { touchActivity = true, preserveTimestamp = false } = {}) {
       if (index < 0 || index >= conversationLines.length) return addConversation(text, { touchActivity });
-      const at = new Date();
+      const originalIso = preserveTimestamp && conversationLineMetadata[index]?.iso;
+      const at = originalIso ? new Date(originalIso) : new Date();
       conversationLines[index] = conversationLine(text, at);
       conversationLineMetadata[index] = { ...conversationLineMetadata[index], ...conversationLineMetadataFromDate(at) };
       renderConversation();
@@ -13047,13 +13048,16 @@
       renderConversation();
     }
 
-    function noteUserText(text) {
+    function noteUserText(text, { replaceLatest = false } = {}) {
       toolScopeDenials.clear();
       toolContinuation.startTurn();
       toolGenerationUncertain = false;
       resetConversationReengageCycle();
       lastUserText = String(text || "").trim();
-      if (lastUserText) recentUserTexts = [...recentUserTexts, lastUserText].slice(-8);
+      if (lastUserText) {
+        const previous = replaceLatest ? recentUserTexts.slice(0, -1) : recentUserTexts;
+        recentUserTexts = [...previous, lastUserText].slice(-8);
+      }
     }
 
 
@@ -13131,9 +13135,18 @@
       return "new";
     }
 
-    function recordUserTranscript(text) {
+    function recordUserTranscript(text, event = {}) {
       const transcript = String(text || "").trim();
-      const update = classifyTranscriptUpdate(transcript);
+      // Reopened speech keeps its protocol item ID even when STT rewrites every word.
+      // Keep identity on the row so clearing the conversation also clears ownership.
+      const itemId = typeof event.item_id === "string" ? event.item_id : "";
+      const contentIndex = Number.isInteger(event.content_index) ? event.content_index : 0;
+      const itemIndex = itemId ? conversationLineMetadata.findIndex(item =>
+        item?.inputItemId === itemId && item.inputContentIndex === contentIndex) : -1;
+      const previous = itemIndex >= 0 ? conversationLineMetadata[itemIndex].inputTranscript : lastAcceptedUserTranscript;
+      const update = !transcript ? "empty" : itemId
+        ? itemIndex < 0 ? "new" : previous === transcript ? "duplicate" : "supersedes"
+        : classifyTranscriptUpdate(transcript);
       if (update === "empty") return { accepted: false, transcript };
       captureCompletedAloneInterval();
       if (update === "duplicate") {
@@ -13144,16 +13157,23 @@
         return { accepted: false, transcript };
       }
 
-      noteUserText(transcript);
+      noteUserText(transcript, { replaceLatest: update === "supersedes" && lastUserText === previous });
       lastAcceptedUserTranscript = transcript;
       lastAcceptedUserTranscriptAt = Date.now();
-      if (update === "supersedes" && lastUserConversationIndex >= 0) {
-        lastUserConversationIndex = replaceConversation(lastUserConversationIndex, `You: ${transcript}`);
-        log(events, `stt transcript coalesced: ${transcript}`);
-        return { accepted: true, coalesced: true, transcript, index: lastUserConversationIndex };
+      const replaceIndex = itemId ? itemIndex : lastUserConversationIndex;
+      const coalesced = update === "supersedes" && replaceIndex >= 0;
+      if (coalesced) {
+        lastUserConversationIndex = replaceConversation(replaceIndex, `You: ${transcript}`, { preserveTimestamp: Boolean(itemId) });
+        log(events, `stt transcript coalesced${itemId ? ` [${itemId}:${contentIndex}]` : ""}: ${transcript}`);
+      } else {
+        lastUserConversationIndex = addConversation(`You: ${transcript}`);
       }
-      lastUserConversationIndex = addConversation(`You: ${transcript}`);
-      return { accepted: true, coalesced: false, transcript, index: lastUserConversationIndex };
+      if (itemId) {
+        Object.assign(conversationLineMetadata[lastUserConversationIndex], {
+          inputItemId: itemId, inputContentIndex: contentIndex, inputTranscript: transcript
+        });
+      }
+      return { accepted: true, coalesced, transcript, index: lastUserConversationIndex };
     }
 
     function updateInputDraft(text) {
@@ -19788,7 +19808,7 @@
         if (event.type === "conversation.item.input_audio_transcription.completed") {
           inputAudioTranscriptionPending = false;
           clearInputDraft();
-          const recorded = recordUserTranscript(event.transcript || "");
+          const recorded = recordUserTranscript(event.transcript || "", event);
           if (recorded.accepted) rememberConversationProsody(recorded.index, event.voice_shape || "");
         } else if (event.type === "conversation.item.input_audio_transcription.failed") {
           inputAudioTranscriptionPending = false;
@@ -19868,7 +19888,7 @@
           lastInputVoiceShape = completedVoiceShape;
           log(events, `input prosody: ${event.voice_shape}`);
         }
-        const recorded = recordUserTranscript(event.transcript || "");
+        const recorded = recordUserTranscript(event.transcript || "", event);
         if (!recorded.accepted) return;
         rememberConversationProsody(recorded.index, completedVoiceShape);
         noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });

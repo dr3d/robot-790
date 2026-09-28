@@ -18,13 +18,16 @@ from robot_790d.realtime_lifecycle import apply_native_response_lifecycle_patch
 
 @pytest.fixture
 def service(monkeypatch):
-    for name in ("_on_transcription_completed", "_on_audio_input_completed", "_on_token_usage"):
+    for name in ("_on_transcription_completed", "_on_audio_input_completed", "_on_token_usage",
+                 "handle_response_create"):
         monkeypatch.setattr(RealtimeService, name, getattr(RealtimeService, name))
     monkeypatch.setattr(RealtimeService, "_robot_790_native_response_lifecycle_patch", False, raising=False)
     apply_native_response_lifecycle_patch()
     patched = RealtimeService._on_transcription_completed
+    patched_create = RealtimeService.handle_response_create
     apply_native_response_lifecycle_patch()
     assert RealtimeService._on_transcription_completed is patched
+    assert RealtimeService.handle_response_create is patched_create
     service = RealtimeService(text_prompt_queue=Queue())
     conn = service.register()
     yield service, conn

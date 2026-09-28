@@ -36,6 +36,23 @@ def apply_native_response_lifecycle_patch() -> None:
 
     RealtimeService._on_transcription_completed = wrap(RealtimeService._on_transcription_completed)
     RealtimeService._on_audio_input_completed = wrap(RealtimeService._on_audio_input_completed)
+    original_create = RealtimeService.handle_response_create
+
+    @wraps(original_create)
+    def create(self: Any, conn_id: str, event: Any) -> Any:
+        response = event.response
+        if (getattr(response, "robot790_idle_continuation", None) is True
+                and not is_out_of_band(response)):
+            # Native response.input is committed before the LM handler runs.
+            # Carry scheduled input privately so only the actual output is retained.
+            response = response.model_copy(deep=True)
+            response = response.model_copy(update={
+                "input": None, "robot790_idle_input": response.input,
+            })
+            event = event.model_copy(update={"response": response})
+        return original_create(self, conn_id, event)
+
+    RealtimeService.handle_response_create = create
     original_usage = RealtimeService._on_token_usage
 
     @wraps(original_usage)
