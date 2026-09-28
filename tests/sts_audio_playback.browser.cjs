@@ -249,6 +249,7 @@ async function main() {
     persistenceUi.on('pageerror', error => pageErrors.push(error.message));
     await persistenceUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
     results.eyePersistence = await require('./helpers/sts_eye_persistence_browser.cjs').checkEyePersistence(persistenceUi);
+    results.eyeHistory = await require('./helpers/sts_eye_history_browser.cjs').checkEyeHistory(persistenceUi);
     await persistenceUi.close();
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);
@@ -307,7 +308,17 @@ async function main() {
       body: JSON.stringify({ ready: mapReady })
     }));
     await mapUi.goto('http://127.0.0.1:8790/session-map.html', { waitUntil: 'domcontentloaded' });
-    await mapUi.waitForFunction(() => Boolean(selectedSession()));
+    try {
+      await mapUi.waitForFunction(() => Boolean(selectedSession()));
+    } catch (error) {
+      console.error('Session map initial selection:', JSON.stringify({ pageErrors, state: await mapUi.evaluate(() => ({
+        selected: typeof selectedFilename === 'undefined' ? null : selectedFilename,
+        current: typeof currentFilename === 'undefined' ? null : currentFilename,
+        count: typeof sessions === 'undefined' ? null : sessions.length,
+        status: document.body.innerText.slice(0, 700)
+      })) }));
+      throw error;
+    }
     assert.equal(await mapUi.locator('#connectInSts').isDisabled(), true);
     mapReady = true;
     await mapUi.waitForFunction(() => !connectButton.disabled);

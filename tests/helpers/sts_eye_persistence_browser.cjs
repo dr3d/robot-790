@@ -90,11 +90,11 @@ async function checkEyePersistence(page) {
         await set(kind === 'text' ? 'visual' : 'text', { saveToFilesystem: false });
         current = false;
         const expected = { image: sensingEyeContent.imageUrl, text: sensingEyeContent.text,
-          images: sensingEyeImageHistory.length, texts: sensingEyeTextHistory.length };
+          images: sensingEyeHistory.imageCount, texts: sensingEyeHistory.textCount };
         finish();
         const error = await pending;
         replacements.push({ kind, error, retained: sensingEyeContent.imageUrl === expected.image && sensingEyeContent.text === expected.text,
-          noLateHistory: sensingEyeImageHistory.length === expected.images && sensingEyeTextHistory.length === expected.texts });
+          noLateHistory: sensingEyeHistory.imageCount === expected.images && sensingEyeHistory.textCount === expected.texts });
       }
       const clearInbox = clearSensingEyeInboxOnServer, clearFace = clearBrowserFaceCaptureQueue;
       const queue = [];
@@ -102,13 +102,13 @@ async function checkEyePersistence(page) {
       try {
         clearSensingEyeInboxOnServer = () => new Promise(resolve => queue.push(resolve));
         clearBrowserFaceCaptureQueue = async () => null;
-        const images = sensingEyeImageHistory.length, texts = sensingEyeTextHistory.length;
+        const images = sensingEyeHistory.imageCount, texts = sensingEyeHistory.textCount;
         const first = clearSensingEyeState(), second = clearSensingEyeState();
         queue[0]({ latest_seq: seq }); await first;
         const held = sensingEyeContent.clearInFlight;
         queue[1]({ latest_seq: seq }); await second;
         overlappingClear = { held, released: !sensingEyeContent.clearInFlight,
-          historyKept: sensingEyeImageHistory.length === images && sensingEyeTextHistory.length === texts,
+          historyKept: sensingEyeHistory.imageCount === images && sensingEyeHistory.textCount === texts,
           empty: !sensingEyeContent.imageUrl && !sensingEyeContent.text && !visionPreview.hasAttribute('src') };
       } finally {
         clearSensingEyeInboxOnServer = clearInbox; clearBrowserFaceCaptureQueue = clearFace;

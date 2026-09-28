@@ -113,6 +113,13 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 28 next structural step, after checkpoint `df44692`: in-memory eye
+history now has its own `sensing-eye-history.js` owner. Four more page globals
+disappear; IDs, duplicate handling, ordering, existing retention limits and
+catalogue wording are preserved. This is not a change to disk search or Eric's
+memory policy. Automated comparisons, real-page history checks and two live
+recall/Clear/reconnect runs pass. See [STS Lifecycle Ownership](docs/sts-lifecycle-ownership-plan.md).
+
 September 28 structural work: checkpoint `3823d81` records the accepted sensing-eye
 workflow extraction. The next step puts all ten current-eye fields inside
 `sensing-eye-content.js`, removes the writable page-state bridge, and gives

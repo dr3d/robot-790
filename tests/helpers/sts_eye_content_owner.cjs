@@ -11,6 +11,7 @@ const installed = new WeakMap(), aliases = new WeakSet();
 let legacyModule;
 
 function installEyeContent(c, page = fs.readFileSync(`${__dirname}/../../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n')) {
+  require('./sts_eye_history_owner.cjs').installEyeHistory(c, page);
   if (!page.includes('function createSensingEyeContent(')) return;
   const factory = extract(page, 'createSensingEyeContent');
   if (factory.includes('get sensingEyeGeneration()')) {
@@ -50,6 +51,7 @@ function installEyeContent(c, page = fs.readFileSync(`${__dirname}/../../web/sts
 }
 
 function normalizeEyeAccess(source) {
+  source = require('./sts_eye_history_owner.cjs').normalizeHistoryAccess(source);
   source = source.replace(/sensingEyeContent\.markStaged\(\)/g, 'visionImageStaged = true')
     .replace(/sensingEyeContent\.resetStaging\(\)/g, 'visionImageStaged = false')
     .replace(/sensingEyeContent\.restoreImage\(item\);/g, [

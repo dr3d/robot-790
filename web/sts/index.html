@@ -3018,6 +3018,7 @@
   <script src="generated-image-handoff.js"></script>
   <script src="sensing-eye-persistence.js"></script>
   <script src="sensing-eye-content.js"></script>
+  <script src="sensing-eye-history.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -4008,10 +4009,7 @@
     const idleExpansionQueryLimit = 36;
     const maxIdleDrift = 12;
     let chassisBusyUntil = 0;
-    let sensingEyeImageHistory = [];
-    let sensingEyeImageHistorySeq = 0;
-    let sensingEyeTextHistory = [];
-    let sensingEyeTextHistorySeq = 0;
+    const sensingEyeHistory = createSensingEyeHistory();
     const sensingEyeSessionAssetFilenames = new Set();
     const generatedPreview = createGeneratedPreviewOwner();
     const imageRequest = createImageRequestOwner();
@@ -16040,7 +16038,7 @@
 
     function currentSensingEyeHistoryItem() {
       if (!sensingEyeContent.imageUrl) return null;
-      return sensingEyeImageHistory.find((item) => item.dataUrl === sensingEyeContent.imageUrl) || null;
+      return sensingEyeHistory.imageFor(sensingEyeContent.imageUrl);
     }
 
     function safeLoadMemoryFacts() {
@@ -16233,11 +16231,11 @@
             `Text chars: ${sensingEyeContent.text.length}${sensingEyeContent.textSavedFilename ? ` (${sensingEyeContent.textSavedFilename})` : ""}`,
             `Text cap: ${maxSensingTextChars} chars`,
             `Image staged into realtime context: ${sensingEyeContent.imageStaged ? "yes" : "no"}`,
-            `Recent image history: ${sensingEyeImageHistory.length}/${maxSensingEyeImageHistory}`,
+            `Recent image history: ${sensingEyeHistory.imageCount}/${maxSensingEyeImageHistory}`,
             ...sensingEyeImageHistoryList().map((item) => (
               `${item.index}. ${item.name}${item.current ? " (current)" : ""} - ${item.source}`
             )),
-            `Recent text history: ${sensingEyeTextHistory.length}/${maxSensingEyeImageHistory}`,
+            `Recent text history: ${sensingEyeHistory.textCount}/${maxSensingEyeImageHistory}`,
             ...sensingEyeTextHistoryList().map((item) => (
               `${item.index}. ${item.name}${item.current ? " (current)" : ""} - ${item.characters} chars - ${item.source}`
             )),
@@ -17398,57 +17396,23 @@
       }
     }
 
-    function rememberSensingEyeImage({ dataUrl, name, width, height, source = "operator", openUrl = "", savedFilename = "", memoryContext = null } = {}) {
-      const imageDataUrl = String(dataUrl || "");
-      if (!imageDataUrl) return null;
-      const imageName = filenameFromPath(name) || String(name || "").trim() || "sensing-eye image";
-      sensingEyeImageHistory = sensingEyeImageHistory.filter((item) => item.dataUrl !== imageDataUrl);
-      const context = memoryContext && typeof memoryContext === "object" ? memoryContext : sensingEyeMemoryContext();
-      const item = {
-        kind: "image",
-        id: `eye-${++sensingEyeImageHistorySeq}`,
-        createdAt: new Date().toISOString(),
-        name: imageName,
-        width: Number(width) || 0,
-        height: Number(height) || 0,
-        source: String(source || "operator").replace(/_/g, " ").slice(0, 80),
-        openUrl: String(openUrl || ""),
-        savedFilename: String(savedFilename || ""),
-        lastUserText: String(context.last_user_text || "").trim(),
-        nearbyTranscript: String(context.nearby_transcript || "").trim(),
-        dataUrl: imageDataUrl
-      };
-      sensingEyeImageHistory.unshift(item);
-      sensingEyeImageHistory = sensingEyeImageHistory.slice(0, maxSensingEyeImageHistory);
-      if (contextPanel?.open) renderContextMap();
-      return item;
+    function createSensingEyeHistory() {
+      return Robot790SensingEyeHistory.create({
+        limit: maxSensingEyeImageHistory,
+        filenameFromPath: value => filenameFromPath(value),
+        memoryContext: () => sensingEyeMemoryContext(),
+        imageUrl: () => sensingEyeContent.imageUrl,
+        text: () => sensingEyeContent.text,
+        changed: () => { if (contextPanel?.open) renderContextMap(); }
+      });
     }
 
-    function rememberSensingEyeText({ content, name, source = "operator text", openUrl = "", savedFilename = "", memoryContext = null } = {}) {
-      const text = String(content || "");
-      if (!text) return null;
-      const textName = filenameFromPath(name) || String(name || "").trim() || "sensing-eye text";
-      sensingEyeTextHistory = sensingEyeTextHistory.filter((item) => item.content !== text);
-      const context = memoryContext && typeof memoryContext === "object" ? memoryContext : sensingEyeMemoryContext();
-      const item = {
-        kind: "text",
-        id: `eye-text-${++sensingEyeTextHistorySeq}`,
-        createdAt: new Date().toISOString(),
-        name: textName,
-        characters: text.length,
-        width: 0,
-        height: 0,
-        source: String(source || "operator text").replace(/_/g, " ").slice(0, 80),
-        openUrl: String(openUrl || ""),
-        savedFilename: String(savedFilename || ""),
-        lastUserText: String(context.last_user_text || "").trim(),
-        nearbyTranscript: String(context.nearby_transcript || "").trim(),
-        content: text
-      };
-      sensingEyeTextHistory.unshift(item);
-      sensingEyeTextHistory = sensingEyeTextHistory.slice(0, maxSensingEyeImageHistory);
-      if (contextPanel?.open) renderContextMap();
-      return item;
+    function rememberSensingEyeImage(options) {
+      return sensingEyeHistory.rememberImage(options);
+    }
+
+    function rememberSensingEyeText(options) {
+      return sensingEyeHistory.rememberText(options);
     }
 
     function transcriptToken(value, fallback = "") {
@@ -17479,50 +17443,15 @@
     }
 
     function sensingEyeImageHistoryList() {
-      return sensingEyeImageHistory.map((item, index) => ({
-        index: index + 1,
-        id: item.id,
-        kind: item.kind || "image",
-        name: item.name,
-        source: item.source,
-        created_at: item.createdAt,
-        width: item.width,
-        height: item.height,
-        current: Boolean(sensingEyeContent.imageUrl && item.dataUrl === sensingEyeContent.imageUrl),
-        open_url: item.openUrl || "",
-        saved_filename: item.savedFilename || "",
-        last_user_text: item.lastUserText || "",
-        nearby_transcript: item.nearbyTranscript || ""
-      }));
+      return sensingEyeHistory.imageList();
     }
 
     function sensingEyeTextHistoryList() {
-      return sensingEyeTextHistory.map((item, index) => ({
-        index: index + 1,
-        id: item.id,
-        kind: "text",
-        name: item.name,
-        source: item.source,
-        created_at: item.createdAt,
-        characters: item.characters,
-        current: Boolean(sensingEyeContent.text && item.content === sensingEyeContent.text),
-        open_url: item.openUrl || "",
-        saved_filename: item.savedFilename || "",
-        last_user_text: item.lastUserText || "",
-        nearby_transcript: item.nearbyTranscript || ""
-      }));
+      return sensingEyeHistory.textList();
     }
 
     function sensingEyeImageHistoryContextLine() {
-      const notes = [
-        ...sensingEyeImageHistoryList(),
-        ...sensingEyeTextHistoryList()
-      ].sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
-      if (!notes.length) return "- Recent open sensing-eye notes this browser session: none; saved eye notes may still be listable by tool.";
-      const current = notes.find(item => item.current);
-      return `- Retained sensing-eye notes this browser session: ${notes.length}. Current: ${current
-        ? `${current.kind || "image"} ${current.name}${current.saved_filename ? ` [${current.saved_filename}]` : ""}`
-        : "none"}. Earlier identities remain in tool receipts and the sensing-eye catalogue.`;
+      return sensingEyeHistory.contextLine();
     }
 
     async function fetchSensingEyeFilePage({ limit = 5, offset = 0, query = "", filename = "", hints = [] } = {}) {
@@ -17771,7 +17700,7 @@
       if (!listedItem) throw new Error("No unambiguous sensing-eye selection. Find the file by query and use its exact id; the current eye has not been changed.");
 
       let item = listedItem.location === "session" && listedItem.kind === "text"
-        ? sensingEyeTextHistory.find((candidate) => candidate.id === (listedItem.history_id || listedItem.id))
+        ? sensingEyeHistory.textById(listedItem.history_id || listedItem.id)
         : null;
       if (item?.kind === "text") {
         const textItem = await setSensingTextContent(item.content, item.name || "sensing-eye text", {
@@ -17805,7 +17734,7 @@
       }
 
       item = listedItem.location === "session"
-        ? sensingEyeImageHistory.find((candidate) => candidate.id === (listedItem.history_id || listedItem.id))
+        ? sensingEyeHistory.imageById(listedItem.history_id || listedItem.id)
         : null;
       if (!item && listedItem.location === "filesystem") {
         const imageUrl = String(listedItem.open_url || "");
@@ -17873,7 +17802,7 @@
       visionHint.textContent = `${sensingEyeContent.imageName}${item.width && item.height ? ` (${item.width}x${item.height})` : ""} - recalled`;
       updateVisionButtons();
       log(events, `sensing-eye image recalled: ${sensingEyeContent.imageName}`);
-      const historyIndex = Math.max(1, sensingEyeImageHistory.indexOf(item) + 1);
+      const historyIndex = Math.max(1, sensingEyeHistory.imageIndex(item) + 1);
       if (item.savedFilename) rememberSensingEyeSessionAsset(item.savedFilename);
       recordUiEvent("sensing-eye image recalled", sensingEyeContent.imageName, {
         id: item.id,
@@ -18508,9 +18437,9 @@
       if (name === "generate_image") return args.title || args.prompt;
       if (name === "move_generated_image_to_sensing_eye") return generatedPreview.name || args.reason || "generated image";
       if (name === "paint_face_from_sensing_eye") return args.clear ? "clear" : (sensingEyeContent.imageName || args.target || "sensing eye");
-      if (name === "list_sensing_eye_notes") return `${sensingEyeImageHistory.length + sensingEyeTextHistory.length} eye notes`;
+      if (name === "list_sensing_eye_notes") return `${sensingEyeHistory.imageCount + sensingEyeHistory.textCount} eye notes`;
       if (name === "recall_sensing_eye_note") return args.query || args.note_id || args.image_id || `#${args.index || 1}`;
-      if (name === "list_sensing_eye_images") return `${sensingEyeImageHistory.length + sensingEyeTextHistory.length} eye notes`;
+      if (name === "list_sensing_eye_images") return `${sensingEyeHistory.imageCount + sensingEyeHistory.textCount} eye notes`;
       if (name === "select_sensing_eye_image") return args.query || args.image_id || `#${args.index || 1}`;
       if (name === "clear_sensing_eye") return args.reason || "clear current eye";
       if (name === "cast_media") return args.query || args.url || args.action;

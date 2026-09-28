@@ -4,6 +4,45 @@ Reviewed September 28, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 28 checkpoint `df44692` records the accepted private current-eye state
+refactor and both live PMs. The next step extracts in-memory image/text history
+into `sensing-eye-history.js`: two arrays and their two ID counters leave the
+page. Catalogue rows and the compact history context line move with them;
+returned item identity, metadata, ordering, duplicate replacement and existing
+per-kind retention limits are preserved. Disk catalogue/search, recall selection,
+saved-session asset bookkeeping, current-eye state and staging stay on their
+existing paths. No prompt, persona, idle or automatic-staging policy changes.
+
+Twenty-two characterization tests passed on checkpoint code before editing and
+match the new owner; two additional tests cover the intact private module and
+source equivalence. All 1,137 JavaScript and 1,101 Python tests pass (one existing
+Python dependency warning). Real-page history checks exercise duplicate refresh,
+independent image/text eviction, Clear/reconnect retention, exact retained image
+and text recall, and filesystem retrieval after in-memory eviction. Test writes
+and device calls are intercepted; no model or paid image generation is involved.
+The full isolated Edge suite passes, including desktop/mobile image pixels and
+layout. Two earlier full attempts passed the eye-history checks but timed out
+at session-map initial selection; a standalone map check and third full attempt
+passed. No application change addressed those timeouts; their cause is not
+established. Failure-state diagnostics now report map selection/page errors if
+it recurs. This remains a test watch item, not an eye-history repair.
+
+HTML loses 71 lines / 3,903 LF-normalized bytes. The new module is 131 lines /
+5,372 bytes, making total production 1,469 bytes larger while reducing shared
+page state. Live acceptance September 28, 16:20-16:24 passes: archive recalls,
+Clear, interrupted speech and same-page reconnect. Double Run keeps its eye-1
+identity across both runs; the new screenshot advances to eye-3. All eleven
+tools succeed; both pipelines release within the Disconnect second. Seven/eight
+pin hashes and two eye assets per run verify; drafts match disk and preparation
+retains 21/21 and 14/14 entries. No backend warnings/errors or TTS capacity stops.
+Priya recall works without a file call this time; no cognition fix is claimed.
+Scott reports both runs looked good. Text/eviction/race cases remain automated
+coverage, not live claims. PMs: `logs/runs/20260928-1623-eye-history-acceptance/`
+and `logs/runs/20260928-1624-eye-history-reconnect/`.
+Evidence: `logs/maintenance/lifecycle-review/eye-history-*`.
+
+### Previous State Checkpoint
+
 September 28, after accepted checkpoint `3823d81`: the next current-eye step
 removes ten mutable page globals and their writable bridge. The content module
 now owns those fields privately, with getter-only readers and explicit retained
