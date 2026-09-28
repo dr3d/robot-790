@@ -4,7 +4,7 @@ const cp = require('node:child_process');
 const vm = require('node:vm');
 const { test } = require('node:test');
 const { extract } = require('./helpers/sts_completion_harness.cjs');
-const { installEyeContent } = require('./helpers/sts_eye_content_owner.cjs');
+const { installEyeContent, normalizeEyeAccess } = require('./helpers/sts_eye_content_owner.cjs');
 const baseline = '8786837';
 const original = cp.execFileSync('git', ['show', `${baseline}:web/sts/index.html`], { encoding: 'utf8', maxBuffer: 4e6 }).replace(/\r\n/g, '\n');
 const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
@@ -189,6 +189,6 @@ test('eye extraction leaves retrieval, camera lifetime, staging and model behavi
     'stageVisionImage', 'clearVisionImage', 'clearSensingEye', 'startVisionCamera', 'stopVisionCamera',
     'pollSensingEyeInbox', 'applySensingEyeInboxItem', 'rememberSensingEyeImage', 'rememberSensingEyeText',
     'buildSessionInstructions', 'triggerIdlePonder', 'handleFunctionCall', 'generateImage', 'moveGeneratedImageToSensingEye']) {
-    assert.equal(extract(page, name), extract(original, name), name);
+    assert.equal(normalizeEyeAccess(extract(page, name)), extract(original, name), name);
   }
 });

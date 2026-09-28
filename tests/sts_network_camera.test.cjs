@@ -58,6 +58,7 @@ function captureContext(snapshot=async()=>({width:240,height:320})) {
       c.writes++; c.options=options; return {savedFilename:name,openUrl:'/saved.jpg'};
     }});
   require('./helpers/sts_connection_harness.cjs').installRealtimeConnection(c);
+  require('./helpers/sts_eye_content_owner.cjs').installEyeContent(c, html);
   vm.runInContext(source('captureEsp32Camera'),c);
   return {c,stop:()=>generation++,elements};
 }

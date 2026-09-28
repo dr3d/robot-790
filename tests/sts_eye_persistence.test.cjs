@@ -177,7 +177,7 @@ test('eye save extraction leaves staging, lookup, context and decisions byte-for
     'rememberSensingEyeSessionAsset', 'pollSensingEyeInbox', 'applySensingEyeInboxItem',
     'buildSessionInstructions', 'handleFunctionCall', 'triggerIdlePonder', 'generateImage',
     'createGeneratedImageHandoff', 'moveGeneratedImageToSensingEye']) {
-    assert.equal(extract(page, name), extract(original, name), name);
+    assert.equal(require('./helpers/sts_eye_content_owner.cjs').normalizeEyeAccess(extract(page, name)), extract(original, name), name);
   }
   for (const name of ['generated-preview.js', 'image-request.js', 'generated-image-handoff.js', 'idle-art.js']) {
     assert.equal(read(name), before(name), name);

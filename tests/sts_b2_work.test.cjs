@@ -137,6 +137,6 @@ test('page has one busy owner and unchanged scheduling policy functions', () => 
       acceptBrain2Headline: '9ecf4557f5823de4578294e8a26fb170d20eb68036e80f23e9dd828ebc705a76',
       brain2EvidenceSnapshot: '17d73091ed3db8502bc17c685fb403fabdaff813ba568e3d07db8e9b00687bbc',
     }[name] || expected;
-    assert.equal(createHash('sha256').update(source.slice(start, end + 6)).digest('hex'), currentExpected, name);
+    assert.equal(createHash('sha256').update(require('./helpers/sts_eye_content_owner.cjs').normalizeEyeAccess(source.slice(start, end + 6))).digest('hex'), currentExpected, name);
   }
 });

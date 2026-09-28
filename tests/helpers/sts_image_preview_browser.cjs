@@ -7,7 +7,7 @@ async function checkImagePreview(page, artifacts) {
     if (typeof Robot790ImageRequest?.create !== 'function' || typeof imageRequest?.generate !== 'function') {
       throw Error('Image request owner was not loaded by the page');
     }
-    const originalFetch = window.fetch, eye = visionImageUrl;
+    const originalFetch = window.fetch, eye = sensingEyeContent.imageUrl;
     const canvas = document.createElement('canvas');
     canvas.width = 300; canvas.height = 192;
     const paint = canvas.getContext('2d');
@@ -36,7 +36,7 @@ async function checkImagePreview(page, artifacts) {
       paint.drawImage(generatedImagePreview, 0, 0);
       const pixel = Array.from(paint.getImageData(100, 80, 1, 1).data);
       return { calls, displayed: receipt.displayed, retained: receipt.retained, staged: receipt.staged,
-        eyeUnchanged: visionImageUrl === eye, state: generatedPreview.state,
+        eyeUnchanged: sensingEyeContent.imageUrl === eye, state: generatedPreview.state,
         imageWidth: generatedImagePreview.naturalWidth, pixel,
         controlsReady: !generatedImageOpenButton.disabled && !generatedImageToEyeButton.disabled && !generatedImageClearButton.disabled,
         headerReady: topImageStatus.dataset.state === 'ready' && !topImagePreview.hidden,
@@ -63,7 +63,7 @@ async function checkImagePreview(page, artifacts) {
     await panel.screenshot({ path: path.join(artifacts, `image-preview-${name}.png`) });
   }
   const races = await page.evaluate(async () => {
-    const originalFetch = window.fetch, eye = visionImageUrl, outcomes = [];
+    const originalFetch = window.fetch, eye = sensingEyeContent.imageUrl, outcomes = [];
     try {
       for (const action of ['clear', 'replace', 'disconnect']) {
         for (const fail of [false, true]) {
@@ -83,7 +83,7 @@ async function checkImagePreview(page, artifacts) {
           let receipt, error;
           try { receipt = await pending; } catch (e) { error = e.message; }
           outcomes.push({action,fail,calls,state:generatedPreview.state,name:generatedPreview.name,
-            displayed:receipt?.displayed ?? null,error:error || null,eyeUnchanged:visionImageUrl===eye,
+            displayed:receipt?.displayed ?? null,error:error || null,eyeUnchanged:sensingEyeContent.imageUrl===eye,
             disabled:generatedImageOpenButton.disabled,header:topImageStatus.dataset.state});
         }
       }

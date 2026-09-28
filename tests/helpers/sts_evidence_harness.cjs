@@ -46,6 +46,7 @@ function context(input) {
     ...(input.art ? { idleArt: { history: [1], snapshot: count => { assert.equal(count, 6); return input.art; } } } : {})
   });
   const start = page.indexOf('    function brain2EvidenceSnapshot(');
+  require('./sts_eye_content_owner.cjs').installEyeContent(c, page);
   const end = page.indexOf('\n    }\n', start);
   assert.ok(start >= 0 && end > start);
   vm.runInContext(page.slice(start, end + 6), c);

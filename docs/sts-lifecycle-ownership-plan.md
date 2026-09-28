@@ -22,10 +22,76 @@ The [engineering status](engineering-status.md) records automated and live
 acceptance, including the unresolved repeated-language investigation. No new
 persona, idle policy, or eye-staging behavior is part of that checkpoint.
 
-Current step: sensing-eye image/text loading, replacement and Clear workflow
-extracted, automatically checked and accepted for the exercised live paths.
-Keep retrieval, saved history, camera lifetimes and behavioral changes outside
-this step. Checkpoint the extraction and acceptance before the next ownership boundary.
+Checkpoint `3823d81` records the accepted sensing-eye content workflow extraction.
+Current step: move its ten current-content fields into the owner and remove the
+writable page-state bridge. Automated checks and the two-run mechanical
+acceptance, including same-page reconnect, pass. Ready to checkpoint; the
+conversational recall misses recorded below remain separate.
+Retrieval decisions, saved history, camera lifetimes and behavioral changes stay
+outside this step.
+
+### Implemented Step: Private Current-Eye State
+
+September 28, baseline `3823d81`: `sensing-eye-content.js` now owns the current
+image/text content, names/URLs, staging flag, generation and Clear-in-flight flag.
+The ten page globals and their writable adapter disappear. All page readers use
+getter-only properties; retained-image recall, successful staging and session
+cleanup use `restoreImage`, `markStaged` and `resetStaging`. The owner initializes
+without side effects. Resetting staging preserves the loaded content.
+
+No prompt, tool policy, idle cadence, camera lifetime, catalogue/history behavior
+or automatic staging is changed. The actual staging send still precedes the
+staged flag; a failed send cannot mark success. Existing setter/Clear bodies are
+unchanged, including guarded versus unguarded replacement ordering.
+
+Twelve characterization cases passed before edits and now compare full state and
+effect traces with `3823d81`. Four additional tests exercise the shipped private
+owner without fixture instrumentation and compare every existing page function
+outside the changed eye factory after only the known access substitutions.
+All 1,113 JavaScript and 1,101 Python tests pass, with one existing Python
+dependency deprecation warning. Older VM fixtures retain their race
+inputs through a test-only state hook; the shipped module has no such hook.
+The real-page Edge suite also verifies removed globals and getter-only access,
+delayed saves, Clear/startup-clear/replacement races, staging and interrupted
+handoffs. Desktop/mobile screenshots and decoded pixels pass. Test writes and
+device calls are intercepted; no live model or paid image call is made.
+
+Evidence: `logs/maintenance/lifecycle-review/eye-state-{before,node-tests,python,browser}.txt`
+and `logs/maintenance/audio-owner-browser/results.json`.
+Size, LF-normalized against `3823d81`: HTML 22,069 -> 22,040 lines and
+998,504 -> 997,861 bytes; module 223 -> 256 lines and 9,737 -> 11,098 bytes.
+Total production grows 718 bytes. This is removal of shared mutable state, not
+source compression or full history/retrieval extraction.
+
+Human acceptance: refresh while disconnected, Connect to resume, recall an old
+picture, replace the eye with text and then an image, and Clear it. Interrupt
+speech and Disconnect; reconnect without refreshing and check continuity plus
+one more image recall. No backend restart is needed. Prior live PMs do not
+constitute acceptance of this new state-owner step.
+
+Live acceptance September 28, 15:04-15:15: three retained image recalls, one
+generated-image transfer, eye Clear, dropped text and five successive screenshot
+replacements worked. Eleven playback barge-ins and save/close completed; all
+five pin and ten eye-file hashes verify, draft equals saved note, preparation
+retains 88/88 entries. Context 30.73% -> 47.84%. One private-output suppression
+warning was contained; no eye-tool error or TTS capacity stop. The separate
+browser-open receipt and inaccurate Chamber Seven recall remain outside this
+refactor. Scott reports the run felt okay. Accept the exercised paths; the saved
+child has not yet been resumed without refreshing, and late-save races remain
+automated coverage. PM: `logs/runs/20260928-1515-eye-state-acceptance/postmortem.md`.
+
+Follow-up September 28, 15:18-15:21 closes the mechanical live pair: same-page
+Connect cleared the current eye but preserved history, restored prior `eye-9`
+and then recalled Double Run from disk as `eye-10`. Mid-speech Disconnect
+canceled TTS, saved and released the pipeline normally. Six pin/two asset hashes
+verify, draft equals saved note, preparation retains 27/27 entries. No backend
+warning/error, TTS capacity stop or tool failure. Initial screenshot recall
+failed until a catalogue lookup; Priya recall still failed despite the loaded
+source records. Do not score that as perfect conversational continuity or use
+Eric's empty-eye explanation as a verified cause. No raw on-wire input capture
+settles attention versus delivery. The eye-owner refactor is ready to checkpoint;
+memory/search findings stay separate. PM:
+`logs/runs/20260928-1521-eye-state-reconnect/postmortem.md`.
 
 ### Implemented Step: Current-Eye Content Workflows
 
@@ -956,7 +1022,8 @@ current responsibilities, not a claim that they already form isolated modules.
 | Optional B2 monitor | `brain2-speech.js` owns browser utterances and echo tail; `brain2-surface.js` owns deferred mouth/voice delivery and its timer | Old timers or device replies must not publish into a replacement item/session. Already-submitted device commands cannot be unsent. Private advice remains separate. |
 | Turn completion | `response-completion.js` owns pending state, idle provenance and timer; thin page adapters retain activity/idle policy | Idle/reengagement can start too early if generation completion is mistaken for speech completion. |
 | Image requests and presentation | `image-request.js` owns generation; `generated-preview.js` owns preview state/revision; `generated-image-handoff.js` owns explicit transfer; page adapters retain eye staging and DOM/recording effects | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. Request handling must reuse the preview/idle owners, not introduce another busy flag. |
-| Eye-note save requests | `sensing-eye-persistence.js` owns image/text save transport and receipt routing; page retains generation, inbox cursors and session asset set | A late save must be consumed by the inbox without attaching to a newer session. Persistence is not eye staging. |
+| Current eye content | `sensing-eye-content.js` owns current image/text, staging, generation and Clear-in-flight state; page readers have getter-only access | Clear invalidates pending loads; staging reset preserves content. Recall, successful staging and reset mutate only through owner methods. History/catalogue remains separate. |
+| Eye-note save requests | `sensing-eye-persistence.js` owns image/text save transport and receipt routing; current-eye owner supplies generation; page retains inbox cursors and session asset set | A late save must be consumed by the inbox without attaching to a newer session. Persistence is not eye staging. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
 | Idle/B2 opportunities | `brain2BlockedReason`, idle/reengagement scheduling, B2 advisory and speech queues | Private advice and public speech have different readiness conditions. Fixing ownership must not suppress useful parallel thought or proactive conversation. |
 

@@ -5,9 +5,30 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  function createState() {
+    return {
+      sensingEyeGeneration: 0, sensingEyeInboxClearInFlight: false,
+      visionImageUrl: "", visionImageName: "", visionImageStaged: false, visionImageOpenUrl: "",
+      sensingTextContent: "", sensingTextName: "", sensingTextOpenUrl: "", sensingTextSavedFilename: ""
+    };
+  }
+
   function create(a) {
-    // Live accessors keep the page and its existing readers on one state.
-    const s = a.state;
+    const s = createState();
+
+    function restoreImage(item) {
+      s.sensingTextContent = "";
+      s.sensingTextName = "";
+      s.sensingTextOpenUrl = "";
+      s.sensingTextSavedFilename = "";
+      s.visionImageUrl = item.dataUrl;
+      s.visionImageName = item.name || "sensing-eye image";
+      s.visionImageStaged = false;
+      s.visionImageOpenUrl = item.openUrl || "";
+    }
+
+    function markStaged() { s.visionImageStaged = true; }
+    function resetStaging() { s.visionImageStaged = false; }
 
     function requireCurrent(generation) {
       if (generation !== s.sensingEyeGeneration) {
@@ -216,7 +237,19 @@
       return previous;
     }
 
-    return { requireCurrent, setImage, setText, clear };
+    return {
+      requireCurrent, setImage, setText, clear, restoreImage, markStaged, resetStaging,
+      get generation() { return s.sensingEyeGeneration; },
+      get clearInFlight() { return s.sensingEyeInboxClearInFlight; },
+      get imageUrl() { return s.visionImageUrl; },
+      get imageName() { return s.visionImageName; },
+      get imageStaged() { return s.visionImageStaged; },
+      get imageOpenUrl() { return s.visionImageOpenUrl; },
+      get text() { return s.sensingTextContent; },
+      get textName() { return s.sensingTextName; },
+      get textOpenUrl() { return s.sensingTextOpenUrl; },
+      get textSavedFilename() { return s.sensingTextSavedFilename; }
+    };
   }
 
   return { create };

@@ -22,7 +22,7 @@ test('surrounding eye, idle, prompt and tool policies remain byte-for-byte uncha
   for(const name of ['createGeneratedPreviewOwner','stageVisionImage',
     'idleBlockedReason','idleEnabledToolList','enabledToolList',
     'buildSessionInstructions','handleFunctionCall']) {
-    assert.equal(extract(page,name),extract(original,name),name);
+    assert.equal(require('./helpers/sts_eye_content_owner.cjs').normalizeEyeAccess(extract(page,name)),extract(original,name),name);
   }
   for(const name of ['generated-preview.js','idle-art.js']) {
     const before=cp.execFileSync('git',['show',`${baseline.baseline}:web/sts/${name}`],{encoding:'utf8'}).replace(/\r\n/g,'\n');

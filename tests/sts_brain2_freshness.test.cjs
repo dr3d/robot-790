@@ -24,6 +24,7 @@ function load(names, globals = {}) {
   globals.brain2SetupCards ??= () => [];
   globals.sessionMapMoveBusy ??= false;
   const context = vm.createContext(globals);
+  require('./helpers/sts_eye_content_owner.cjs').installEyeContent(context, page);
   require('./helpers/sts_continuation_harness.cjs').installToolContinuation(context);
   require('./helpers/sts_b2_work_owner.cjs').installBrain2Work(context);
   require('./helpers/sts_advisory_owner.cjs').installBrain2Advisories(context);

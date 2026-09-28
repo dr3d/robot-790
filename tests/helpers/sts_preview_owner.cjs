@@ -3,6 +3,7 @@ const vm = require('node:vm');
 const { extract } = require('./sts_completion_harness.cjs');
 
 function installGeneratedPreview(c, page = fs.readFileSync(`${__dirname}/../../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n')) {
+  require('./sts_eye_content_owner.cjs').installEyeContent(c, page);
   if (c.generatedPreview || !page.includes('function createGeneratedPreviewOwner(')) return;
   const names = {generatedImageUrl:'url',generatedImageName:'name',generatedImageStatusState:'state',
     generatedImageStatusLabel:'label',generatedImageRequestGeneration:'revision'};

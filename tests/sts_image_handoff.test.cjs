@@ -18,12 +18,12 @@ test('eye staging, retrieval, idle delivery and prompts stay unchanged', () => {
   // Current-eye loading/clear now has ordered-effect comparisons in sts_eye_content.test.cjs.
   for (const name of ['stageVisionImage', 'selectSensingEyeImage', 'buildSessionInstructions',
     'handleFunctionCall', 'triggerIdlePonder', 'generateImage']) {
-    assert.equal(extract(page, name), extract(original, name), name);
+    assert.equal(require('./helpers/sts_eye_content_owner.cjs').normalizeEyeAccess(extract(page, name)), extract(original, name), name);
   }
   const delivery = source => source.slice(source.indexOf('      deliver: async (result, sameSession) => {'),
     source.indexOf('\n      receipt:', source.indexOf('      deliver: async (result, sameSession) => {')));
   assert.ok(delivery(original).length > 100);
-  assert.equal(delivery(page), delivery(original));
+  assert.equal(require('./helpers/sts_eye_content_owner.cjs').normalizeEyeAccess(delivery(page)), delivery(original));
   for (const name of ['generated-preview.js', 'image-request.js', 'idle-art.js']) {
     const before = cp.execFileSync('git', ['show', `${baseline.baseline}:web/sts/${name}`], { encoding: 'utf8' }).replace(/\r\n/g, '\n');
     assert.equal(fs.readFileSync(`${__dirname}/../web/sts/${name}`, 'utf8').replace(/\r\n/g, '\n'), before, name);

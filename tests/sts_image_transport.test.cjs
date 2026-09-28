@@ -16,6 +16,7 @@ test('image staging carries marked provenance, not a repeated instruction script
     updateSessionTools() {}, scheduleIdlePonder() {},
   });
   const start = page.indexOf('    function stageVisionImage()');
+  require('./helpers/sts_eye_content_owner.cjs').installEyeContent(c, page);
   vm.runInContext(page.slice(start, page.indexOf('\n    }\n', start) + 6), c);
   c.stageVisionImage();
   const first = JSON.stringify(sent[0]);

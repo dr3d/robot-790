@@ -5,6 +5,17 @@ async function checkEyePersistence(page) {
   const result = await page.evaluate(async () => {
     if (typeof Robot790SensingEyePersistence?.create !== 'function') throw Error('Eye persistence module missing');
     if (typeof Robot790SensingEyeContent?.create !== 'function') throw Error('Eye content module missing');
+    const ownership = {
+      legacyGlobalsGone: [typeof sensingEyeGeneration, typeof sensingEyeInboxClearInFlight,
+        typeof visionImageUrl, typeof visionImageName, typeof visionImageStaged, typeof visionImageOpenUrl,
+        typeof sensingTextContent, typeof sensingTextName, typeof sensingTextOpenUrl, typeof sensingTextSavedFilename]
+        .every(value => value === 'undefined'),
+      readOnly: ['generation', 'clearInFlight', 'imageUrl', 'imageName', 'imageStaged', 'imageOpenUrl',
+        'text', 'textName', 'textOpenUrl', 'textSavedFilename'].every(key => {
+          const descriptor = Object.getOwnPropertyDescriptor(sensingEyeContent, key);
+          return typeof descriptor.get === 'function' && !descriptor.set && !Reflect.set(sensingEyeContent, key, 'outside write');
+        }),
+    };
     const original = { fetch: window.fetch, postFace, scheduleIdlePonder };
     const writes = [], races = [], failures = [], replacements = [];
     let seq = 20000, hold = '', release, fail = false, savedName = '';
@@ -42,15 +53,15 @@ async function checkEyePersistence(page) {
     try {
       await clearSensingEyeState();
       const text = await set('text');
-      const textResult = { content: sensingTextContent, saved: text.savedFilename,
-        attached: sensingEyeSessionAssetFilenames.has(text.savedFilename), imageCleared: !visionImageUrl,
+      const textResult = { content: sensingEyeContent.text, saved: text.savedFilename,
+        attached: sensingEyeSessionAssetFilenames.has(text.savedFilename), imageCleared: !sensingEyeContent.imageUrl,
         path: writes.at(-1).path, noImagePayload: !Object.hasOwn(writes.at(-1).body, 'client_eye_generation') };
       const image = await set('visual');
       await visionPreview.decode();
       const imageResult = { saved: image.savedFilename, attached: sensingEyeSessionAssetFilenames.has(image.savedFilename),
-        width: visionPreview.naturalWidth, textCleared: !sensingTextContent,
+        width: visionPreview.naturalWidth, textCleared: !sensingEyeContent.text,
         client: writes.at(-1).body.client_id === sensingEyeClientId,
-        generation: writes.at(-1).body.client_eye_generation === sensingEyeGeneration };
+        generation: writes.at(-1).body.client_eye_generation === sensingEyeContent.generation };
       for (const kind of ['text', 'visual']) {
         for (const phase of ['fetch', 'json']) {
           for (const source of ['ui', 'session_connect']) {
@@ -63,7 +74,7 @@ async function checkEyePersistence(page) {
             finish();
             const outcome = await pending;
             races.push({ kind, phase, source, error: outcome.error,
-              empty: !visionImageUrl && !sensingTextContent,
+              empty: !sensingEyeContent.imageUrl && !sensingEyeContent.text,
               notAttached: !sensingEyeSessionAssetFilenames.has(savedName),
               echoHandled: kind === 'text' || handledSensingEyeInboxSeqs.has(String(savedName.split('-')[0])) });
           }
@@ -78,11 +89,11 @@ async function checkEyePersistence(page) {
         const finish = release; hold = '';
         await set(kind === 'text' ? 'visual' : 'text', { saveToFilesystem: false });
         current = false;
-        const expected = { image: visionImageUrl, text: sensingTextContent,
+        const expected = { image: sensingEyeContent.imageUrl, text: sensingEyeContent.text,
           images: sensingEyeImageHistory.length, texts: sensingEyeTextHistory.length };
         finish();
         const error = await pending;
-        replacements.push({ kind, error, retained: visionImageUrl === expected.image && sensingTextContent === expected.text,
+        replacements.push({ kind, error, retained: sensingEyeContent.imageUrl === expected.image && sensingEyeContent.text === expected.text,
           noLateHistory: sensingEyeImageHistory.length === expected.images && sensingEyeTextHistory.length === expected.texts });
       }
       const clearInbox = clearSensingEyeInboxOnServer, clearFace = clearBrowserFaceCaptureQueue;
@@ -94,11 +105,11 @@ async function checkEyePersistence(page) {
         const images = sensingEyeImageHistory.length, texts = sensingEyeTextHistory.length;
         const first = clearSensingEyeState(), second = clearSensingEyeState();
         queue[0]({ latest_seq: seq }); await first;
-        const held = sensingEyeInboxClearInFlight;
+        const held = sensingEyeContent.clearInFlight;
         queue[1]({ latest_seq: seq }); await second;
-        overlappingClear = { held, released: !sensingEyeInboxClearInFlight,
+        overlappingClear = { held, released: !sensingEyeContent.clearInFlight,
           historyKept: sensingEyeImageHistory.length === images && sensingEyeTextHistory.length === texts,
-          empty: !visionImageUrl && !sensingTextContent && !visionPreview.hasAttribute('src') };
+          empty: !sensingEyeContent.imageUrl && !sensingEyeContent.text && !visionPreview.hasAttribute('src') };
       } finally {
         clearSensingEyeInboxOnServer = clearInbox; clearBrowserFaceCaptureQueue = clearFace;
       }
@@ -108,14 +119,15 @@ async function checkEyePersistence(page) {
         const item = await set(kind);
         failures.push({ kind, writes: writes.length - count, unsaved: !item.savedFilename,
           notAttached: !sensingEyeSessionAssetFilenames.has(savedName),
-          visible: kind === 'text' ? sensingTextContent === 'First line\nSecond line' : !!visionImageUrl });
+          visible: kind === 'text' ? sensingEyeContent.text === 'First line\nSecond line' : !!sensingEyeContent.imageUrl });
       }
-      return { textResult, imageResult, races, replacements, overlappingClear, failures, connected: realtimeConnected() };
+      return { ownership, textResult, imageResult, races, replacements, overlappingClear, failures, connected: realtimeConnected() };
     } finally {
       window.fetch = original.fetch; postFace = original.postFace; scheduleIdlePonder = original.scheduleIdlePonder;
     }
   });
   assert.equal(result.connected, false);
+  assert.deepEqual(result.ownership, { legacyGlobalsGone: true, readOnly: true });
   assert.equal(result.textResult.content, 'First line\nSecond line');
   assert.match(result.textResult.saved, /fixture\.txt$/);
   assert.equal(result.textResult.attached, true);

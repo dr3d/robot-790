@@ -65,10 +65,10 @@ async function checkImageHandoff(page, artifacts) {
       const recalled = await moveGeneratedImageToSensingEye({ filename: 'older.png', reason: 'Offline recall' });
       const exactRecall = { receipt: recalled, previewName: generatedPreview.name,
         hintUnchanged: generatedImageHint.textContent === hint, imageMessages: imageItems().length };
-      const priorEye = visionImageUrl;
+      const priorEye = sensingEyeContent.imageUrl;
       let missing;
       try { await moveGeneratedImageToSensingEye({ filename: 'missing.png' }); } catch (error) { missing = error.message; }
-      const missingResult = { error: missing, eyeUnchanged: visionImageUrl === priorEye };
+      const missingResult = { error: missing, eyeUnchanged: sensingEyeContent.imageUrl === priorEye };
 
       for (const phase of ['fetch', 'save']) {
         for (const action of ['clear', 'preview', 'eye', 'turn', 'reconnect']) {
@@ -93,11 +93,11 @@ async function checkImageHandoff(page, artifacts) {
             await clearSensingEyeState({ source: 'session_connect' });
             adopt();
           }
-          const eyeBefore = visionImageUrl, nameBefore = visionImageName, stagedBefore = imageItems().length;
+          const eyeBefore = sensingEyeContent.imageUrl, nameBefore = sensingEyeContent.imageName, stagedBefore = imageItems().length;
           finish();
           const outcome = await pending;
           races.push({ phase, action, error: outcome.error,
-            eyeUnchanged: visionImageUrl === eyeBefore && visionImageName === nameBefore,
+            eyeUnchanged: sensingEyeContent.imageUrl === eyeBefore && sensingEyeContent.imageName === nameBefore,
             noLateStage: imageItems().length === stagedBefore });
         }
       }

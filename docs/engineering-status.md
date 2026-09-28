@@ -4,6 +4,51 @@ Reviewed September 28, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 28, after accepted checkpoint `3823d81`: the next current-eye step
+removes ten mutable page globals and their writable bridge. The content module
+now owns those fields privately, with getter-only readers and explicit retained
+recall, staged-success and staging-reset methods. Outside the changed eye factory,
+prior page functions match the checkpoint after the known access substitutions; setter/Clear bodies remain
+unchanged. No persona, prompt, staging policy, camera or idle behavior changes.
+Saved image/text history and catalogue ownership are not moved in this step.
+
+Twelve before/after characterization cases plus four private-owner/scope tests
+cover this transition. All 1,113 JavaScript and 1,101 Python tests pass, with one
+existing dependency deprecation warning. The isolated real-page Edge suite passes delayed saves,
+Clear and replacement races, handoffs, staging and reconnect cleanup; it also
+confirms the old globals are absent and the new fields reject assignment.
+Desktop/mobile screenshots and image pixels pass. Tests intercept disk/device
+writes and do not call a live model or paid image service. Evidence:
+`logs/maintenance/lifecycle-review/eye-state-{before,node-tests,python,browser}.txt`.
+HTML loses another 29 lines / 643 LF-normalized bytes; the owner adds 1,361 bytes,
+so total production grows 718 bytes. The gain is controlled state ownership.
+
+Live acceptance September 28, 15:04-15:15: three archive recalls, one generated
+transfer, Clear, dropped text and five screenshot replacements passed. Eleven
+playback barge-ins and save/close worked; five pins and ten eye assets verify,
+saved draft matches disk and preparation retains 88/88 entries. Context rose
+30.73% -> 47.84%; 44 TTS batches reached EOS, two canceled, no capacity stop.
+One private/thinking-output warning was caught by the existing filter; no such
+block appears in saved public dialogue. No eye-tool errors or stuck cleanup.
+Scott reports the run felt okay. The separate browser-open issue and an incorrect
+claim of no earlier Chamber Seven record remain; they do not establish an eye
+ownership regression. PM:
+`logs/runs/20260928-1515-eye-state-acceptance/postmortem.md`.
+
+Follow-up 15:18-15:21 completes mechanical acceptance: same-page reconnect,
+retained `eye-9` restoration, Double Run filesystem recall and mid-speech
+Disconnect passed. Six pins and two assets verify; saved draft matches and
+preparation retains 27/27 entries. No backend warnings/errors or TTS capacity
+stops. Ready to checkpoint the owner refactor. Conversational recall was mixed:
+the screenshot question initially failed until catalogue lookup, and Priya
+recall failed despite her presence in the resumed sources and pinned Chamber
+Seven note. No missing file or excerpt omission explains it, but without raw
+on-wire B1 capture the internal cause remains unmeasured. Empty current eye is
+not absence of historical conversation. PM:
+`logs/runs/20260928-1521-eye-state-reconnect/postmortem.md`.
+
+### Previous Workflow Checkpoint
+
 September 28, after checkpoint `8786837`: current sensing-eye image/text loading
 and Clear sequencing move into `sensing-eye-content.js`. Page wrappers return the
 module promises directly; live accessors retain the existing single state rather

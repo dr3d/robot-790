@@ -3359,8 +3359,7 @@
     let operatorBlockedReason = "";
     let sensingEyeInboxLastSeq = 0;
     let sensingEyeInboxIgnoreSeqThrough = 0;
-    let sensingEyeInboxClearInFlight = false;
-    let sensingEyeGeneration = 0;
+    const sensingEyeContent = createSensingEyeContent();
     const sensingEyeClientId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     let sensingEyeFaceCommandIgnoreSeqThrough = 0;
     const handledSensingEyeInboxSeqs = new Set();
@@ -4009,10 +4008,6 @@
     const idleExpansionQueryLimit = 36;
     const maxIdleDrift = 12;
     let chassisBusyUntil = 0;
-    let visionImageUrl = "";
-    let visionImageName = "";
-    let visionImageStaged = false;
-    let visionImageOpenUrl = "";
     let sensingEyeImageHistory = [];
     let sensingEyeImageHistorySeq = 0;
     let sensingEyeTextHistory = [];
@@ -4022,11 +4017,6 @@
     const imageRequest = createImageRequestOwner();
     const generatedImageHandoff = createGeneratedImageHandoff();
     const sensingEyePersistence = createSensingEyePersistence();
-    const sensingEyeContent = createSensingEyeContent();
-    let sensingTextContent = "";
-    let sensingTextName = "";
-    let sensingTextOpenUrl = "";
-    let sensingTextSavedFilename = "";
     let castPlaybackActive = false;
     let micPausedForCast = false;
     let castStatusMonitorTimer = null;
@@ -6769,8 +6759,8 @@
     }
 
     function firstContactInputLabel() {
-      if (sensingTextContent) return "current text";
-      if (visionImageUrl) return "temporary image";
+      if (sensingEyeContent.text) return "current text";
+      if (sensingEyeContent.imageUrl) return "temporary image";
       return "none";
     }
 
@@ -7139,14 +7129,14 @@
     }
 
     function formatSensingTextForInstructions() {
-      if (!sensingTextContent) return "";
-      const clipped = sensingTextContent.length > maxSensingTextChars
-        ? `${sensingTextContent.slice(0, maxSensingTextChars)}\n[Sensing-eye text clipped after ${maxSensingTextChars} characters.]`
-        : sensingTextContent;
+      if (!sensingEyeContent.text) return "";
+      const clipped = sensingEyeContent.text.length > maxSensingTextChars
+        ? `${sensingEyeContent.text.slice(0, maxSensingTextChars)}\n[Sensing-eye text clipped after ${maxSensingTextChars} characters.]`
+        : sensingEyeContent.text;
       return [
         "Current sensing-eye text context:",
-        `Source: ${sensingTextName || "dropped text"}`,
-        sensingTextSavedFilename ? `Filed at: logs/sensing-eye/${sensingTextSavedFilename}` : "",
+        `Source: ${sensingEyeContent.textName || "dropped text"}`,
+        sensingEyeContent.textSavedFilename ? `Filed at: logs/sensing-eye/${sensingEyeContent.textSavedFilename}` : "",
         "This is current eye input, separate from pinned notes. Clearing the eye does not delete its saved file; new sessions do not automatically load it.",
         sensingEyeSalienceInstruction(),
         "Use it when the user's spoken request refers to this, it, the text, the file, what you see, or what was dropped. Do not pin it or promote it into other memory unless explicitly asked.",
@@ -7196,11 +7186,11 @@
         "- Current runtime state overrides loaded notes and saved session notes for microphone, camera, sensing-eye, recording, cast, tools, and embodiment.",
         `- Connection note flavor is ${continuityScrubModeLabel()}: ${continuityScrubModeStatusText()}`,
         `- Browser live camera stream is ${visionCameraActive() ? "on" : "off"}.`,
-        `- Staged sensing-eye image is ${visionImageUrl ? "present" : "absent"}${visionImageUrl ? ` (${visionImageName || "unnamed image"}, ${visionImageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
+        `- Staged sensing-eye image is ${sensingEyeContent.imageUrl ? "present" : "absent"}${sensingEyeContent.imageUrl ? ` (${sensingEyeContent.imageName || "unnamed image"}, ${sensingEyeContent.imageStaged ? "in realtime context" : "not staged yet"})` : ""}.`,
         `- Sensing-eye salience is ${sensingEyeSalienceLabel()}: ${sensingEyeSalienceStatusText()}`,
         sensingEyeImageHistoryContextLine(),
-        `- Current sensing-eye text is ${sensingTextContent ? "present" : "absent"}${sensingTextContent ? ` (${sensingTextName || "unnamed text"})` : ""}.`,
-        !visionImageUrl && !sensingTextContent
+        `- Current sensing-eye text is ${sensingEyeContent.text ? "present" : "absent"}${sensingEyeContent.text ? ` (${sensingEyeContent.textName || "unnamed text"})` : ""}.`,
+        !sensingEyeContent.imageUrl && !sensingEyeContent.text
           ? "- The sensing eye is empty right now. Historical session notes may say an image existed earlier, but that is not current visual context."
           : "- Sensing-eye content listed here is current for this browser session.",
         `- This browser's audio recorder is ${audioRecordingActive() ? "recording" : "not recording"}; auto-record on microphone start is ${autoAudioRecordEnabled() ? "enabled" : "disabled"}.`,
@@ -8286,8 +8276,8 @@
             : normalText
         }
       ];
-      if (lane.name === "sensing_eye" && visionImageUrl) {
-        content.push({ type: "input_image", image_url: visionImageUrl, detail: "auto" });
+      if (lane.name === "sensing_eye" && sensingEyeContent.imageUrl) {
+        content.push({ type: "input_image", image_url: sensingEyeContent.imageUrl, detail: "auto" });
       }
       return content;
     }
@@ -8511,7 +8501,7 @@
     }
 
     function sensingEyeSalienceStatusText(level = currentSensingEyeSalience()) {
-      if (!visionImageUrl && !sensingTextContent) return "No live sensing-eye item.";
+      if (!sensingEyeContent.imageUrl && !sensingEyeContent.text) return "No live sensing-eye item.";
       if (level <= 0) return "Ignored by idle; still filed in history.";
       if (level <= 2) return "Memory trace only; mention if asked.";
       if (level <= 5) return "Background context; do not orbit it.";
@@ -8520,7 +8510,7 @@
     }
 
     function sensingEyeSalienceInstruction(level = currentSensingEyeSalience()) {
-      if (!visionImageUrl && !sensingTextContent) {
+      if (!sensingEyeContent.imageUrl && !sensingEyeContent.text) {
         return "Sensing-eye salience: empty. Do not invent current visual pressure from old session notes.";
       }
       const item = sensingInputLabel();
@@ -8554,12 +8544,12 @@
 
     function updateSensingEyeSalienceVisual() {
       const level = currentSensingEyeSalience();
-      const alpha = !visionImageUrl && !sensingTextContent ? 1 : 0.25 + level * 0.075;
+      const alpha = !sensingEyeContent.imageUrl && !sensingEyeContent.text ? 1 : 0.25 + level * 0.075;
       if (sensingEyeSalienceValue) sensingEyeSalienceValue.textContent = sensingEyeSalienceLabel(level);
       if (sensingEyeSalienceStatus) sensingEyeSalienceStatus.textContent = sensingEyeSalienceStatusText(level);
       if (visionDrop) {
         visionDrop.style.setProperty("--sensing-eye-salience-alpha", alpha.toFixed(2));
-        visionDrop.style.borderColor = (visionImageUrl || sensingTextContent)
+        visionDrop.style.borderColor = (sensingEyeContent.imageUrl || sensingEyeContent.text)
           ? `rgba(96, 211, 148, ${Math.max(0.18, alpha * 0.55).toFixed(2)})`
           : "";
       }
@@ -9241,9 +9231,9 @@
     }
 
     function updateVisionButtons() {
-      visionClearButton.disabled = !visionImageUrl && !sensingTextContent;
-      if (visionOpenButton) visionOpenButton.disabled = !visionImageUrl && !sensingTextOpenUrl;
-      if (visionPaintFaceButton) visionPaintFaceButton.disabled = !visionImageUrl || !facePaintControllerAvailable();
+      visionClearButton.disabled = !sensingEyeContent.imageUrl && !sensingEyeContent.text;
+      if (visionOpenButton) visionOpenButton.disabled = !sensingEyeContent.imageUrl && !sensingEyeContent.textOpenUrl;
+      if (visionPaintFaceButton) visionPaintFaceButton.disabled = !sensingEyeContent.imageUrl || !facePaintControllerAvailable();
       if (visionClearFacePaintButton) visionClearFacePaintButton.disabled = !facePaintControllerAvailable();
       if (visionBrowserFaceFrameButton) visionBrowserFaceFrameButton.disabled = !browserFaceControllerActive();
       updateSensingEyeSalienceVisual();
@@ -9270,7 +9260,7 @@
         resolveUrl: url => new URL(url, location.href).href,
         captureCover: () => ({
           previous: audioRecordingActive() ? audioRecordingCurrentVisualCover({ includePlaceholder: true }) : null,
-          canBecomeCover: !visionImageUrl
+          canBecomeCover: !sensingEyeContent.imageUrl
         }),
         rollover: cover => {
           if (cover.canBecomeCover) rolloverAudioRecordingForVisualChange("generated image changed", { cover: cover.previous });
@@ -9382,9 +9372,9 @@
         preview: generatedPreview,
         idle: () => typeof idleArt === "undefined" ? undefined : idleArt,
         eye: {
-          get generation() { return sensingEyeGeneration; },
-          get url() { return visionImageUrl; }, get text() { return sensingTextContent; },
-          get name() { return visionImageName; }, get staged() { return visionImageStaged; }
+          get generation() { return sensingEyeContent.generation; },
+          get url() { return sensingEyeContent.imageUrl; }, get text() { return sensingEyeContent.text; },
+          get name() { return sensingEyeContent.imageName; }, get staged() { return sensingEyeContent.imageStaged; }
         },
         url: path => new URL(path, location.href), filenameFromPath: path => filenameFromPath(path),
         fetch: (...args) => fetch(...args), blobToDataUrl: blob => blobToDataUrl(blob),
@@ -11439,9 +11429,9 @@
       return [
         "Current runtime facts for this request (override historical notes, dialogue, and private suggestions):",
         formatEmbodimentForInstructions({ compact: true }),
-        `Current sensing-eye image: ${visionImageUrl ? `present (${visionImageStaged ? "staged" : "not staged yet"})` : "absent"}.`,
-        `Current sensing-eye text: ${sensingTextContent ? "present" : "absent"}.`,
-        !visionImageUrl && !sensingTextContent
+        `Current sensing-eye image: ${sensingEyeContent.imageUrl ? `present (${sensingEyeContent.imageStaged ? "staged" : "not staged yet"})` : "absent"}.`,
+        `Current sensing-eye text: ${sensingEyeContent.text ? "present" : "absent"}.`,
+        !sensingEyeContent.imageUrl && !sensingEyeContent.text
           ? "The sensing eye is empty. You may remember an earlier picture, but it is not still in your eye and you are not seeing it now."
           : "Only the current supplied sensing content is present-tense sensory evidence.",
         `Microphone: ${micRuntimeLabel()}. Browser audio recorder: ${audioRecordingActive() ? "recording" : "not recording"}.`,
@@ -11500,12 +11490,12 @@
       const runtime = {
         microphone: micRuntimeLabel(),
         audio_recording: audioRecordingActive(),
-        sensing_eye_image: visionImageUrl ? visionImageName : null,
+        sensing_eye_image: sensingEyeContent.imageUrl ? sensingEyeContent.imageName : null,
         image_task_receipts: imageTaskReceipt,
         file_write_receipts: fileWriteReceipts.filter(row => row.session_generation === realtimeConnection.generation),
         ...(typeof music !== "undefined" ? { music: music.evidence() } : {}),
         ...(typeof idleArt !== "undefined" && idleArt.history.length ? { idle_art: idleArt.snapshot(6) } : {}),
-        sensing_eye_text: sensingTextContent ? sensingTextName : null,
+        sensing_eye_text: sensingEyeContent.text ? sensingEyeContent.textName : null,
         camera_active: visionCameraActive(),
         b1_hard_brake: idleHardBrakeActive(),
         b1_hard_brake_reason: idleHardBrakeActive() ? idleHardBrakeReason : ""
@@ -12545,8 +12535,8 @@
       ].filter(Boolean).join("\n\n");
       const input = [{ type: "message", role: "user", content: [
         { type: "input_text", text: "[STS scheduled opportunity]" },
-        ...(visionImageUrl && (!sharedConversation || !visionImageStaged)
-          ? [{ type: "input_image", image_url: visionImageUrl, detail: "auto" }] : [])
+        ...(sensingEyeContent.imageUrl && (!sharedConversation || !sensingEyeContent.imageStaged)
+          ? [{ type: "input_image", image_url: sensingEyeContent.imageUrl, detail: "auto" }] : [])
       ] }];
       noteAloneActivity("idle_beat", "open", { source: manual ? "manual-idle" : "idle" });
       cueFaceMode("thinking", 0.42, { force: true });
@@ -13249,7 +13239,7 @@
 
     function beginRealtimeSession() {
       lastRealtimeContextMode = currentPromptContextModeKey();
-      visionImageStaged = false;
+      sensingEyeContent.resetStaging();
       renderMemory();
       if (contextPanel?.open) renderContextMap();
     }
@@ -13834,12 +13824,12 @@
     }
 
     async function applySensingEyeInboxItem(item) {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       const seq = Number(item?.seq) || 0;
       const faceCommandSeq = Number(item?.face_command_seq) || 0;
       const dataUrl = String(item?.image_data_url || "");
       if (!seq || !dataUrl) return false;
-      if (sensingEyeInboxClearInFlight || seq <= sensingEyeInboxIgnoreSeqThrough
+      if (sensingEyeContent.clearInFlight || seq <= sensingEyeInboxIgnoreSeqThrough
           || (item.client_id === sensingEyeClientId && item.client_eye_generation !== generation)
           || (faceCommandSeq > 0 && faceCommandSeq <= sensingEyeFaceCommandIgnoreSeqThrough)) {
         sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
@@ -13857,7 +13847,7 @@
         }
       }
       const image = await loadImage(dataUrl);
-      if (generation !== sensingEyeGeneration) return false;
+      if (generation !== sensingEyeContent.generation) return false;
       const source = String(item.source || "browser_face").replace(/_/g, " ");
       const filename = filenameFromPath(item.filename) || `browser-face-${new Date().toTimeString().slice(0, 8).replace(/:/g, "")}.jpg`;
       const savedUrl = String(item.saved_url || "").trim();
@@ -13874,7 +13864,7 @@
         saveToFilesystem: false,
         memoryContext
       });
-      if (generation !== sensingEyeGeneration) return false;
+      if (generation !== sensingEyeContent.generation) return false;
       updateVisionButtons();
       sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
       const stateLabel = item.state && typeof item.state === "object"
@@ -13913,10 +13903,10 @@
     }
 
     async function clearBrowserFaceCaptureQueue() {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       if (!browserFaceControllerActive()) return null;
       const result = await postFace("commands/clear", { reason: "sensing eye cleared" }, { signal: AbortSignal.timeout(5000) });
-      if (generation === sensingEyeGeneration) sensingEyeFaceCommandIgnoreSeqThrough = Number(result.latest_seq) || 0;
+      if (generation === sensingEyeContent.generation) sensingEyeFaceCommandIgnoreSeqThrough = Number(result.latest_seq) || 0;
       return result;
     }
 
@@ -13935,7 +13925,7 @@
     }
 
     async function pollSensingEyeInbox() {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       if (window.__robot790PageUnloading) return;
       if (sensingEyeInboxPollInFlight) {
         scheduleSensingEyeInboxPoll();
@@ -13944,7 +13934,7 @@
       sensingEyeInboxPollInFlight = true;
       try {
         const item = await fetchSensingEyeInboxItem();
-        if (item && generation === sensingEyeGeneration) await applySensingEyeInboxItem(item);
+        if (item && generation === sensingEyeContent.generation) await applySensingEyeInboxItem(item);
       } catch (error) {
         log(events, `sensing-eye inbox poll error: ${error.message}`);
       } finally {
@@ -13954,10 +13944,10 @@
     }
 
     async function flushSensingEyeInboxForSessionSave({ isCurrent = () => true } = {}) {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       try {
         const item = await fetchSensingEyeInboxItem();
-        if (item && generation === sensingEyeGeneration && isCurrent()) {
+        if (item && generation === sensingEyeContent.generation && isCurrent()) {
           // The server already retained this asset. A slow preview decode must
           // not leave it out of a retried save's frozen asset receipt.
           rememberSensingEyeSessionAsset(item.saved_filename);
@@ -14366,15 +14356,15 @@
         ? String(target || "").trim().toLowerCase()
         : "auto";
       const seconds = Math.max(0, Math.min(300, Number(duration) || 0));
-      if (!shouldClear && !visionImageUrl) {
+      if (!shouldClear && !sensingEyeContent.imageUrl) {
         throw new Error("No sensing-eye image is loaded.");
       }
       const payload = shouldClear
         ? { clear: true }
         : {
             source: "sensing_eye",
-            filename: visionImageName || "sensing-eye image",
-            image_data_url: visionImageUrl,
+            filename: sensingEyeContent.imageName || "sensing-eye image",
+            image_data_url: sensingEyeContent.imageUrl,
             duration: seconds,
             fit: normalizedFit,
             target: normalizedTarget,
@@ -14394,7 +14384,7 @@
         status: "ok",
         tool: "paint_face_from_sensing_eye",
         clear: shouldClear,
-        filename: visionImageName || "",
+        filename: sensingEyeContent.imageName || "",
         target: normalizedTarget,
         fit: normalizedFit,
         face_url: baseUrl,
@@ -14437,7 +14427,7 @@
     }
 
     async function captureBrowserFaceToEye({ reason = "" } = {}) {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       if (!browserFaceControllerActive()) {
         throw new Error("Browser face is not the active face controller.");
       }
@@ -14458,7 +14448,7 @@
             status: "ok",
             tool: "capture_browser_face_to_eye",
             staged: true,
-            filename: item.filename || visionImageName,
+            filename: item.filename || sensingEyeContent.imageName,
             source: item.source || "browser_face",
             face_state: item.state || null,
             queued_seq: queueResult.seq || null
@@ -14488,7 +14478,7 @@
       gaze_y: gazeY,
       settle_ms: settleMs = 700
     } = {}) {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       if (!browserFaceControllerActive()) {
         throw new Error("Browser face is not the active face controller.");
       }
@@ -16038,19 +16028,19 @@
     }
 
     function sensingInputLabel() {
-      if (sensingTextContent) return `${sensingTextName || "text"} (${sensingTextContent.length} chars text)`;
-      if (visionImageUrl) return `${visionImageName || "image"} (${visionImageStaged ? "staged sensing-eye image" : "loaded sensing-eye image"})`;
+      if (sensingEyeContent.text) return `${sensingEyeContent.textName || "text"} (${sensingEyeContent.text.length} chars text)`;
+      if (sensingEyeContent.imageUrl) return `${sensingEyeContent.imageName || "image"} (${sensingEyeContent.imageStaged ? "staged sensing-eye image" : "loaded sensing-eye image"})`;
       if (visionCameraActive()) return "browser live camera stream on, no sensing-eye image staged";
       return "none";
     }
 
     function sensingInputActive() {
-      return Boolean(sensingTextContent || visionImageUrl);
+      return Boolean(sensingEyeContent.text || sensingEyeContent.imageUrl);
     }
 
     function currentSensingEyeHistoryItem() {
-      if (!visionImageUrl) return null;
-      return sensingEyeImageHistory.find((item) => item.dataUrl === visionImageUrl) || null;
+      if (!sensingEyeContent.imageUrl) return null;
+      return sensingEyeImageHistory.find((item) => item.dataUrl === sensingEyeContent.imageUrl) || null;
     }
 
     function safeLoadMemoryFacts() {
@@ -16240,9 +16230,9 @@
           details: [
             `Current input: ${sensingInputLabel()}`,
             `Salience: ${sensingEyeSalienceLabel()} - ${sensingEyeSalienceStatusText()}`,
-            `Text chars: ${sensingTextContent.length}${sensingTextSavedFilename ? ` (${sensingTextSavedFilename})` : ""}`,
+            `Text chars: ${sensingEyeContent.text.length}${sensingEyeContent.textSavedFilename ? ` (${sensingEyeContent.textSavedFilename})` : ""}`,
             `Text cap: ${maxSensingTextChars} chars`,
-            `Image staged into realtime context: ${visionImageStaged ? "yes" : "no"}`,
+            `Image staged into realtime context: ${sensingEyeContent.imageStaged ? "yes" : "no"}`,
             `Recent image history: ${sensingEyeImageHistory.length}/${maxSensingEyeImageHistory}`,
             ...sensingEyeImageHistoryList().map((item) => (
               `${item.index}. ${item.name}${item.current ? " (current)" : ""} - ${item.source}`
@@ -16917,10 +16907,10 @@
         },
         sensing: {
           label: sensingInputLabel(),
-          text_name: sensingTextName || "",
-          text_tail: textTail(sensingTextContent, 4000),
-          image_name: visionImageName || "",
-          image_staged: Boolean(visionImageStaged),
+          text_name: sensingEyeContent.textName || "",
+          text_tail: textTail(sensingEyeContent.text, 4000),
+          image_name: sensingEyeContent.imageName || "",
+          image_staged: Boolean(sensingEyeContent.imageStaged),
           live_camera: visionCameraActive()
         },
         last_user: {
@@ -17498,7 +17488,7 @@
         created_at: item.createdAt,
         width: item.width,
         height: item.height,
-        current: Boolean(visionImageUrl && item.dataUrl === visionImageUrl),
+        current: Boolean(sensingEyeContent.imageUrl && item.dataUrl === sensingEyeContent.imageUrl),
         open_url: item.openUrl || "",
         saved_filename: item.savedFilename || "",
         last_user_text: item.lastUserText || "",
@@ -17515,7 +17505,7 @@
         source: item.source,
         created_at: item.createdAt,
         characters: item.characters,
-        current: Boolean(sensingTextContent && item.content === sensingTextContent),
+        current: Boolean(sensingEyeContent.text && item.content === sensingEyeContent.text),
         open_url: item.openUrl || "",
         saved_filename: item.savedFilename || "",
         last_user_text: item.lastUserText || "",
@@ -17550,18 +17540,6 @@
 
     function createSensingEyeContent() {
       return Robot790SensingEyeContent.create({
-        state: {
-          get sensingEyeGeneration() { return sensingEyeGeneration; }, set sensingEyeGeneration(value) { sensingEyeGeneration = value; },
-          get sensingEyeInboxClearInFlight() { return sensingEyeInboxClearInFlight; }, set sensingEyeInboxClearInFlight(value) { sensingEyeInboxClearInFlight = value; },
-          get visionImageUrl() { return visionImageUrl; }, set visionImageUrl(value) { visionImageUrl = value; },
-          get visionImageName() { return visionImageName; }, set visionImageName(value) { visionImageName = value; },
-          get visionImageStaged() { return visionImageStaged; }, set visionImageStaged(value) { visionImageStaged = value; },
-          get visionImageOpenUrl() { return visionImageOpenUrl; }, set visionImageOpenUrl(value) { visionImageOpenUrl = value; },
-          get sensingTextContent() { return sensingTextContent; }, set sensingTextContent(value) { sensingTextContent = value; },
-          get sensingTextName() { return sensingTextName; }, set sensingTextName(value) { sensingTextName = value; },
-          get sensingTextOpenUrl() { return sensingTextOpenUrl; }, set sensingTextOpenUrl(value) { sensingTextOpenUrl = value; },
-          get sensingTextSavedFilename() { return sensingTextSavedFilename; }, set sensingTextSavedFilename(value) { sensingTextSavedFilename = value; },
-        },
         ui: () => ({ visionPreview, visionDrop, visionHint, visionFile, contextPanel }),
         get visionMaxEdgePx() { return visionMaxEdgePx; },
         get visionJpegQuality() { return visionJpegQuality; },
@@ -17593,7 +17571,7 @@
 
     function createSensingEyePersistence() {
       return Robot790SensingEyePersistence.create({
-        generation: () => sensingEyeGeneration,
+        generation: () => sensingEyeContent.generation,
         clientId: () => sensingEyeClientId,
         memoryContext: () => sensingEyeMemoryContext(),
         url: path => new URL(path, location.href),
@@ -17773,12 +17751,12 @@
     }
 
     async function selectSensingEyeImage(selection = {}) {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       selection = selection || {};
       const { index, image_id: imageId = "", query = "", _isCurrent = () => true } = selection;
-      let expectedImage = visionImageUrl;
-      let expectedText = sensingTextContent;
-      const isCurrent = () => _isCurrent() && visionImageUrl === expectedImage && sensingTextContent === expectedText;
+      let expectedImage = sensingEyeContent.imageUrl;
+      let expectedText = sensingEyeContent.text;
+      const isCurrent = () => _isCurrent() && sensingEyeContent.imageUrl === expectedImage && sensingEyeContent.text === expectedText;
       const requireCurrent = () => {
         requireCurrentSensingEyeLoad(generation);
         if (!isCurrent()) throw new Error("Sensing-eye recall was superseded.");
@@ -17888,23 +17866,16 @@
       if (!item) throw new Error("That sensing-eye visual note could not be reopened.");
       requireCurrent();
 
-      sensingTextContent = "";
-      sensingTextName = "";
-      sensingTextOpenUrl = "";
-      sensingTextSavedFilename = "";
-      visionImageUrl = item.dataUrl;
-      visionImageName = item.name || "sensing-eye image";
-      visionImageStaged = false;
-      visionImageOpenUrl = item.openUrl || "";
-      visionPreview.src = visionImageUrl;
+      sensingEyeContent.restoreImage(item);
+      visionPreview.src = sensingEyeContent.imageUrl;
       visionPreview.classList.add("ready");
       visionDrop.classList.remove("text-ready");
-      visionHint.textContent = `${visionImageName}${item.width && item.height ? ` (${item.width}x${item.height})` : ""} - recalled`;
+      visionHint.textContent = `${sensingEyeContent.imageName}${item.width && item.height ? ` (${item.width}x${item.height})` : ""} - recalled`;
       updateVisionButtons();
-      log(events, `sensing-eye image recalled: ${visionImageName}`);
+      log(events, `sensing-eye image recalled: ${sensingEyeContent.imageName}`);
       const historyIndex = Math.max(1, sensingEyeImageHistory.indexOf(item) + 1);
       if (item.savedFilename) rememberSensingEyeSessionAsset(item.savedFilename);
-      recordUiEvent("sensing-eye image recalled", visionImageName, {
+      recordUiEvent("sensing-eye image recalled", sensingEyeContent.imageName, {
         id: item.id,
         index: historyIndex,
         source: item.source
@@ -17924,7 +17895,7 @@
           height: item.height,
           saved_filename: item.savedFilename || "",
           open_url: item.openUrl || "",
-          staged: visionImageStaged
+          staged: sensingEyeContent.imageStaged
         }
       };
     }
@@ -17947,7 +17918,7 @@
 
 
     async function prepareVisionImage(file) {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       if (!file || !file.type.startsWith("image/")) {
         throw new Error("Choose an image file.");
       }
@@ -18087,7 +18058,7 @@
       if (esp32CameraCapturePromise) return { status: "error", error: "ESP32 capture already in progress." };
       const camera = esp32Camera();
       const generation = camera.generation();
-      const eyeGeneration = sensingEyeGeneration;
+      const eyeGeneration = sensingEyeContent.generation;
       const session = realtimeConnection.generation;
       const isCurrent = () => generation === camera.generation() && session === realtimeConnection.generation
         && (!_isCurrent || _isCurrent());
@@ -18103,7 +18074,7 @@
           log(events, `ESP32 camera captured to sensing eye: ${item?.savedFilename || label}`);
           return { status: "ok", tool: "capture_esp32_camera", camera: "esp32",
             filename: label, saved_filename: item?.savedFilename || "", saved_url: item?.openUrl || "",
-            staged: visionImageStaged };
+            staged: sensingEyeContent.imageStaged };
         } catch (error) {
           if (isCurrent()) document.querySelector("#esp32CameraHint").textContent = `Capture failed: ${error.message}`;
           return { status: "error", tool: "capture_esp32_camera", error: error.message };
@@ -18196,10 +18167,10 @@
         return {
           status: "ok",
           tool: "capture_sensing_eye",
-          filename: visionImageName,
+          filename: sensingEyeContent.imageName,
           saved_filename: historyItem?.savedFilename || "",
           saved_url: historyItem?.openUrl || "",
-          staged: visionImageStaged,
+          staged: sensingEyeContent.imageStaged,
           camera: "live",
           reason: String(reason || "")
         };
@@ -18213,7 +18184,7 @@
     }
 
     async function prepareSensingText(file) {
-      const generation = sensingEyeGeneration;
+      const generation = sensingEyeContent.generation;
       if (!isSensingTextFile(file)) {
         throw new Error("Choose an image, .txt, or .md file.");
       }
@@ -18262,24 +18233,24 @@
     }
 
     function openSensingEyeImage() {
-      const url = visionImageOpenUrl || visionImageUrl || sensingTextOpenUrl;
+      const url = sensingEyeContent.imageOpenUrl || sensingEyeContent.imageUrl || sensingEyeContent.textOpenUrl;
       if (!url) return;
-      recordUiEvent("sensing eye open", visionImageName || sensingTextName || "sensing eye", { url: visionImageOpenUrl || sensingTextOpenUrl || "[data-url]" });
+      recordUiEvent("sensing eye open", sensingEyeContent.imageName || sensingEyeContent.textName || "sensing eye", { url: sensingEyeContent.imageOpenUrl || sensingEyeContent.textOpenUrl || "[data-url]" });
       window.open(url, "_blank", "noopener,noreferrer");
     }
 
     function stageVisionImage() {
-      if (!visionImageUrl || visionImageStaged) return;
+      if (!sensingEyeContent.imageUrl || sensingEyeContent.imageStaged) return;
 
       if (!realtimeConnected()) {
-        visionHint.textContent = `${visionImageName || "image"} - connect to stage`;
+        visionHint.textContent = `${sensingEyeContent.imageName || "image"} - connect to stage`;
         updateVisionButtons();
         return;
       }
       const visualNote = currentSensingEyeHistoryItem();
       const stagingText = "[STS sensing image]\n" + JSON.stringify({
         id: visualNote?.id || null,
-        name: visionImageName || null,
+        name: sensingEyeContent.imageName || null,
         source: visualNote?.source || "unknown",
         media: "still_image"
       }) + "\n[End STS sensing image]";
@@ -18293,15 +18264,15 @@
               type: "input_text",
               text: stagingText
             },
-            { type: "input_image", image_url: visionImageUrl, detail: "auto" }
+            { type: "input_image", image_url: sensingEyeContent.imageUrl, detail: "auto" }
           ]
         }
       });
-      visionImageStaged = true;
-      visionHint.textContent = `${visionImageName || "image"} - ready for voice`;
+      sensingEyeContent.markStaged();
+      visionHint.textContent = `${sensingEyeContent.imageName || "image"} - ready for voice`;
       updateVisionButtons();
       addSensingEyeVisualNoteTranscriptMarker("opened into B1 context", visualNote, { touchActivity: false });
-      log(events, `sensing-eye image staged: ${visionImageName || "image"}`);
+      log(events, `sensing-eye image staged: ${sensingEyeContent.imageName || "image"}`);
       updateSessionTools({ quiet: true });
       scheduleIdlePonder();
     }
@@ -18536,7 +18507,7 @@
       if (name === "show_web_page") return args.url;
       if (name === "generate_image") return args.title || args.prompt;
       if (name === "move_generated_image_to_sensing_eye") return generatedPreview.name || args.reason || "generated image";
-      if (name === "paint_face_from_sensing_eye") return args.clear ? "clear" : (visionImageName || args.target || "sensing eye");
+      if (name === "paint_face_from_sensing_eye") return args.clear ? "clear" : (sensingEyeContent.imageName || args.target || "sensing eye");
       if (name === "list_sensing_eye_notes") return `${sensingEyeImageHistory.length + sensingEyeTextHistory.length} eye notes`;
       if (name === "recall_sensing_eye_note") return args.query || args.note_id || args.image_id || `#${args.index || 1}`;
       if (name === "list_sensing_eye_images") return `${sensingEyeImageHistory.length + sensingEyeTextHistory.length} eye notes`;
@@ -19228,8 +19199,8 @@
     }
 
     function audioRecordingCurrentVisualCover({ includePlaceholder = false } = {}) {
-      const currentVisionImageUrl = visionImageUrl;
-      const currentVisionImageName = visionImageName;
+      const currentVisionImageUrl = sensingEyeContent.imageUrl;
+      const currentVisionImageName = sensingEyeContent.imageName;
       const currentGeneratedImageName = generatedPreview.name;
       if (currentVisionImageUrl) {
         return blobFromDataUrl(currentVisionImageUrl).then((blob) => ({
@@ -20286,7 +20257,7 @@
       faceIdleButton.disabled = true;
       faceBeatButton.disabled = true;
       idlePonderNowButton.disabled = true;
-      visionImageStaged = false;
+      sensingEyeContent.resetStaging();
       updateTypedInputButtons();
       updateVisionButtons();
       syncServerPanelToConnection();
@@ -21258,9 +21229,9 @@
       const originalText = visionPaintFaceButton.textContent;
       visionPaintFaceButton.disabled = true;
       visionPaintFaceButton.textContent = "Painting...";
-      recordUiEvent("face paint from sensing eye", visionImageName || "image", { target: "auto", fit: "contain" });
+      recordUiEvent("face paint from sensing eye", sensingEyeContent.imageName || "image", { target: "auto", fit: "contain" });
       paintFaceFromSensingEye({ duration: 0, fit: "contain", target: "auto" }).then(
-        (result) => log(events, `face painted from sensing eye: ${result.filename || visionImageName || "image"}`),
+        (result) => log(events, `face painted from sensing eye: ${result.filename || sensingEyeContent.imageName || "image"}`),
         (error) => log(events, `face paint error: ${error.message}`)
       ).finally(() => {
         visionPaintFaceButton.textContent = originalText || "Paint Face";
@@ -21389,17 +21360,17 @@
         quietMs: Date.now() - Math.max(lastUserTurnActivityAt, lastAcceptedUserTranscriptAt),
         minimumQuietMs: Number(runtimeConfig.idle_timing?.idle_art_quiet_s ?? 90) * 1000,
         userKey: `${lastUserTurnActivityAt}:${lastAcceptedUserTranscriptAt}`,
-        eyeKey: `${sensingEyeGeneration}:${visionImageName}:${sensingTextName}`,
+        eyeKey: `${sensingEyeContent.generation}:${sensingEyeContent.imageName}:${sensingEyeContent.textName}`,
         mediaKey: generatedPreview.url
       }),
       deliver: async (result, sameSession) => {
-        const eyeGeneration = sensingEyeGeneration;
+        const eyeGeneration = sensingEyeContent.generation;
         const userActivity = lastUserTurnActivityAt;
-        const previousEye = visionImageUrl;
-        const previousText = sensingTextContent;
-        const current = () => sameSession() && sensingEyeGeneration === eyeGeneration
+        const previousEye = sensingEyeContent.imageUrl;
+        const previousText = sensingEyeContent.text;
+        const current = () => sameSession() && sensingEyeContent.generation === eyeGeneration
           && lastUserTurnActivityAt === userActivity && idleArtEnabled.checked && llmImageTools.checked
-          && visionImageUrl === previousEye && sensingTextContent === previousText;
+          && sensingEyeContent.imageUrl === previousEye && sensingEyeContent.text === previousText;
         if (!current()) throw new Error("Image delivery was superseded.");
         const hydrated = { ...result, url: new URL(result.url, location.href).href };
         showGeneratedImage(hydrated);

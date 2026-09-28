@@ -7,6 +7,7 @@ const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').repla
 
 function load(names, globals = {}) {
   const c = vm.createContext(globals);
+  require('./helpers/sts_eye_content_owner.cjs').installEyeContent(c, page);
   for (const name of names) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
