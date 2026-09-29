@@ -54,11 +54,11 @@ async function checkEyePersistence(page) {
       await clearSensingEyeState();
       const text = await set('text');
       const textResult = { content: sensingEyeContent.text, saved: text.savedFilename,
-        attached: sensingEyeSessionAssetFilenames.has(text.savedFilename), imageCleared: !sensingEyeContent.imageUrl,
+        attached: sensingEyeSessionAssetFilenamesForSave().includes(text.savedFilename), imageCleared: !sensingEyeContent.imageUrl,
         path: writes.at(-1).path, noImagePayload: !Object.hasOwn(writes.at(-1).body, 'client_eye_generation') };
       const image = await set('visual');
       await visionPreview.decode();
-      const imageResult = { saved: image.savedFilename, attached: sensingEyeSessionAssetFilenames.has(image.savedFilename),
+      const imageResult = { saved: image.savedFilename, attached: sensingEyeSessionAssetFilenamesForSave().includes(image.savedFilename),
         width: visionPreview.naturalWidth, textCleared: !sensingEyeContent.text,
         client: writes.at(-1).body.client_id === sensingEyeClientId,
         generation: writes.at(-1).body.client_eye_generation === sensingEyeContent.generation };
@@ -75,7 +75,7 @@ async function checkEyePersistence(page) {
             const outcome = await pending;
             races.push({ kind, phase, source, error: outcome.error,
               empty: !sensingEyeContent.imageUrl && !sensingEyeContent.text,
-              notAttached: !sensingEyeSessionAssetFilenames.has(savedName),
+              notAttached: !sensingEyeSessionAssetFilenamesForSave().includes(savedName),
               echoHandled: kind === 'text' || handledSensingEyeInboxSeqs.has(String(savedName.split('-')[0])) });
           }
         }
@@ -118,7 +118,7 @@ async function checkEyePersistence(page) {
         const count = writes.length;
         const item = await set(kind);
         failures.push({ kind, writes: writes.length - count, unsaved: !item.savedFilename,
-          notAttached: !sensingEyeSessionAssetFilenames.has(savedName),
+          notAttached: !sensingEyeSessionAssetFilenamesForSave().includes(savedName),
           visible: kind === 'text' ? sensingEyeContent.text === 'First line\nSecond line' : !!sensingEyeContent.imageUrl });
       }
       return { ownership, textResult, imageResult, races, replacements, overlappingClear, failures, connected: realtimeConnected() };

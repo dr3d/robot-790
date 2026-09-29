@@ -628,10 +628,10 @@ test('Connect Select exposes one-item checklist management and archive', () => {
 });
 
 test('session saves carry sensing-eye capture receipts into their archive package', () => {
-  assert.match(page, /const sensingEyeSessionAssetFilenames = new Set\(\)/);
+  assert.match(page, /const sensingEyeSessionAssets = createSensingEyeSessionAssets\(\)/);
   assert.match(page, /function rememberSensingEyeSessionAsset\(filename\)/);
   assert.match(page, /sensing_eye_filenames: Array\.isArray\(sensingEyeFilenames\)/);
-  assert.match(page, /sensingEyeSessionAssetFilenames\.clear\(\)/);
+  assert.match(page, /sensingEyeSessionAssets\.clear\(\)/);
   assert.match(page, /function flushSensingEyeInboxForSessionSave\(/);
   assert.match(page, /await flushSensingEyeInboxForSessionSave\(\{ isCurrent:/);
   assert.match(page, /session-scoped sensing-eye captures will move with it/);

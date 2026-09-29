@@ -40,7 +40,7 @@ from robot_790d.continuity import (
 from robot_790d.exploration import read_exploration
 from robot_790d.headlines import read_headlines
 from robot_790d.idle_art import IdleArtService, validate_proposal
-from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path
+from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path, image_output_dir
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.network_camera import camera_config, capture_frame
 from robot_790d.note_brains import format_brain_guidance, parse_note_brains
@@ -1666,11 +1666,34 @@ def list_sensing_eye_images(
     root = repo_root or Path(__file__).resolve().parents[2]
     out_dir = root / "logs" / "sensing-eye"
     files: list[dict[str, object]] = []
+    generated: dict[str, dict[str, object]] = {}
+    generated_dir = image_output_dir(repo_root)
+    if generated_dir.is_dir():
+        for path in generated_dir.iterdir():
+            if (not path.is_file() or len(path.name) > 160
+                    or not re.fullmatch(r"[a-zA-Z0-9._-]+\.(?:png|jpe?g|webp|svg)", path.name, re.IGNORECASE)):
+                continue
+            try:
+                metadata = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                metadata = {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+            stat = path.stat()
+            generated[path.name] = {
+                "id": f"generated:{path.name}", "filename": path.name,
+                "url": f"{GENERATED_IMAGE_URL_PREFIX}{quote(path.name)}",
+                "kind": "image", "source": "generated image", "storage": "generated",
+                "reason": str(metadata.get("title") or "")[:160],
+                "size_bytes": stat.st_size,
+                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+                "_sort_mtime": stat.st_mtime,
+                "_search": key(" ".join(str(metadata.get(field) or "") for field in ("title", "prompt")) + " " + path.name),
+            }
+    staged_originals: set[str] = set()
     if out_dir.is_dir():
         for path in out_dir.iterdir():
             if not path.is_file():
-                continue
-            if filename and path.name != filename:
                 continue
             if path.name.startswith("latest-sensing-eye."):
                 continue
@@ -1693,9 +1716,10 @@ def list_sensing_eye_images(
             metadata = _read_sensing_eye_metadata(path)
             # Only file metadata or explicitly attributed browser hints, not adjacent conversation.
             searchable = key(path.name + " " + str(metadata.get("reason") or ""))
-            if not filename and query.strip() and path.name not in hinted_names:
-                if not words or not all(word in searchable for word in words):
-                    continue
+            original = str(metadata.get("filename") or "")
+            if kind == "image" and metadata.get("source") == "generated image" and original in generated:
+                staged_originals.add(original)
+                searchable += " " + str(generated[original]["_search"])
             memory_context = metadata.get("memory_context") if isinstance(metadata.get("memory_context"), dict) else {}
             files.append(
                 {
@@ -1711,11 +1735,22 @@ def list_sensing_eye_images(
                     "size_bytes": stat.st_size,
                     "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
                     "_sort_mtime": stat.st_mtime,
+                    "_search": searchable,
                 }
             )
+    # Ordinary search prefers the existing eye copy. Previously issued generated IDs
+    # still reopen the exact original, even after that image has since been staged.
+    files.extend(item for name, item in generated.items()
+                 if name not in staged_originals or filename == item["id"])
+    files = [item for item in files if (
+        (item.get("id", item["filename"]) == filename if filename else
+         not query.strip() or item["filename"] in hinted_names or
+         bool(words) and all(word in str(item["_search"]) for word in words))
+    )]
     files.sort(key=lambda item: (-float(item.get("_sort_mtime") or 0), str(item["filename"])))
     for item in files:
         item.pop("_sort_mtime", None)
+        item.pop("_search", None)
     return {
         "status": "ok",
         "tool": "list_sensing_eye_images",

@@ -25,7 +25,7 @@ function fixture(files, local = []) {
     sensingEyeSavedRemarks: () => new Map(),
     fetchSensingEyeFilePage: async args => {
       calls.push(args);
-      const found = files.filter(file => args.filename ? file.filename === args.filename
+      const found = files.filter(file => args.filename ? (file.id || file.filename) === args.filename
         : args.hints.includes(file.filename) || lookup.matches(`${file.filename} ${file.reason || ''}`, args.query));
       return { total: found.length, files: found.slice(args.offset, args.offset + args.limit) };
     }
@@ -141,4 +141,48 @@ test('note-file tool enforces a small page before sending a request; the operato
   assert.equal(calls[0].searchParams.get('query'), 'companion');
   await assert.rejects(c.listTextFiles({ limit: 999 }), /1-8/);
   assert.equal(calls.length, 1);
+});
+
+test('unstaged generated originals have distinct exact IDs and are not eye attachments', async () => {
+  const name = 'the-loose-eyes-roll-around.png';
+  const { c, calls } = fixture([
+    { filename: name, id: `generated:${name}`, storage: 'generated', url: `/generated-images/${name}` },
+  ], [{ id: 'eye-collision', saved_filename: name, name: 'unrelated operator picture' }]);
+  const matches = await c.listSensingEyeImages({ query: 'loose eyes' });
+  assert.equal(matches.images.length, 1);
+  assert.equal(matches.images[0].id, `generated:${name}`);
+  assert.equal(matches.images[0].current, false);
+  const result = await c.sensingEyeLookupItems({ image_id: matches.images[0].id });
+  assert.equal(calls.at(-1).filename, `generated:${name}`);
+  assert.equal(result.images[0].location, 'generated');
+  assert.equal(result.images[0].saved_filename, '');
+  assert.equal(result.images[0].history_id, undefined);
+});
+
+test('selecting a generated result uses exact-file handoff, never a new render', async () => {
+  const calls = [], eye = { generation: 1, imageUrl: 'before', text: '' };
+  const c = load(['selectSensingEyeImage'], {
+    sensingEyeContent: eye, requireCurrentSensingEyeLoad: generation => assert.equal(generation, eye.generation),
+    sensingEyeLookupItems: async () => ({ images: [{ id: 'generated:original.png', name: 'original.png', location: 'generated' }] }),
+    chooseSensingEyeNote: items => items[0],
+    moveGeneratedImageToSensingEye: async args => {
+      calls.push(args); assert.equal(args._isCurrent(), true);
+      return { status: 'ok', source_image: args.filename, saved_filename: 'original.jpg', saved_url: '/sensing-eye/original.jpg', staged: true };
+    },
+  });
+  const result = await c.selectSensingEyeImage({ image_id: 'generated:original.png' });
+  assert.equal(calls[0].filename, 'original.png');
+  assert.equal(result.tool, 'select_sensing_eye_image');
+  assert.equal(result.selected.saved_filename, 'original.jpg');
+  assert.equal(result.selected.staged, true);
+  eye.imageUrl = 'replacement';
+  assert.equal(calls[0]._isCurrent(), false);
+  const count = calls.length;
+  await assert.rejects(c.selectSensingEyeImage({ _isCurrent: () => false }), /superseded/);
+  assert.equal(calls.length, count);
+});
+
+test('catalogue functional scope is explicit alongside the ownership extraction checks', () => {
+  const { edits } = require('./helpers/sts_generated_catalogue_scope.cjs');
+  for (const [after] of edits) assert.equal(page.split(after).length, 2, after);
 });

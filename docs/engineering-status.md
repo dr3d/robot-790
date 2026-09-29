@@ -1,8 +1,118 @@
 # Engineering Status
 
-Reviewed September 28, 2026. This is the maintained engineering view; session
+Reviewed September 29, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+September 29 checkpoint decision: the operator reports everything seems OK and
+accepts the latest work. Checkpoint the session eye-asset owner, generated-image
+catalogue repair, tests and acceptance notes together. This accepts the exercised
+paths; it does not turn the remaining live reconnect/text-swap coverage or the
+full-browser session-map timeout into passes. Next structural candidate is
+private eye-inbox sequence/duplicate bookkeeping, with baseline characterization
+first. Polling cadence, camera lifecycle and model behavior stay out of that step.
+
+Operational follow-up from this reboot: the gold launcher model key no longer
+matches LM Studio's local index. The same VERY-LOW NVFP4 MTP artifact is indexed
+as `qwen3.8-27b-mtp`; it was loaded under the existing API identifier
+`qwen3.8-27b-nvfp4-mtp`, with 131072 context and parallel 2, then the normal
+voice launcher was started. Startup/readiness passed. The persistent launcher
+lookup still needs a separate small repair; no model substitution was made.
+
+September 29, 12:59-13:15 live acceptance: both previously missing generated
+originals (Loose Eyes and Day I Became a Dog) were found, explicitly staged,
+and saved without redrawing. The first clarification switched from the earlier
+generated cartoon to the operator's physical-eye photograph; it was not another
+catalogue miss. Four recalls, ten operator drops, face-paint queueing and
+Clear/re-recall worked; all eight tool results were OK. Twelve eye-asset hashes
+and three pins verify, saved draft matches, preparation retains 120/120 entries.
+Disconnect released cleanly after speech had finished. Context 30.47% -> 54.41%;
+51 completed TTS batches, five canceled, no capacity stops. Eleven unique,
+unclipped B2 advice notes. Same-page reconnect/text swap remain untested live.
+
+Watch: five private-output suppression warnings, including one fully filtered
+reply that invoked the existing retry and was then interrupted by the operator.
+Conversation recovered; raw filtered content is unavailable, so this is not a
+diagnosis of its cause. Eric also invented a mic-status explanation for the
+"ready for voice" eye label, and changed his preferred embodiment from metal
+face to box robot on "show it to me." The selected file was returned correctly.
+No production or persona edits from this PM. Frozen evidence:
+`logs/runs/20260929-1315-generated-recall-acceptance/`.
+
+September 29: the generated-image discovery gap below is repaired, separately
+from the pending asset-owner extraction. The existing compact, paginated lookup
+now includes generated originals from the configured image-output directory.
+Filename/title/prompt matching stays internal; tool output does not contain full
+prompts. Explicit generated IDs select the exact original through the existing
+handoff, producing a normal eye copy and session attachment only when selected.
+Known generated/eye pairs deduplicate by saved provenance, not filename guessing;
+old generated IDs still work after staging. Generation is not automatically staged.
+
+Real-archive queries recover both missing originals: Loose Eyes (16:50) and Day
+I Became a Dog (16:51). Loose Eyes also returns the distinct 20:15 redraw; Family
+on the Bench returns one eye copy. The isolated Edge test verifies no discovery
+side effects, exact-file fetching, decoded pixels, one staged image message, the
+correct JPEG attachment, unchanged generation preview, and rejection after a
+newer eye update. No model, paid generation, real save or device write is used.
+All 1,157 JavaScript and 1,106 Python tests pass (one existing Python dependency
+warning), plus the dedicated real-page catalogue test and documentation checks.
+Automated receipts: `logs/maintenance/generated-catalogue/`. Human acceptance
+pending: refresh and resume, ask for those two originals without redrawing, then
+recall a previously staged picture. The Python page helper needs this update;
+the LLM/voice backend does not need restarting. Automatic page-helper restart was
+initially blocked; the post-reboot startup activated it, confirmed by the live
+queries and acceptance run above. The earlier full-browser-suite
+session-map timeout watch remains separate and unresolved.
+
+September 28, 20:08-20:17: four old eye images recalled plus one requested redraw;
+five attachments and two pins verify, saved draft matches, preparation retains
+82/82 entries, and mid-speech Disconnect releases cleanly. These paths exercise
+the pending asset owner successfully; same-page reconnect/text replacement are
+not live-accepted yet. The run exposes a separate retrieval defect: generated
+images never staged into the eye remain on disk but are outside the eye-file
+catalogue, even for an exact title query. Original Loose Eyes and dog-mask files
+are intact. The directory boundary predates this refactor; the user reports this
+as a new experience. The separate repair is recorded above, without automatic
+staging or directory dumps. PM: `logs/runs/20260928-2017-generated-recall-gap/`.
+
+September 28, after checkpoint `97d0721`: session eye-file bookkeeping is now
+owned by `sensing-eye-assets.js`. One mutable page set and its five helpers move
+behind explicit methods. Normalization, deduplication, sorted copied snapshots,
+sessionStorage restoration and failure handling retain their existing behavior.
+Save transactions, acknowledgement timing, inbox cursors, disk search, recall,
+current eye, prompts and idle/music behavior are unchanged.
+
+Fifteen tests passed before editing; after extraction, two additional checks
+verify private instances and source equivalence against the checkpoint. All
+1,154 JavaScript and 1,101 Python tests pass (one existing dependency warning).
+Real-page checks pass restoration after reload, Clear preservation, failed-save
+retention, identical retry manifests and clearing only after acknowledgement.
+Existing image/text late-reply and desktop/mobile image checks also pass. No
+live model, paid generation or real save/device write is used by browser fixtures.
+
+Both combined Edge attempts passed the changed paths but timed out at the
+pre-existing final session-map selection test: zero sessions, still refreshing,
+no page errors. The isolated map loaded 106 sessions in 7.037s. Cause remains
+unestablished; do not call the full browser suite green. Incomplete results are
+now preserved for diagnosis. No application map behavior was changed.
+Evidence: `logs/maintenance/lifecycle-review/eye-assets-*`.
+
+HTML loses 12 lines / 472 LF-normalized bytes. The new module is 62 lines /
+1,778 bytes; total production grows 1,306 bytes. This is ownership improvement,
+not a large size reduction. Live acceptance pending: refresh disconnected,
+resume, recall a picture, drop text or another picture, interrupt and Disconnect;
+reconnect without refreshing and recall once. No server restart needed.
+
+September 28, 16:30-16:54: fresh-lineage run on checkpoint `97d0721`, only the
+core memory note loaded. Weather comedy developed into workshop/embodiment art
+and a saved piano ditty. Sixteen generated files exist; seventeen saved eye
+assets and the pin verify, draft matches disk, preparation retains 185/185
+entries. Twelve playback barge-ins and final Disconnect worked; no TTS capacity
+stop or backend error. One private-output warning was contained. Six image-busy
+rejections recovered; speech-over-music and invented-workshop provenance remain
+observations, not behavior-change mandates. Context 15.02% -> 57.02%; longest
+completed handler chunk 10.313s was the music-score response. No new production
+repair from this PM. Evidence: `logs/runs/20260928-1654-fresh-fog-and-faces/`.
 
 September 28 checkpoint `df44692` records the accepted private current-eye state
 refactor and both live PMs. The next step extracts in-memory image/text history

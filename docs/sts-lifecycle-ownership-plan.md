@@ -22,32 +22,97 @@ The [engineering status](engineering-status.md) records automated and live
 acceptance, including the unresolved repeated-language investigation. No new
 persona, idle policy, or eye-staging behavior is part of that checkpoint.
 
-Checkpoint `df44692` records private current-eye ownership with the accepted
-two-run mechanical check. Current step: in-memory eye-history ownership, with
-baseline comparisons, real-page recall checks and two accepted live runs.
-Retrieval decisions, disk storage, camera lifetimes and behavioral changes stay
-outside this step. The conversational recall misses below are not a repair mandate.
+Checkpoint `97d0721` records accepted in-memory eye-history ownership and its
+two-run mechanical check. September 29: the operator accepts the session eye-file
+attachment owner and separate generated-image retrieval repair for checkpoint,
+following the automated checks and live runs below. Same-page reconnect/text
+replacement remain explicitly untested live, not silently credited as passes.
+The conversational inconsistencies below are observations, not behavior repairs.
 
-### Next Step: Session Eye-Asset Ownership
+### Next Candidate: Eye-Inbox Receipt State
 
-After checkpointing the accepted history work, extract only the set of eye-file
-names attached to a saved session and its sessionStorage persistence. Today the
-page owns the set plus remember/list/persist/load/clear helpers. A private owner
-can remove that shared mutable state without moving the save transaction itself.
+Start with the sequence cursor, ignore-through watermark and handled-sequence
+set currently shared by inbox application, Clear/sync, capture waits and save
+receipts. Give this bookkeeping one private owner with explicit operations.
+Do not move the poll timer, change the 600ms cadence, alter camera lifetimes,
+or change staging decisions in this first step. Face-command queue ownership
+remains separate unless a baseline dependency makes it inseparable.
 
-First characterize filename normalization, duplicate suppression, sorted copied
-snapshots, restoration, malformed/unavailable storage and clear behavior against
-the checkpoint. Then preserve the existing callers: image/text saves, recall,
-inbox application and save flush register assets; acknowledged session save
-clears them. Failed saves and frozen retries must retain their existing behavior.
-No new lifetime, retention limit or automatic eye staging is part of this work.
+Before production edits, characterize ordinary delivery, duplicate receipts,
+save-echo suppression, Clear/sync advancement, stale-generation results and
+decode interruption against this checkpoint. Preserve existing sequence
+normalization, monotonic updates and the current handled-set behavior exactly;
+any discovered defect gets a separate repair decision. Then compare ordered
+effects after extraction and run an isolated real-page capture/Clear race check.
 
-Run focused owner/save tests, source comparisons and the isolated browser checks
-before a live trial: recall an older picture, drop text or another picture,
+Human check after implementation: resume, capture the browser face into the eye,
+replace or clear it, interrupt speech and Disconnect; reconnect without a page
+refresh and recall a saved picture. A small text drop can cover the remaining
+asset-owner live gap in that same ordinary run. No special dialogue script or
+new restrictions on Eric are needed. This next extraction is not implemented yet.
+
+September 29 functional exception, requested after the confirmed disk-catalogue
+gap: lookup now includes never-staged generated originals, with compact pages,
+provenance-based duplicate removal, and explicit selection through the existing
+generated-file handoff. No automatic staging, new rendering or persona change.
+This is not counted as an ownership extraction. Earlier source-equivalence
+checks normalize only the literal catalogue edits; dedicated backend, frontend
+and isolated real-browser tests cover the new behavior. Live original-image
+recall passed September 29, 12:59-13:15: both known missing originals were
+retrieved without rendering, twelve attachments and three pins verify, and
+Clear/re-recall and repeated drops worked. Same-page reconnect/text replacement
+remain the owner's outstanding live checks. Five private-output filter warnings
+are tracked separately; see the engineering status and frozen PM for receipts.
+
+### Implemented Step: Session Eye-Asset Ownership
+
+September 28, baseline `97d0721`: `sensing-eye-assets.js` owns the set of eye-file
+names attached to a saved session and its sessionStorage persistence. The page
+delegates remember/list/persist/load/clear helpers without moving the save
+transaction itself. Storage access stays inside the original guarded operations,
+so unavailable storage does not turn module initialization into a new failure.
+
+Fifteen tests passed before edits: normalization, duplicates, copied snapshots,
+restoration, malformed/unavailable storage, clear behavior and actual save/retry
+orchestration. Two more checks verify separate private instances and source
+equivalence of all existing page functions and extracted bodies. Image/text
+saves, recall, inbox application and save flush still register assets;
+acknowledged session save clears them. Failed saves, frozen retry payloads,
+expired receipts and flush timeouts keep their existing behavior. No new lifetime,
+retention limit or automatic eye staging is included.
+
+All 1,154 JavaScript and 1,101 Python tests pass, with one existing dependency
+warning. Real-page asset tests pass page-reload restoration, Clear preservation,
+failed-save retention, identical retry payloads and post-acknowledgement clearing.
+Existing late-save image/text races and desktop/mobile screenshots/pixels pass.
+Browser fixtures intercept save/device calls and forbid live model connections.
+
+Two full browser attempts timed out later at the existing session-map selection
+check (empty map, still refreshing, no page errors). A standalone map check
+loaded 106 sessions in 7.037s. Full-suite result remains incomplete, not green;
+cause unestablished. The runner now saves completed results on failure. Evidence:
+`logs/maintenance/lifecycle-review/eye-assets-{before,focused,node-tests,python,browser-retry,map-isolated}.txt`
+and `eye-assets-browser-completed.json` in the same directory.
+
+Size, LF-normalized: HTML 21,969 -> 21,957 lines / 993,958 -> 993,486 bytes.
+New module: 62 lines / 1,778 bytes. Total production grows 1,306 bytes; one more
+mutable page global is removed. The save orchestration is deliberately unchanged.
+
+Human acceptance next: refresh disconnected, recall an older picture, drop text or another picture,
 Disconnect during speech, then reconnect without refreshing and recall once.
 Verify both session manifests and asset hashes. Inbox polling/cursors, camera
-lifetimes, disk search and recall selection are deliberately deferred. This is
-planned work, not implemented or accepted by the history-owner runs above.
+lifetimes, disk search and recall selection are deliberately deferred. No server
+restart needed. Earlier history-owner runs do not accept this new owner.
+
+Partial live acceptance September 28, 20:08-20:17: four older eye-file recalls,
+one requested new render/stage, ten playback barge-ins and mid-speech Disconnect
+worked. Both pins and all five attachments verify; saved draft/source match,
+preparation retains 82/82 entries. Same-page reconnect/text swap remain untested
+live. Separate finding: previously generated but never-staged images exist in
+generated-images and are excluded from the eye-file catalogue. Exact-title
+discovery fails; this is a functional retrieval gap, not evidence of attachment
+loss. Address it separately from this extraction, with bounded results and no
+automatic staging. PM: `logs/runs/20260928-2017-generated-recall-gap/`.
 
 ### Implemented Step: In-Memory Eye History
 
@@ -1101,7 +1166,8 @@ current responsibilities, not a claim that they already form isolated modules.
 | Image requests and presentation | `image-request.js` owns generation; `generated-preview.js` owns preview state/revision; `generated-image-handoff.js` owns explicit transfer; page adapters retain eye staging and DOM/recording effects | Artifact creation, preview display and eye staging are separate successes. A retained image must remain retrievable without another render. Request handling must reuse the preview/idle owners, not introduce another busy flag. |
 | Current eye content | `sensing-eye-content.js` owns current image/text, staging, generation and Clear-in-flight state; page readers have getter-only access | Clear invalidates pending loads; staging reset preserves content. Recall, successful staging and reset mutate only through owner methods. History/catalogue remains separate. |
 | In-memory eye history | `sensing-eye-history.js` owns retained image/text arrays, IDs and catalogue formatting; disk lookup and recall selection remain in page workflows | Clear/reconnect preserves retained entries; eviction does not remove disk files. Duplicate handling, item identity, ordering and existing limits stay unchanged. |
-| Eye-note save requests | `sensing-eye-persistence.js` owns image/text save transport and receipt routing; current-eye owner supplies generation; page retains inbox cursors and session asset set | A late save must be consumed by the inbox without attaching to a newer session. Persistence is not eye staging. |
+| Eye-note save requests | `sensing-eye-persistence.js` owns image/text save transport and receipt routing; current-eye owner supplies generation; page retains inbox cursors | A late save must be consumed by the inbox without attaching to a newer session. Persistence is not eye staging. |
+| Session eye-file attachments | `sensing-eye-assets.js` owns the filename set and sessionStorage persistence; existing save transaction takes a copied snapshot and clears on acknowledgement | Failed or expired saves must not clear newer attachments. Storage failure behavior, frozen retries and inbox registration timing are unchanged. |
 | Idle art | `idle-art.js`, browser grant and staging callbacks | Existing single-owner controller must not acquire a competing owner during extraction. Permission, job completion and staging have different lifetimes. |
 | Idle/B2 opportunities | `brain2BlockedReason`, idle/reengagement scheduling, B2 advisory and speech queues | Private advice and public speech have different readiness conditions. Fixing ownership must not suppress useful parallel thought or proactive conversation. |
 

@@ -3019,6 +3019,7 @@
   <script src="sensing-eye-persistence.js"></script>
   <script src="sensing-eye-content.js"></script>
   <script src="sensing-eye-history.js"></script>
+  <script src="sensing-eye-assets.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -4010,7 +4011,7 @@
     const maxIdleDrift = 12;
     let chassisBusyUntil = 0;
     const sensingEyeHistory = createSensingEyeHistory();
-    const sensingEyeSessionAssetFilenames = new Set();
+    const sensingEyeSessionAssets = createSensingEyeSessionAssets();
     const generatedPreview = createGeneratedPreviewOwner();
     const imageRequest = createImageRequestOwner();
     const generatedImageHandoff = createGeneratedImageHandoff();
@@ -5139,7 +5140,7 @@
         type: "function",
         name: "list_sensing_eye_notes",
         description: (
-          "Find sensing-eye memories in this browser session or saved under logs/sensing-eye using query: a partial name or identifying words. " +
+          "Find saved eye material and generated pictures, including pictures never staged in the eye, using query: a partial name or identifying words. " +
           "A sensing-eye memory can be a picture memory or a pasted/dropped text memory. " +
           "Use when the user refers to previous eye material, the last few pictures/texts, visual notes, picture memories, text memories, or asks what eye material is available. " +
           "Returns a few compact matches, not file contents or old dialogue. Omit query for recent files; use next_offset for more matches. Recall an exact returned id to inspect it."
@@ -5147,7 +5148,7 @@
         parameters: {
           type: "object",
           properties: {
-            query: { type: "string", maxLength: 160, description: "Identifying words from the filename, saved reason, or previously attributed remarks; not a full instruction." },
+            query: { type: "string", maxLength: 160, description: "Identifying words from the filename, generation prompt, saved reason, or previously attributed remarks; not a full instruction." },
             offset: { type: "integer", minimum: 0, description: "Previous result's next_offset for more matches." },
             limit: { type: "integer", minimum: 1, maximum: 8, default: 5 }
           },
@@ -5189,7 +5190,7 @@
         type: "function",
         name: "list_sensing_eye_images",
         description: (
-          "Find saved images or pasted/dropped text by query (partial name or identifying words). Searches older saved eye files too. " +
+          "Find saved images or pasted/dropped text by query (partial name or identifying words). Includes older eye files and generated pictures never staged in the eye. " +
           "Use when the user refers to a previous image, pasted text, last few eye notes, visual notes, picture notes, or asks what eye material is available. " +
           "Returns a few compact matches. Omit query for recent files; use next_offset for more matches. Select an exact returned id to inspect it."
         ),
@@ -17355,45 +17356,32 @@
       };
     }
 
+    function createSensingEyeSessionAssets() {
+      return Robot790SensingEyeAssets.create({
+        filenameFromPath: value => filenameFromPath(value),
+        storage: () => sessionStorage,
+        storageKey: sensingEyeSessionAssetStorageKey
+      });
+    }
+
     function rememberSensingEyeSessionAsset(filename) {
-      const safeFilename = filenameFromPath(String(filename || ""));
-      if (!safeFilename) return;
-      sensingEyeSessionAssetFilenames.add(safeFilename);
-      persistSensingEyeSessionAssets();
+      return sensingEyeSessionAssets.remember(filename);
     }
 
     function sensingEyeSessionAssetFilenamesForSave() {
-      return [...sensingEyeSessionAssetFilenames].sort((left, right) => left.localeCompare(right));
+      return sensingEyeSessionAssets.filenames();
     }
 
     function persistSensingEyeSessionAssets() {
-      try {
-        sessionStorage.setItem(sensingEyeSessionAssetStorageKey, JSON.stringify(sensingEyeSessionAssetFilenamesForSave()));
-      } catch {
-        return;
-      }
+      return sensingEyeSessionAssets.persist();
     }
 
     function loadSensingEyeSessionAssets() {
-      try {
-        const stored = JSON.parse(sessionStorage.getItem(sensingEyeSessionAssetStorageKey) || "[]");
-        if (!Array.isArray(stored)) return;
-        stored.forEach((filename) => {
-          const safeFilename = filenameFromPath(String(filename || ""));
-          if (safeFilename) sensingEyeSessionAssetFilenames.add(safeFilename);
-        });
-      } catch {
-        return;
-      }
+      return sensingEyeSessionAssets.load();
     }
 
     function clearSensingEyeSessionAssets() {
-      sensingEyeSessionAssetFilenames.clear();
-      try {
-        sessionStorage.removeItem(sensingEyeSessionAssetStorageKey);
-      } catch {
-        return;
-      }
+      return sensingEyeSessionAssets.clear();
     }
 
     function createSensingEyeHistory() {
@@ -17567,7 +17555,7 @@
       if (exactId) {
         const local = sessionNotes.find(item => item.id === exactId);
         if (local) return { images: [local], total: 1, next_offset: null };
-        if (!exactId.startsWith("file:")) return { images: [], total: 0, next_offset: null };
+        if (!exactId.startsWith("file:") && !exactId.startsWith("generated:")) return { images: [], total: 0, next_offset: null };
       }
       const matches = Robot790FileLookup.matches;
       const local = exactId ? [] : sessionNotes.filter(item => !item.saved_filename
@@ -17586,11 +17574,11 @@
       const result = await fetchSensingEyeFilePage({
         query, offset: Math.max(0, offset - local.length),
         limit: Math.max(1, limit - localPage.length),
-        filename: exactId ? exactId.slice(5) : "", hints: [...hints]
+        filename: exactId.startsWith("generated:") ? exactId : exactId ? exactId.slice(5) : "", hints: [...hints]
       });
       const files = localPage.length === limit ? [] : result.files;
-      const images = [...localPage, ...files.map(file => sessionNotes.find(item => item.saved_filename === file.filename) || ({
-            id: `file:${file.filename}`,
+      const images = [...localPage, ...files.map(file => (file.storage !== "generated" && sessionNotes.find(item => item.saved_filename === file.filename)) || ({
+            id: file.id || `file:${file.filename}`,
             name: file.filename,
             kind: file.kind || "image",
             source: file.source || "sensing-eye filesystem",
@@ -17600,10 +17588,10 @@
             characters: 0,
             current: false,
             open_url: file.url ? new URL(String(file.url), location.href).href : "",
-            saved_filename: file.filename || "",
+            saved_filename: file.storage === "generated" ? "" : file.filename || "",
             size_bytes: file.size_bytes || 0,
             reason: file.reason || "",
-            location: "filesystem"
+            location: file.storage === "generated" ? "generated" : "filesystem"
           }))];
       const total = local.length + result.total;
       return { images, total, next_offset: offset + images.length < total ? offset + images.length : null };
@@ -17698,6 +17686,17 @@
       }
       const listedItem = chooseSensingEyeNote(listed.images, { index, id: imageId, query });
       if (!listedItem) throw new Error("No unambiguous sensing-eye selection. Find the file by query and use its exact id; the current eye has not been changed.");
+
+      if (listedItem.location === "generated") {
+        const moved = await moveGeneratedImageToSensingEye({ filename: listedItem.name, _isCurrent: isCurrent });
+        return {
+          status: moved.status, tool: "select_sensing_eye_image",
+          selected: {
+            id: listedItem.id, kind: "image", name: moved.source_image, source: "generated image",
+            saved_filename: moved.saved_filename, open_url: moved.saved_url, staged: moved.staged
+          }
+        };
+      }
 
       let item = listedItem.location === "session" && listedItem.kind === "text"
         ? sensingEyeHistory.textById(listedItem.history_id || listedItem.id)

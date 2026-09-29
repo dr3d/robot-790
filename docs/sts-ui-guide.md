@@ -236,6 +236,13 @@ the returned file IDs, then lets him speak from the actual recall result. If he
 cannot identify it, he can ask which picture you mean. Saved remarks help locate
 an image; they are not a substitute for opening and inspecting it.
 
+The catalogue also searches saved generated pictures that were never moved into
+the eye. Titles/filenames and generation prompts help locate them without dumping
+prompts into conversation. Selecting one opens that original through the normal
+move-to-eye path; it does not generate a replacement. An original and its known
+eye copy appear as one search choice, while separately generated redraws remain
+distinct choices. Generating still does not automatically stage a picture.
+
 ![Focus and Eye Salience](assets/sts-ui/2026-09-10/14-focus.png)
 
 Under **Robot Controls > Focus**, **Eye Salience** controls attention guidance

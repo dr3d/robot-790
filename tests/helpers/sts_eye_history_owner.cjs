@@ -31,6 +31,7 @@ function installEyeHistory(c, page) {
 }
 
 function normalizeHistoryAccess(source) {
+  source = require('./sts_eye_assets_owner.cjs').normalizeAssetAccess(source);
   baseline ??= cp.execFileSync('git', ['show', 'df44692:web/sts/index.html'], { encoding: 'utf8', maxBuffer: 4e6 }).replace(/\r\n/g, '\n');
   for (const [name, method, args] of [
     ['rememberSensingEyeImage', 'rememberImage', 'options'], ['rememberSensingEyeText', 'rememberText', 'options'],

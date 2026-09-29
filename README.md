@@ -113,6 +113,21 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 29 retrieval repair: image lookup includes saved generated originals,
+even when Eric never put them in his eye. Results remain compact and paginated;
+selection retrieves the existing file, without redrawing or automatic staging
+on generation. Known staged copies do not duplicate their originals in search.
+The live run recovered both previously missing originals; the operator accepted
+the checkpoint. All twelve saved image attachments and three pinned notes verify.
+
+September 28, after accepted checkpoint `97d0721`: session eye-file attachments
+now have a private `sensing-eye-assets.js` owner. Save snapshots, browser-storage
+restoration and retry behavior are preserved; Eric's behavior is unchanged.
+Automated owner/save and real-page attachment checks pass, with live image/save
+acceptance recorded September 29. Same-page reconnect/text replacement have
+automated coverage but no new live acceptance. The combined browser suite still
+has a separate session-map timeout watch.
+
 September 28 next structural step, after checkpoint `df44692`: in-memory eye
 history now has its own `sensing-eye-history.js` owner. Four more page globals
 disappear; IDs, duplicate handling, ordering, existing retention limits and

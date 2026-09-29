@@ -251,6 +251,11 @@ async function main() {
     results.eyePersistence = await require('./helpers/sts_eye_persistence_browser.cjs').checkEyePersistence(persistenceUi);
     results.eyeHistory = await require('./helpers/sts_eye_history_browser.cjs').checkEyeHistory(persistenceUi);
     await persistenceUi.close();
+    const assetsUi = await context.newPage();
+    assetsUi.on('pageerror', error => pageErrors.push(error.message));
+    await assetsUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.eyeAssets = await require('./helpers/sts_eye_assets_browser.cjs').checkEyeAssets(assetsUi);
+    await assetsUi.close();
     results.socketCloseAudio = await require('./helpers/sts_close_audio_browser.cjs').checkSocketCloseAudio(ui);
     results.networkLoss = await require('./helpers/sts_network_loss_browser.cjs').checkNetworkLoss(ui);
     const restartUi = await context.newPage();
@@ -330,6 +335,11 @@ async function main() {
     await context.close();
     fs.writeFileSync(path.join(artifacts, 'results.json'), JSON.stringify(results, null, 2) + '\n');
     console.log(JSON.stringify(results, null, 2));
+  } catch (error) {
+    fs.writeFileSync(path.join(artifacts, 'results-incomplete.json'), JSON.stringify({
+      error: error.message, completed: results
+    }, null, 2) + '\n');
+    throw error;
   } finally {
     await browser.close();
   }
