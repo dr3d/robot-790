@@ -40,7 +40,7 @@ function fixture(source, options = {}) {
   });
   for (const key of ['sensingEyeInboxLastSeq', 'sensingEyeInboxIgnoreSeqThrough']) {
     let value = c[key];
-    Object.defineProperty(c, key, { get: () => value, set: next => { value = next; trace.push([key, next]); } });
+    Object.defineProperty(c, key, { configurable: true, get: () => value, set: next => { value = next; trace.push([key, next]); } });
   }
   installEyePersistence(c, source);
   for (const name of ['saveSensingEyeTextNote', 'saveSensingEyeVisualNote']) vm.runInContext(extract(source, name), c);

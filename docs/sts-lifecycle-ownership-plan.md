@@ -16,6 +16,15 @@ shorter answers, new quiet periods or a setup-card requirement.
 
 ## Current Agenda
 
+September 29 checkpoint decision: the operator accepts the inbox-state extraction
+and its two-run acceptance below. Pause dedicated refactor trials so ordinary
+exploration can lead again. Use those runs as regression evidence where relevant;
+request a special human test only for a specific risk automation cannot cover.
+Future structural work should remove a meaningful, cohesive responsibility from
+the HTML, using the established owners, rather than continuing a series of tiny
+state wrappers. Keep changes behavior-preserving and fix demonstrated faults;
+do not require a pristine architecture before further creative work with Eric.
+
 September 28 checkpoint `8786837` records the independently verified idle-input
 service boundary and browser transcript-revision repairs before further extraction.
 The [engineering status](engineering-status.md) records automated and live
@@ -29,27 +38,45 @@ following the automated checks and live runs below. Same-page reconnect/text
 replacement remain explicitly untested live, not silently credited as passes.
 The conversational inconsistencies below are observations, not behavior repairs.
 
-### Next Candidate: Eye-Inbox Receipt State
+### Implemented Step: Eye-Inbox Receipt State
 
-Start with the sequence cursor, ignore-through watermark and handled-sequence
-set currently shared by inbox application, Clear/sync, capture waits and save
-receipts. Give this bookkeeping one private owner with explicit operations.
-Do not move the poll timer, change the 600ms cadence, alter camera lifetimes,
-or change staging decisions in this first step. Face-command queue ownership
-remains separate unless a baseline dependency makes it inseparable.
+September 29, baseline `d2629ec`: the sequence cursor, ignore-through watermark
+and handled-sequence set shared by inbox application, Clear/sync, capture waits
+and save receipts now belong to `sensing-eye-inbox-state.js`. Explicit operations
+own the bookkeeping; the mutable set is not exposed. Poll timer, 600ms cadence,
+camera lifetimes, staging choices and face-command watermark remain unchanged.
 
-Before production edits, characterize ordinary delivery, duplicate receipts,
-save-echo suppression, Clear/sync advancement, stale-generation results and
-decode interruption against this checkpoint. Preserve existing sequence
-normalization, monotonic updates and the current handled-set behavior exactly;
-any discovered defect gets a separate repair decision. Then compare ordered
-effects after extraction and run an isolated real-page capture/Clear race check.
+Thirty-six baseline tests passed before production edits, covering ordinary
+delivery, duplicates, save echoes, Clear/sync advancement, stale generations,
+decode interruption, malformed responses, poll/save-flush orchestration and
+source equivalence. They match the new owner in results, state and ordered
+callbacks. A separate intact-module test checks privacy and independent
+instances. Existing persistence tests still observe cursor-write order through
+a test-only state bridge; no fixture hook is exposed in production.
+
+All 1,194 JavaScript tests pass. Isolated real-page tests verify capture and
+pixels, once-only staging, duplicate suppression, Clear and reconnect-style
+decode races, plus existing save/asset and generated-file recall checks. No live
+model or real save/device write is used. The older full-browser-suite session-map
+timeout remains a separate watch. Evidence: `logs/maintenance/inbox-state/`.
+HTML loses eight lines / 669 bytes; the new module adds 47 lines / 1,220 bytes.
+Net production growth is 551 bytes, with three shared mutable globals removed.
 
 Human check after implementation: resume, capture the browser face into the eye,
 replace or clear it, interrupt speech and Disconnect; reconnect without a page
 refresh and recall a saved picture. A small text drop can cover the remaining
 asset-owner live gap in that same ordinary run. No special dialogue script or
-new restrictions on Eric are needed. This next extraction is not implemented yet.
+new restrictions on Eric are needed. Refresh STS first; no backend restart.
+September 29, 14:42-14:53 live pair passed capture, text/image replacement,
+disconnect during active TTS, same-page reconnect and older saved-picture recall.
+Six eye assets and nine pinned-note receipts verify; both transcripts retain all
+dialogue. No observed inbox regression. The newly captured goofy face was not
+itself recalled after reconnect; duplicate/decode races remain automated checks.
+Two display switches changed session instructions/tools and correlated with
+reload waits; paint explicitly returned Browser Face while S3 was selected.
+These existing behaviors are separate from inbox bookkeeping. Frozen PM:
+`logs/runs/20260929-1453-inbox-state-acceptance/`. Operator accepted this work for
+checkpoint; no further dedicated live trial is required for this extraction.
 
 September 29 functional exception, requested after the confirmed disk-catalogue
 gap: lookup now includes never-staged generated originals, with compact pages,

@@ -11,6 +11,7 @@ const installed = new WeakMap(), aliases = new WeakSet();
 let legacyModule;
 
 function installEyeContent(c, page = fs.readFileSync(`${__dirname}/../../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n')) {
+  require('./sts_eye_inbox_state_owner.cjs').installInboxState(c, page);
   require('./sts_eye_history_owner.cjs').installEyeHistory(c, page);
   if (!page.includes('function createSensingEyeContent(')) return;
   const factory = extract(page, 'createSensingEyeContent');

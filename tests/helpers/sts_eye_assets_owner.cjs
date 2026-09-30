@@ -16,6 +16,7 @@ function installEyeAssets(c, page) {
 }
 
 function normalizeAssetAccess(source) {
+  source = require('./sts_eye_inbox_state_owner.cjs').normalizeInboxState(source);
   source = require('./sts_generated_catalogue_scope.cjs').normalizeGeneratedCatalogue(source);
   baseline ??= cp.execFileSync('git', ['show', '97d0721:web/sts/index.html'],
     { encoding: 'utf8', maxBuffer: 4e6 }).replace(/\r\n/g, '\n');

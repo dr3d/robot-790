@@ -76,7 +76,7 @@ async function checkEyePersistence(page) {
             races.push({ kind, phase, source, error: outcome.error,
               empty: !sensingEyeContent.imageUrl && !sensingEyeContent.text,
               notAttached: !sensingEyeSessionAssetFilenamesForSave().includes(savedName),
-              echoHandled: kind === 'text' || handledSensingEyeInboxSeqs.has(String(savedName.split('-')[0])) });
+              echoHandled: kind === 'text' || sensingEyeInboxState.has(String(savedName.split('-')[0])) });
           }
         }
       }

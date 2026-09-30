@@ -4,6 +4,49 @@ Reviewed September 29, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
 
+September 29 checkpoint decision: the operator accepts the inbox-state work and
+returns to exploration. Dedicated refactor trials are paused. Future extractions
+should remove a substantial cohesive responsibility from the HTML, with automated
+verification first; ordinary sessions can supply regression evidence. Request
+special human testing only for a named risk that needs observation. This is a
+workflow decision, not a change to Eric's prompts, tools or idle behavior.
+
+September 29, after checkpoint `d2629ec`: private eye-inbox receipt-state
+extraction implemented, two-run mechanical acceptance passed. `sensing-eye-inbox-state.js`
+owns the last sequence, ignore-through watermark and handled-sequence set.
+Existing normalization, monotonic cursor updates, duplicate suppression and
+save-echo handling are preserved. The inbound handled-set eviction behavior
+and untrimmed saved-receipt insertion remain distinct, as before. This is not
+an image-retention limit. Poll timers, cadence, face-command watermark, camera
+lifetimes, save transactions, prompts and staging decisions do not move.
+
+Thirty-six tests passed against the checkpoint before production edits, then
+matched the extracted implementation. One more checks the intact private owner,
+independent instances and read-only state. All 1,194 JavaScript tests pass.
+Isolated Edge tests pass real-page capture, one-time staging, duplicate rejection,
+Clear/sync, stale decode after reconnect-style Clear, decoded pixels, save races,
+asset restoration/retry and unchanged generated-original retrieval. Tests mock
+save/device calls and prohibit live model connections. No Python production
+change; the previous 1,106-test Python pass is not claimed as a new run. The
+previous full-browser session-map timeout watch remains separate; that combined
+suite was not rerun for this extraction. Receipts: `logs/maintenance/inbox-state/`
+and the generated-catalogue browser receipt.
+
+Size (LF-normalized): HTML loses eight lines / 669 bytes; new module is 47 lines /
+1,220 bytes, for 551 net production bytes added. Three mutable globals become
+private state. This is ownership improvement, not a large code-size reduction.
+September 29, 14:42-14:53: live face capture, text/image replacement, disconnect
+during active TTS, same-page reconnect and older saved-image recall passed.
+All six eye assets and nine pinned-note receipts verify; preparations retained
+48/48 and 19/19 entries, with every dialogue row preserved. No tool failure,
+backend warning or TTS capacity stop. Both pipelines released cleanly. Exact
+replay of the newly captured face was not requested; forced duplicate/stale
+races remain automated coverage. The two body switches updated session tools
+and instructions, consistent with the reported cache-rebuild stalls; exact KV
+cost was not measured. Paint while on S3 deliberately targeted Browser Face,
+as its receipt states. No production changes during PM; operator accepted this
+work for checkpoint. Evidence: `logs/runs/20260929-1453-inbox-state-acceptance/`.
+
 September 29 checkpoint decision: the operator reports everything seems OK and
 accepts the latest work. Checkpoint the session eye-asset owner, generated-image
 catalogue repair, tests and acceptance notes together. This accepts the exercised

@@ -113,6 +113,17 @@ that assembly when the machinery is kept visible.
 
 ## Current Pieces
 
+September 29, after checkpoint `d2629ec`: eye-inbox sequence and duplicate
+bookkeeping now live in `sensing-eye-inbox-state.js`, removing three mutable
+page globals. Polling timing, camera/face commands, Clear and staging behavior
+are preserved. Automated baseline comparisons and isolated browser checks pass;
+the live pair also passed capture, text/image replacement, connection Clear,
+same-page reconnect and saved-image recall. Both saves and all asset receipts
+verify. Exact new-capture replay remains an automated rather than live check.
+The operator accepted this checkpoint. Dedicated refactor trials are paused in
+favor of ordinary exploration; further structural work should remove cohesive
+workflows from the page and use automated checks before requesting human testing.
+
 September 29 retrieval repair: image lookup includes saved generated originals,
 even when Eric never put them in his eye. Results remain compact and paginated;
 selection retrieves the existing file, without redrawing or automatic staging

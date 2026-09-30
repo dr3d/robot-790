@@ -3020,6 +3020,7 @@
   <script src="sensing-eye-content.js"></script>
   <script src="sensing-eye-history.js"></script>
   <script src="sensing-eye-assets.js"></script>
+  <script src="sensing-eye-inbox-state.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
   <script src="backend-control-feedback.js"></script>
@@ -3359,12 +3360,10 @@
     let operatorCommandPollInFlight = false;
     let operatorBlockedSeq = 0;
     let operatorBlockedReason = "";
-    let sensingEyeInboxLastSeq = 0;
-    let sensingEyeInboxIgnoreSeqThrough = 0;
+    const sensingEyeInboxState = Robot790SensingEyeInboxState.create();
     const sensingEyeContent = createSensingEyeContent();
     const sensingEyeClientId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     let sensingEyeFaceCommandIgnoreSeqThrough = 0;
-    const handledSensingEyeInboxSeqs = new Set();
     let sensingEyeInboxPollTimer = null;
     let sensingEyeInboxPollInFlight = false;
     let lastUserText = "";
@@ -13828,22 +13827,19 @@
       const faceCommandSeq = Number(item?.face_command_seq) || 0;
       const dataUrl = String(item?.image_data_url || "");
       if (!seq || !dataUrl) return false;
-      if (sensingEyeContent.clearInFlight || seq <= sensingEyeInboxIgnoreSeqThrough
+      if (sensingEyeContent.clearInFlight || seq <= sensingEyeInboxState.ignoreSeqThrough
           || (item.client_id === sensingEyeClientId && item.client_eye_generation !== generation)
           || (faceCommandSeq > 0 && faceCommandSeq <= sensingEyeFaceCommandIgnoreSeqThrough)) {
-        sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
+        sensingEyeInboxState.advance(seq);
         return false;
       }
       const seqKey = String(item.seq || "");
-      if (seqKey && handledSensingEyeInboxSeqs.has(seqKey)) {
-        sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
+      if (seqKey && sensingEyeInboxState.has(seqKey)) {
+        sensingEyeInboxState.advance(seq);
         return false;
       }
       if (seqKey) {
-        handledSensingEyeInboxSeqs.add(seqKey);
-        while (handledSensingEyeInboxSeqs.size > 100) {
-          handledSensingEyeInboxSeqs.delete(handledSensingEyeInboxSeqs.values().next().value);
-        }
+        sensingEyeInboxState.remember(seqKey);
       }
       const image = await loadImage(dataUrl);
       if (generation !== sensingEyeContent.generation) return false;
@@ -13865,7 +13861,7 @@
       });
       if (generation !== sensingEyeContent.generation) return false;
       updateVisionButtons();
-      sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
+      sensingEyeInboxState.advance(seq);
       const stateLabel = item.state && typeof item.state === "object"
         ? `${item.state.mood || "?"}/${item.state.mouth?.shape || "?"}`
         : "";
@@ -13873,7 +13869,7 @@
       return true;
     }
 
-    async function fetchSensingEyeInboxItem(after = sensingEyeInboxLastSeq) {
+    async function fetchSensingEyeInboxItem(after = sensingEyeInboxState.lastSeq) {
       const url = new URL("/api/sensing-eye/inbox", location.href);
       url.searchParams.set("after", String(after));
       const response = await fetch(url, { cache: "no-store" });
@@ -13896,8 +13892,7 @@
       if (!response.ok || result.status === "error") {
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
-      sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, Number(result.latest_seq) || 0);
-      sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, Number(result.latest_seq) || 0);
+      sensingEyeInboxState.ignoreThrough(Number(result.latest_seq) || 0);
       return result;
     }
 
@@ -13918,8 +13913,7 @@
         throw new Error(result.error || `${response.status} ${response.statusText}`);
       }
       const latestSeq = Number(result.latest_seq) || 0;
-      sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, latestSeq);
-      sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, latestSeq);
+      sensingEyeInboxState.ignoreThrough(latestSeq);
       return latestSeq;
     }
 
@@ -14430,7 +14424,7 @@
       if (!browserFaceControllerActive()) {
         throw new Error("Browser face is not the active face controller.");
       }
-      const beforeSeq = sensingEyeInboxLastSeq;
+      const beforeSeq = sensingEyeInboxState.lastSeq;
       const queueResult = await postFace("capture_to_eye", {
         sts_url: location.origin,
         reason: String(reason || "self-capture").slice(0, 120)
@@ -17494,9 +17488,7 @@
         url: path => new URL(path, location.href),
         fetch: (...args) => fetch(...args),
         observeInboxSeq: seq => {
-          sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);
-          sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, seq);
-          handledSensingEyeInboxSeqs.add(String(seq));
+          sensingEyeInboxState.observeSaved(seq);
         },
         rememberAsset: filename => rememberSensingEyeSessionAsset(filename),
         log: message => log(events, message)

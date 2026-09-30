@@ -251,6 +251,11 @@ async function main() {
     results.eyePersistence = await require('./helpers/sts_eye_persistence_browser.cjs').checkEyePersistence(persistenceUi);
     results.eyeHistory = await require('./helpers/sts_eye_history_browser.cjs').checkEyeHistory(persistenceUi);
     await persistenceUi.close();
+    const inboxUi = await context.newPage();
+    inboxUi.on('pageerror', error => pageErrors.push(error.message));
+    await inboxUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
+    results.eyeInboxState = await require('./helpers/sts_eye_inbox_state_browser.cjs').checkInboxState(inboxUi);
+    await inboxUi.close();
     const assetsUi = await context.newPage();
     assetsUi.on('pageerror', error => pageErrors.push(error.message));
     await assetsUi.goto('http://127.0.0.1:8790/', { waitUntil: 'domcontentloaded' });
