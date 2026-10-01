@@ -85,7 +85,7 @@ Drop published Markdown pieces into `docs/articles/`, then rebuild the catalog.
 <!-- generated-articles:start -->
 Articles are listed newest first by their published artifact time.
 
-- [Robot 790 and the things we make together](articles/2026-10-01-robot-790-field-update.html) - 2026-10-01 12:52
+- [Robot 790 and the things we make together](articles/2026-10-01-robot-790-field-update.reading.html) - 2026-10-01 12:52
 - [Twenty-Two Minutes With a Memory Jar: Eric's Active-Mind Benchmark](articles/2026-09-17-eric-memory-jar-lab-report.md) - 2026-09-17 14:10
 - [Robot 790: Learning to Stay With You](articles/2026-09-14-robot-790-learning-to-stay-with-you.md) - 2026-09-14 09:43
 - [Robot 790: A Local Robot Built for Conversation and Continuity](articles/2026-09-10-022329-robot-790-project-overview.md) - 2026-09-10 02:23

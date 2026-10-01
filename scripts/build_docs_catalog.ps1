@@ -329,7 +329,7 @@ if (Test-Path $articleDir) {
                 published_source = $moment.source
                 modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
-            $htmlPath = [System.IO.Path]::ChangeExtension($_.FullName, '.html')
+            $htmlPath = [System.IO.Path]::ChangeExtension($_.FullName, '.reading.html')
             if (Test-Path -LiteralPath $htmlPath) {
                 $articleEntry.html_source = Convert-ToSitePath $htmlPath
             }

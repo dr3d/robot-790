@@ -16,12 +16,12 @@ const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="Stories, drawings, music and corrections from life with Eric, the Robot 790 AI companion.">
-<link rel="canonical" href="https://dr3d.github.io/robot-790/articles/2026-10-01-robot-790-field-update.html">
+<link rel="canonical" href="https://dr3d.github.io/robot-790/articles/2026-10-01-robot-790-field-update.reading.html">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="A future museum, an alien signal, a small piano, and the drawings that appear when I stop asking for things.">
 <meta property="og:image" content="https://dr3d.github.io/robot-790/media/field-update-20261001/museum-v4.jpg">
-<meta property="og:url" content="https://dr3d.github.io/robot-790/articles/2026-10-01-robot-790-field-update.html">
+<meta property="og:url" content="https://dr3d.github.io/robot-790/articles/2026-10-01-robot-790-field-update.reading.html">
 <meta name="twitter:card" content="summary_large_image">
 <style>
 :root{color-scheme:light;--ink:#252925;--muted:#656960;--paper:#faf8f2;--accent:#9b482c}
@@ -42,6 +42,6 @@ article>p:last-child{font:14px/1.65 system-ui,sans-serif}
 @media(max-width:600px){.masthead{padding:24px 22px 18px;font-size:10px;letter-spacing:.1em}article{padding:30px 22px 48px;font-size:18px;line-height:1.65}h1+p{font-size:20px}h1+p+p{margin-bottom:32px}h2{font-size:24px;margin-top:42px}blockquote{font-size:21px;padding-left:18px}img{margin-top:27px}}
 @media print{body{background:white}article{max-width:none;font-size:11pt;padding:24px 0}.masthead{padding:0 0 12px}h1{font-size:32pt}h2{font-size:17pt;break-after:avoid}img{max-width:100mm;max-height:110mm;object-fit:contain}blockquote,img{break-inside:avoid}a{color:inherit}}
 </style></head><body><nav class="masthead" aria-label="Site navigation"><a href="../index.html#articles">Robot 790 / Field notes</a><span>${Math.ceil(words / 220)} minute read</span></nav><article>${body}</article></body></html>`;
-const target = source.replace(/\.md$/, '.html');
+const target = source.replace(/\.md$/, '.reading.html');
 fs.writeFileSync(target, html, 'utf8');
 console.log(JSON.stringify({target, words, bytes: Buffer.byteLength(html), embeddedImages:(html.match(/src="data:image/g)||[]).length}));

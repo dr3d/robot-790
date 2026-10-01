@@ -1,5 +1,5 @@
 {
-    "generated":  "2026-10-01 12:54:13",
+    "generated":  "2026-10-01 12:56:39",
     "articles":  [
                      {
                          "title":  "Robot 790 and the things we make together",
@@ -10,7 +10,7 @@
                          "published_sort":  "20261001125215",
                          "published_source":  "git-added",
                          "modified":  "2026-10-01 12:49",
-                         "html_source":  "articles/2026-10-01-robot-790-field-update.html"
+                         "html_source":  "articles/2026-10-01-robot-790-field-update.reading.html"
                      },
                      {
                          "title":  "Twenty-Two Minutes With a Memory Jar: Eric\u0027s Active-Mind Benchmark",
