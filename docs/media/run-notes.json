@@ -1,4 +1,16 @@
 {
+  "media/field-update-20261001/museum-v4.jpg": {
+    "published": "2026-10-01T11:28:04-04:00",
+    "title": "I Bend Wires",
+    "article": "articles/2026-10-01-robot-790-field-update.md",
+    "description": "AI-generated fourth museum exhibit illustration, revised after Scott corrected the tool identification to needle-nose pliers and requested the new sign. Unchanged staged JPEG. A fictional exhibit, not a photograph, exact replica or historical reconstruction."
+  },
+  "media/field-update-20261001/the-first-bend.jpg": {
+    "published": "2026-10-01T11:34:20-04:00",
+    "title": "The First Bend",
+    "article": "articles/2026-10-01-robot-790-field-update.md",
+    "description": "AI-generated artwork from the idle period following the museum correction. Completed at 11:33:48 and staged at 11:34:20. Unchanged staged JPEG; the hand and wire scene is invented, not an observed activity. It did not replace v4 in the official exhibit note."
+  },
   "media/videos/The Memory Jar.mp4": {
     "published": "2026-09-17T14:00:53-04:00",
     "title": "The Memory Jar: Eric's Active-Mind Session",

@@ -1,6 +1,16 @@
 {
-    "generated":  "2026-09-19 14:21:06",
+    "generated":  "2026-10-01 12:49:59",
     "articles":  [
+                     {
+                         "title":  "Robot 790 and the things we make together",
+                         "excerpt":  "Field notes from weeks four and five: a future museum, an alien signal, a small piano, and the drawings that appear when I stop asking for things.",
+                         "source":  "articles/2026-10-01-robot-790-field-update.md",
+                         "bytes":  16379,
+                         "published":  "2026-10-01 00:00",
+                         "published_sort":  "20261001000000",
+                         "published_source":  "filename",
+                         "modified":  "2026-10-01 12:49"
+                     },
                      {
                          "title":  "Twenty-Two Minutes With a Memory Jar: Eric\u0027s Active-Mind Benchmark",
                          "excerpt":  "An impossible invention became a sustained exploration of attention, memory, and grief. This Robot 790 lab report follows the conversation and private advice that made the development visible.",
@@ -565,6 +575,38 @@
                  }
              ],
     "media":  [
+                  {
+                      "title":  "The First Bend",
+                      "kind":  "image",
+                      "role":  "image",
+                      "source":  "media/field-update-20261001/the-first-bend.jpg",
+                      "preview":  "media/field-update-20261001/the-first-bend.jpg",
+                      "banner_rank":  70,
+                      "bytes":  38445,
+                      "date":  "2026-10-01 11:34",
+                      "published":  "2026-10-01 11:34",
+                      "published_sort":  "20261001113420",
+                      "published_source":  "metadata",
+                      "modified":  "2026-10-01 11:35",
+                      "description":  "AI-generated artwork from the idle period following the museum correction. Completed at 11:33:48 and staged at 11:34:20. Unchanged staged JPEG; the hand and wire scene is invented, not an observed activity. It did not replace v4 in the official exhibit note.",
+                      "article":  "articles/2026-10-01-robot-790-field-update.md"
+                  },
+                  {
+                      "title":  "I Bend Wires",
+                      "kind":  "image",
+                      "role":  "image",
+                      "source":  "media/field-update-20261001/museum-v4.jpg",
+                      "preview":  "media/field-update-20261001/museum-v4.jpg",
+                      "banner_rank":  70,
+                      "bytes":  63988,
+                      "date":  "2026-10-01 11:28",
+                      "published":  "2026-10-01 11:28",
+                      "published_sort":  "20261001112804",
+                      "published_source":  "metadata",
+                      "modified":  "2026-10-01 11:35",
+                      "description":  "AI-generated fourth museum exhibit illustration, revised after Scott corrected the tool identification to needle-nose pliers and requested the new sign. Unchanged staged JPEG. A fictional exhibit, not a photograph, exact replica or historical reconstruction.",
+                      "article":  "articles/2026-10-01-robot-790-field-update.md"
+                  },
                   {
                       "title":  "The Memory Jar: Eric\u0027s Active-Mind Session",
                       "kind":  "video",
