@@ -5,7 +5,7 @@ const { test } = require('node:test');
 
 const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 
-test('B2 can retain an old request after its completion leaves the transcript window', () => {
+test('short completed task retains its receipt beyond the old eighteen-chunk window', () => {
   const request = '[6:37:05 AM] You: Draw forgetting.';
   const receipt = '[6:37:21 AM] System: [sensing-eye visual note opened into B1 context: id eye-2]';
   const rows = [request, receipt, '[6:37:23 AM] Robot 790: There it is.'];
@@ -32,9 +32,10 @@ test('B2 can retain an old request after its completion leaves the transcript wi
   }
   const snapshot = c.brain2EvidenceSnapshot();
   assert.equal(snapshot.latest_user_utterance.text, request);
-  assert.equal(snapshot.conversation.length, 18);
-  assert.ok(!snapshot.conversation.some(row => row.text === receipt));
+  assert.equal(snapshot.conversation.length, rows.length);
+  assert.equal(snapshot.conversation_window.omitted_chunks, 0);
+  assert.ok(snapshot.conversation.some(row => row.text === receipt));
   assert.ok(!c.brain2ConversationContext().includes('eye-2'));
-  // This records the current information gap, not a desired permanent policy.
+  // The legacy fallback is still short; structured evidence no longer depends on it.
   assert.equal(snapshot.runtime.sensing_eye_image, 'a later image');
 });

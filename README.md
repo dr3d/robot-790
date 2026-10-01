@@ -323,6 +323,29 @@ observed mixed-speaker failure was recovered without changing the original sessi
 The private-advice extraction passes automated, isolated-browser and paired
 resume/idle/disconnect live checks. It removes 81 lines from the main HTML, keeping
 B2's advice wording, timing and selection behavior unchanged.
+September 30's separate B2 input repair replaces the short, clipped chunk window
+with whole observed reply groups and the full latest operator turn. Older-turn
+omissions are explicit; compact server receipts record what was prepared for B2.
+The evidence window targets 16K text characters, retaining the latest two assistant
+turns whole even when longer, rather than copying B1's full session history.
+Eric's seed and idle cadence are unchanged. Isolated checks confirm instruction
+delivery and improve unsupported-search handling; B2's own repetition judgments
+remain unreliable, so this is not a claimed loop cure.
+B2 can also use an occasional reading opportunity to revisit older conversation:
+alternating among speech behind its recent window and already loaded session notes,
+walking backward within each source. This shares the existing Exploration cadence
+with outside reading, rather than adding
+another stream of requests. A separate historical-reading job may offer one
+speaker/date/source-tagged callback or abstain; ordinary B2 oversight continues.
+It does not crawl archived files, force a new topic, or change Eric's persona.
+Historical advice stays pending until included in a local send, unless fresh human
+input, a source change, or a session change invalidates it. Citation generation is
+constrained to supplied passage IDs; invalid advice citations remain rejected.
+Automated, isolated model and resumed/idle live checks pass the repaired delivery,
+source-breadth and citation paths. The acceptance run reached all three loaded
+sessions, sent all seven historical suggestions and showed several useful callbacks.
+B2 still sometimes reinforces the theme it flags as circling; this is a mechanical
+checkpoint, not a claimed repetition cure.
 The response-completion owner passes automated, isolated-browser and paired live
 resume/tool-follow-up/stop checks. It separates model completion from finished playback
 without changing Eric's prompts, response length or idle cadence.

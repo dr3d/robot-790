@@ -42,7 +42,7 @@ function fixture() {
     'conversationLineMetadataFromDate', 'conversationLine', 'addConversation', 'replaceConversation',
     'noteUserText', 'normalizeTranscriptForDedupe', 'transcriptSimilarity', 'classifyTranscriptUpdate',
     'recordUserTranscript', 'clearInputDraft', 'rememberConversationProsody',
-    'activeRealtimeSession', 'handleEvent', 'conversationDisplayTextRange', 'conversationDisplayText',
+    'activeRealtimeSession', 'eventResponseId', 'handleEvent', 'conversationDisplayTextRange', 'conversationDisplayText',
     'conversationVisibleText', 'recordingSnapshotPaneText', 'conversationTranscriptSinceCleanConnect',
   ]) vm.runInContext(source(name), c);
   const event = (item, text, extra = {}, owner) => c.handleEvent({
@@ -52,6 +52,17 @@ function fixture() {
   const speech = text => c.handleEvent({ type: 'response.output_audio_transcript.done', transcript: text });
   return { c, calls, logs, event, speech, advance: ms => { now += ms; } };
 }
+
+test('assistant transcript metadata retains response identity without changing visible words', () => {
+  const { c } = fixture();
+  for (const response_id of ['first', 'first', 'second']) c.handleEvent({
+    type: 'response.output_audio_transcript.done', response_id, transcript: 'A complete sentence.'
+  });
+  c.handleEvent({ type: 'response.output_text.delta', response_id: 'text-response', delta: 'Text only.' });
+  assert.deepEqual(Array.from(c.conversationLineMetadata, row => row.responseId),
+    ['first', 'first', 'second', 'text-response']);
+  assert.ok(c.conversationLines.slice(0, 3).every(line => line.endsWith('Robot 790: A complete sentence.')));
+});
 
 test('same item rewrites one row despite long gaps, changed wording, and intervening Eric speech', () => {
   const f = fixture(), { c } = f;

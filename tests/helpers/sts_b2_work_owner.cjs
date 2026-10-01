@@ -4,6 +4,10 @@ const vm = require('node:vm');
 const page = fs.readFileSync(`${__dirname}/../../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
 
 function installBrain2Work(context, source = page) {
+  context.brain2History ||= require('../../web/sts/brain2-history.js').create();
+  // Legacy scenarios have no archived input; dedicated history tests install real candidates.
+  context.brain2HistoryCandidate ||= () => null;
+  context.brain2HistoryEnabled ||= () => false;
   if (context.brain2Work) return context.brain2Work;
   const busy = !!context.brain2InFlight, headlines = !!context.brain2HeadlinesInFlight;
   context.Robot790Brain2Work = require('../../web/sts/brain2-work.js');

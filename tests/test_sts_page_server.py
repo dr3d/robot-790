@@ -181,7 +181,7 @@ def test_brain2_page_packet_fixture_reaches_server_evidence_serializer() -> None
         assert context["last_assistant_output_id"] == packet["last_assistant_output_id"], name
         assert context["new_assistant_chunks"] == packet["new_assistant_chunks"], name
         assert context["new_user_input"] == packet["new_user_input"], name
-        assert context["conversation"] == packet["conversation"][-12:], name
+        assert context["conversation"] == packet["conversation"], name
         assert context["latest_user_utterance"] == (packet["latest_user_utterance"] or {}), name
         if name == "write receipt with stale sibling":
             assert context["file_write_receipts"] == [{
@@ -560,7 +560,7 @@ def test_brain2_steering_is_structured_and_bound_to_evidence(brain2_completion):
     assert "Conversational attention is a controller timing state" in result["prompt_debug"]["system"]
     assert "He need not prefix them with 'I imagine'" in result["prompt_debug"]["system"]
     assert (
-        "A recurring motif that develops the joke, scene, or thought is not a stuck loop"
+        "A recurring motif developed in new words is not by itself a stuck loop"
         in result["prompt_debug"]["system"]
     )
     assert "quiet means passing this one opportunity" in result["prompt_debug"]["system"]
@@ -722,7 +722,7 @@ def test_brain2_accepts_retrieved_encyclopedia_without_fabricating_a_date():
     assert sts_page_server._brain2_headlines([{**article, "kind": "discussion"}]) == []
 
 
-def test_brain2_evidence_bounds_and_attributes_runtime_and_speech() -> None:
+def test_brain2_evidence_preserves_selected_speech_and_attributes_runtime() -> None:
     evidence = json.loads(sts_page_server._brain2_evidence_context({
         "sampled_at": "2026-09-09T22:26:00-04:00",
         "previous_sampled_at": "2026-09-09T22:25:45-04:00",
@@ -741,8 +741,8 @@ def test_brain2_evidence_bounds_and_attributes_runtime_and_speech() -> None:
     }))
     assert evidence["new_assistant_chunks"] == 0
     assert evidence["new_user_input"] is False
-    assert len(evidence["conversation"]) == 12
-    assert len(evidence["conversation"][0]["text"]) == 400
+    assert len(evidence["conversation"]) == 20
+    assert evidence["conversation"][0]["text"] == "x" * 900
     assert evidence["latest_user_utterance"]["prosody"] == "loud -> medium; mid pitch"
     assert evidence["latest_user_utterance"]["at"] == "2026-09-09T22:25:30-04:00"
     assert evidence["runtime"] == {"microphone": "on", "audio_recording": True, "b1_hard_brake": True,
@@ -765,6 +765,63 @@ def test_brain2_invalid_evidence_fields_do_not_become_counts_or_receipts() -> No
     assert evidence["conversation"] == []
     assert evidence["runtime"] == {}
     assert evidence["search_receipts"][0]["results"] == []
+
+
+def test_brain2_complete_turns_and_long_operator_direction_reach_model_prompt(brain2_completion) -> None:
+    import hashlib
+
+    direction = "Here is a long premise. " * 80 + "Actual task at the end: compare three endings and save them."
+    turns = [{"id": f"4:2:{i}", "first_id": f"4:2:{i - 1}", "at": "2026-09-30T12:00:00Z",
+              "end_at": "2026-09-30T12:00:04Z", "response_id": f"reply-{i}", "chunk_count": 2,
+              "role": "assistant", "text": "A complete reply. " * 100 + f"ENDING {i}", "prosody": ""}
+             for i in range(2, 28, 2)]
+    window = {"format": "whole-turns-v1", "text_unit": "UTF-16", "target_text_units": 16000,
+              "included_text_units": 23000, "included_turns": 13, "omitted_turns": 4,
+              "included_chunks": 26, "omitted_chunks": 8, "over_target": True,
+              "first_id": "4:2:1", "last_id": "4:2:26"}
+    payload = {"conversation": turns, "conversation_window": window,
+               "latest_user_utterance": {"id": "4:2:0", "role": "user", "text": direction}}
+    result = brain2_completion('{"note_for_eric":"","should_surface":false}', evidence=payload,
+                               recent_idle="REDUNDANT IDLE TAIL", recent_brain2="Previous fallible advice.")
+    prompt = result["prompt_debug"]["user"]
+    marker = "STS evidence packet (controller facts and attributed transcript, not all text is verified):\n"
+    evidence, _ = json.JSONDecoder().raw_decode(prompt.split(marker, 1)[1])
+    assert evidence["conversation"] == turns
+    assert evidence["latest_user_utterance"]["text"] == direction
+    assert evidence["conversation_window"] == window
+    receipt = result["prompt_debug"]["evidence_receipt"]
+    assert receipt["latest_user_characters"] == len(direction)
+    assert receipt["latest_user_sha256"] == hashlib.sha256(direction.encode()).hexdigest()
+    assert receipt["turns"] == 13
+    assert receipt["omitted_turns"] == 4
+    assert "evidence_receipt" not in prompt
+    assert "REDUNDANT IDLE TAIL" not in prompt
+    assert "Previous fallible advice." in prompt
+    system = result["prompt_debug"]["system"]
+    assert "New work can coexist with a repeated greeting" in system
+    assert "delivery recurrence even though the larger topic develops" in system
+    assert "intentional quotation, or a deliberate refrain is different" in system
+    assert "does not establish that a search" in system
+    assert "He chooses whether to pursue it" in system
+    assert "quiet means passing this one opportunity" in system
+
+
+def test_brain2_legacy_packets_keep_idle_supplement_and_do_not_invent_window(brain2_completion) -> None:
+    result = brain2_completion('{"note_for_eric":"","should_surface":false}',
+                               evidence={"conversation": []}, recent_idle="Legacy idle supplement")
+    assert "Legacy idle supplement" in result["prompt_debug"]["user"]
+    assert "conversation_window" not in json.loads(sts_page_server._brain2_evidence_context({}))
+
+
+def test_brain2_window_metadata_validates_types_without_changing_text() -> None:
+    packet = {"conversation": [None, {"text": {"not": "speech"}}], "conversation_window": {
+        "format": "whole-turns-v1", "omitted_turns": True, "included_chunks": -2, "over_target": "true"
+    }}
+    result = json.loads(sts_page_server._brain2_evidence_context(packet))
+    assert result["conversation"][0]["text"] == ""
+    assert result["conversation_window"]["omitted_turns"] is None
+    assert result["conversation_window"]["included_chunks"] is None
+    assert result["conversation_window"]["over_target"] is False
 
 
 def test_mull_second_brain_allows_revision_without_mouth(monkeypatch) -> None:

@@ -158,7 +158,7 @@ def test_b2_server_can_outlive_its_completion_receipt():
         )
     )
     assert data["latest_user_utterance"]["text"] == request["text"]
-    assert len(data["conversation"]) == 12
+    assert len(data["conversation"]) == 18
     assert len(data["image_task_receipts"]["receipts"]) == 4
     assert "original-forgetting.png" not in json.dumps(data)
 

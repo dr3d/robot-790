@@ -34,6 +34,7 @@ function installInboxState(c, page) {
 }
 
 function normalizeInboxState(source) {
+  source = require('./sts_b2_evidence_scope.cjs').normalizeB2Evidence(source);
   return source
     .replaceAll('sensingEyeInboxState.observeSaved(seq);', 'sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, seq);\n          sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, seq);\n          handledSensingEyeInboxSeqs.add(String(seq));')
     .replaceAll('sensingEyeInboxState.ignoreThrough(Number(result.latest_seq) || 0);', 'sensingEyeInboxLastSeq = Math.max(sensingEyeInboxLastSeq, Number(result.latest_seq) || 0);\n      sensingEyeInboxIgnoreSeqThrough = Math.max(sensingEyeInboxIgnoreSeqThrough, Number(result.latest_seq) || 0);')

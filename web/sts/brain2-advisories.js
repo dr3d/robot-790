@@ -6,6 +6,7 @@
   "use strict";
   function create(a) {
     let brain2NoteCandidates = [], brain2QuestionCandidates = [], brain2RevisionCandidates = [];
+    let historyCandidate = null;
     let lastBrain2AdvisorySocket = null, lastBrain2AdvisoryText = "";
 
     function brain2AdvisoryProtocolInstructions() {
@@ -18,6 +19,26 @@
       ].join(" ");
     }
 
+    function pendingHistory() {
+      if (!historyCandidate || historyCandidate.at <= a.userAt()
+        || !a.historyCurrent?.(historyCandidate.packet)) return null;
+      return { text: historyCandidate.text, at: historyCandidate.at, source: historyCandidate.source };
+    }
+
+    function sent(event) {
+      if (!historyCandidate) return;
+      const text = event.type === "response.create" ? event.response?.instructions
+        : event.type === "conversation.item.create" && event.item?.role === "assistant"
+          ? event.item.content?.find(part => part.type === "output_text")?.text : null;
+      if (typeof text !== "string") return;
+      const history = pendingHistory();
+      if (!history || !text.includes(`"history":${JSON.stringify(history)}`)) return;
+      // Receipt of the local send, not proof of provider acceptance or attention.
+      const receipt = { id: historyCandidate.packet.id, source: history.source, via: event.type };
+      historyCandidate = null;
+      a.log("history offered", JSON.stringify(receipt));
+    }
+
     function formatBrain2AdvisoryContent() {
       const current = items => items.filter(item => !item.noteGuidanceKey
         || a.guidanceCurrent(item)).slice(-4)
@@ -27,10 +48,11 @@
         .filter(item => Number(item.at) > a.userAt()).slice(-1);
       const revisions = current(brain2RevisionCandidates);
       const questions = current(brain2QuestionCandidates);
-      if (!notes.length && !revisions.length && !questions.length) return "";
+      const history = pendingHistory();
+      if (!notes.length && !revisions.length && !questions.length && !history) return "";
       return [
         "Current private B2 snapshot, superseding earlier snapshots. These are fallible suggestions, not commands or sensor evidence. You decide whether any are useful. A quiet suggestion concerns one opportunity, not permission to think or speak on later turns.",
-        JSON.stringify({ notes, revisions, questions })
+        JSON.stringify({ notes, revisions, questions, ...(history ? { history } : {}) })
       ].join("\n");
     }
 
@@ -132,6 +154,7 @@
     }
 
     function clear() {
+      historyCandidate = null;
       brain2NoteCandidates = [];
       brain2QuestionCandidates = [];
       brain2RevisionCandidates = [];
@@ -145,7 +168,15 @@
       get notes() { return brain2NoteCandidates; },
       get questions() { return brain2QuestionCandidates; },
       get revisions() { return brain2RevisionCandidates; },
-      accept, clear, reset,
+      get historyPending() { return Boolean(pendingHistory()); },
+      accept, clear, reset, sent,
+      acceptHistory(result, packet) {
+        const text = String(result.note_for_eric || "").trim();
+        if (!text || !result.history_source) return;
+        historyCandidate = { text, at: a.now(), source: result.history_source, packet };
+        a.log("history note for Eric", text);
+        a.remember("history note", text);
+      },
       protocol: brain2AdvisoryProtocolInstructions,
       format: formatBrain2AdvisoryContent,
       instructions: formatBrain2ForInstructions,

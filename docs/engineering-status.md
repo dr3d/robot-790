@@ -1,8 +1,261 @@
 # Engineering Status
 
-Reviewed September 29, 2026. This is the maintained engineering view; session
+Reviewed September 30, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+September 30, 21:27-22:31 historical-reading repair acceptance: all thirteen
+history reads completed, with six abstentions and seven valid advice candidates.
+All seven have exactly one local-send receipt. Two survived ongoing B1 speech
+for 138 and 108 seconds before sending, directly exercising the repaired race.
+Interleaving reached all three loaded saved sessions plus older current speech;
+the oldest saved session was reached on the third opportunity. Several callbacks
+visibly entered B1's replies, notably witness-by-frequency and the Solaris
+counterexample. Source identity and send receipts do not prove interpretation.
+
+No near-verbatim long-block repeat like the previous run was found by the stated
+proximity-block scan; repeated phrasing and thematic circling remain. Four ordinary
+B2 notes repeated exactly twice, and eight loop verdicts did not prevent further
+taxonomy suggestions. The mechanical changes have live acceptance, not a claimed
+loop cure. All nine image originals/eye assets survive, music was composed/played,
+and the failed short-ID image recall recovered through exact filename lookup.
+Peak B1 context was 73.59%, without overflow or B2 timeout.
+
+Mid-speech disconnect cancelled both response and TTS, released the pipeline,
+and saved complete continuity: source/draft match, four verified pins, nine
+verified assets, preparation ready with 236/236 entries. A separate watch item:
+after a request for silent music playback, a fully filtered tool follow-up caused
+the existing automatic retry, which produced the unwanted spoken acknowledgment.
+The filtered text is unavailable, so intentional silence cannot be inferred.
+No runtime edits or restart in this PM. Evidence:
+`logs/runs/20260930-2231-history-repair-acceptance/`.
+
+September 30 historical-reading follow-up repairs: pending advice now survives
+ongoing B1 speech until an eligible local send actually includes that candidate.
+Formatting, session configuration, stale sockets and failed sends do not consume
+it. Fresh human input, source edits/removal and session changes still invalidate
+it. A compact `history offered` receipt identifies the source and send type;
+this proves local submission, not provider acceptance, attention or usefulness.
+Another historical read cannot overwrite a still-pending candidate.
+
+The reader alternates among available current/saved sources, keeping each source's
+backward cursor rather than exhausting the newest first. Failed reads yield to
+another source next time without marking their passages inspected. Citation
+generation uses an enum of supplied passage IDs; even abstentions identify an
+assessed passage internally, without producing advice for B1. Nonempty advice
+with an invalid citation is still rejected. No persona, speech restriction,
+context size or reading cadence change was made.
+
+All 1,222 JavaScript and 1,130 Python tests pass, including source fairness and
+delivery races; scoped Ruff and whitespace checks pass. Python reports one
+existing Starlette/httpx deprecation warning.
+Isolated real-page checks cover ongoing speech, failed/stale sends, source removal
+and reconnects. Automatic selection on the actual run reaches the older 12:32
+session within three history opportunities. Seven isolated production-model calls
+were recorded: an initial empty-ID-permitting schema failed once, three diagnostic
+calls passed, and three calls with the final no-empty-ID contract passed. The
+initial failure's raw response was not captured. Final valid citations do not
+prove substantive use of the older material: two calls abstained and one mostly
+continued recent-topic advice. Repetition and callback quality remain live watch
+items, not claimed fixes. Only the page helper was restarted; served code and
+history-mode validation were checked over HTTP, then isolated real-page checks
+passed again. Realtime, face and model processes stayed running. Refresh STS
+before the next resumed/idle trial. Evidence: `logs/maintenance/b2-history-repairs/`.
+
+September 30, 20:14-21:08 historical-reading live PM: partial acceptance, not yet
+a stable behavioral checkpoint. Eleven history attempts produced six abstentions,
+three advice candidates and two invalid-source rejections. The reader walked the
+newest saved session and older current speech but never reached the earlier full
+HAL discussion. Exhaustive newest-source-first traversal is too narrow for the
+intended breadth. One callback arrived during an active B1 response and expired
+on its next speech chunk, before a new request could use it; the real advisory
+module reproduces this delivery race offline. Other callbacks arrived between
+turns, so this does not explain all unused advice or repetition.
+
+Two long B1 blocks repeated at 98.8% and 99.3% word similarity with distinct
+requests and fresh TTS. B2 also repeated three notes exactly and often extended
+the motif it was flagging. Full latest operator input was preserved; no advice
+clipping or context overflow (peak 54.67%). Search dispatch, image retention,
+save/preparation and disconnect receipts passed the inspected paths. Eric's
+closing denial of idle HAL thought contradicts earlier HAL mentions, though
+those mentions were not sustained exploration. Next: repair advice lifetime,
+broaden source traversal, and tighten source-ID output without weakening
+validation. No runtime changes in this PM. Evidence and reproduction:
+`logs/runs/20260930-2108-history-reading/`.
+
+September 30 B2 historical reading implemented after the feasibility experiment
+below (initial implementation; traversal and advice lifetime superseded by the
+follow-up repairs above). A private cursor walks backward outside B2's recent evidence window, then
+through already loaded session notes, newest session first. It preserves speaker,
+clock, source filename/date and line references. Pages target 2,400 text characters
+but retain a whole coherent response when longer. No archive crawl, extra note
+loading, ordinary-note scan, or copy of B1's full history into B2 was added.
+
+Historical and outside reading share the existing Exploration cadence: history
+gets the first eligible opportunity, then outside reading gets the next when
+enabled. Initial quiet time is up to two real minutes; subsequent reading uses
+the existing level-dependent gap, not lab-speed time. Drift, Wonder and
+Exploration must be enabled; history does not require web access. Ordinary B2
+oversight still runs between reading opportunities. There is no new persona rule,
+forced topic rotation, speech restriction or compulsory historical callback.
+
+The server assigns a distinct historical-reading job, keeps recent evidence for
+revision checks, allows abstention, and requires an actual supplied passage ID
+for nonempty advice. Historical reading cannot directly speak, steer, draw or
+move the body. B1 receives only the bounded advice and source metadata, not the
+whole passage. This optional advice expires from future advisory snapshots after
+new B1 speech, human input, source removal/edit, or session change. Already sent
+conversation messages are not erased. Failed or stale reads do not advance the
+cursor; successful abstentions do. Previously inspected pages are not automatically
+replayed after exhaustion. Session reset clears coverage.
+
+Isolated real-page checks pass successful delivery, interruption, unpinning and
+reconnect rejection, with no live voice/tools. Three isolated production-model
+calls used automatically selected passages from two recorded runs: one supplied
+a correctly source-bound callback and two abstained. All returned the history
+mode without speech/art/body/steering. These validate the path, not fewer loops
+or consistently useful callbacks: the offered thought partly revisits an already
+discussed uncertainty. Source binding does not prove the model's interpretation
+or attribution is sound. All 1,220 JavaScript tests and 1,130 Python tests pass;
+scoped Ruff and whitespace checks pass. The page helper alone was restarted and
+its history-mode validation checked over HTTP; realtime, face and model processes
+were left running. Automated evidence and model receipts are in
+`logs/maintenance/b2-history-implementation/`. A refreshed ordinary resumed/idle
+run is the remaining live acceptance check.
+
+September 30 B2 historical-reading feasibility experiment completed, isolated
+from live Eric. Three selected older passages from two recorded sessions were
+replayed with the current whole-turn evidence builder and production B2 request
+construction. Each retained the full latest operator turn and identical recent
+evidence. The first 27 local calls compared current B2, historical-reading
+guidance with an empty packet, and the same guidance with a sourced older passage,
+three repetitions per condition. None of the nine history-added advisories used
+a distinctive detail from that older passage; they continued the latest theme.
+
+A separately recorded, post-hoc nine-call follow-up kept those inputs and assigned
+the particular pass a historical-reading job. Eight advisories used older details;
+one correctly abstained because the old proposal had been revised. This is source
+access, not eight quality passes: two clinic-scene callbacks were concretely useful,
+one city/lattice reconciliation was qualified, one answer misattributed Eric's
+earlier description to Scott, and several others restated the current theme or
+overstated consequences. All three expiry-date controls recognized revision rather
+than reinstating the old deadline, but some explanations blurred distinct revisions.
+
+All 36 requests matched their registered input transformations, returned complete
+JSON and valid output-bound steering, and would fit the existing advice delivery
+limit without clipping. Calls took 1.84-5.38 seconds. Focused history added 743-990
+prompt tokens over current B2 in these fixtures. These are observed costs, not a
+cache benchmark: no B1 workload, controlled cache state, or live long-idle test.
+Recent packets were reconstructed, with runtime/search receipts and prior B2
+outputs withheld identically across arms; native response IDs were unavailable.
+The two story cases share a recent-context snapshot. Passage selection was manual,
+so this does not validate an automatic historical cursor, independent retrieval,
+fewer repeated B1 replies, or reliability across sessions.
+
+Direction supported: an occasional explicitly scoped historical-reading pass,
+with speaker/date/source intact, recent context to check revisions, and permission
+to abstain. Simply appending older text to every supervisory pass did not suffice
+here. Live prompts, persona, scheduling, advice delivery and services were not
+changed or restarted. The reusable offline runner is `scripts/b2_history_lab.py`;
+plans, frozen requests, raw outputs, per-answer qualitative review and verified
+costs are in `logs/maintenance/b2-history-reading/`. No operator test or refresh is
+needed for that experiment. Automatic selection was not tested at that stage;
+the later implementation is documented above. All 176 focused Python tests pass,
+including thirteen new harness checks; scoped Ruff and whitespace checks pass. The executed harness was
+preserved before hardening its protection against overwriting completed inputs.
+
+September 30 B2 evidence repair implemented and page helper activated. Native
+response IDs now group observed speech chunks; legacy rows fall back to adjacent
+same-speaker timing with a ten-second gap, without crossing human input. Selection
+keeps whole recent groups toward a 16,000 UTF-16-text-unit soft target, always
+preserving the latest two assistant groups and the complete latest operator turn
+separately. Long replies can exceed the target; no speech is clipped to fit it.
+The server no longer applies the hidden twelve-row/400-character cuts. Coverage
+reports older groups/chunks omitted. The overlapping 900-character idle tail is
+not re-added to the new format; legacy clients retain their old supplement.
+Raw chunk IDs/counts, stale-advice checks, scheduling and B1/creature prompts stay
+unchanged. B2 guidance now distinguishes repeated delivery from useful topic
+development and forbids inferring a running/stuck search from narration alone.
+
+Server-prepared evidence receipts record included turns/text size, omitted turns,
+last output ID, and latest operator ID/length/SHA-256 in the B2 audit, not the
+model's context. Status accompanies each receipt; preparation is not proof of
+provider acceptance or attention. Historical reconstruction preserves all 639
+and 1,146 characters of the two previously clipped assignments. All 1,202 Node
+tests and 1,109 Python tests pass; after the final B2 wording clarification,
+171 targeted Python tests pass. An isolated Edge check routes sixty native speech
+chunks as two groups and preserves the full instruction, without live voice or
+tools. Existing import-order/line-length lint findings remain unrelated.
+
+Six isolated B2-only model probes (three cases, two prompt versions) are mixed:
+both instruction-tail probes recover the requested compare-without-choosing
+direction, and both unreceipted-search probes challenge the unsupported status.
+Both repeated-passage-with-new-detail probes still return loop:false, although
+their advice proposes new developments. Do not count the latter as a loop cure,
+or the six hand-selected probes as a controlled rate/causality study. Input
+fidelity is repaired; model judgment and a complete search lifecycle ledger
+remain separate work. No response filter, forced topic rotation, or idle silence
+policy was added. Ordinary refresh/resume is the next live check. Evidence:
+`logs/maintenance/b2-evidence-fidelity/`.
+
+September 30 context/focus follow-up: 83 captured B2 provider inputs confirm an
+older evidence-fidelity defect. The browser selects 18 raw transcript rows, but
+the server supplies only 12, with each text field and the separately retained
+latest operator utterance silently cut at 400 characters. Long assignments lose
+their task directions; one twelve-row packet spans only 6.619 seconds of a single
+reply. These limits date to September 10, not the latest extraction. Both a failed
+resumed story and a productive empty-start story exhibit the clipping, so it is
+not a proven loop cause. B2 also misses some plainly visible repetitions and can
+reinforce a detected one or an unverified search claim. Selected historical cases
+do not support B1 context size alone as the discriminator: narrow topics can
+develop, broad research can repeat, and fresh readings can feed an existing fixation.
+Recommended next scope is complete current operator direction and coherent recent
+turns for B2, then explicit search lifecycle receipts, without persona changes,
+forced silence or topic rotation. No production/runtime change or new operator
+trial. Reproducible extraction, source hashes, tests, comparisons and limitations:
+`logs/runs/20260930-context-focus-audit/`.
+
+September 30 historical repetition audit: passage matching across 4,109 saved
+conversation snapshots found older examples beyond the recent PMs. September 1
+has the same mercury paragraph twice with separate request cycles; September 4
+has repeated search promises after the last actual lookup; September 19 has
+three identical Mars passages corroborated by distinct native requests and new
+TTS, before the September 20 ownership-refactor baseline. September 25's PM had
+already noted an octopus near-repeat: the full 155-word passage repeats, and its
+wire capture proves the first answer was present in history while current B2
+advice had changed. Repetition is therefore not newly introduced as a behavior
+class by the latest refactors. This does not establish unchanged frequency,
+exonerate all changes, or identify one cause. Exact-row checks and good lifecycle
+acceptance were too narrow to imply a clean content verdict. No production or
+runtime changes, model replay, or special operator trial. Evidence, source hashes,
+six passing scanner tests and verified case assertions:
+`logs/runs/20260930-historical-repeat-audit/`.
+
+September 30, 12:45-13:03 follow-up PM: five spoken "Searched:" claims had no
+native call or page request. Four idle passages recycled the nonexistent wait
+and monolith argument; B2 reinforced the waiting premise despite later noticing
+the missing receipt. The first explicit operator correction still produced
+only speech; the second produced a real search at 13:02:18, with results about
+two seconds later. This is an action-grounding failure, not a demonstrated slow
+search. Context peaked at 29.50%. Search/dispatch function spans and backend
+search/tool files match September 28 checkpoint 8786837; 37 focused offline tests
+pass. That does not clear earlier changes or provider/request construction:
+full on-wire history was not captured. The eventual search had a concatenated
+first result, a separate source-quality watch. Save/disconnect/asset receipts
+passed. No production change or operator trial imposed. Evidence and scoped next
+investigation: `logs/runs/20260930-1303-unissued-search-loop/`.
+
+September 30, 12:04-12:32 cold-start PM: a near-verbatim idle passage recurred
+at 12:24:54 and 12:25:40. Distinct model request IDs, backend text and fresh TTS
+establish generated repetition, not transcript duplication or audio replay.
+Idle requests were 47 seconds apart with the first complete before the second;
+B2 later flagged loop:true while supplying near-repeated advice. Only the core
+note was loaded and B1 context peaked at 32.15%, so neither old-session loading
+nor context exhaustion explains this instance. Full on-wire history was not
+captured; model/advisory/history causes are not resolved. Tools, image recall,
+save receipts and disconnect passed. Three originals exist, two staged; the
+third was retained after operator activity changed the scene. No production
+change or dedicated trial requested. Evidence: `logs/runs/20260930-1232-idle-repeat/`.
 
 September 29 checkpoint decision: the operator accepts the inbox-state work and
 returns to exploration. Dedicated refactor trials are paused. Future extractions

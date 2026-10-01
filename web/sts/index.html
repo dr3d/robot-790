@@ -3009,6 +3009,7 @@
   <script src="brain2-speech.js"></script>
   <script src="brain2-surface.js"></script>
   <script src="brain2-evidence.js"></script>
+  <script src="brain2-history.js"></script>
   <script src="brain2-request.js"></script>
   <script src="brain2-work.js"></script>
   <script src="brain2-advisories.js"></script>
@@ -3447,6 +3448,7 @@
     let brain2Timer = null;
     const brain2Surface = createBrain2SurfaceOwner();
     const brain2Work = Robot790Brain2Work.create();
+    const brain2History = Robot790Brain2History.create();
     const brain2Advisories = createBrain2AdvisoryOwner();
     let brain2LastEvidence = null;
     let brain2EvidenceGeneration = 0;
@@ -7541,6 +7543,7 @@
       return Robot790Brain2Advisories.create({
         now: () => Date.now(),
         guidanceCurrent: item => Robot790NoteBrains.isCurrent(item, loadedNoteContexts, "b2"),
+        historyCurrent: packet => brain2History.current(packet, brain2HistoryInput()),
         userAt: () => lastUserTurnActivityAt,
         discoveryAt: () => idleDiscovery?.at,
         connected: () => realtimeConnected(),
@@ -8139,25 +8142,25 @@
       brain2Surface.stopWaiting();
     }
 
-    function brain2BlockedReason({ manual = false } = {}) {
+    function brain2BlockedReason({ manual = false, history = null } = {}) {
       if (pendingSessionMapMove || sessionMapMoveBusy) return "session transition";
       if (toolContinuation.pending > 0 || toolContinuation.needed) return "tool continuation";
       if (brain2Work.busy) return "already in flight";
       if (!manual && !realtimeConnected()) return "disconnected";
       if (!manual && !brain2MouthBrainEnabled()) return "brain 2 off";
       const headlinesDue = !manual && brain2HeadlinesDue();
-      if (currentBrain2PersonFocus() <= 0 && !headlinesDue) return "person lane off";
-      if (!conversationLines.length && !headlinesDue) return "no conversation";
+      if (currentBrain2PersonFocus() <= 0 && !headlinesDue && !history) return "person lane off";
+      if (!conversationLines.length && !headlinesDue && !history) return "no conversation";
       if (userSpeechActive) return "user speaking";
       if (!manual && Date.now() < brain2BackoffUntil) return `backoff until ${new Date(brain2BackoffUntil).toLocaleTimeString()}`;
       if (!manual && Date.now() - lastBrain2MullAt < compressIdleMs(brain2MinGapMs, { floorMs: brain2FastClockFloorMs })) return "cooldown";
-      if (!manual && !headlinesDue && brain2LastEvidence?.fingerprint === brain2EvidenceSnapshot().fingerprint) return "no new evidence";
+      if (!manual && !headlinesDue && !history && brain2LastEvidence?.fingerprint === brain2EvidenceSnapshot().fingerprint) return "no new evidence";
       return "";
     }
 
     function brain2DelayMs() {
       const focus = currentBrain2PersonFocus();
-      if (focus <= 0) return brain2HeadlinesEnabled() ? 30000 : Infinity;
+      if (focus <= 0) return brain2HeadlinesEnabled() || brain2HistoryEnabled() ? 30000 : Infinity;
       return compressIdleMs(Math.max(10000, 52000 - focus * 4200), { floorMs: brain2FastClockFloorMs });
     }
 
@@ -10158,6 +10161,9 @@
         error: result?.error || ""
       };
       brain2PromptLog = [...brain2PromptLog, item].slice(-maxBrain2PromptLog);
+      if (promptDebug.evidence_receipt) {
+        logBrain2("evidence input", JSON.stringify({ status: item.status, ...promptDebug.evidence_receipt }));
+      }
       if (item.system || item.user) {
         rememberPromptLedger({
           kind: "chat.completions",
@@ -11796,6 +11802,26 @@
       await brain2Surface.maybeSurface();
     }
 
+    function brain2HistoryEnabled() {
+      return brain2MouthBrainEnabled() && currentIdleDrift() > 0 && currentIdleWonder() > 0 && currentIdleExploration() > 0
+        && !firstContactModeEnabled() && !performanceModeEnabled() && !idleSubstrateTestEnabled();
+    }
+
+    function brain2HistoryInput() {
+      return { generation: realtimeConnection.generation, evidence: brain2EvidenceSnapshot(),
+        lines: conversationLines, metadata: conversationLineMetadata, notes: loadedNoteContexts };
+    }
+
+    function brain2HistoryCandidate() {
+      if (!brain2HistoryEnabled() || !realtimeConnected() || brain2Work.busy || brain2Advisories.historyPending) return null;
+      if (userSpeechActive || userTurnPending() || responseCompletion.active || outputAudioActive() || idleInFlight
+        || toolContinuation.pending > 0 || toolContinuation.needed || currentLabGoal() || activeIdleSelfTasks().length
+        || lmStudioPromptBusy()) return null;
+      return brain2History.candidate({ ...brain2HistoryInput(), now: Date.now(), gap: idleExplorationGapMs(),
+        quietSince: Math.max(brain2HeadlineStartedAt, lastUserTurnActivityAt, lastAcceptedUserTranscriptAt),
+        outsideEnabled: brain2HeadlinesEnabled() });
+    }
+
     function brain2HeadlinesEnabled() {
       return brain2MouthBrainEnabled() && currentIdleDrift() > 0 && currentIdleWonder() > 0 && currentIdleExploration() > 0 && llmWebSearchTools.checked
         && !firstContactModeEnabled() && !performanceModeEnabled() && !idleSubstrateTestEnabled();
@@ -11809,10 +11835,10 @@
       const quietSince = Math.max(brain2HeadlineStartedAt, lastUserTurnActivityAt, lastAcceptedUserTranscriptAt);
       const unusedCached = brain2HeadlineCache.some((item) => !brain2HeadlineSeen.includes(item.url));
       const gap = idleExplorationGapMs();
-      const lastReading = Math.max(brain2HeadlineLastAttemptAt, brain2HeadlineLastSelectionAt);
+      const lastReading = Math.max(brain2HeadlineLastAttemptAt, brain2HeadlineLastSelectionAt, brain2History.lastAttemptAt);
       return now - quietSince >= Math.min(idleHeadlineQuietMs, gap)
         && ((!lastReading || now - lastReading >= gap)
-          || (brain2HeadlineRefreshRequested && unusedCached && now - brain2HeadlineLastSelectionAt >= 30000));
+          || (brain2HeadlineRefreshRequested && unusedCached && now - Math.max(brain2HeadlineLastSelectionAt, brain2History.lastAttemptAt) >= 30000));
     }
 
     function idleHeadlineSeedAvailable() {
@@ -11963,15 +11989,16 @@
       }
     }
 
-    async function requestBrain2Mull({ manual = false, headlines = null } = {}) {
+    async function requestBrain2Mull({ manual = false, headlines = null, history = null } = {}) {
       const generation = realtimeConnection.generation;
       const socket = realtimeConnection.socket;
       const evidence = brain2EvidenceSnapshot();
-      const body = headlines ? null : brain2BodyContext();
+      const body = headlines || history ? null : brain2BodyContext();
       const observedBody = body ? { url: normalizeFaceBaseUrl(), revision: faceVisualHoldRevision } : null;
       return Robot790Brain2Request.run({
         manual, headlines, generation, socket, evidence, body, observedBody,
-        ...(!headlines && typeof idleArt !== "undefined" && idleArt.proposalContext()
+        ...(history ? { history } : {}),
+        ...(!headlines && !history && typeof idleArt !== "undefined" && idleArt.proposalContext()
           ? { idleArt: idleArt.proposalContext() } : {}),
         personFocus: currentBrain2PersonFocus(),
         conversation: brain2ConversationContext(),
@@ -11991,7 +12018,7 @@
         userSpeaking: () => userSpeechActive,
         rememberPrompt: details => rememberBrain2Prompt(details),
         logBodyChoice: detail => logBrain2("body choice", detail),
-        acceptEvidence: accepted => { brain2LastEvidence = accepted; }
+        acceptEvidence: accepted => { if (!history) brain2LastEvidence = accepted; }
       });
     }
 
@@ -12001,8 +12028,9 @@
       const socket = realtimeConnection.socket;
       const evidenceGeneration = brain2EvidenceGeneration;
       const userActivityAt = lastUserTurnActivityAt;
-      const readHeadlines = !manual && brain2HeadlinesDue();
-      const blocked = brain2BlockedReason({ manual });
+      const history = !manual ? brain2HistoryCandidate() : null;
+      const readHeadlines = !manual && !history && brain2HeadlinesDue();
+      const blocked = brain2BlockedReason({ manual, history });
       if (blocked) {
         bumpBrain2Counter("skipped");
         logBrain2("mull skipped", blocked);
@@ -12018,7 +12046,11 @@
       updateLanePressure({ reason: "Brain 2 mull started" });
       try {
         bumpBrain2Counter("fired");
-        logBrain2("fired", readHeadlines ? "idle headlines" : manual ? "manual" : "auto");
+        logBrain2("fired", history ? "idle history" : readHeadlines ? "idle headlines" : manual ? "manual" : "auto");
+        if (history || readHeadlines) brain2History.attempted(history ? "history" : "outside", Date.now(), history);
+        if (history) logBrain2("history reading", JSON.stringify({ id: history.id, source: history.filename,
+          saved_at: history.saved_at, form: history.form, characters: history.characters,
+          passages: history.passages.map(({ id, speaker, at, first_line, last_line }) => ({ id, speaker, at, first_line, last_line })) }));
         const headlineWorkCurrent = () => !realtimeConnection.stopped && socket === realtimeConnection.socket && generation === realtimeConnection.generation
           && evidenceGeneration === brain2EvidenceGeneration && userActivityAt === lastUserTurnActivityAt
           && !userSpeechActive && !userTurnPending() && brain2HeadlinesEnabled() && brain2MouthBrainEnabled();
@@ -12031,7 +12063,7 @@
           logBrain2("headlines unchanged", "no new dated stories; no model call needed");
           return;
         }
-        const result = await requestBrain2Mull({ manual, headlines });
+        const result = await requestBrain2Mull({ manual, headlines, ...(history ? { history } : {}) });
         if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) {
           logBrain2("stale", "ignored result from previous realtime session");
           return;
@@ -12042,6 +12074,16 @@
         }
         lastBrain2MullAt = Date.now();
         brain2FailureStreak = 0;
+        if (history) {
+          if (!brain2HistoryEnabled() || userSpeechActive || userTurnPending() || userActivityAt !== lastUserTurnActivityAt
+            || !brain2History.complete(history, brain2HistoryInput())) {
+            logBrain2("history stale", "operator activity, source change, or session reset");
+            return;
+          }
+          logBrain2("history examined", JSON.stringify({ id: history.id, advice: Boolean(result.note_for_eric), source: result.history_source || null }));
+          brain2Advisories.acceptHistory(result, history);
+          return;
+        }
         if (readHeadlines) {
           if (headlineWorkCurrent()) acceptBrain2Headline(result, headlines);
           else logBrain2("headlines stale", "discarded after operator activity or idle reading disabled");
@@ -12944,10 +12986,11 @@
       return `[${stamp}] ${text}`;
     }
 
-    function addConversation(text, { touchActivity = true, channel = "dialogue" } = {}) {
+    function addConversation(text, { touchActivity = true, channel = "dialogue", responseId = "" } = {}) {
       const at = new Date();
       conversationLines.push(conversationLine(text, at));
-      conversationLineMetadata.push({ ...conversationLineMetadataFromDate(at), channel });
+      conversationLineMetadata.push({ ...conversationLineMetadataFromDate(at), channel,
+        ...(responseId ? { responseId } : {}) });
       renderConversation();
       if (touchActivity) noteConversationActivity();
       return conversationLines.length - 1;
@@ -12987,6 +13030,7 @@
       recentBrain2Outputs = [];
       brain2Surface.reset();
       brain2Advisories.reset();
+      brain2History.reset();
       lastRuntimeContextSocket = null;
       lastRuntimeContextSections = {};
       recentIdleOutputs = [];
@@ -13232,7 +13276,9 @@
     }
 
     function send(event, { socket = realtimeConnection.socket, generation = realtimeConnection.generation } = {}) {
+      const active = activeRealtimeSession(socket, generation);
       realtimeConnection.send(event, { socket, generation });
+      if (active) brain2Advisories.sent(event);
     }
 
     function beginRealtimeSession() {
@@ -19664,14 +19710,14 @@
           standingRoutine.cueCount += 1;
         }
         noteAssistantText(event.transcript || "");
-        addConversation(`Robot 790: ${event.transcript || ""}`, { touchActivity: false });
+        addConversation(`Robot 790: ${event.transcript || ""}`, { touchActivity: false, responseId: eventResponseId(event) });
       } else if (event.type === "response.output_text.delta") {
         lastUserConversationIndex = -1;
         if (containsToolMarkup(event.delta || "")) {
           suppressToolMarkupResponse(event.delta || "", event);
           return;
         }
-        addConversation(`Robot 790: ${event.delta || ""}`, { touchActivity: false });
+        addConversation(`Robot 790: ${event.delta || ""}`, { touchActivity: false, responseId: eventResponseId(event) });
       } else if (event.type === "response.function_call_arguments.done") {
         handleFunctionCall(event, { socket, generation }).catch((error) => log(events, `tool bridge error: ${error.message}`));
       } else if (event.type === "error") {

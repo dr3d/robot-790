@@ -38,6 +38,7 @@ function fixture(name, page, installOwner = null) {
     conversationLines: ['Hello'], brain2QuestionCandidates: [], brain2NoteCandidates: [], brain2RevisionCandidates: [],
     compressIdleMs: ms => ms, realtimeConnected: () => true,
     brain2HeadlinesDue: () => name.startsWith('headline') || name === 'empty-headlines',
+    brain2HistoryCandidate: () => null, brain2History: { attempted() {} },
     brain2HeadlinesEnabled: () => true, brain2MouthBrainEnabled: () => true,
     currentBrain2PersonFocus: () => 4, userTurnPending: () => false,
     brain2EvidenceSnapshot: () => evidence,

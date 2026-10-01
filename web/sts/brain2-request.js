@@ -6,10 +6,11 @@
   "use strict";
 
   function buildPayload(input) {
-    const { manual, headlines, evidence, body } = input;
+    const { manual, headlines, history, evidence, body } = input;
     const { fingerprint, user_key, ...evidenceContext } = evidence;
     return {
-      mode: headlines ? "headlines" : manual ? "question" : "person",
+      mode: history ? "history" : headlines ? "headlines" : manual ? "question" : "person",
+      ...(history ? { history } : {}),
       ...(Object.hasOwn(input, "idleArt") ? { idle_art: input.idleArt } : {}),
       ...(headlines ? { headlines } : {}),
       ...(body ? { body } : {}),
@@ -45,6 +46,9 @@
     }
     if (!response.ok || result.status === "error") {
       throw new Error(result.error || `${response.status} ${response.statusText}`);
+    }
+    if (input.history && result.mode !== "history") {
+      throw new Error("History reading is unavailable on this page server; restart the STS page helper.");
     }
     effects.acceptEvidence(evidence);
     return { ...result, observed_evidence: evidence, observed_body: observedBody };
