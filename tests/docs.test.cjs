@@ -64,7 +64,7 @@ test('repository Markdown links and catalog sources point at existing files', ()
     if (Array.isArray(value)) value.forEach(visitCatalog);
     else if (value && typeof value === 'object') {
       for (const [key, item] of Object.entries(value)) {
-        if (['source', 'preview', 'poster'].includes(key) && typeof item === 'string') check('docs/catalog.json', item);
+        if (['source', 'html_source', 'preview', 'poster'].includes(key) && typeof item === 'string') check('docs/catalog.json', item);
         else visitCatalog(item);
       }
     }
@@ -192,5 +192,5 @@ test('repository Markdown article list is generated from the same newest-first c
   const index = fs.readFileSync(path.join(root, 'docs/index.md'), 'utf8');
   assert.doesNotMatch(index, /System\.Object\[\]/);
   const sources = [...index.matchAll(/]\((articles\/[^)]+)\)/g)].map(match => match[1]);
-  assert.deepEqual(sources, catalog.articles.map(item => item.source));
+  assert.deepEqual(sources, catalog.articles.map(item => item.html_source || item.source));
 });

@@ -1,15 +1,16 @@
 {
-    "generated":  "2026-10-01 12:49:59",
+    "generated":  "2026-10-01 12:54:13",
     "articles":  [
                      {
                          "title":  "Robot 790 and the things we make together",
                          "excerpt":  "Field notes from weeks four and five: a future museum, an alien signal, a small piano, and the drawings that appear when I stop asking for things.",
                          "source":  "articles/2026-10-01-robot-790-field-update.md",
                          "bytes":  16379,
-                         "published":  "2026-10-01 00:00",
-                         "published_sort":  "20261001000000",
-                         "published_source":  "filename",
-                         "modified":  "2026-10-01 12:49"
+                         "published":  "2026-10-01 12:52",
+                         "published_sort":  "20261001125215",
+                         "published_source":  "git-added",
+                         "modified":  "2026-10-01 12:49",
+                         "html_source":  "articles/2026-10-01-robot-790-field-update.html"
                      },
                      {
                          "title":  "Twenty-Two Minutes With a Memory Jar: Eric\u0027s Active-Mind Benchmark",

@@ -182,6 +182,7 @@ function readArticleAloud() {
 }
 
 function articleShareUrl(article) {
+  if (article.html_source) return new URL(article.html_source, location.href).toString();
   const url = new URL(location.href);
   url.searchParams.delete("media");
   url.searchParams.delete("autoplay");
@@ -216,7 +217,11 @@ async function copyArticleShareUrl(article, button) {
   }
 }
 
-async function openArticle(article, { replaceUrl = false, scroll = true } = {}) {
+async function openArticle(article, { replaceUrl = false, scroll = true, standalone = true } = {}) {
+  if (standalone && article.html_source) {
+    location.assign(new URL(article.html_source, location.href).toString());
+    return;
+  }
   stopArticleSpeech();
   currentArticle = article;
   articleReaderTitle.textContent = article.title;
@@ -304,7 +309,7 @@ function showArticles(articles) {
         <p class="meta">${escapeHtml([publicationLabel(article), bytesLabel(article.bytes)].filter(Boolean).join(" - "))}</p>
       </div>
       <div class="card-actions">
-        <button type="button" data-read-article="${index}">Read Here</button>
+        <button type="button" data-read-article="${index}">${article.html_source ? "Read Article" : "Read Here"}</button>
         <a href="${escapeHtml(renderedMarkdownUrl(article.source))}">Open File</a>
       </div>
     </section>
@@ -340,6 +345,7 @@ function showArticles(articles) {
   const targetIndex = selectedIndex >= 0 ? selectedIndex : defaultArticleIndex(orderedArticles);
   openArticle(orderedArticles[targetIndex], {
     replaceUrl: false,
+    standalone: Boolean(requested),
     scroll: location.hash === "#article-reader"
   });
 }

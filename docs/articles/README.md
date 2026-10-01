@@ -2,6 +2,13 @@
 
 Drop public Markdown articles in this folder.
 
+An article can also have a formatted HTML reading edition with the same base
+filename. The catalog records it as `html_source`; Read Article, Share and
+the generated index use that edition, while Markdown remains the editable
+source and the homepage's inline preview. Keep both editions synchronized.
+For the October 1 field update, run `node scripts/build_field_update.cjs`
+before rebuilding the catalog.
+
 Suggested filename style:
 
 ```text

@@ -319,7 +319,7 @@ if (Test-Path $articleDir) {
         ForEach-Object {
             $moment = Get-CanonicalArtifactMoment $_
             $source = Convert-ToSitePath $_.FullName
-            [ordered]@{
+            $articleEntry = [ordered]@{
                 title = Get-TitleFromMarkdown $_.FullName
                 excerpt = Get-ExcerptFromMarkdown $_.FullName
                 source = $source
@@ -329,6 +329,11 @@ if (Test-Path $articleDir) {
                 published_source = $moment.source
                 modified = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
             }
+            $htmlPath = [System.IO.Path]::ChangeExtension($_.FullName, '.html')
+            if (Test-Path -LiteralPath $htmlPath) {
+                $articleEntry.html_source = Convert-ToSitePath $htmlPath
+            }
+            $articleEntry
         } |
         Sort-Object @{ Expression = { $_.published_sort }; Descending = $true },
                     @{ Expression = { $_.source }; Descending = $false }
@@ -450,7 +455,8 @@ function Update-PublicArticleIndex {
     }
     $end += $endMarker.Length
     $entries = $Articles | ForEach-Object {
-        "- [$($_.title)]($($_.source)) - $($_.published)"
+        $articleLink = if ($_.html_source) { $_.html_source } else { $_.source }
+        "- [$($_.title)]($articleLink) - $($_.published)"
     }
     $replacementLines = @(
         $startMarker,
