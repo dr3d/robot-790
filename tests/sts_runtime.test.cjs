@@ -10,6 +10,89 @@ const sessionMapPage = fs.readFileSync(path.join(__dirname, '../web/sts/session-
 const lineagePalette = JSON.parse(sessionMapPage.match(/const LINEAGE_HUES = (\[[^\]]+\]);/)[1]);
 const runtimeConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/runtime.json'), 'utf8'));
 
+test('base search rules allow private tool work and preserve user disclosure constraints', () => {
+  assert.doesNotMatch(page, /When using search_web, summarize the result naturally/);
+  assert.match(page, /Search results can be used privately to complete the task/);
+  assert.match(page, /honor requests to withhold answers, clues, prompts, or other details/);
+});
+
+test('page opening preserves isolation and never mistakes a null handle for proof of blocking', async () => {
+  for (const handle of [null, {}]) {
+    const requests = [], messages = [];
+    const c = loadFunctions(['showWebPage'], {
+      window: { open: (...args) => { requests.push(args); return handle; } },
+      events: {}, log: (_, text) => messages.push(text),
+    });
+    const result = await c.showWebPage({url: 'https://example.com/article', title: 'Article'});
+    assert.deepEqual(requests, [['https://example.com/article', '_blank', 'noopener,noreferrer']]);
+    assert.equal(result.status, 'requested');
+    assert.equal(result.opened, null);
+    assert.equal(result.blocked, null);
+    assert.equal(result.content_fetched, false);
+    assert.match(messages[0], /requested \(unconfirmed\)/);
+    await assert.rejects(c.showWebPage({url: 'javascript:alert(1)'}), /HTTP or HTTPS/);
+    assert.equal(requests.length, 1);
+  }
+});
+
+function modelSettingsContext() {
+  const stored = new Map();
+  const context = loadFunctions([
+    'currentModelPreset', 'currentModelMtp', 'modelHasMtpControl',
+    'currentCustomModelKey', 'currentCustomModelReasoning', 'currentCustomModelContext',
+    'currentCustomModelParallel', 'updateCustomModelControls', 'loadModelPreset',
+    'saveModelPreset', 'currentModelRestartPayload',
+  ], {
+    modelPreset: { value: 'qwen27-mtp-vlow', options: [{ value: 'qwen27-mtp-vlow' }, { value: 'custom' }] },
+    modelMtp: { value: 'off' }, modelMtpControls: { hidden: false }, customModelControls: { hidden: true },
+    customModelKey: { value: 'fixture/model' },
+    customModelReasoning: { value: 'none', options: [{ value: 'none' }] },
+    customModelContext: { value: '131072' }, customModelParallel: { value: '2' },
+    currentTtsPrecision: () => 'bfloat16',
+    modelPresetStorageKey: 'preset', modelMtpStorageKey: 'mtp', customModelKeyStorageKey: 'key',
+    customModelReasoningStorageKey: 'reasoning', customModelContextStorageKey: 'context',
+    customModelParallelStorageKey: 'parallel',
+    localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
+  });
+  return { context, stored };
+}
+
+test('MTP is a remembered restart request, defaults off, and retains the custom load settings', () => {
+  const { context: c, stored } = modelSettingsContext();
+  c.loadModelPreset();
+  assert.equal(c.currentModelRestartPayload().mtp, 'off');
+  c.modelPreset.value = 'custom';
+  c.customModelContext.value = '65536';
+  c.customModelParallel.value = '4';
+  c.modelMtp.value = 'on';
+  c.saveModelPreset();
+  c.modelMtp.value = 'off';
+  c.loadModelPreset();
+  assert.equal(c.modelMtp.value, 'on');
+  assert.deepEqual(JSON.parse(JSON.stringify(c.currentModelRestartPayload())), {
+    preset: 'custom', tts_dtype: 'bfloat16', mtp: 'on', model: 'fixture/model',
+    reasoning: 'none', context_length: 65536, parallel: 4,
+  });
+  stored.set('mtp', 'invalid');
+  c.loadModelPreset();
+  assert.equal(c.currentModelRestartPayload().mtp, 'off');
+});
+
+test('a saved MTP-on choice is hidden and omitted for other presets', () => {
+  const { context: c } = modelSettingsContext();
+  c.modelMtp.value = 'on';
+  for (const preset of ['qwen27', 'qwen9', 'qwen4', 'nemotron30', 'openai']) {
+    c.modelPreset.value = preset;
+    c.updateCustomModelControls();
+    assert.equal(c.modelMtpControls.hidden, true);
+    assert.equal('mtp' in c.currentModelRestartPayload(), false);
+  }
+  c.modelPreset.value = 'qwen27-mtp-vlow';
+  c.updateCustomModelControls();
+  assert.equal(c.modelMtpControls.hidden, false);
+  assert.equal(c.currentModelRestartPayload().mtp, 'on');
+});
+
 test('session map reuses the STS diamond-metal texture and title family', () => {
   const texture = 'assets/diamond-plate.avif';
   assert.ok(page.includes(`url("${texture}")`));

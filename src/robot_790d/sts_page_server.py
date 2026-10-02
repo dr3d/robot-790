@@ -842,6 +842,15 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if tts_dtype not in {"bfloat16", "float16"}:
             self._send_json(400, {"status": "error", "error": f"Unsupported TTS precision: {tts_dtype}."})
             return
+        mtp = payload.get("mtp", "default")
+        if mtp not in ("default", "on", "off"):
+            self._send_json(400, {"status": "error", "error": "MTP must be on, off, or default."})
+            return
+        if mtp != "default" and preset not in {"qwen27-mtp-vlow", "custom"}:
+            self._send_json(400, {
+                "status": "error", "error": "MTP control requires the NVFP4 or Custom LM Studio preset."
+            })
+            return
         try:
             context_length = int(payload.get("context_length") or 131072)
         except (TypeError, ValueError):
@@ -893,6 +902,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                         str(parallel),
                         "-TtsDtype",
                         tts_dtype,
+                        "-Mtp",
+                        mtp,
                     ],
                     cwd=repo_root,
                     stdout=stdout,
@@ -909,6 +920,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 "status": "ok",
                 "tool": "restart_realtime_server",
                 "preset": preset,
+                "mtp": mtp,
                 "pid": process.pid,
                 "message": "Realtime backend restart started.",
             },

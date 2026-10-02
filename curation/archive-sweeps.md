@@ -4,6 +4,43 @@ This file records intentional moves from the active repo tree into the adjacent
 `robot-790-archive` folder. These are not deletions; they are index/search
 relief sweeps for bulky or high-count runtime artifacts.
 
+## 2026-10-01 General Workspace Cleanup
+
+- Archive: `D:\_PROJECTS\robot-790-archive\20261001-cold-workspace`.
+  Preserved 1,765 files, 438,879,749 bytes (about 419 MiB), under original
+  repository-relative paths: 1,640 moved files, 68 shared referenced copies
+  retained locally and 57 Markdown reports replaced by forwarding links.
+- Covers 55 September 21–25 run bundles, 126 older live diagnostics and
+  30 loose diagnostic, backup and browser-console files. Checked 3,624
+  retained source/document/note/evidence files for references.
+- Kept September 26 onward, older open investigations, active service logs,
+  source, configuration, prompt exports, environments, session memory, artwork
+  and recordings. All 3,754 protected runtime files retain their paths, sizes
+  and modification times. The private root `notes-to-me.txt` was untouched.
+- Skipped 54 scratch directories with access restrictions or private-name
+  fixtures. No permissions changed, no services restarted and no runtime code
+  changed in this sweep. Existing uncommitted work remains intact.
+- Every archived original was SHA-256 verified. Recovery information:
+  archive `README.md`, `manifest.json`, `moves.jsonl`, `skipped.json`,
+  `verification.json` and `protected-verification.json`. Script and local
+  results: `logs/maintenance/archive-cold-20261001*`. This is reversible
+  same-drive organization; no files were discarded.
+
+## 2026-10-01 Live Snapshot Cleanup
+
+- Moved 3,339 unreferenced dated conversation, events, Brain 2 and companion
+  audit snapshots (488,793,746 bytes, 466.15 MiB) into
+  `D:\_PROJECTS\robot-790-archive\20261001-cold-live-snapshots`.
+- Checked 4,942 retained text files for references. Kept all `latest-*` files,
+  the newest dated snapshot per stream, referenced evidence, other snapshot
+  types and service logs. No PM bundles, notes or media moved.
+- Every moved file was SHA-256 verified. Original relative paths, `plan.json`,
+  `moves.jsonl`, `manifest.json` and a recovery README are in the archive.
+  Script: `logs/maintenance/archive-live-20261001.ps1`. This is reversible
+  same-drive organization; no files were discarded.
+- Periodic two-minute snapshots are now a default-off Advanced setting in
+  STS. Manual and exit saves remain; refresh the page to load the change.
+
 ## 2026-09-23 Cold Workspace
 
 - Archive: `D:\_PROJECTS\robot-790-archive\20260923-cold-workspace`.

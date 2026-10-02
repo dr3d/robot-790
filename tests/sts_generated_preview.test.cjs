@@ -8,7 +8,8 @@ const baseline=require('./fixtures/sts-generated-preview.json');
 const page=fs.readFileSync(`${__dirname}/../web/sts/index.html`,'utf8').replace(/\r\n/g,'\n');
 
 test('preview owner preserves complete state and ordered effects from the checkpoint',async()=>{
-  assert.deepEqual(await characterize(page,installGeneratedPreview),baseline.cases);
+  const {previousImageReceiptShape}=require('./helpers/sts_image_receipt_compat.cjs');
+  assert.deepEqual(previousImageReceiptShape(await characterize(page,installGeneratedPreview)),baseline.cases);
 });
 test('frozen preview baseline independently reproduces from committed page',async()=>{
   const original=cp.execFileSync('git',['show',`${baseline.baseline}:web/sts/index.html`],{encoding:'utf8'}).replace(/\r\n/g,'\n');

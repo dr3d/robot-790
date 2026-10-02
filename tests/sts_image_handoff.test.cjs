@@ -24,7 +24,9 @@ test('eye staging, retrieval, idle delivery and prompts stay unchanged', () => {
     source.indexOf('\n      receipt:', source.indexOf('      deliver: async (result, sameSession) => {')));
   assert.ok(delivery(original).length > 100);
   assert.equal(require('./helpers/sts_eye_content_owner.cjs').normalizeEyeAccess(delivery(page)), delivery(original));
-  for (const name of ['generated-preview.js', 'image-request.js', 'idle-art.js']) {
+  // image-request.js now adds preview/observation metadata; its frozen effect
+  // traces and the new receipt contract are checked in sts_image_request.
+  for (const name of ['generated-preview.js', 'idle-art.js']) {
     const before = cp.execFileSync('git', ['show', `${baseline.baseline}:web/sts/${name}`], { encoding: 'utf8' }).replace(/\r\n/g, '\n');
     assert.equal(fs.readFileSync(`${__dirname}/../web/sts/${name}`, 'utf8').replace(/\r\n/g, '\n'), before, name);
   }

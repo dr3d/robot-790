@@ -47,6 +47,9 @@ and contention with conversation still matter. Some tools use external services.
 Start with the public story, receipts, and open questions:
 
 - [Eric Robot 790 public page](docs/index.md)
+- [Robot 790 and the things we make together](docs/articles/2026-10-01-robot-790-field-update.reading.html):
+  the latest illustrated field report, following Eric through drawing, music,
+  tools, corrections and shared projects.
 - [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8):
   the larger video collection; the repository keeps selected recordings rather
   than duplicating every upload.
@@ -112,6 +115,34 @@ The interesting question is how far character and continuity can appear from
 that assembly when the machinery is kept visible.
 
 ## Current Pieces
+
+October 2 checkpoint: saved piano scores now use readable title-and-timestamp
+filenames. Periodic diagnostic transcript snapshots are optional and off by
+default; session saving and manual snapshots remain available. Context cards
+label their filtered word counts **Frequent words (display only)**, separating
+them from the actual search query.
+
+Connection Settings now includes **MTP on restart**, and the NVFP4 restart path
+uses the installed model key separately from its API name. A missing model is
+rejected before stopping realtime. Brain 2 has a checked-by-default **Mute
+microphone** control: unchecking it permits microphone input while its browser
+voice speaks. The choice is remembered; acoustic B1/B2 conversation is still an
+experiment, not a demonstrated capability.
+
+Search fallbacks reject the observed dictionary and unrelated headline results
+and can try a news index after an empty general search. Tool instructions allow
+private search work when the operator wants an answer withheld. Image receipts
+distinguish preview updates from eye staging; opening a browser tab reports a
+request rather than claiming confirmed display or page reading. These changes
+improve the information Eric receives; they do not guarantee sound judgment.
+
+Long-context performance remains open. Recent live runs reproduced GPU stalls
+and timeouts, including a full 108k-token B1 prompt rebuild after a B2 history
+pass replaced its cached slot. A separate post-disconnect GPU burst was normal
+session-summary preparation. MTP's role has not been isolated. See
+[Engineering Status](docs/engineering-status.md) for verification and limits,
+and the [STS UI Guide](docs/sts-ui-guide.md) for the controls. Refresh STS to load
+browser changes; Python search changes require a page-server restart.
 
 September 29, after checkpoint `d2629ec`: eye-inbox sequence and duplicate
 bookkeeping now live in `sensing-eye-inbox-state.js`, removing three mutable
@@ -523,14 +554,14 @@ The usual all-local STS setup has four moving parts:
 3. Robot 790 browser page on `127.0.0.1:8790`.
 4. Browser Face on `127.0.0.1:8791`, the default embodiment.
 
-Here `gold` means the current best-known-good Eric runtime preset, not only the
-robot's gold body color. The current gold baseline is back on the faster NVFP4
-MTP build because responsive Brain1 timing matters more than the old-model
-comparison for ordinary lab work.
+Here `gold` names the daily Eric runtime preset, not only the robot's gold body
+color. It uses the NVFP4 model. MTP is a separate load setting; the UI defaults
+its next-restart choice to Off. Extended-session GPU behavior remains under
+investigation as described above.
 
 ```powershell
 lms unload --all
-lms load qwen3.8-27b-nvfp4-mtp --parallel 2 --context-length 131072 --gpu max --identifier qwen3.8-27b-nvfp4-mtp -y
+lms load qwen3.8-27b-mtp --parallel 2 --context-length 131072 --gpu max --identifier qwen3.8-27b-nvfp4-mtp --no-speculative-draft-mtp -y
 ```
 
 Start the realtime backend:
@@ -647,32 +678,39 @@ Or stop one side:
 
 ## Brain Presets
 
-The STS page Realtime Server panel has a `Brain` dropdown. Pick a model and hit
-`Restart` to stop realtime, unload the current LM Studio model, load the chosen
-model, and start realtime again with Eric's Qwen3-TTS voice.
+The STS Connection Settings panel has a `Brain` dropdown. Pick a model, then
+use Server Management's `Restart` to stop realtime, unload the current LM Studio
+model, load the chosen model, and start realtime again with Eric's Qwen3-TTS voice.
 
 Current presets:
 
 | Preset | LM Studio model | Context | Parallel | Reasoning | Notes |
 | --- | --- | ---: | ---: | --- | --- |
-| Qwen 27B MTP Fast | `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Current gold baseline: faster response, less lag, and better for testing Brain1 without patience becoming the experiment. |
+| Qwen 27B NVFP4 | API name `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Daily preset; MTP On/Off is chosen separately for the next restart. Extended-session stalls remain open. |
 | Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | `low` | Old-brain comparison preset: slower, subtly familiar, useful for calibration days. |
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | 1 | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | 1 | `none` | Small/fast comparison model. |
 | Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K requested / 32K observed | 1 | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like; verify actual context with brain status after restart. |
 | OpenAI | `$env:ROBOT_790_OPENAI_LLM_MODEL` | API | n/a | omitted | Cloud LLM comparison while keeping local Qwen3-TTS voice, face, and tools. Defaults to `gpt-4.1-mini`. |
-| Custom LM Studio | user-entered identifier | user-entered | 1-8 | user-entered | Paste the identifier from `lms ls` or LM Studio's load message, then restart. |
+| Custom LM Studio | user-entered installed key | user-entered | 1-8 | user-entered | Paste an installed model key from `lms ls`, then restart. |
+
+The NVFP4 preset loads the installed key `qwen3.8-27b-mtp` and assigns the API
+name shown above. Those names are not interchangeable when loading. Restart
+checks the installed catalogue before stopping realtime. **MTP on restart**
+appears for NVFP4 and Custom; Connect alone does not apply it. The command-line
+launcher accepts `-Mtp on`, `-Mtp off`, or `-Mtp default` (inherit LM Studio's
+setting). Omitting that argument uses `default`.
 
 The restart script behind the dropdown is:
 
 ```powershell
-.\scripts\restart_realtime_gold.ps1 -Preset qwen27-mtp-vlow
+.\scripts\restart_realtime_gold.ps1 -Preset qwen27-mtp-vlow -Mtp off
 .\scripts\restart_realtime_gold.ps1 -Preset qwen27
 .\scripts\restart_realtime_gold.ps1 -Preset qwen9
 .\scripts\restart_realtime_gold.ps1 -Preset qwen4
 .\scripts\restart_realtime_gold.ps1 -Preset nemotron30
 .\scripts\restart_realtime_gold.ps1 -Preset openai
-.\scripts\restart_realtime_gold.ps1 -Preset custom -Model qwen3.8-27b-nvfp4-mtp -Reasoning none -ContextLength 131072 -Parallel 2
+.\scripts\restart_realtime_gold.ps1 -Preset custom -Model qwen3.8-27b-mtp -Reasoning none -ContextLength 131072 -Parallel 2 -Mtp off
 ```
 
 The OpenAI preset uses `OPENAI_API_KEY` from `.env` and skips LM Studio model

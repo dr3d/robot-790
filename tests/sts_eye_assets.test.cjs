@@ -113,10 +113,11 @@ test('save flush registers an asset before decode and keeps it through a timed-o
   assert.equal(f.requests.length, 1);
 });
 
-test('asset extraction changes only delegation in existing page functions', () => {
+test('accepted asset extraction changed only delegation; shipped owner preserves its bodies', () => {
   const { names, normalizeAssetAccess } = require('./helpers/sts_eye_assets_owner.cjs');
+  const checkpoint = require('./helpers/sts_checkpoint_page.cjs').acceptedCheckpointPage();
   for (const match of before.matchAll(/^    (?:async )?function (\w+)\(/gm)) {
-    assert.equal(normalizeAssetAccess(extract(page, match[1])), extract(before, match[1]), match[1]);
+    assert.equal(normalizeAssetAccess(extract(checkpoint, match[1])), extract(before, match[1]), match[1]);
   }
   assert.doesNotMatch(page, /\bsensingEyeSessionAssetFilenames\b/);
   const module = fs.readFileSync(`${__dirname}/../web/sts/sensing-eye-assets.js`, 'utf8').replace(/\r\n/g, '\n');

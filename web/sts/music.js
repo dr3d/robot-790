@@ -79,7 +79,8 @@
   function create(a) {
     let serial = 0, state = "empty", current = null, filename = "", error = "";
     let latestPerformance = null;
-    const now = () => new Date(a.now ? a.now() : Date.now()).toISOString();
+    const currentTime = () => new Date(a.now ? a.now() : Date.now());
+    const now = () => currentTime().toISOString();
     function updateReceipt(receipt, playback, reason) {
       if (!receipt) return;
       receipt.playback = playback;
@@ -132,7 +133,9 @@
         if (!alive()) return { status: "cancelled", playback: "not_started", filename: retained };
         if (!retained) {
           const slug = parsed.score.title.normalize("NFKD").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "composition";
-          const target = `music/${a.id()}-${slug}.txt`;
+          const date = currentTime(), pad = (value, width = 2) => String(value).padStart(width, "0");
+          const timestamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${pad(date.getMilliseconds(), 3)}`;
+          const target = `music/${slug}-${timestamp}.txt`;
           await a.save(target, JSON.stringify(parsed.score, null, 2));
           retained = target;
         }

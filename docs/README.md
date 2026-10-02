@@ -33,31 +33,24 @@ The page is static, but it loads `catalog.json` with browser `fetch()`. That
 works on GitHub Pages and from a local HTTP file server. It may not work when
 opened directly as a `file://` URL.
 
-September 23 checkpoint: the homepage reflects shared conversation/idle
-history, the measured cache-state repair, compact file lookup, optional complete
-B1/B2 cards, retained-image retrieval, idle note writing and TimerCam snapshots.
-The extra deep-think experiment is disabled. Browser factoring now separates
-audio playback, tool continuation, connection transitions and B2 evidence
-assembly. Empty, resumed and rich-history trials plus paired note-revision/
-interruption/reconnect checks pass their exercised paths without prompt changes.
-The checkpoint passes 834 JavaScript and 1,006 Python tests plus isolated browser
-checks; broader lifecycle/cache questions remain open. The subsequent B2
-request-boundary extraction passes automated, isolated browser and ordinary
-resumed/idle live checks, with no prompt or scheduling changes.
-The follow-on B2 in-flight owner passes automated, isolated browser and ordinary
-resumed/idle/disconnect live checks. A separate summary citation repair labels
-source speakers explicitly and restricts references accordingly; the rejected
-derivative was recovered with its original session intact. See Engineering Status.
-The subsequent private-advice owner passes automated, isolated browser and paired
-resume/idle/disconnect live checks. It moves candidate storage, freshness, formatting
-and delivery bookkeeping out of the main HTML without changing B2's prompts.
-A response-completion owner now passes automated, isolated-browser and paired
-live resume/tool-follow-up/stop checks. It preserves the distinction between a finished
-model response and speech still playing; no companion behavior is retuned.
-The Memory Jar report
-and its edited video remain the latest featured report; this update adds no new
-article. [Engineering Status](engineering-status.md) is the maintained source
-for test results, observed weaknesses and remaining live acceptance work.
+October 2 checkpoint: the latest featured report is
+[Robot 790 and the things we make together](articles/2026-10-01-robot-790-field-update.reading.html),
+an illustrated account of drawing, music, tools and corrections. The Memory Jar
+report and edited video remain on the public shelf. This checkpoint adds no new
+article or raw session bundle.
+
+The implementation update includes timestamped score filenames, optional
+diagnostic snapshots, clearer search/context labels, search fallback repairs,
+more precise image and page-opening receipts, an MTP restart selector with the
+installed-model-key repair, and a default-on B2 microphone-muting checkbox.
+The [STS UI Guide](sts-ui-guide.md) describes the controls. Browser updates need
+a refresh; Python search changes need a page-server restart.
+
+Recent live sessions also reproduced GPU stalls and expensive B1 context
+rebuilds after B2 history work. The cache/scheduling repair is still open, and
+the microphone option enables an experiment rather than proving two-way voice
+communication. [Engineering Status](engineering-status.md) is the maintained
+source for checks, observations and remaining acceptance work.
 
 The catalog gives articles, media, and curated logs a canonical artifact time
 and renders each public shelf newest first. It does not use an incidental later

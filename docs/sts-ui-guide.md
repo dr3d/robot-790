@@ -179,6 +179,14 @@ and custom LM Studio fields. These configure the backend launch. They are not
 the one-turn **Think** control. Leave a working brain configuration alone for
 ordinary conversation; changing it is a deliberate server-management task.
 
+**MTP on restart** appears for **Qwen 27B NVFP4** and **Custom LM Studio**.
+It controls multi-token prediction, a generation speed optimization. The choice
+defaults to **Off** and is remembered in this browser. Save/disconnect, choose
+**On** or **Off**, then use **Server Management > Restart** to reload the model
+with that setting. **Connect** alone does not apply it. The selector shows your
+next-restart choice, not the running model's measured state. Turning it on
+requires an MTP-capable model; other model-load settings follow the chosen preset.
+
 On another apartment device, use the HTTPS gateway addresses from the cheat
 sheet, not POWER's loopback address. The gateway is a separate service. A
 reachable page, a reachable realtime server, and a trusted browser microphone
@@ -339,6 +347,11 @@ There are three distinct kinds of saving:
 | Record Audio / Stop Recording | The conversation audio and associated run evidence, finalized through the recording pipeline. |
 | Disconnect | A continuity session note, plus exit snapshots and finalization of active recording. |
 
+**Advanced → Periodic diagnostic snapshots (every 2 min)** is off by default.
+Turn it on when investigating a problem to save changed panes every two minutes
+while connected. The browser remembers your choice. Manual, disconnect,
+recording-stop and page-close snapshots still run with this setting off.
+
 **Auto record** starts audio when the mic starts. For a typed-only or idle-only
 test, explicitly check recording state and start recording when wanted. Brain
 2's optional browser-synthesized monitor voice may be audible in the room
@@ -404,6 +417,11 @@ is not a new creature prompt or a new conversation memory.
 it is more than a cosmetic caption toggle. **Voice** optionally reads surfaced
 monitor lines through the browser's speech synthesis. Browser Voice, Volume,
 Pace, and **Test** affect that monitor voice, not Eric's main TTS.
+
+**Mute microphone** starts checked: microphone audio is withheld from Eric
+while Brain 2 speaks and for half a second afterward. Uncheck it to let the
+microphone feed Eric during Brain 2 speech. The change applies immediately and
+is remembered in this browser. The separate **Mute Me** control still applies.
 
 **Person Lane** changes how strongly the ordinary observer pass studies the
 operator. **Mull** requests a manual private pass. It is different from

@@ -1,8 +1,288 @@
 # Engineering Status
 
-Reviewed September 30, 2026. This is the maintained engineering view; session
+Reviewed October 2, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+October 2 publication checkpoint: all 1,164 Python and 1,230 JavaScript tests
+pass, including docs links/catalog checks. Five broad refactor-equivalence
+assertions now verify the accepted September checkpoint (`d2ee62f`) instead of
+freezing every future page control; current owner, behavior and receipt tests
+continue to exercise the shipped code. Ruff reports 51 existing findings,
+confirmed against the previous commit, with no newly introduced diagnostics.
+The root README, docs README and both homepage formats now describe the current
+controls, repaired model-load commands and unresolved GPU/cache behavior.
+Routine PM evidence and local publication drafts remain outside this commit.
+Validation logs: `logs/maintenance/20261002-publish-check/`.
+
+October 2 B2 microphone control: Brain 2 now has a **Mute microphone** checkbox
+below Voice, checked by default and remembered per browser. Clearing it bypasses
+the B2 speech/500ms-tail microphone gate immediately, allowing acoustic listening
+experiments; the separate manual mic mute still applies. UI events and settings
+snapshots record the choice. All 87 focused B2 speech/surface and socket-lifecycle
+checks pass, and the live page server serves the updated HTML. Refresh is needed
+to load the control; no service restart or live acoustic test was performed.
+
+October 2, 16:23–17:24 movie/embodiment run: the goofy browser-face pose,
+capture and eye staging succeeded with explicit operator confirmation. Box
+callbacks and politeness were explicitly welcomed. Late runtime trouble was
+real: three B1 60-second timeouts and two B2 45-second timeouts; the sole manual
+Mull completed in about nine seconds. MTP was on, parallel 2, checkpoints 8;
+peak input was 107,957 (82.36%). Overlap slowed prompt processing, and the full
+trace shows a separate cache-reuse problem: a B2 history pass occupied B1's
+previous slot, followed by a B1 full 107,957-token evaluation taking 52.18s
+without overlapping B2 work. Slot/cache preservation and foreground priority
+both need attention; this does not isolate MTP or explain every timeout.
+The GPU burst after disconnect was continuity preparation, completed in 31.625s.
+Raw saving, 18 eye assets and three pins verify. The 336/339-entry sweep dropped
+three distinctive remarks; the summary omitted explicit positive preferences
+and retained some mistaken facts. No B2 voice playback event followed the volume
+change. Follow-up code inspection also found an explicit mic-to-STT gate during
+B2 speech and for 500ms afterward: volume alone cannot enable the proposed
+acoustic channel. No runtime changes in this PM or follow-up. Evidence:
+`logs/runs/20261002-1725-movie-night-gpu/PM.md`.
+
+October 2, 12:31–13:51 resumed impossible-machines session: a 67m35s user
+absence completed without provider timeout/decode failure or B2 failure.
+MTP was on (restart request plus `draft-mtp` process flag). Return interrupted
+playing audio successfully; first audio took 3.975s, then 1.415s. B1/TTS and B2
+had finished inference before that return, so this does not retest interruption
+of an active B2 request or close the prior GPU incident. Measured B1 input grew
+from 38,533 before idle to 79,016 peak (60.28%). Four fully filtered replies
+retried successfully. Five autonomous pictures completed/staged, plus a saved
+piano theme; the creative work was accompanied by 50 fifth-problem references
+and increasingly unsupported analogies that B2 often reinforced. Ten images
+were generated overall, but the submarine cross-section was never staged
+despite Eric's claim that both submarine pictures were in his eye. Five working
+note writes ended at 13:31; later persistence claims exceed the actual note.
+Session/draft, nine eye assets and two pins verify. Preparation retained
+125/301 entries, protecting every operator entry but dropping some unique idle
+ideas. Its summary invents an operator picture confirmation and repeats the
+unsupported staging claim. No runtime changes in this PM. Evidence:
+`logs/runs/20261002-1352-long-idle/`.
+
+October 2, 11:55–12:08 headlines/Moon run: the first two images were presented
+without disclosing their headlines; the driver round then received spoken
+hints. Round three leaked the complete stroller story before rendering, after
+nine searches exhausted the foreground continuation budget. One further tool
+call was denied (`robot790_spoken_followup_tool_blocked`); its name was not
+captured. A later B1 idle turn generated/staged the requested image successfully.
+All three images and their saved assets verify. The TV cast sent a loopback
+image URL to a remote receiver and returned `ok` with UNKNOWN receiver state;
+actual display is unverified and remote URL handling needs repair. Fifteen
+searches returned `ok`, including six poor/mixed Bing fallbacks. Both backend
+and browser receipts demonstrate the old search/preview behavior, so this is
+not a controlled retest of the pending repairs. The invited Moon-tow act was
+playful, but its factual setup included a millionfold mass error and an invalid
+measurement-limit claim. Peak context 29.66%, median first audio 1.586 seconds;
+no provider timeout/decode failure or B2 failure. Saving/preparation completed,
+but the 70/72-entry sweep dropped the specific dictionary-result failure report;
+raw dialogue remains intact. The summary repeats unverified lunar claims and
+understates the first stroller leak. No runtime changes in this PM. Evidence:
+`logs/runs/20261002-1208-headlines-and-moon/`.
+
+October 2 noon search follow-up: the page/search service was still the original
+09:38 process, so the earlier filtering repair had not loaded. The UI's model
+Restart uses `-RealtimeOnly`; it does not restart the page server. General-web
+queries remained intermittently empty. A direct news-index query recovered an
+exact failing query, so news requests now try DDGS news once after an empty or
+failed general search, preserving query text, publisher and publication date.
+The edited module recovered the observed query in 3.110 seconds; a restrictive
+AP-path query still returned no results. All 187 focused search/page-server
+checks and Ruff pass. Activation needs a page-server restart, then refresh;
+no service or model restart was performed during this live conversation.
+Evidence and exact page-only commands:
+`logs/runs/20261002-1200-search-followup/findings.md`.
+
+October 2, 09:56–10:17 headline game: four puzzle images completed/staged, but
+Eric announced three answers before rendering and described all four images
+despite the no-verbal-clue request. A conflicting base instruction required a
+spoken summary after every search. Search summaries are now conditional on the
+user's disclosure request, carried through tool follow-ups. Five irrelevant
+fallback responses (13 hits) are covered by regression fixtures: fallback
+relevance now requires whole-word subject evidence, news queries do not fall
+back to Wikipedia, and dictionary filtering includes Wiktionary/Vocabulary
+while preserving definition requests. Page-open receipts now report requested,
+unconfirmed opening: `noopener` returning null was incorrectly called blocked.
+Image receipts distinguish preview updates from eye staging/visual inspection.
+The corrected instructions do not establish reliable model compliance; Eric's
+false self-audit chronology also entered the generated continuity summary.
+Raw/scrubbed saving and all asset/pin hashes verify; 124/124 turns were retained.
+MTP was off, peak measured B1 context 39.60%, median first audio 2.157 seconds,
+with no B1 timeout/decode error or B2 failure in this short run. This does not
+resolve extended-idle acceptance. All 199 focused Python checks pass; 1,187 of
+1,192 browser checks pass, with five broad historical snapshot assertions also
+failing against the frozen pre-fix page. Live edited-module searches reject the
+observed junk and return useful focused results. Browser changes are served
+and require refresh. Automatic approval review blocked the page-server restart;
+the backend search fix needs a normal STS restart to activate. No model restart
+or post-fix game was performed. Local PM/evidence:
+`logs/runs/20261002-1017-headline-game/`.
+
+October 2 restart repair: the first user restart after adding MTP exposed the
+previously recorded stale launcher key. STS stopped, then LM Studio rejected
+`qwen3.8-27b-nvfp4-mtp` as an installed key, leaving Connect unavailable.
+The NVFP4 preset now loads the catalogue key `qwen3.8-27b-mtp` and retains
+`qwen3.8-27b-nvfp4-mtp` as its API identifier. A catalogue check occurs before
+stopping realtime or unloading models. Sixteen focused regression tests pass,
+including distinct load/API names and rejection before teardown. A live restart
+through the same API loaded the original VERY-LOW model with MTP off, context
+131072 and parallel 2; STT/TTS startup completed and `/api/realtime/ready`
+returned true at 09:56. Earlier argument-only checks missed the installed-key
+mismatch. Prior logs: `logs/runs/20261002-095315-restart-model-key-fix/`.
+
+October 2 MTP control: Connection Settings now offers a browser-remembered
+**MTP on restart** selector for the NVFP4 and Custom LM Studio presets, default
+Off. Restart forwards the explicit enable/disable option to `lms load`; Connect
+and editing the selector do not change the loaded model. The preset label is
+now **Qwen 27B NVFP4**, independent of MTP state. Other load settings still follow
+the selected preset. Invalid MTP requests are rejected before launch; older
+callers that omit it retain LM Studio's default. All 329 focused Python/Node
+tests pass, including PowerShell argument construction. The page server was
+restarted and its served control/API validation checked; no realtime or model
+restart was performed by this change. LM Studio reloaded separately during the
+work: the initial process had MTP off, while the later process had MTP on with
+131,072 context and four parallel predictions. Live performance remains to be
+tested. Page-server log backups: `logs/runs/20261002-093806-mtp-ui/`.
+
+October 1, 20:57–21:17 resume check: old pliers photo and combined-exhibit image
+recall passed; a new stereoscope exhibit, score, and save note completed. Resume
+admitted 76,204 startup tokens, loading the failed long session raw because its
+simple scrubbed derivative was not an accepted semantic sweep. Opening first
+audio took 30.623 seconds; most later ordinary turns were responsive. One B1
+60-second read timeout and one B2 timeout recurred; peak measured B1 context
+was 101,262 tokens (77.26%), so near-full capacity is not a prerequisite for
+the observed timeouts. At the final user return B2 remained outstanding for
+about thirteen seconds; B1 first audio took 7.608 seconds. Exact GPU/cache
+causality remains unmeasured. Both new images staged; twelve ordinary tools
+succeeded. Eric incorrectly called an explicitly prompted visual analogy an
+accidental discovery. The source of the long incoming politics passage awaits
+operator clarification. Five eye-asset/seven pin hashes and session/draft verify;
+preparation retained 90/90 entries in 9.204 seconds, but summary items omit
+the later half's main events (some image anchors remain). No runtime changes.
+Evidence: `logs/runs/20261001-2117-resume-check/`.
+
+October 1, 17:48–20:29 long idle: extended-idle acceptance failed. During a
+return to conversation, Scott reports repeated high GPU utilization immediately
+after speaking and inability to regain Eric's attention. B2 remained outstanding
+until seven seconds after the first speech start, then was discarded as stale;
+its request path has no speech-triggered provider cancellation. B1 cancellation
+receipts do not establish immediate engine release. Return-turn first-audio
+delays of 12.025 and 19.357 seconds are logged. Foreground priority and actual
+provider cancellation are primary follow-up targets, alongside context growth.
+During the preceding
+2.5-hour absence B1 input grew from 32,378 to 130,467 tokens (99.54% of the
+131,072 window). B1 logged fourteen 60-second read timeouts and seven engine
+decode failures; B2 logged eleven timeouts, seven HTTP 400 failures, and one
+invalid output. Reported B1 context dropped abruptly to about 68k after the last
+decode failure, so Eric's later 52% reading misses the peak. Shared-service
+context/resource pressure is the leading explanation; cache/slot failure,
+memory spill, and the reason for the context drop remain unisolated because
+passive engine capture was off. No GPU leak or thermal fault is established.
+All 264 completed TTS batches ran faster than playback. The timeout handler's
+canned speech entered B2 reflection; Eric's final report incorrectly claimed
+no further orbiting after the operator boundary. Fourteen idle images completed,
+thirteen staged; the unstaged Signed Carrier was nevertheless described as seen.
+Session/draft and all fifteen eye-asset/six pin hashes verify. Summary preparation
+failed explicitly at 102,531 characters against its 96,000 limit; raw/scrubbed
+remain intact. No runtime changes or restart. PM, context plot, and frozen
+evidence: `logs/runs/20261001-2030-long-idle-gpu/`.
+
+October 1 diagnostic snapshot cleanup: periodic two-minute transcript snapshots
+are now opt-in under Advanced, default off, with the choice remembered by the
+browser. Enabled snapshots run only while connected and not stopping. Manual,
+disconnect, recording-stop and page-close saves remain available independently.
+All 88 focused audit, transcript and connection lifecycle tests pass; inline
+page JavaScript parses. Refresh the STS page to load the new control.
+
+October 1, 11:24-11:34 museum return: unhinted brief recall, both prior generated
+image recalls and exact saved-score replay passed. Scott's needle-nose correction
+and "I Bend Wires!" revision reached the new images and saved v4 exhibit note;
+all seven referenced artifacts resolve. Three idle artworks completed/staged,
+with a later search supporting the bending/holding discussion. One B2 history
+read abstained; one ordinary note repeated exactly. No long near-verbatim B1
+repeat found. Silent playback still generated 1.32 seconds of TTS for `(playing)`.
+A "not confirmed" idle reply began before "Yes, please" finished transcribing;
+the separate affirmative turn produced no action, requiring a repeated instruction.
+Record this timing overlap separately from deliberate model refusal; its scheduling
+cause is not isolated. All fifteen tools succeeded; seven eye-asset and four pin
+hashes verify, session/draft match, preparation retained 56/56 entries. Peak context
+38.03%; two controller-markup suppression warnings, no backend errors. No new
+music composition was attempted or repair proposed. The corrected state's next
+reconnect remains untested. No runtime changes. Evidence:
+`logs/runs/20261001-1134-museum-return/`.
+
+October 1, 10:22-10:34 first museum run: camera, research, two generated/staged
+images, interrupted music, score read/revision and note/session saving completed.
+The new title/local-timestamp music filenames have live receipts. The main
+failures are in model output: the camera's long narrow plier jaws do not support
+B1's confident diagonal-cutter identification, which then shaped research and art;
+the claimed gentler musical ending changed only title and tempo (62 to 64 BPM),
+with identical note/timing/dynamic tracks. B2 reinforced the supposed improvement.
+Image delivery and score execution succeeded; these are not demonstrated runtime
+implementation faults.
+Music here is a general language model writing explicit score events without
+listening feedback, not a dedicated generative-music service. Expressive quality
+and revision remain exploratory; playable output and working controls are useful
+results in their own right.
+The children's visual mood changed successfully, and brief idle development
+included a B2-supplied association. No long near-verbatim repeat found.
+All fourteen tools returned success; five exhibit artifact references, three
+eye-asset hashes and two pinned-source hashes verify. Session/draft match;
+preparation retained 52/52 entries. Peak B1 context 29.24%, no tool errors or
+backend warnings/errors. No audio recording was found; playback conclusions
+use controller receipts. Reconnect/recall remains untested. No runtime changes
+in this PM. Evidence: `logs/runs/20261001-1034-museum-first-run/`.
+
+September 30, 23:25-23:30 explicit flat-floor revision: instruction-following
+passed. Eric dropped the dais, chose glazing and rendered shared water-facing
+seating on a flat floor. The second scene supports that conceptual result; the
+first plan's circulation lane was misread, so do not credit every visual critique.
+Condensation/overhang/heater claims remain unverified design proposals. One
+history read examined the superseded platform argument and abstained; no history
+advice was sent. Five ordinary B2 notes, two empty; no exact repeats, but two
+bench-location suggestions were near-restatements. No long B1 repeat found.
+Two images staged; a third in-flight render completed after disconnect and is
+retained on disk, not in the saved eye assets. Peak context 30.82%; no tool errors
+or B2 failures. One controller-text suppression warning preserved a valid image
+call without speech. Save/disconnect passed, preparation retained 18/18 entries,
+and all source/asset hashes match. No runtime changes; the explicit revision
+probe is complete. Evidence: `logs/runs/20260930-2330-flat-floor-revision/`.
+
+September 30, 23:16-23:22 waterfront resume: revised-brief recall passed from the
+loaded transcript without file tools or operator hints. Eric remembered the
+two-person change, shared seating and circulation. He accepted glazing as his
+design choice. The operator asked whether he meant a flat floor, but did not
+explicitly command a flat redesign; Eric acknowledged his platform was not flat
+and left the fork open. Do not score this as refusal of an unissued instruction.
+B2 continued reinforcing the unverified fog/height premise, calling it calibrated,
+and once returned B1's own sentence verbatim as first-person advice. No subsequent
+B1 repetition was observed. One history result was correctly discarded after new
+operator input. One unstaged render remained on disk after disconnect. Context
+peaked at 25.09%; no runtime errors; save and preparation passed, retaining 24/24
+entries. No runtime changes. Evidence: `logs/runs/20260930-2322-waterfront-resume/`.
+
+September 30, 22:45-23:12 waterfront-design trial, Connect Empty with core memory:
+the changed brief was exercised in the same run. Eric revised for Hope's comfort,
+circulation and shared music, then inspected Plan D and noticed that separate
+seating was not the same as an evening together. The closer/two-chair version
+remained a spoken proposal. Cross-session recall of the revised brief is untested.
+
+The main finding is an evidence-boundary issue, not a reproduced transport defect:
+both lanes promoted an explicitly prompted fog pattern into a practical premise
+for raising the perch. B2 reinforced that premise; the next prompt requested a
+split-level section. B1 noticed the tension with "one level" but retained a dais
+without clarifying the constraint. Images helped expose spatial separation while
+also being mistaken for evidence of real condensation behavior. No runtime guard
+or persona change is proposed from this PM.
+
+Seven originals/unique eye assets verified, eight staging receipts (one duplicate
+stage), one stale-image rejection followed by recovery, and one 20-second piano
+piece. No near-verbatim long B1 repeat found; one B2 note repeated exactly.
+Peak context 36.19%; no overflow or B2 failures. Plan D's long follow-up wait
+matches approximately 207 seconds of queued speech. Save/disconnect passed;
+preparation retained 118/118 entries and all source/asset hashes match. No code
+changes or restart. Evidence: `logs/runs/20260930-2312-waterfront-design/`.
 
 September 30, 21:27-22:31 historical-reading repair acceptance: all thirteen
 history reads completed, with six abstentions and seven valid advice candidates.
@@ -313,7 +593,7 @@ matches LM Studio's local index. The same VERY-LOW NVFP4 MTP artifact is indexed
 as `qwen3.8-27b-mtp`; it was loaded under the existing API identifier
 `qwen3.8-27b-nvfp4-mtp`, with 131072 context and parallel 2, then the normal
 voice launcher was started. Startup/readiness passed. The persistent launcher
-lookup still needs a separate small repair; no model substitution was made.
+lookup was repaired October 2 (see above); no model substitution was made.
 
 September 29, 12:59-13:15 live acceptance: both previously missing generated
 originals (Loose Eyes and Day I Became a Dog) were found, explicitly staged,

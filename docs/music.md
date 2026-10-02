@@ -35,8 +35,10 @@ that position rather than reconstructing already-held notes.
 - `play_music`: a complete score OR an existing `music/*.txt` filename.
 - `read_music`: read a score for revision without creating a pinned note.
 - `stop_music`: stop playback without deleting work.
-- Scores are versioned JSON under `notes/music/`, with unique filenames. They
-  are not automatically pinned or inserted into context.
+- Scores are versioned JSON under `notes/music/`. New filenames use the title
+  followed by local date, time and milliseconds, for example
+  `Flat-Shore-Room-20261001-093025-417.txt`. Existing filenames remain valid.
+  Scores are not automatically pinned or inserted into context.
 - A receipt reports the saved filename, title, parts, note count, duration and
   playback starting, not that anyone heard it or liked it.
 - B1 runtime updates and B2 evidence share the controller state and latest

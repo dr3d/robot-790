@@ -7,6 +7,8 @@ param(
     [string] $Reasoning = "none",
     [int] $ContextLength = 131072,
     [int] $Parallel = 0,
+    [ValidateSet("default", "on", "off")]
+    [string] $Mtp = "default",
     [ValidateSet("bfloat16", "float16")]
     [string] $TtsDtype = "bfloat16"
 )
@@ -56,9 +58,10 @@ if (-not (Test-Path $StartScript)) {
 
 $presets = @{
     "qwen27-mtp-vlow" = @{
-        Label = "Qwen 27B MTP Fast"
+        Label = "Qwen 27B NVFP4"
         Provider = "lmstudio"
         Model = "qwen3.8-27b-nvfp4-mtp"
+        LoadModel = "qwen3.8-27b-mtp"
         Reasoning = "none"
         AudioMaxTokens = 64
         ContextLength = 131072
@@ -140,6 +143,17 @@ if ($Preset -eq "custom") {
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
+# An API identifier assigned at load time need not be an installed model key.
+$modelToLoad = if ($selected.LoadModel) { $selected.LoadModel } else { $selected.Model }
+if ($selected.Provider -eq "lmstudio") {
+    $catalogJson = & lms ls --json
+    if ($LASTEXITCODE -ne 0) { throw "Could not read LM Studio's model catalogue; realtime has not been stopped." }
+    $catalog = @($catalogJson | ConvertFrom-Json)
+    if (-not ($catalog | Where-Object { $_.modelKey -eq $modelToLoad })) {
+        throw "Installed model key '$modelToLoad' was not found. Use a key from lms ls. Realtime has not been stopped."
+    }
+}
+
 & $StopScript -RealtimeOnly
 if ($DelaySeconds -gt 0) {
     Start-Sleep -Seconds $DelaySeconds
@@ -156,7 +170,14 @@ if ($selected.Provider -eq "lmstudio") {
         & lms unload --all | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "LM Studio unload failed." }
         Stop-StaleLmStudioBackends -SelectedModel $selected.Model
-        & lms load $selected.Model --parallel $parallelPredictions --context-length $selected.ContextLength --gpu max --identifier $selected.Model -y | Out-Null
+        $modelLoadArgs = @("load", $modelToLoad, "--parallel", $parallelPredictions, "--context-length", $selected.ContextLength, "--gpu", "max", "--identifier", $selected.Model, "-y")
+        if ($Mtp -eq "on") {
+            $modelLoadArgs += "--speculative-draft-mtp"
+        } elseif ($Mtp -eq "off") {
+            $modelLoadArgs += "--no-speculative-draft-mtp"
+        }
+        Write-Host "Loading $($selected.Model) with requested MTP setting: $Mtp"
+        & lms @modelLoadArgs | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "LM Studio model load failed." }
         Stop-StaleLmStudioBackends -SelectedModel $selected.Model
     } catch {

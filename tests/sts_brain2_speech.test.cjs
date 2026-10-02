@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const vm = require('node:vm');
-const { loadFunctions } = require('./helpers/sts_tool_harness.cjs');
+const { loadFunctions, page } = require('./helpers/sts_tool_harness.cjs');
 
 function fixture() {
   const utterances = [], logs = [];
@@ -15,6 +15,7 @@ function fixture() {
     SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } },
     Robot790Brain2Speech: require('../web/sts/brain2-speech.js'),
     brain2VoiceUnsupportedLogged: false, brain2VoiceMonitor: { checked: true },
+    brain2MuteMic: { checked: true },
     brain2MouthBrainEnabled: () => true,
     responseActive: false, audioBusy: false, userSpeechActive: false, userTurnPendingUntil: 0,
     outputAudioActive: () => c.audioBusy,
@@ -132,6 +133,56 @@ test('normal monitor speech preserves voice settings and the 500ms mic echo tail
   assert.equal(c.brain2MonitorAudioShouldMuteMic(), true);
   f.advance(1);
   assert.equal(c.brain2MonitorAudioShouldMuteMic(), false);
+});
+
+test('microphone checkbox takes effect during speech and its echo tail without canceling B2', () => {
+  const f = fixture(), { c } = f;
+  c.speakBrain2Monitor('Can Eric hear this?');
+  const utterance = f.utterances[0];
+  utterance.onstart();
+  const before = f.cancels();
+  assert.equal(c.brain2MonitorAudioShouldMuteMic(), true);
+  c.brain2MuteMic.checked = false;
+  assert.equal(c.brain2MonitorAudioShouldMuteMic(), false);
+  c.brain2MuteMic.checked = true;
+  assert.equal(c.brain2MonitorAudioShouldMuteMic(), true);
+  utterance.onend();
+  c.brain2MuteMic.checked = false;
+  f.advance(499);
+  assert.equal(c.brain2MonitorAudioShouldMuteMic(), false);
+  c.brain2MuteMic.checked = true;
+  assert.equal(c.brain2MonitorAudioShouldMuteMic(), true);
+  f.advance(1);
+  assert.equal(c.brain2MonitorAudioShouldMuteMic(), false);
+  assert.equal(f.cancels(), before);
+});
+
+test('microphone muting defaults on and remembers checkbox changes across preference reloads', () => {
+  const { c } = fixture(), storage = new Map();
+  const handlers = {};
+  Object.assign(c, {
+    localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+    brain2MuteMicStorageKey: 'mic-mute', brain2VoiceMonitorStorageKey: 'voice',
+    brain2VoiceVolume: null, brain2VoicePace: null,
+    brain2VoiceVolumeValue: null, brain2VoicePaceValue: null,
+    populateBrain2Voices() {}, recordUiEvent() {}, brain2ControlDetails: () => ({}),
+  });
+  c.brain2MuteMic.addEventListener = (type, handler) => { handlers[type] = handler; };
+  const listener = page.match(/    brain2MuteMic\.addEventListener\("change", \(\) => \{[\s\S]*?\n    \}\);/);
+  assert.ok(listener, 'checkbox has its real change handler');
+  vm.runInContext(listener[0], c);
+  loadFunctions(c, ['loadBrain2VoiceMonitor']);
+  c.brain2MuteMic.checked = false;
+  c.loadBrain2VoiceMonitor();
+  assert.equal(c.brain2MuteMic.checked, true, 'new users retain the previous muting behavior');
+  for (const checked of [false, true]) {
+    c.brain2MuteMic.checked = checked;
+    handlers.change();
+    c.brain2MuteMic.checked = !checked;
+    c.loadBrain2VoiceMonitor();
+    assert.equal(c.brain2MuteMic.checked, checked);
+  }
+  assert.equal(storage.has('voice'), false, 'changing mic muting does not overwrite the voice preference');
 });
 
 for (const change of ['disabled', 'stopped', 'new session']) {

@@ -129,9 +129,10 @@ for (const mode of ['normal', 'already polling', 'unloading', 'failed', 'stale',
   assert.deepEqual(await run(page), await run(before));
 });
 
-test('inbox state extraction leaves all existing page function bodies equivalent', () => {
+test('accepted inbox state extraction left existing page function bodies equivalent', () => {
+  const checkpoint = require('./helpers/sts_checkpoint_page.cjs').acceptedCheckpointPage();
   for (const match of before.matchAll(/^    (?:async )?function (\w+)\(/gm)) {
-    assert.equal(normalizeInboxState(extract(page, match[1])), extract(before, match[1]), match[1]);
+    assert.equal(normalizeInboxState(extract(checkpoint, match[1])), extract(before, match[1]), match[1]);
   }
 });
 

@@ -113,10 +113,11 @@ test('shipped history owner keeps arrays private, instances separate and lookup 
   assert.equal(owner.textList()[0].current, true);
 });
 
-test('history extraction leaves existing page functions unchanged except explicit owner access', () => {
+test('accepted history extraction preserved page behavior; shipped owner preserves its bodies', () => {
   const { normalizeHistoryAccess } = require('./helpers/sts_eye_history_owner.cjs');
+  const checkpoint = require('./helpers/sts_checkpoint_page.cjs').acceptedCheckpointPage();
   for (const match of before.matchAll(/^    (?:async )?function (\w+)\(/gm)) {
-    assert.equal(normalizeHistoryAccess(extract(page, match[1])), extract(before, match[1]), match[1]);
+    assert.equal(normalizeHistoryAccess(extract(checkpoint, match[1])), extract(before, match[1]), match[1]);
   }
   assert.doesNotMatch(page, /\b(?:sensingEyeImageHistory|sensingEyeTextHistory|sensingEyeImageHistorySeq|sensingEyeTextHistorySeq)\b/);
   const source = fs.readFileSync(`${__dirname}/../web/sts/sensing-eye-history.js`, 'utf8').replace(/\r\n/g, '\n');

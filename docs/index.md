@@ -37,43 +37,20 @@ and a generated river image. This is composition and playback, not musical
 hearing; his descriptions of the scores still need checking. The Music panel
 previews saved scores, and both brains receive compact playback evidence.
 
-September 23 checkpoint: conversation and idle thinking share retained history,
-with measured cache-reuse repairs, compact memory lookup, and more reliable
-image handoffs. Optional setup notes can guide both speaking and advisory
-brains; they are not required for companionship. A small TimerCam can now put
-the physical room into Eric's Sensing Eye. Session sweeps remain the default;
-summaries remain experimental. See [Engineering Status](engineering-status.md)
-for test evidence, live observations, and the remaining gaps between successful
-tool execution and consistently thoughtful behavior.
+October 2 checkpoint: the STS controls now include an MTP choice applied on
+model restart and a default-on **Mute microphone** checkbox for Brain 2's
+browser voice. Diagnostic snapshots are optional, score filenames use readable
+titles and timestamps, and context word counts are clearly labeled as display
+information. Search fallbacks and image/page-opening receipts have been repaired;
+search instructions also respect requests to keep answers or clues private.
+See the [STS UI Guide](sts-ui-guide.md) for the controls.
 
-Interrupted image results can now be retrieved by filename without another
-render; ordinary idle can save notes using existing file permissions. The extra
-deep-think experiment is disabled. Browser restructuring has begun with separate
-audio-playback, tool-continuation and connection owners, preserving current
-prompts and companion behavior. Resumed-thread trials preserve continuity and
-stop speech on Disconnect; isolated tests cover network loss and save recovery.
-Voice interruptions no longer hide a completed image thumbnail; Sensing Eye
-transfer remains Eric's separate action. Unused thread-reset controls are retired.
-The current page extraction checkpoint passes 834 JavaScript tests, all 1,006
-Python tests and isolated browser checks. Backend-control status feedback
-now has its own owner so stale replies cannot overwrite newer operations.
-Restart cleanup cannot act on a replacement session; live continuation and
-mid-speech Disconnect passed. Connect now checks service readiness instead of
-assuming that a launch acknowledgement means STS has finished warming up.
-The optional B2 spoken monitor now owns its queued speech and stale callbacks,
-yielding to accepted human turns and B1 audio without changing private advice or
-idle cadence. Offline/browser checks and ordinary live continuation pass;
-cancellation races retain offline coverage only.
-Deferred B2 mouth/voice delivery also has its own timer/item owner; automated
-checks and ordinary live delivery/mid-speech cleanup pass. A separately measured
-long-context cache refill remains under investigation.
-B2 evidence now includes compact file-write outcomes, and requested drawings can
-wait for an active idle render. Automated checks and ordinary continuation pass;
-live receipt-payload verification and image-overlap acceptance remain open.
-B2 evidence assembly now has its own module with exact baseline-packet checks.
-Live empty/resumed/rich-history trials and a write-revise-interrupt-reconnect
-pair pass the exercised paths; prompts and scheduling are unchanged.
-Further Halt/Unload work is deferred until a practical need appears.
+Camera capture, goofy browser-face posing, saved-image recall, piano playback,
+and session saving have worked in recent shared adventures. Long-context GPU
+stalls and B1 context rebuilds after B2 history work remain unresolved. The new
+microphone option permits a listening experiment; it does not establish two-way
+voice communication. [Engineering Status](engineering-status.md) separates
+verified behavior from these open questions and records the current checks.
 
 The [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8)
 has the larger video collection. This site's media shelf is a curated selection,

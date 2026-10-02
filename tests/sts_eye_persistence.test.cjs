@@ -179,7 +179,9 @@ test('eye save extraction leaves staging, lookup, context and decisions byte-for
     'createGeneratedImageHandoff', 'moveGeneratedImageToSensingEye']) {
     assert.equal(require('./helpers/sts_eye_content_owner.cjs').normalizeEyeAccess(extract(page, name)), extract(original, name), name);
   }
-  for (const name of ['generated-preview.js', 'image-request.js', 'generated-image-handoff.js', 'idle-art.js']) {
+  // Later image-request receipt metadata is covered with frozen effect traces
+  // and an explicit preview-only contract in sts_image_request.test.cjs.
+  for (const name of ['generated-preview.js', 'generated-image-handoff.js', 'idle-art.js']) {
     assert.equal(read(name), before(name), name);
   }
 });

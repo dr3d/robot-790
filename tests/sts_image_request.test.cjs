@@ -6,8 +6,23 @@ const {characterize}=require('./helpers/sts_image_request_harness.cjs');
 const baseline=require('./fixtures/sts-image-request.json');
 const page=fs.readFileSync(`${__dirname}/../web/sts/index.html`,'utf8').replace(/\r\n/g,'\n');
 
-test('image request boundary preserves complete baseline results and ordered effects',async()=>{
-  assert.deepEqual(await characterize(page),baseline.cases);
+test('image request preserves baseline effects with explicit preview-only receipt metadata',async()=>{
+  // Keep the old characterization frozen; only the deliberately added receipt
+  // fields are excluded here. Their meaning is checked independently below.
+  const {previousImageReceiptShape}=require('./helpers/sts_image_receipt_compat.cjs');
+  assert.deepEqual(previousImageReceiptShape(await characterize(page)),baseline.cases);
+});
+
+test('successful rendering reports a preview update without claiming eye staging or visual inspection',async()=>{
+  const {fixture}=require('./helpers/sts_image_harness.cjs');
+  const {c,staged}=fixture();
+  const receipt=await c.generateImage({prompt:'A lighthouse'});
+  assert.equal(receipt.status,'ok');
+  assert.equal(receipt.displayed,true);
+  assert.equal(receipt.display_surface,'generated_image_preview');
+  assert.equal(receipt.staged,false);
+  assert.match(receipt.observation_note,/not confirmed user visibility/);
+  assert.equal(staged.length,0);
 });
 test('frozen image request baseline reproduces from committed code',async()=>{
   const original=cp.execFileSync('git',['show',`${baseline.baseline}:web/sts/index.html`],{encoding:'utf8'}).replace(/\r\n/g,'\n');

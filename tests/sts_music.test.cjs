@@ -16,7 +16,7 @@ function fixture(overrides = {}) {
   const engine = { load: async () => {}, start: (parsed, cb) => { calls.push(['start',parsed]); done=cb; },
     stop: () => calls.push(['stop']), pause() {}, resume() {}, position: () => 0 };
   const owner = create({ engine, connected: () => state.connected, enabled: () => state.enabled,
-    generation: () => state.generation, id: () => String(stored.size + 1),
+    generation: () => state.generation, now: () => new Date(2026, 9, 1, 9, 30, 25, 417).getTime(),
     save: async (f,c) => { stored.set(f,c); }, read: async f => stored.get(f),
     ...overrides, changed: s => calls.push(['changed',s]), retained: s => calls.push(['retained',s]),
   });
@@ -46,7 +46,7 @@ for (const [label, edit] of [
 test('play saves an unpinned versioned score and returns compact factual receipt', async () => {
   const f=fixture(), receipt=await f.owner.play({score:score()});
   assert.equal(receipt.playback,'started'); assert.equal(receipt.saved,true);
-  assert.equal(receipt.filename,'music/1-A-small-waltz.txt');
+  assert.equal(receipt.filename,'music/A-small-waltz-20261001-093025-417.txt');
   assert.equal(JSON.parse(f.stored.get(receipt.filename)).version,1);
   assert(!('score' in receipt)); assert.match(receipt.perception,/no musical audio perception/);
   f.done(); assert.equal(f.owner.snapshot().state,'completed');

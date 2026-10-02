@@ -43,6 +43,14 @@ SEARCH_STOPWORDS = {
     "with",
     "would",
 }
+# These describe a search's style, not its subject. In fallback results they
+# must not be sufficient evidence that (say) a raccoon story was found.
+NEWS_QUERY_WORDS = {
+    "news", "story", "stories", "headline", "headlines", "weird", "strange",
+    "unusual", "funny", "bizarre", "quirky", "odd", "offbeat", "latest",
+    "recent", "specific", "man", "men", "woman", "women", "people", "person",
+    "something", "anything", "example", "examples", "local",
+}
 
 
 def search_web(query: str, max_results: int = DEFAULT_RESULTS) -> dict[str, Any]:
@@ -68,10 +76,35 @@ def search_web(query: str, max_results: int = DEFAULT_RESULTS) -> dict[str, Any]
             logger.warning("search_web failed for %r: %s", query, exc)
             errors.append(f"ddgs failed: {exc}")
         else:
-            results = _compact_ddgs_results(hits, result_count)
+            results = [
+                result for result in _compact_ddgs_results(hits, result_count)
+                if _dictionary_result_allowed(query, result["url"])
+            ]
             if results:
-                return {"status": "ok", "tool": "search_web", "query": query, "results": results}
+                return {"status": "ok", "tool": "search_web", "query": query, "source": "ddgs", "results": results}
             errors.append("ddgs returned no usable results")
+
+        # General web search can be empty while the same provider's news
+        # indexes have useful articles. Try once with the exact same query;
+        # do not silently broaden dates, subjects or site constraints.
+        if _is_news_query(query):
+            try:
+                with DDGS() as ddgs:
+                    news_hits = list(ddgs.news(query, max_results=result_count))
+            except (DDGSException, RuntimeError) as exc:
+                logger.warning("search_web news fallback failed for %r: %s", query, exc)
+                errors.append(f"ddgs news failed: {exc}")
+            else:
+                news_results = [
+                    result for result in _compact_ddgs_results(news_hits, result_count)
+                    if _dictionary_result_allowed(query, result["url"])
+                ]
+                if news_results:
+                    return {
+                        "status": "ok", "tool": "search_web", "query": query,
+                        "source": "ddgs_news", "results": news_results,
+                    }
+                errors.append("ddgs news returned no usable results")
 
     bing_results = _search_bing_html(query, result_count)
     if bing_results:
@@ -83,7 +116,9 @@ def search_web(query: str, max_results: int = DEFAULT_RESULTS) -> dict[str, Any]
             "results": bing_results,
         }
 
-    wiki_results = _search_wikipedia(query, result_count)
+    # An encyclopedia is useful for reference questions, but it is not a
+    # substitute news provider when the search engines fail.
+    wiki_results = [] if _is_news_query(query) else _search_wikipedia(query, result_count)
     if wiki_results:
         return {
             "status": "ok",
@@ -104,7 +139,7 @@ def _compact_ddgs_results(hits: list[object], result_count: int) -> list[dict[st
         if not isinstance(hit, dict):
             continue
         title = str(hit.get("title") or "").strip()
-        url = str(hit.get("href") or "").strip()
+        url = str(hit.get("href") or hit.get("url") or "").strip()
         if not title or not url:
             continue
         results.append(
@@ -114,6 +149,10 @@ def _compact_ddgs_results(hits: list[object], result_count: int) -> list[dict[st
                 "url": url,
             }
         )
+        if hit.get("date"):
+            results[-1]["published_at"] = str(hit["date"])
+        if hit.get("source"):
+            results[-1]["publisher"] = str(hit["source"])
     return results[:result_count]
 
 
@@ -329,7 +368,7 @@ def _search_wikipedia(query: str, result_count: int) -> list[dict[str, str]]:
 
 
 def _clean_wikipedia_snippet(value: str) -> str:
-    without_tags = re.sub(r"<[^>]+>", "", value)
+    without_tags = html.unescape(re.sub(r"<[^>]+>", "", value))
     return re.sub(r"\s+", " ", without_tags).strip()
 
 
@@ -337,29 +376,67 @@ def _search_result_is_relevant(query: str, title: str, snippet: str, url: str) -
     tokens = _search_query_tokens(query)
     if not tokens:
         return True
-    if len(tokens) >= 2 and _is_dictionary_result(url):
+    if not _dictionary_result_allowed(query, url):
         return False
-    haystack = " ".join([title, snippet, url]).lower()
-    matched = sum(1 for token in tokens if token in haystack)
-    return matched >= min(2, len(tokens))
+    # Match words in the actual preview, not substrings such as "man" inside
+    # "human" or keywords hidden in a domain/tracking URL.
+    words = set(re.findall(r"[^\W_]+", f"{title} {snippet}".casefold()))
+    if _is_dictionary_result(url):
+        tokens = [token for token in tokens if token not in {
+            "define", "definition", "definitions", "meaning", "mean", "word",
+            "synonym", "synonyms", "pronunciation", "spelling", "etymology",
+        }]
+    if _is_news_query(query):
+        if _host_matches(url, "wikipedia.org"):
+            return False
+        subjects = [token for token in tokens if token not in NEWS_QUERY_WORDS and not token.isdigit()]
+        # Broad requests for odd-news roundups have no subject yet. Their
+        # style words can match, but a year alone never counts as a topic.
+        tokens = subjects or [token for token in tokens if not token.isdigit()]
+    matched = sum(1 for token in tokens if token in words)
+    return bool(tokens) and matched >= min(2, len(tokens))
+
+
+def _is_news_query(query: str) -> bool:
+    words = set(re.findall(r"[^\W_]+", query.casefold()))
+    return bool(words & {"news", "headlines", "headline"}) or bool(
+        words & {"story", "stories"}
+        and words & {"weird", "strange", "unusual", "bizarre", "quirky", "odd", "offbeat", "latest", "recent"}
+    )
+
+
+def _host_matches(url: str, domain: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return host == domain or host.endswith(f".{domain}")
+
+
+def _dictionary_result_allowed(query: str, url: str) -> bool:
+    if not _is_dictionary_result(url):
+        return True
+    words = re.findall(r"[^\W_]+", query.casefold())
+    return len(words) == 1 or bool(re.search(
+        r"\b(define|definition|meaning|etymology|synonyms?|pronunciation|spelling)\b|\bwhat does .+ mean\b",
+        query, re.IGNORECASE,
+    ))
 
 
 def _is_dictionary_result(url: str) -> bool:
-    host = urlparse(url).netloc.lower()
     return any(
-        blocked in host
+        _host_matches(url, blocked)
         for blocked in (
             "dictionary.com",
             "merriam-webster.com",
-            "cambridge.org",
+            "dictionary.cambridge.org",
             "collinsdictionary.com",
             "thefreedictionary.com",
+            "wiktionary.org",
+            "vocabulary.com",
         )
     )
 
 
 def _search_query_tokens(query: str) -> list[str]:
-    tokens = re.findall(r"[a-z0-9]+", query.lower())
+    tokens = re.findall(r"[^\W_]+", query.casefold())
     return [
         token
         for token in dict.fromkeys(tokens)

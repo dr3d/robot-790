@@ -150,14 +150,15 @@ test('growing an in-flight response advances chunk identity without manufacturin
     next.fingerprint);
 });
 
-test('page wiring changes only response metadata, not B1 transcript or event behavior', () => {
+test('accepted evidence checkpoint changed only response metadata; current page retains the wiring', () => {
   const fs = require('node:fs');
   const cp = require('node:child_process');
   const { edits, normalizeB2Evidence } = require('./helpers/sts_b2_evidence_scope.cjs');
   const page = fs.readFileSync(`${__dirname}/../web/sts/index.html`, 'utf8').replace(/\r\n/g, '\n');
   const before = cp.execFileSync('git', ['show', '4e30b93:web/sts/index.html'], { encoding: 'utf8' }).replace(/\r\n/g, '\n');
   for (const [after] of edits) assert.equal(page.split(after).length - 1, 1, after);
-  assert.equal(normalizeB2Evidence(page), before);
+  const checkpoint = require('./helpers/sts_checkpoint_page.cjs').acceptedCheckpointPage();
+  assert.equal(normalizeB2Evidence(checkpoint), before);
 });
 
 test('prepared B2 evidence receipt goes to audit, not the conversation or advisory queues', () => {

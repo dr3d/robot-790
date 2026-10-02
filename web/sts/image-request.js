@@ -54,7 +54,9 @@
         throw error;
       }
       const absoluteUrl = a.url(String(result.url || "")).href;
-      const hydrated = { ...result, local_url: result.url, url: absoluteUrl, displayed: true };
+      const hydrated = { ...result, local_url: result.url, url: absoluteUrl, displayed: true,
+        display_surface: "generated_image_preview", staged: false,
+        observation_note: "displayed reports a preview update, not confirmed user visibility. This result does not put the image in the sensing eye or show you its pixels. Stage the saved image before describing what it contains." };
       // Speech freshness and artifact-preview freshness are deliberately separate.
       const canPreview = _isPreviewCurrent() && ownsProgress();
       if (!_isCurrent() || result.retained || !canPreview) {

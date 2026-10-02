@@ -16,6 +16,9 @@ function fixture() {
     conversation: {}, eventLogLines: ['events'], log() {}, updateBrain2Status() {},
     conversationDisplayText: () => 'original conversation',
     lastAutosavedLogText: new Map(),
+    logAutosaveEnabled: { checked: false },
+    realtimeConnected: () => true, realtimeConnection: { stopped: false },
+    logAutosaveStorageKey: 'robot790.logAutosave.v1', localStorage: { getItem: () => null },
     recordLogSnapshot: async (source, content) => { saved.push({ source, content }); return { filename: source }; },
     recordingStopReportText: () => 'report',
     navigator: { sendBeacon: (url, body) => { sent.push({ url, body }); return true; } },
@@ -23,7 +26,7 @@ function fixture() {
   });
   loadFunctions(c, ['companionAuditText', 'logBrain2', 'recordingSnapshotPaneText',
     'recordThreePaneSnapshots', 'recordAudioStopSnapshots', 'autosaveLogPane', 'autosaveSessionLogs',
-    'beaconLogSnapshot', 'beaconAllLogSnapshots']);
+    'beaconLogSnapshot', 'beaconAllLogSnapshots', 'loadLogAutosavePref']);
   return { c, saved, sent };
 }
 
@@ -103,6 +106,7 @@ test('nonempty B2 pane stays authoritative over event fallback', () => {
 
 test('periodic and unload wiring include audit without an audio recording', async () => {
   const { c, saved, sent } = fixture();
+  c.logAutosaveEnabled.checked = true;
   c.autosaveSessionLogs();
   await Promise.resolve();
   assert.ok(saved.some(entry => entry.source === 'companion_audit'));
@@ -110,6 +114,27 @@ test('periodic and unload wiring include audit without an audio recording', asyn
   c.beaconAllLogSnapshots();
   const payloads = await Promise.all(sent.map(async entry => JSON.parse(await entry.body.text())));
   assert.ok(payloads.some(entry => entry.source === 'companion_audit' && entry.content.includes('PRIVATE')));
+});
+
+test('periodic snapshots default off, restore opt-in, and stop when disconnected or stopping', async () => {
+  const { c, saved } = fixture();
+  c.loadLogAutosavePref();
+  assert.equal(c.logAutosaveEnabled.checked, false);
+  c.autosaveSessionLogs();
+  assert.equal(saved.length, 0);
+  c.localStorage.getItem = () => 'true';
+  c.loadLogAutosavePref();
+  assert.equal(c.logAutosaveEnabled.checked, true);
+  c.realtimeConnected = () => false;
+  c.autosaveSessionLogs();
+  assert.equal(saved.length, 0);
+  c.realtimeConnected = () => true;
+  c.realtimeConnection.stopped = true;
+  c.autosaveSessionLogs();
+  assert.equal(saved.length, 0);
+  c.logAutosaveEnabled.checked = false;
+  await c.recordThreePaneSnapshots('disconnect');
+  assert.equal(saved.length, 4);
 });
 
 test('both B2 pane reset paths reset audit history too', () => {

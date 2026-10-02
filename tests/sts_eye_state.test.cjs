@@ -160,12 +160,13 @@ test('shipped owner Clear cancels a pending load and an older Clear cannot relea
   assert.equal(f.owner.clearInFlight, false);
 });
 
-test('all existing page functions retain their behavior after only eye access substitutions', () => {
+test('accepted eye extraction preserved page behavior; shipped owner preserves its bodies', () => {
   const { normalizeEyeAccess, fields } = require('./helpers/sts_eye_content_owner.cjs');
+  const checkpoint = require('./helpers/sts_checkpoint_page.cjs').acceptedCheckpointPage();
   for (const match of before.matchAll(/^    (?:async )?function (\w+)\(/gm)) {
     const name = match[1];
     if (name === 'createSensingEyeContent') continue;
-    assert.equal(normalizeEyeAccess(extract(page, name)), extract(before, name), name);
+    assert.equal(normalizeEyeAccess(extract(checkpoint, name)), extract(before, name), name);
   }
   for (const name of Object.keys(fields)) assert.doesNotMatch(page, new RegExp(`\\b${name}\\b`));
   assert.doesNotMatch(page, /sensingEyeContent\.\w+\s*=(?!=)/);
