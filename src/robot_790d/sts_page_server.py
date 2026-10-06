@@ -27,7 +27,8 @@ from uuid import uuid4
 import httpx
 
 from robot_790d.archive_transaction import pending_archives
-from robot_790d.brain_status import get_brain_status, get_gpu_status
+from robot_790d.brain_status import get_brain_status, get_gpu_status, get_tts_status
+from robot_790d import thinking
 from robot_790d.connection_context import PREPARE_LOCK, budget_config, measure_connection, prepare_excerpt
 from robot_790d.context_history import context_history_plan, history_config
 from robot_790d.continuity import (
@@ -41,7 +42,12 @@ from robot_790d.continuity import (
 from robot_790d.exploration import read_exploration
 from robot_790d.headlines import read_headlines
 from robot_790d.idle_art import IdleArtService, validate_proposal
-from robot_790d.image_generation import GENERATED_IMAGE_URL_PREFIX, generate_image, generated_image_path, image_output_dir
+from robot_790d.image_generation import (
+    GENERATED_IMAGE_URL_PREFIX,
+    generate_image,
+    generated_image_path,
+    image_output_dir,
+)
 from robot_790d.media_cast import CastMediaClient
 from robot_790d.network_camera import camera_config, capture_frame
 from robot_790d.note_brains import format_brain_guidance, parse_note_brains
@@ -57,6 +63,7 @@ from robot_790d.request_diagnostics import begin_request, finish_request
 from robot_790d.runtime_model import local_runtime_model
 from robot_790d.session_preparation import session_preparer
 from robot_790d.smart_home import control_smart_home_device
+from robot_790d.tts_settings import MODEL_SIZES, model_installed
 from robot_790d.weather import DEFAULT_WEATHER_LOCATION, lookup_weather
 from robot_790d.web_search import search_web
 
@@ -133,6 +140,12 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/realtime/ready":
             self._handle_realtime_ready()
+            return
+        if parsed.path == "/api/realtime/tts":
+            self._send_json(200, get_tts_status())
+            return
+        if parsed.path == "/api/thinking":
+            self._send_json(200, thinking_status())
             return
         if parsed.path == "/api/camera/esp32/frame":
             self._handle_esp32_camera_frame()
@@ -834,13 +847,16 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"status": "error", "error": f"Unsupported model preset: {preset}."})
             return
         model = str(payload.get("model") or "").strip()
-        reasoning = str(payload.get("reasoning") or "none").strip()
-        if reasoning not in {"", "low", "medium", "xhigh", "none"}:
+        reasoning = str(payload.get("reasoning", "none")).strip()
+        if reasoning not in {"", "on", "low", "medium", "xhigh", "none"}:
             self._send_json(400, {"status": "error", "error": f"Unsupported reasoning mode: {reasoning}."})
             return
-        tts_dtype = str(payload.get("tts_dtype") or "bfloat16").strip()
-        if tts_dtype not in {"bfloat16", "float16"}:
-            self._send_json(400, {"status": "error", "error": f"Unsupported TTS precision: {tts_dtype}."})
+        tts_model = payload.get("tts_model", "0.6B")
+        if tts_model not in MODEL_SIZES:
+            self._send_json(400, {"status": "error", "error": "Speech model must be 0.6B or 1.7B."})
+            return
+        if "tts_model" in payload and not model_installed(tts_model):
+            self._send_json(400, {"status": "error", "error": f"Speech model {tts_model} is not installed."})
             return
         mtp = payload.get("mtp", "default")
         if mtp not in ("default", "on", "off"):
@@ -900,8 +916,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                         str(context_length),
                         "-Parallel",
                         str(parallel),
-                        "-TtsDtype",
-                        tts_dtype,
+                        "-TtsModelSize",
+                        tts_model,
                         "-Mtp",
                         mtp,
                     ],
@@ -921,6 +937,8 @@ class StsPageHandler(SimpleHTTPRequestHandler):
                 "tool": "restart_realtime_server",
                 "preset": preset,
                 "mtp": mtp,
+                "reasoning": reasoning,
+                "tts_model": tts_model,
                 "pid": process.pid,
                 "message": "Realtime backend restart started.",
             },
@@ -2015,12 +2033,19 @@ def _brain2_headlines(value: object) -> list[dict[str, str]]:
     return items
 
 
-def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: list[str], idle_art: bool = False) -> dict[str, Any]:
+def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: list[str], idle_art: bool = False,
+                            thinking_profiles: dict | None = None) -> dict[str, Any]:
     properties: dict[str, Any] = {
         key: {"type": "string"}
         for key in ("mouth_text", "note_for_eric", "question", "revision_candidate", "reason")
     }
     properties["should_surface"] = {"type": "boolean"}
+    properties["thinking_changes"] = {
+        "type": "object", "properties": {
+            key: {"type": "string", "enum": ["keep", *thinking.control_modes((thinking_profiles or {}).get(key) or {})]}
+            for key in ("eric", "brain2")
+        }, "required": ["eric", "brain2"], "additionalProperties": False,
+    }
     if headlines is not None:
         properties["headline_url"] = {
             "type": "string", "enum": ["", *dict.fromkeys(item["url"] for item in headlines)]
@@ -2046,6 +2071,31 @@ def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: 
             "type": "object", "properties": properties, "required": list(properties), "additionalProperties": False
         },
     }}
+
+
+def _brain2_model_config() -> tuple[str, str, dict[str, str]]:
+    base_url = (os.getenv("ROBOT_790_BRAIN2_BASE_URL") or os.getenv("ROBOT_790_OPENAI_LLM_BASE_URL")
+                or "http://127.0.0.1:1234/v1").strip().rstrip("/")
+    selected_model = local_runtime_model(base_url)
+    model = (selected_model or os.getenv("ROBOT_790_BRAIN2_MODEL") or os.getenv("ROBOT_790_OPENAI_LLM_MODEL")
+             or "qwen3.8-27b-nvfp4-mtp").strip()
+    if not selected_model and model == "qwen/qwen3.8-27b" and os.getenv("ROBOT_790_ALLOW_BRAIN2_OLD_QWEN27", "").lower() not in {"1", "true", "yes"}:
+        model = "qwen3.8-27b-nvfp4-mtp"
+    key = os.getenv("ROBOT_790_BRAIN2_API_KEY") or os.getenv("ROBOT_790_OPENAI_LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "none"
+    headers = {"Content-Type": "application/json"}
+    if key.lower() not in {"none", "null", "false"}:
+        headers["Authorization"] = f"Bearer {key}"
+    return base_url, model, headers
+
+
+def thinking_status() -> dict:
+    from robot_790d.brain_status import _read_realtime_runtime_args
+
+    runtime = _read_realtime_runtime_args(Path(__file__).resolve().parents[2])
+    base_url, model, headers = _brain2_model_config()
+    eric = thinking.model_profile(runtime.get("responses_api_base_url") or "http://127.0.0.1:1234/v1",
+                                 runtime.get("model_name") or "")
+    return {"status": "ok", "eric": eric, "brain2": thinking.model_profile(base_url, model, headers)}
 
 
 def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
@@ -2081,34 +2131,31 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         person_focus = 5
     person_focus = max(0, min(10, person_focus))
 
-    base_url = (
-        (
-            os.getenv("ROBOT_790_BRAIN2_BASE_URL")
-            or os.getenv("ROBOT_790_OPENAI_LLM_BASE_URL")
-            or "http://127.0.0.1:1234/v1"
-        )
-        .strip()
-        .rstrip("/")
-    )
-    selected_model = local_runtime_model(base_url)
-    model = (
-        selected_model or os.getenv("ROBOT_790_BRAIN2_MODEL") or os.getenv("ROBOT_790_OPENAI_LLM_MODEL") or "qwen3.8-27b-nvfp4-mtp"
-    ).strip()
-    if not selected_model and model == "qwen/qwen3.8-27b" and os.getenv("ROBOT_790_ALLOW_BRAIN2_OLD_QWEN27", "").lower() not in {
-        "1",
-        "true",
-        "yes",
-    }:
-        model = "qwen3.8-27b-nvfp4-mtp"
-    api_key = (
-        os.getenv("ROBOT_790_BRAIN2_API_KEY")
-        or os.getenv("ROBOT_790_OPENAI_LLM_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-        or "none"
-    )
-    headers = {"Content-Type": "application/json"}
-    if api_key and api_key.lower() not in {"none", "null", "false"}:
-        headers["Authorization"] = f"Bearer {api_key}"
+    base_url, model, headers = _brain2_model_config()
+    supplied_thinking = payload.get("thinking") or {}
+    if not isinstance(supplied_thinking, dict):
+        raise ValueError("Thinking settings must identify each brain.")
+    own_thinking = supplied_thinking.get("brain2") or {}
+    if not isinstance(own_thinking, dict):
+        raise ValueError("Brain 2 Thinking settings must be an object.")
+    eric_thinking = supplied_thinking.get("eric") or {}
+    if not isinstance(eric_thinking, dict):
+        raise ValueError("Eric Thinking settings must be an object.")
+    thinking_mode = own_thinking.get("mode", "none")
+    if not isinstance(thinking_mode, str) or thinking_mode not in thinking.MODES:
+        raise ValueError("Choose a Thinking setting advertised by Brain 2's loaded model.")
+    thinking_enabled = thinking_mode not in {"none", "off"}
+    thinking_profile = thinking.model_profile(base_url, model, headers)
+    if own_thinking.get("model") and own_thinking["model"] != model:
+        raise ValueError("Brain 2's model changed; refresh Thinking controls.")
+    if thinking_profile.get("status") == "verified" and thinking_profile.get("can_on" if thinking_enabled else "can_off"):
+        thinking_options = thinking.request_options(thinking_profile, thinking_mode)
+    elif thinking_enabled:
+        raise ValueError(thinking_profile["manual"])
+    else:
+        thinking_options = {} if thinking_profile.get("status") == "verified" else {"reasoning_effort": "none", "chat_template_kwargs": {"enable_thinking": False}}
+    thinking_receipt = {"mode": thinking_mode if thinking_options else "model_default",
+                        "profile": thinking_profile, "request_options": thinking_options}
 
     system = (
         "You are Brain 2 for Robot 790, spoken name Eric. You do not speak aloud. "
@@ -2136,6 +2183,12 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "in conversation, that is one utterance, not two. Compare complete recent replies, not just their endings. "
         "Your previous outputs, including held mouth asides and advisories, are self-generated proposals, "
         "never sensor receipts or proof that anything happened. Neither are Eric's unverified descriptions. "
+        "For technical explanations, distinguish what a supplied source states from a mechanism you infer. "
+        "An unverified mechanism can be a useful lead: call it 'one possible implementation' or a question "
+        "worth checking, not what the author does. Keep that distinction in private advice and mouth asides. "
+        "A title, snippet, or URL is not a full article you have read. When pointing Eric to a source, "
+        "identify where it actually appears in the supplied evidence; do not invent a result position. "
+        "Eric adopting your suggestion is not independent confirmation of it. "
         "Do not use playful body descriptions as independent evidence for factual decisions. "
         "Conversational attention is a controller timing state, not proof the operator is present or absent. "
         "When engaged, favor curiosity that continues the shared activity with the operator, not only self-talk; "
@@ -2187,7 +2240,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "scene, or poetic body-feel. Preserve associative wandering; correct unsupported factual claims, "
         "not imagination. If nothing relevant changed, return empty strings with should_surface false. "
         "Return only JSON with keys mouth_text, note_for_eric, question, revision_candidate, "
-        "should_surface, reason, steering. "
+        "should_surface, reason, steering, thinking_changes. "
         "steering is an object: evidence_id copies last_assistant_output_id from the evidence packet; "
         "loop and unsupported_claim are JSON booleans; topic is a short stable label for the assessed subject "
         "(reuse it while the subject remains the same); next is continue, new_subject, ground, or quiet. "
@@ -2214,6 +2267,17 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "instruction to rest, hold, wait, stop adding layers or let silence stand. "
         "If the operator actually requested quiet, that instruction can be passed along. "
         "It is advice, not a command."
+    )
+    system += (
+        "\nThinking controls: the operator authorizes you and Eric to change Thinking independently for either brain. "
+        "Return thinking_changes with eric and brain2 each keep or a supported Thinking setting from that brain's instructions. Choose keep unless you want a change. "
+        "For a control-only choice leave should_surface false. Both settings start Off when supported. "
+        "Changes persist until changed again. They affect the next request, never this one; turning your own "
+        "thinking on takes effect at your next scheduled mull, without an immediate extra call. "
+        "Honor explicit operator preferences. A change request is not proof it applied. "
+        "Use only supported settings in the loaded-model instructions below; do not invent depth levels. "
+        "Brain 2: " + json.dumps(thinking_receipt, ensure_ascii=True) +
+        "\nEric's current control receipt: " + json.dumps(supplied_thinking.get("eric", {}), ensure_ascii=True)
     )
     if body_beats:
         system += (
@@ -2311,9 +2375,10 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
             {"role": "user", "content": user},
         ],
         "temperature": 0.55,
-        "max_tokens": 750 if idle_art else 420,
+        "max_tokens": 4096 if thinking_enabled else 750 if idle_art else 420,
         "stream": False,
-        "response_format": _brain2_response_format(headlines if headline_mode else None, body_beats, idle_art),
+        "response_format": _brain2_response_format(headlines if headline_mode else None, body_beats, idle_art,
+            {"brain2": thinking_profile, "eric": eric_thinking.get("profile")}),
     }
     if history:
         schema = request["response_format"]["json_schema"]["schema"]
@@ -2322,8 +2387,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         }
         schema["required"].append("history_source_id")
     if "api.openai.com" not in base_url.lower():
-        request["reasoning_effort"] = "none"
-        request["chat_template_kwargs"] = {"enable_thinking": False}
+        request.update(thinking_options)
     prompt_debug = {
         "system": system,
         "user": user,
@@ -2373,16 +2437,22 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         }
 
     usage = data.get("usage") or {}
+    thinking_receipt["reasoning_tokens"] = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
     finish_request(diagnostic, outcome="completed", input_tokens=usage.get("prompt_tokens"),
                    output_tokens=usage.get("completion_tokens"))
     raw_text = _chat_completion_text(data)
     parsed = _parse_second_brain_json(raw_text)
+    try:
+        thinking_changes = thinking.changes_from_result(parsed.get("thinking_changes"))
+    except ValueError as exc:
+        return {"status": "error", "error": str(exc), "prompt_debug": prompt_debug}
+    thinking_result = {"thinking": thinking_receipt, "thinking_changes": thinking_changes}
     if history:
         try:
             source = brain2_history.source_for(history, parsed)
         except ValueError as exc:
             return {"status": "error", "error": str(exc), "prompt_debug": prompt_debug}
-        return {"status": "ok", "tool": "mull_second_brain", "mode": "history",
+        return {"status": "ok", "tool": "mull_second_brain", **thinking_result, "mode": "history",
                 **_brain2_advice_delivery(parsed["note_for_eric"]), "history_source": source,
                 "reason": _clean_second_brain_text(parsed.get("reason") or "", 220),
                 "mouth_text": "", "question": "", "revision_candidate": "", "should_surface": False,
@@ -2405,7 +2475,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
                 "prompt_debug": prompt_debug, "raw_text": raw_text[:1000],
             }
         return {
-            "status": "ok", "tool": "mull_second_brain", "mode": "headlines", "headline_url": url,
+            "status": "ok", "tool": "mull_second_brain", **thinking_result, "mode": "headlines", "headline_url": url,
             **_brain2_advice_delivery(parsed.get("note_for_eric", "") if url else ""),
             "question": _clean_second_brain_text(parsed.get("question"), 140)
             if url and isinstance(parsed.get("question"), str) else "",
@@ -2455,6 +2525,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
     return {
         "status": "ok",
         "tool": "mull_second_brain",
+        **thinking_result,
         "model": model,
         "mode": mode,
         "person_focus": person_focus,

@@ -20,6 +20,7 @@ if ($forwarding.Count -ne 3) { throw 'Expected the three launcher forwarding sta
 $forward = [scriptblock]::Create(($forwarding.Extent.Text -join "`n"))
 $Launcher = [scriptblock]::Create($target.ParamBlock.Extent.Text + "`n [pscustomobject]`$PSBoundParameters")
 $Model = 'fixture-model'
+$TtsDtype = 'bfloat16'
 foreach ($enabled in @($false, $true)) {
     $CaptureLlmWire = $enabled
     $result = & $forward

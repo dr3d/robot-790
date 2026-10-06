@@ -6,14 +6,14 @@ param(
     [string] $LlmBaseUrl = "http://127.0.0.1:1234/v1",
     [string] $LlmApiKey = "none",
     [string] $LlmModel = "qwen/qwen3.8-27b",
-    [ValidateSet("", "low", "medium", "xhigh", "none")]
-    [string] $ReasoningEffort = "low",
+    [ValidateSet("", "on", "low", "medium", "xhigh", "none")]
+    [string] $ReasoningEffort = "none",
     [switch] $OmitReasoningEffort,
     [int] $AudioMaxTokens = 64,
     [int] $TextMaxTokens = 0,
     [string] $TtsModel = "C:\Users\dr3d\ComfyUI_windows_portable\ComfyUI\models\TTS\Qwen3-TTS-12Hz-0.6B-CustomVoice",
-    [ValidateSet("bfloat16", "float16")]
-    [string] $TtsDtype = "bfloat16",
+    [ValidateSet("", "bfloat16", "float16")]
+    [string] $TtsDtype = "",
     [string] $Speaker = "Eric",
     [string] $TtsInstruct = "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation.",
     [switch] $CaptureLlmWire,
@@ -28,6 +28,7 @@ $EnvLoader = Join-Path $PSScriptRoot "load_env.ps1"
 if (Test-Path -LiteralPath $EnvLoader) {
     . $EnvLoader -Quiet
 }
+$TtsDtype = & (Join-Path $PSScriptRoot "tts_precision.ps1") -Override $TtsDtype
 
 if ($TextMaxTokens -gt 0) {
     $env:ROBOT_790_TEXT_MAX_TOKENS = [string] $TextMaxTokens

@@ -33,7 +33,7 @@ function fixture() {
     searchContextReceipts: [], maxSearchContextReceipts: 4, maxSearchContextResults: 3,
     send: e => sent.push(e), rememberPromptLedger: e => ledger.push(e),
     saveToolPrefs() {}, contextPanel: { open: false }, enabledToolList: () => [],
-    ttsRuntimeConfig: () => ({}), imageToolProtectionEnabled: false,
+    ttsRuntimeConfig: () => ({}), thinkingRuntimeConfig: () => ({}), imageToolProtectionEnabled: false,
     currentInterruptSensitivity: () => 6,
     events: {}, log: (_target, text) => logs.push(text), rememberSessionPromptSnapshot() {},
   });

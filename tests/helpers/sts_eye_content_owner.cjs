@@ -52,6 +52,7 @@ function installEyeContent(c, page = fs.readFileSync(`${__dirname}/../../web/sts
 }
 
 function normalizeEyeAccess(source) {
+  source = require('./sts_policy_compat.cjs').normalizeLaterPolicyAdditions(source);
   source = require('./sts_eye_history_owner.cjs').normalizeHistoryAccess(source);
   source = source.replace(/sensingEyeContent\.markStaged\(\)/g, 'visionImageStaged = true')
     .replace(/sensingEyeContent\.resetStaging\(\)/g, 'visionImageStaged = false')

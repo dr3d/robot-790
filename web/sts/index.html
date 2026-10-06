@@ -907,7 +907,18 @@
       text-transform: none;
     }
     .brain1-controls {
-      grid-template-columns: minmax(82px, 110px) minmax(100px, 130px) minmax(110px, 145px) minmax(260px, 1fr) minmax(130px, 170px) minmax(120px, 150px) auto auto;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    #brain1Expando > .runtime-settings-expando-body { padding-right: 12px; }
+    #brain1Expando input[type="range"] { margin: 0; }
+    .tts-style-controls {
+      display: grid;
+      gap: 10px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .tts-style-controls[hidden], #ttsStyleNotice[hidden] {
+      display: none;
     }
     .brain2-controls {
       grid-template-columns: minmax(82px, 110px) auto auto minmax(180px, 1fr) minmax(120px, 150px) minmax(120px, 150px) auto minmax(120px, 160px) auto;
@@ -1041,14 +1052,6 @@
       display: grid;
       gap: 8px;
       align-self: stretch;
-    }
-    .think-action-row {
-      display: grid;
-      grid-template-columns: auto minmax(88px, 1fr);
-      gap: 6px;
-    }
-    .think-action-row select {
-      min-width: 0;
     }
     .vision-drop {
       --sensing-eye-salience-alpha: 1;
@@ -1499,6 +1502,8 @@
     #controlSidebar #serverPanel .server-controls {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    #modelRestartPreview { grid-column: 1 / -1; }
+    #connectionSettingsExpando [hidden] { display: none !important; }
     #controlSidebar #serverPanel .custom-model-controls {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
@@ -1507,6 +1512,19 @@
     }
     #controlSidebar #serverPanel .custom-model-controls > .subtle {
       grid-column: 1 / -1;
+    }
+    #connectionSettingsExpando > .runtime-settings-expando-body {
+      gap: 6px;
+      padding-top: 6px;
+    }
+    #connectionSettingsExpando .controls {
+      padding: 6px 0;
+      gap: 6px;
+    }
+    #connectionSettingsExpando label { gap: 4px; }
+    #controlSidebar #serverPanel .thinking-controls {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
     }
     #controlSidebar #generatedImageExpando .generated-image-controls {
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -2352,17 +2370,18 @@
                 <input id="serverUrl" value="ws://127.0.0.1:8765/v1/realtime" spellcheck="false">
               </label>
               <label>
-                Brain
+                Brain on restart
                 <select id="modelPreset">
-                  <option value="qwen27-mtp-vlow">Qwen 27B NVFP4</option>
-                  <option value="qwen27">Qwen 27B</option>
-                  <option value="qwen9">Qwen 9B</option>
-                  <option value="qwen4">Qwen 4B</option>
-                  <option value="nemotron30">Nemotron 30B</option>
+                  <option value="qwen27-mtp-vlow" data-load-model="qwen3.8-27b-mtp">Qwen 27B NVFP4</option>
+                  <option value="qwen27" data-load-model="qwen/qwen3.8-27b">Qwen 27B</option>
+                  <option value="qwen9" data-load-model="qwen/qwen3.5-9b">Qwen 9B</option>
+                  <option value="qwen4" data-load-model="qwen3.5-4b">Qwen 4B</option>
+                  <option value="nemotron30" data-load-model="nvidia-nemotron-3.5-lightning-30b-a3b">Nemotron 30B</option>
                   <option value="openai">OpenAI</option>
                   <option value="custom">Custom LM Studio</option>
                 </select>
               </label>
+              <span id="modelRestartPreview" class="subtle" aria-live="polite">Restart loads: qwen3.8-27b-mtp</span>
             </section>
             <section id="modelMtpControls" class="controls">
               <label>
@@ -2374,20 +2393,30 @@
               </label>
               <span id="modelMtpHelp" class="subtle">Multi-token prediction. Apply with Server Management → Restart. Connect alone does not apply this setting. On requires an MTP-capable model.</span>
             </section>
-            <section id="customModelControls" class="controls custom-model-controls" hidden>
+            <section id="modelThinkingControls" class="controls thinking-controls">
               <label>
-                LM Studio model key
-                <input id="customModelKey" value="qwen3.8-27b-mtp" spellcheck="false">
+                Eric Thinking
+                <select id="customModelReasoning" aria-describedby="modelThinkingHelp" disabled>
+                  <option value="" hidden>Model default</option>
+                  <option value="none">Off</option>
+                  <option value="on">On</option>
+                </select>
               </label>
               <label>
-                Thinking
-                <select id="customModelReasoning">
+                Brain 2 Thinking
+                <select id="brain2Thinking" aria-describedby="brain2ThinkingHelp" disabled>
+                  <option value="" hidden>Model default</option>
                   <option value="none">Off</option>
-                  <option value="low">Low</option>
-                  <option value="">Omit</option>
-                  <option value="medium">Medium</option>
-                  <option value="xhigh">XHigh</option>
+                  <option value="on">On</option>
                 </select>
+              </label>
+              <span id="modelThinkingHelp" class="subtle">Checking the loaded model's Thinking controls.</span>
+              <span id="brain2ThinkingHelp" class="subtle">Checking the loaded model's Thinking controls.</span>
+            </section>
+            <section id="customModelControls" class="controls custom-model-controls" hidden>
+              <label>
+                Custom LM Studio model key
+                <input id="customModelKey" value="qwen3.8-27b-mtp" spellcheck="false">
               </label>
               <label>
                 Context
@@ -2574,14 +2603,6 @@
               </label>
               <div class="typed-actions" aria-label="Typed input actions">
                 <button id="typedSend" type="button" disabled>Send</button>
-                <div class="think-action-row">
-                  <button id="typedThink" type="button" disabled>Think</button>
-                  <select id="typedThinkEffort" aria-label="Think depth" disabled>
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="xhigh">Hard</option>
-                  </select>
-                </div>
                 <button id="typedSay" type="button" disabled>Say</button>
               </div>
               <span id="typedStatus" class="subtle">Connect first</span>
@@ -2688,45 +2709,53 @@
         <details id="brain1Expando" class="runtime-settings-expando">
           <summary>
             <span class="runtime-settings-label">Brain 1</span>
-            <span class="subtle">Eric voice and delivery</span>
+            <span class="subtle">Voice, volume, and speech model</span>
           </summary>
           <div class="runtime-settings-expando-body">
             <section class="controls brain1-controls">
               <div class="brain-control-title">
-                <strong>Brain 1</strong>
-                <span>Eric voice</span>
+                <strong>Eric's voice</strong>
+                <span id="ttsActiveStatus" role="status">Checking speech model…</span>
               </div>
               <label>
                 Voice
                 <select id="ttsVoice" aria-label="Qwen3-TTS voice"></select>
               </label>
               <label>
-                Precision
-                <select id="ttsPrecision" aria-label="Qwen3-TTS precision">
-                  <option value="bfloat16">bfloat16</option>
-                  <option value="float16">float16</option>
-                </select>
-              </label>
-              <label>
-                Voice style
-                <input id="ttsInstruct" class="compact-text" spellcheck="false">
-              </label>
-              <label>
-                Output <span id="ericAudioVolumeValue">100%</span>
+                Volume <span id="ericAudioVolumeValue">100%</span>
                 <input id="ericAudioVolume" type="range" min="0" max="100" step="1" value="100">
               </label>
-              <select id="ttsPreset" aria-label="Voice style preset">
-                <option value="neutral">Neutral</option>
-                <option value="dry">Dry Eric</option>
-                <option value="happy">Happy</option>
-                <option value="ominous">Ominous</option>
-                <option value="troll">Troll-ish</option>
-                <option value="sleepy">Sleepy</option>
-                <option value="excited">Excited</option>
-                <option value="custom">Custom</option>
-              </select>
-              <button id="ttsApply">Apply</button>
-              <button id="clearLog">Clear</button>
+              <span class="subtle">Voice and volume changes apply immediately.</span>
+              <span id="ttsStyleNotice" class="subtle">Delivery styles appear when a supported speech model is running.</span>
+              <div id="ttsStyleControls" class="tts-style-controls" hidden>
+                <label>
+                  Delivery style
+                  <select id="ttsPreset" aria-label="Voice style preset">
+                    <option value="neutral">Neutral</option>
+                    <option value="dry">Dry Eric</option>
+                    <option value="happy">Happy</option>
+                    <option value="ominous">Ominous</option>
+                    <option value="troll">Troll-ish</option>
+                    <option value="sleepy">Sleepy</option>
+                    <option value="excited">Excited</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </label>
+                <label>
+                  Style instruction
+                  <textarea id="ttsInstruct" rows="3" spellcheck="false"></textarea>
+                </label>
+                <button id="ttsApply" type="button">Apply style</button>
+                <span class="subtle">Presets apply to future speech immediately. After editing the instruction, use Apply style.</span>
+              </div>
+              <label>
+                Speech model
+                <select id="ttsModel" aria-describedby="ttsRestartNotice">
+                  <option value="0.6B">0.6B — Named voices</option>
+                  <option value="1.7B">1.7B — Voices + delivery styles</option>
+                </select>
+              </label>
+              <span id="ttsRestartNotice" class="subtle" role="status">Model changes require Server Management → Restart.</span>
             </section>
           </div>
         </details>
@@ -2744,7 +2773,8 @@
               </div>
               <label class="toggle-row"><input id="brain2MouthBrain" type="checkbox"> Caption</label>
               <label class="toggle-row"><input id="brain2VoiceMonitor" type="checkbox"> Voice</label>
-              <label class="toggle-row"><input id="brain2MuteMic" type="checkbox" checked> Mute microphone</label>
+              <label class="toggle-row"><input id="brain2MuteMic" type="checkbox" aria-describedby="brain2MicStatus" checked> Mute microphone during B2 speech</label>
+              <span id="brain2MicStatus" class="subtle">Mic muted during B2 speech.</span>
               <label>
                 Browser voice
                 <select id="brain2VoiceSelect" aria-label="Brain 2 browser voice">
@@ -2964,6 +2994,7 @@
             <button id="prosodyKey" class="copy-link" type="button">Key</button>
             <button id="popoutConversation" class="copy-link" type="button">Pop Out</button>
             <button id="copyConversation" class="copy-link" type="button">Copy</button>
+            <button id="clearLog" class="copy-link warn" type="button">Reset conversation</button>
           </span>
         </div>
         <div id="prosodyKeyPanel" class="subtle" hidden>v key: q quiet, m medium, l loud, p pause; > shift; + combined cues.</div>
@@ -3020,6 +3051,7 @@
   <script src="music.js"></script>
   <script src="music-panel.js"></script>
   <script src="brain2-speech.js"></script>
+  <script src="brain2-mic.js"></script>
   <script src="brain2-surface.js"></script>
   <script src="brain2-evidence.js"></script>
   <script src="brain2-history.js"></script>
@@ -3037,6 +3069,8 @@
   <script src="sensing-eye-inbox-state.js"></script>
   <script src="realtime-connection.js"></script>
   <script src="realtime-readiness.js"></script>
+  <script src="tts-controls.js"></script>
+  <script src="thinking-controls.js"></script>
   <script src="backend-control-feedback.js"></script>
   <script src="tool-continuation.js"></script>
   <script src="connection-context.js"></script>
@@ -3055,11 +3089,25 @@
     const restartServerButton = document.querySelector("#restartServer");
     const unloadServerButton = document.querySelector("#unloadServer");
     const modelPreset = document.querySelector("#modelPreset");
+    const modelRestartPreview = document.querySelector("#modelRestartPreview");
     const modelMtpControls = document.querySelector("#modelMtpControls");
     const modelMtp = document.querySelector("#modelMtp");
     const customModelControls = document.querySelector("#customModelControls");
     const customModelKey = document.querySelector("#customModelKey");
     const customModelReasoning = document.querySelector("#customModelReasoning");
+    const modelThinkingHelp = document.querySelector("#modelThinkingHelp");
+    const liveThinkingSessions = new WeakMap();
+    const brain2Thinking = document.querySelector("#brain2Thinking");
+    const brain2ThinkingHelp = document.querySelector("#brain2ThinkingHelp");
+    const thinkingWaiters = new Set();
+    let thinkingApiReady = false;
+    let thinkingProfileRequest = 0;
+    let latestBrain2ThinkingReceipt = null;
+    const thinkingControls = Robot790ThinkingControls.create({ storage: localStorage, changed: receipt => {
+      renderThinkingControls();
+      recordUiEvent("Thinking requested", `${receipt.brain}: ${thinkingControls.label(receipt.mode, receipt.profile)} by ${receipt.source}`, receipt);
+    } });
+    const modelThinkingControls = document.querySelector("#modelThinkingControls");
     const customModelContext = document.querySelector("#customModelContext");
     const customModelParallel = document.querySelector("#customModelParallel");
     const realtimeControlsExpando = document.querySelector("#realtimeControlsExpando");
@@ -3095,7 +3143,6 @@
     const loadedNoteSelect = document.querySelector("#loadedNoteSelect");
     const loadedNoteUnpinButton = document.querySelector("#loadedNoteUnpin");
     const ttsVoice = document.querySelector("#ttsVoice");
-    const ttsPrecision = document.querySelector("#ttsPrecision");
     const ttsInstruct = document.querySelector("#ttsInstruct");
     const ericAudioVolume = document.querySelector("#ericAudioVolume");
     const ericAudioVolumeValue = document.querySelector("#ericAudioVolumeValue");
@@ -3129,6 +3176,7 @@
     const brain2MouthBrain = document.querySelector("#brain2MouthBrain");
     const brain2VoiceMonitor = document.querySelector("#brain2VoiceMonitor");
     const brain2MuteMic = document.querySelector("#brain2MuteMic");
+    const brain2MicStatus = document.querySelector("#brain2MicStatus");
     const brain2VoiceSelect = document.querySelector("#brain2VoiceSelect");
     const brain2VoiceVolume = document.querySelector("#brain2VoiceVolume");
     const brain2VoiceVolumeValue = document.querySelector("#brain2VoiceVolumeValue");
@@ -3151,8 +3199,6 @@
     const resetMicButton = document.querySelector("#resetMic");
     const typedInput = document.querySelector("#typedInput");
     const typedSendButton = document.querySelector("#typedSend");
-    const typedThinkButton = document.querySelector("#typedThink");
-    const typedThinkEffort = document.querySelector("#typedThinkEffort");
     const typedSayButton = document.querySelector("#typedSay");
     const typedStatus = document.querySelector("#typedStatus");
     const brain2Log = document.querySelector("#brain2Log");
@@ -3252,11 +3298,23 @@
     const settingsPanel = document.querySelector("#settingsPanel");
 
     const realtimeConnection = Robot790RealtimeConnection.create();
+    const ttsControls = Robot790TtsControls.create({
+      model: document.querySelector("#ttsModel"),
+      styles: document.querySelector("#ttsStyleControls"),
+      activeLabel: document.querySelector("#ttsActiveStatus"),
+      styleNotice: document.querySelector("#ttsStyleNotice"),
+      restartNotice: document.querySelector("#ttsRestartNotice"), storage: localStorage
+    });
+    let ttsRuntimeRequest = 0;
     const realtimeReadiness = Robot790RealtimeReadiness.create({
       probe: Robot790RealtimeReadiness.probeLocal,
       canCheck: () => !realtimeConnection.busy && !restartServerButton.disabled
         && ![WebSocket.OPEN, WebSocket.CONNECTING].includes(realtimeConnection.socket?.readyState),
-      onChange: () => setConnectionButtonsDisabled(connectionButtonsLocked)
+      onChange: () => {
+        setConnectionButtonsDisabled(connectionButtonsLocked);
+        if (realtimeReadiness.ready) { void refreshTtsRuntime(); void refreshThinkingProfiles(); }
+        else if (!realtimeConnection.busy) { ttsRuntimeRequest++; ttsControls.unavailable(); }
+      }
     });
     const backendControlFeedback = Robot790BackendControlFeedback.create({
       setTimer: (callback, ms) => setTimeout(callback, ms),
@@ -3281,6 +3339,8 @@
     let esp32CameraCapturePromise = null;
     let micSource;
     let micProcessor;
+    let brain2MicWarning = "";
+    const brain2Mic = createBrain2MicOwner();
     const brain2Speech = createBrain2SpeechOwner();
     let toolActivityTimer = null;
     let deliberateIndicatorTimer = null;
@@ -3743,7 +3803,6 @@
     const toolPrefsStorageKey = "robot790.toolPrefs.v2";
     const toolPrefItemPrefix = "robot790.toolPref.";
     const ttsVoiceStorageKey = "robot790.ttsVoice.v1";
-    const ttsPrecisionStorageKey = "robot790.ttsPrecision.v1";
     const ttsStyleStorageKey = "robot790.ttsStyle.v1";
     const idleDriftStorageKey = "robot790.idleDrift.v1";
     const idleWonderStorageKey = "robot790.idleWonder.v1";
@@ -3791,6 +3850,8 @@
     const legacyContinuityBookmarkNoteFilename = "core/continuity.txt";
     const labGoalOneShotStorageKey = "robot790.labGoalOneShot.v1";
     const idleToolAllowedNames = new Set([
+      "get_thinking", "set_thinking",
+      "set_voice",
       "play_music",
       "read_music",
       "stop_music",
@@ -4046,8 +4107,11 @@
         type: "function",
         name: "set_voice",
         description: (
-          "Change Robot 790's TTS voice or speaking style only when the user explicitly asks for a voice, " +
-          "speaker, accent, tone, mood, or delivery change. This affects future speech; do not call it for normal conversation."
+          "Choose speaking delivery that fits what you are saying, including ordinary conversation and spontaneous remarks. " +
+          "You may choose a preset or custom instruction without being asked. Honor the user's delivery preferences. " +
+          "Omit voice to keep the current speaker; change the named speaker only when the user requests it. " +
+          "Delivery changes require the active 1.7B speech model and persist for future speech until changed again; " +
+          "0.6B supports named voices only."
         ),
         parameters: {
           type: "object",
@@ -4055,7 +4119,7 @@
             voice: {
               type: "string",
               enum: qwen3TtsVoices,
-              description: "Qwen3-TTS speaker preset."
+              description: "Named speaker, changed on user request. Omit when adjusting your own delivery."
             },
             preset: {
               type: "string",
@@ -4065,7 +4129,7 @@
             instruct: {
               type: "string",
               maxLength: 240,
-              description: "Short custom TTS style instruction. Use only when the user asks for a style not covered by a preset."
+              description: "Short delivery instruction for tone, pace, emphasis, or expression when a preset does not fit."
             },
             neutral: {
               type: "boolean",
@@ -5467,7 +5531,8 @@
       "If startup memory asks you to announce an exact time and date, call get_current_time before saying them.",
       "Use set_embodiment when the user explicitly asks you to move yourself, switch yourself, jump, go to, or inhabit another configured body/face/embodiment such as the mask, external eyes, touch screen, or two-inch face.",
       "Never say you moved, switched, or changed embodiment unless set_embodiment succeeded.",
-      "Use set_voice only when the user explicitly asks you to change your voice, speaker, accent, tone, mood, or delivery.",
+      "You may use set_voice to choose your own delivery: tone, pace, emphasis, or expression that fits the conversation or a spontaneous remark. Use a preset or a short custom instruction and honor the user's delivery preferences.",
+      "Delivery changes persist until changed again; return to your usual delivery when a special moment passes. Omit voice to keep your current speaker; named speaker changes still require a user request.",
       "Never say you changed your voice unless set_voice succeeded.",
       "Use get_ui_controls when the user asks what the current mic interrupt sensitivity or Eric speaker volume is.",
       "Use set_ui_control only when the user explicitly asks you to change mic interrupt sensitivity or Eric speaker volume. Treat Eric speaker volume 0 as mute.",
@@ -5489,7 +5554,7 @@
       "You may play the scene vividly, but separate stage reality from operational reality: do not claim your actual system is corrupt, damaged, restored, stable, shut down, or rebooted without a current receipt.",
       "Good pattern for dramatic system language: acknowledge the frame, name what is verified or unverified, then choose one concrete next move such as a status check, quiet hold, face/body action, question, or image generation if requested.",
       "First-person body-feel may be poetic and present tense; the listener can understand it as Robot 790's inner life rather than calibrated telemetry.",
-      "Do not use tools for ordinary greetings or conversation.",
+      "Ordinary greetings and conversation do not require tools; set_voice is available when you choose an expressive delivery change.",
       "When the user asks for a face, expression, mood, gaze, chassis, or body action, call an appropriate robot tool before answering.",
       "If the user asks for an ongoing habit such as always, every time, from now on, or whenever I ruminate, do not treat your spoken agreement as machinery. Use an available standing-routine tool when there is an exact fit such as GPU/VRAM watching or a recurring spoken cue; otherwise do the immediate safe action if possible, then say the automatic habit needs active scheduler support before you can rely on it.",
       "When the user asks a quick body check such as touch, IMU, tilt, orientation, right-side-up/upside-down, picked up, shaken, swiped, tapped, or what your body feels like, call get_body_sensors before answering.",
@@ -7788,6 +7853,7 @@
     }
 
     function effectiveTtsInstruct() {
+      if (!ttsControls.supportsStyles()) return "";
       const languageGuard = "Speak English only unless the user explicitly asked for another language; if any output drifts toward another language, recover into plain English.";
       return [languageGuard, currentTtsInstruct()].filter(Boolean).join(" ");
     }
@@ -7797,9 +7863,32 @@
       return qwen3TtsVoices.includes(voice) ? voice : "Eric";
     }
 
-    function currentTtsPrecision() {
-      const value = String(ttsPrecision?.value || "bfloat16").trim();
-      return ["bfloat16", "float16"].includes(value) ? value : "bfloat16";
+    function currentTtsModel() {
+      return document.querySelector("#ttsModel").value === "1.7B" ? "1.7B" : "0.6B";
+    }
+
+    async function refreshTtsRuntime() {
+      const request = ++ttsRuntimeRequest;
+      try {
+        const response = await fetch(new URL("/api/realtime/tts", location.href), {
+          cache: "no-store", signal: AbortSignal.timeout(7000)
+        });
+        if (response.status === 404) {
+          if (request === ttsRuntimeRequest) ttsControls.unavailable({ outdated: true });
+          return;
+        }
+        if (!response.ok) throw new Error("Speech status unavailable");
+        const result = await response.json();
+        if (request === ttsRuntimeRequest) {
+          const hadStyles = ttsControls.supportsStyles();
+          ttsControls.update(result);
+          if (hadStyles !== ttsControls.supportsStyles() && realtimeConnected()) {
+            updateSessionTtsStyle({ announce: false, persist: false });
+          }
+        }
+      } catch {
+        if (request === ttsRuntimeRequest) ttsControls.unavailable();
+      }
     }
 
     function populateTtsVoices() {
@@ -7820,15 +7909,6 @@
 
     function saveTtsVoice() {
       localStorage.setItem(ttsVoiceStorageKey, currentTtsVoice());
-    }
-
-    function loadTtsPrecision() {
-      const saved = localStorage.getItem(ttsPrecisionStorageKey);
-      if (ttsPrecision) ttsPrecision.value = ["bfloat16", "float16"].includes(saved) ? saved : "bfloat16";
-    }
-
-    function saveTtsPrecision() {
-      localStorage.setItem(ttsPrecisionStorageKey, currentTtsPrecision());
     }
 
     function loadTtsStyle() {
@@ -7870,6 +7950,11 @@
       const hasInstruct = Object.prototype.hasOwnProperty.call(args, "instruct");
       const neutral = Boolean(args.neutral);
 
+      if ((hasPreset || hasInstruct || neutral) && !ttsControls.supportsStyles()) {
+        return { status: "unsupported", tool: "set_voice", changed: false,
+          voice: currentTtsVoice(), style_supported: false, error: ttsControls.styleUnavailableReason() };
+      }
+
       if (hasVoice) {
         const voice = resolveTtsVoice(args.voice);
         if (voice) ttsVoice.value = voice;
@@ -7895,8 +7980,9 @@
           status: "ok",
           tool: "set_voice",
           voice: currentTtsVoice(),
-          preset: matchingTtsPresetName(),
-          instruct: currentTtsInstruct() || null,
+          preset: ttsControls.supportsStyles() ? matchingTtsPresetName() : null,
+          instruct: ttsControls.supportsStyles() ? currentTtsInstruct() || null : null,
+          style_supported: ttsControls.supportsStyles(),
           changed: false,
           connected: realtimeConnected()
         };
@@ -7907,8 +7993,9 @@
         status: "ok",
         tool: "set_voice",
         voice: currentTtsVoice(),
-        preset: matchingTtsPresetName(),
-        instruct: currentTtsInstruct() || null,
+        preset: ttsControls.supportsStyles() ? matchingTtsPresetName() : null,
+        instruct: ttsControls.supportsStyles() ? currentTtsInstruct() || null : null,
+        style_supported: ttsControls.supportsStyles(),
         changed: true,
         connected: realtimeConnected()
       };
@@ -8805,8 +8892,12 @@
     }
 
     function currentCustomModelReasoning() {
-      const value = customModelReasoning?.value || "none";
-      return ["", "low", "medium", "xhigh", "none"].includes(value) ? value : "none";
+      return thinkingControls.snapshot("eric").mode;
+    }
+
+    function modelHasBinaryThinking() {
+      const options = thinkingControls.snapshot("eric").profile?.options;
+      return Boolean(options?.includes("on") && options.every(value => ["off", "none", "on"].includes(value)));
     }
 
     function currentCustomModelContext() {
@@ -8829,9 +8920,20 @@
       return modelMtp?.value === "on" ? "on" : "off";
     }
 
+    function currentModelRestartDescription() {
+      const preset = currentModelPreset();
+      if (preset === "custom") return currentCustomModelKey()
+        ? `Restart loads: ${currentCustomModelKey()}` : "Enter a custom model key for Restart.";
+      if (preset === "openai") return "Restart uses the configured OpenAI model.";
+      const selected = [...modelPreset.options].find(option => option.value === preset);
+      return `Restart loads: ${selected?.dataset?.loadModel || selected?.text || preset}`;
+    }
+
     function updateCustomModelControls() {
       if (customModelControls) customModelControls.hidden = currentModelPreset() !== "custom";
       if (modelMtpControls) modelMtpControls.hidden = !modelHasMtpControl();
+      modelRestartPreview.textContent = currentModelRestartDescription();
+      renderThinkingControls();
     }
 
     function loadModelPreset() {
@@ -8842,10 +8944,7 @@
       if (modelMtp) modelMtp.value = localStorage.getItem(modelMtpStorageKey) === "on" ? "on" : "off";
       const savedModel = localStorage.getItem(customModelKeyStorageKey);
       if (savedModel && customModelKey) customModelKey.value = savedModel;
-      const savedReasoning = localStorage.getItem(customModelReasoningStorageKey);
-      if (savedReasoning !== null && customModelReasoning && [...customModelReasoning.options].some((option) => option.value === savedReasoning)) {
-        customModelReasoning.value = savedReasoning;
-      }
+      customModelReasoning.value = currentCustomModelReasoning();
       const savedContext = Number(localStorage.getItem(customModelContextStorageKey));
       if (Number.isFinite(savedContext) && customModelContext) {
         customModelContext.value = String(Math.max(4096, Math.min(262144, Math.round(savedContext))));
@@ -8868,8 +8967,9 @@
 
     function currentModelRestartPayload() {
       const preset = currentModelPreset();
-      const payload = { preset, tts_dtype: currentTtsPrecision() };
+      const payload = { preset, tts_model: currentTtsModel() };
       if (modelHasMtpControl()) payload.mtp = currentModelMtp();
+      if (preset === "qwen27-mtp-vlow") payload.reasoning = currentCustomModelReasoning();
       if (preset === "custom") {
         payload.model = currentCustomModelKey();
         payload.reasoning = currentCustomModelReasoning();
@@ -9244,6 +9344,7 @@
       muteMicForEricButton.classList.toggle("warn", micMutedForNarration);
       muteMicForEricButton.setAttribute("aria-pressed", micMutedForNarration ? "true" : "false");
       updateTopMicMeter();
+      updateBrain2MicStatus();
     }
 
     function setMicMutedForNarration(enabled, { reason = "manual" } = {}) {
@@ -9422,6 +9523,168 @@
       return generatedImageHandoff.move(args);
     }
 
+    function renderThinkingControls() {
+      for (const [brain, select, help] of [["eric", customModelReasoning, modelThinkingHelp], ["brain2", brain2Thinking, brain2ThinkingHelp]]) {
+        const state = thinkingControls.snapshot(brain);
+        const profile = state.profile;
+        const choices = thinkingControls.options(brain);
+        const selectable = choices.some(option => option.value === state.mode);
+        const placeholder = new Option(profile?.status === "verified" ? "Model default" : "Unavailable", "");
+        placeholder.disabled = true;
+        placeholder.hidden = selectable;
+        select.replaceChildren(placeholder, ...choices.map(option => new Option(option.label, option.value)));
+        select.value = selectable ? state.mode : "";
+        select.disabled = choices.length === 0;
+        const manual = profile?.manual || "Checking the loaded model's Thinking controls.";
+        help.title = manual;
+        const concise = choices.length
+          ? `Changes apply to the ${brain === "eric" ? "next response" : "next mull"}.`
+          : manual;
+        const runningModel = profile?.label || profile?.model;
+        help.textContent = [runningModel ? `Running: ${runningModel}.` : "", concise].filter(Boolean).join(" ");
+        if (brain === "eric" && liveThinkingSessions.get(realtimeConnection.socket)?.supported === false) {
+          select.disabled = true;
+          help.textContent += " Restart realtime once to load live Thinking support.";
+        }
+      }
+    }
+
+    async function refreshThinkingProfiles() {
+      const request = ++thinkingProfileRequest;
+      const socket = realtimeConnection.socket, generation = realtimeConnection.generation;
+      try {
+        const response = await fetch(new URL("/api/thinking", location.href), { cache: "no-store", signal: AbortSignal.timeout(8000) });
+        if (!response.ok) throw new Error(response.status === 404
+          ? "The STS page server needs an update before Thinking controls are available."
+          : `Could not check Thinking controls (HTTP ${response.status}).`);
+        const data = await response.json();
+        if (request !== thinkingProfileRequest || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return null;
+        thinkingApiReady = true;
+        for (const brain of ["eric", "brain2"]) thinkingControls.configure(brain, data[brain]);
+        renderThinkingControls();
+        if (socket?.readyState === WebSocket.OPEN && liveThinkingSessions.get(socket)?.supported) updateSessionTools({ quiet: true });
+        return data;
+      } catch (error) {
+        if (request !== thinkingProfileRequest || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation) return null;
+        thinkingApiReady = false;
+        for (const brain of ["eric", "brain2"]) {
+          if (brain === "eric" && liveThinkingSessions.get(socket)?.supported) continue;
+          thinkingControls.configure(brain, { status: "unverified", can_off: false, can_on: false,
+            manual: error.name === "TimeoutError" ? "The Thinking capability check timed out; reopen Connection Settings to retry." : error.message });
+        }
+        renderThinkingControls();
+        return null;
+      }
+    }
+
+    function thinkingRuntimeConfig() {
+      const state = thinkingControls.snapshot("eric");
+      if (!thinkingControls.supports("eric", state.mode)) return {};
+      return { robot790_reasoning_effort: state.mode, robot790_thinking_model: state.model,
+        robot790_thinking_revision: state.revision };
+    }
+
+    function updateSessionThinking() {
+      const config = thinkingRuntimeConfig();
+      const socket = realtimeConnection.socket;
+      if (!socket || socket.readyState !== WebSocket.OPEN) return Promise.resolve({ status: "saved", applies: "next connection" });
+      if (!Object.hasOwn(config, "robot790_reasoning_effort")) return Promise.reject(new Error("Thinking is unavailable for the loaded model."));
+      if (liveThinkingSessions.get(socket)?.supported === false) return Promise.reject(new Error("Restart realtime once to load live Thinking support."));
+      return new Promise((resolve, reject) => {
+        const waiter = { socket, config, resolve, reject, timer: null };
+        waiter.timer = setTimeout(() => {
+          thinkingWaiters.delete(waiter);
+          reject(new Error("Thinking change was not confirmed by realtime."));
+        }, 8000);
+        thinkingWaiters.add(waiter);
+        send({ type: "session.update", session: { type: "realtime", ...config } });
+      });
+    }
+
+    function observeSessionThinking(event, socket) {
+      if (event.type === "error" && event.error?.type === "invalid_thinking_setting") {
+        for (const waiter of thinkingWaiters) if (waiter.socket === socket) {
+          clearTimeout(waiter.timer); thinkingWaiters.delete(waiter); waiter.reject(new Error(event.error.message));
+        }
+        return;
+      }
+      if (!["session.created", "session.updated"].includes(event.type)) return;
+      const previous = liveThinkingSessions.get(socket);
+      const supported = event.robot790_live_thinking === true && Boolean(event.robot790_thinking_profile);
+      const mode = event.session?.robot790_reasoning_effort;
+      const revision = event.session?.robot790_thinking_revision;
+      const previousModel = thinkingControls.snapshot("eric").identity;
+      liveThinkingSessions.set(socket, { supported, mode, revision });
+      if (event.robot790_thinking_profile) thinkingControls.configure("eric", event.robot790_thinking_profile);
+      renderThinkingControls();
+      if (!supported) return;
+      if (event.type === "session.created") {
+        updateSessionTools({ quiet: true });
+        void refreshThinkingProfiles();
+        return;
+      }
+      if (previousModel && previousModel !== thinkingControls.snapshot("eric").identity) updateSessionTools({ quiet: true });
+      for (const waiter of thinkingWaiters) if (waiter.socket === socket && revision >= waiter.config.robot790_thinking_revision) {
+        clearTimeout(waiter.timer); thinkingWaiters.delete(waiter);
+        if (revision === waiter.config.robot790_thinking_revision && mode === waiter.config.robot790_reasoning_effort
+            && event.robot790_thinking_profile.model === waiter.config.robot790_thinking_model) {
+          waiter.resolve({ status: "ok", applies: "next response", mode, revision });
+        } else waiter.reject(new Error("Thinking change superseded by a newer choice."));
+      }
+      if (typeof mode === "string" && (previous?.mode !== mode || previous?.supported !== true)) {
+        log(events, `Eric Thinking ${thinkingControls.label(mode, event.robot790_thinking_profile)} confirmed for the next response`);
+      }
+    }
+
+    function thinkingReport() {
+      return { status: "ok", tool: "get_thinking", ...thinkingControls.packet(),
+        eric_confirmation: liveThinkingSessions.get(realtimeConnection.socket) || null,
+        brain2_last_request: latestBrain2ThinkingReceipt };
+    }
+
+    async function setThinking({ brain, mode, reason = "" }, { source = "Eric", observed = null } = {}) {
+      if (brain === "eric" && liveThinkingSessions.get(realtimeConnection.socket)?.supported === false) {
+        throw new Error("Restart realtime once to load live Thinking support.");
+      }
+      if (brain === "brain2" && !thinkingApiReady) throw new Error("Brain 2 Thinking support is not verified; refresh its model controls.");
+      const receipt = thinkingControls.change(brain, mode, { source, observed, reason });
+      const applied = brain === "eric" ? await updateSessionThinking() : { status: "ok", applies: "next scheduled mull" };
+      return { ...applied, tool: "set_thinking", brain, mode: receipt.mode, source, model: receipt.model };
+    }
+
+    async function applyBrain2Thinking(result) {
+      if (result.thinking) latestBrain2ThinkingReceipt = result.thinking;
+      for (const [brain, mode] of Object.entries(result.thinking_changes || {})) {
+        try {
+          const session = result.observed_session;
+          if (!session || !activeRealtimeSession(session.socket, session.generation) || userSpeechActive
+              || result.observed_evidence?.user_key !== brain2EvidenceSnapshot().user_key) return;
+          const observed = result.observed_thinking?.[brain];
+          if (!observed) throw new Error("Missing control snapshot; change not applied.");
+          const receipt = await setThinking({ brain, mode, reason: result.reason || "" }, { source: "B2", observed });
+          logBrain2("Thinking changed", JSON.stringify(receipt));
+        } catch (error) { logBrain2("Thinking unchanged", error.message); }
+      }
+    }
+
+    function thinkingToolList() {
+      const modes = [...new Set(["eric", "brain2"].flatMap(brain =>
+        thinkingControls.options(brain).map(option => option.value === "none" ? "off" : option.value)))];
+      const manual = ["eric", "brain2"].map(brain => {
+        const state = thinkingControls.snapshot(brain);
+        return `${brain}: ${state.model || "unverified model"}. ${state.profile?.manual || "Thinking unavailable."}`;
+      }).join(" ");
+      return [
+        { type: "function", name: "get_thinking", description: "Inspect separate Thinking settings and loaded-model instructions for Eric and B2.",
+          parameters: { type: "object", properties: {}, additionalProperties: false } },
+        { type: "function", name: "set_thinking",
+          description: "You and B2 may independently choose any advertised Thinking setting for either brain, including on your own initiative. Honor the operator's preferences. Use that brain's supported levels, not another model's choices. Changes persist until changed again and apply to the next request, not the current generation. Return to Off when extra thinking is no longer useful. B2 changes apply to its next scheduled mull; this does not launch extra work. Only claim success after an ok receipt. " + manual,
+          parameters: { type: "object", properties: { brain: { type: "string", enum: ["eric", "brain2"] },
+            mode: { type: "string", ...(modes.length ? { enum: modes } : { description: "No verified Thinking settings are currently available." }) }, reason: { type: "string", maxLength: 160 } },
+            required: ["brain", "mode"], additionalProperties: false } }
+      ];
+    }
+
     function ttsRuntimeConfig() {
       const instruct = effectiveTtsInstruct();
       const voice = currentTtsVoice();
@@ -9457,7 +9720,7 @@
       if (announce) {
         log(events, effectiveTtsInstruct()
           ? `voice ${currentTtsVoice()} style applied`
-          : `voice ${currentTtsVoice()} neutral`);
+          : `voice ${currentTtsVoice()} applied`);
       }
     }
 
@@ -9633,13 +9896,11 @@
         applyCreatureProfile({ quiet: true });
       }
       if (ttsVoice) ttsVoice.value = "Eric";
-      if (ttsPrecision) ttsPrecision.value = "bfloat16";
       if (ttsPreset && ttsInstruct) {
         ttsPreset.value = "dry";
         ttsInstruct.value = ttsStylePresets.dry;
       }
       saveTtsVoice();
-      saveTtsPrecision();
       saveTtsStyle();
 
       if (loadEricMemories) {
@@ -9943,7 +10204,8 @@
       const observations = specimen?.observations || {};
       const llm = active.identifier || active.model || model.llm_model || "unknown";
       const parts = [`llm=${llm}`];
-      if (model.reasoning_effort) parts.push(`reasoning=${model.reasoning_effort}`);
+      if (model.reasoning_effort) parts.push(`startup_reasoning=${model.reasoning_effort}`);
+      if (status?.latest_request?.reasoning_effort) parts.push(`last_request_reasoning=${status.latest_request.reasoning_effort}`);
       if (model.audio_max_tokens) parts.push(`audio_max_tokens=${model.audio_max_tokens}`);
       if (active.context_window_tokens) parts.push(`context=${active.context_window_tokens}`);
       if (active.parallel_predictions) parts.push(`parallel=${active.parallel_predictions}`);
@@ -10778,8 +11040,10 @@
       responseCompletion.check();
     }
 
-    function noteUserTurnActivity({ pendingMs = idlePendingUserTurnMs } = {}) {
-      cancelBrain2MonitorSpeech("human turn");
+    function noteUserTurnActivity({ pendingMs = idlePendingUserTurnMs, inputAudio = false } = {}) {
+      // In the explicit listening experiment, VAD may be hearing B2 itself.
+      // Typed input and Eric's output still cancel B2 normally.
+      if (!inputAudio || !brain2MicrophoneListening()) cancelBrain2MonitorSpeech("human turn");
       const now = Date.now();
       captureCompletedAloneInterval();
       lastUserTurnActivityAt = now;
@@ -11691,6 +11955,7 @@
     function loadBrain2VoiceMonitor() {
       if (brain2VoiceMonitor) brain2VoiceMonitor.checked = localStorage.getItem(brain2VoiceMonitorStorageKey) === "true";
       if (brain2MuteMic) brain2MuteMic.checked = localStorage.getItem(brain2MuteMicStorageKey) !== "false";
+      updateBrain2MicStatus();
       if (brain2VoiceVolume) {
         const savedVolume = savedNumberPref(brain2VoiceVolumeStorageKey, defaultBrain2VoiceVolume);
         brain2VoiceVolume.value = String(Math.max(0, Math.min(100, savedVolume)));
@@ -11751,6 +12016,8 @@
           return utterance;
         },
         canSpeak: options => brain2VoiceCanSpeak(options),
+        prepare: () => brain2Mic.begin(),
+        release: options => brain2Mic.end(options),
         getSessionGeneration: () => realtimeConnection.generation,
         log: (kind, text) => logBrain2(kind, text),
         now: () => Date.now()
@@ -11776,6 +12043,32 @@
 
     function brain2MonitorAudioShouldMuteMic() {
       return brain2MuteMic?.checked !== false && brain2Speech.shouldMuteMic();
+    }
+
+    function brain2MicrophoneListening() {
+      return brain2MuteMic?.checked === false && brain2Speech.shouldMuteMic();
+    }
+
+    function updateBrain2MicStatus() {
+      if (!brain2MicStatus) return;
+      brain2MicStatus.textContent = brain2MicWarning || (brain2MuteMic.checked
+        ? "Mic muted during B2 speech."
+        : !micStream ? "Start the mic to let Eric hear B2 through speakers."
+        : micMutedForNarration ? "Mic is muted for Eric; unmute it to hear B2."
+        : "Listening through the mic: echo cancellation pauses during B2 speech.");
+    }
+
+    function createBrain2MicOwner() {
+      return Robot790Brain2Mic.create({
+        getTrack: () => micStream?.getAudioTracks?.()[0],
+        listenEnabled: () => brain2MuteMic?.checked === false,
+        report: result => {
+          brain2MicWarning = result.error || "";
+          updateBrain2MicStatus();
+          logBrain2("microphone", result.error || (result.echoCancellation
+            ? "normal echo cancellation restored" : "echo cancellation off for B2 listening"));
+        }
+      });
     }
 
     async function surfaceBrain2MouthText(mouthText, options = {}) {
@@ -12036,6 +12329,7 @@
       const observedBody = body ? { url: normalizeFaceBaseUrl(), revision: faceVisualHoldRevision } : null;
       return Robot790Brain2Request.run({
         manual, headlines, generation, socket, evidence, body, observedBody,
+        thinking: thinkingControls.packet(),
         ...(history ? { history } : {}),
         ...(!headlines && !history && typeof idleArt !== "undefined" && idleArt.proposalContext()
           ? { idleArt: idleArt.proposalContext() } : {}),
@@ -12120,14 +12414,20 @@
             return;
           }
           logBrain2("history examined", JSON.stringify({ id: history.id, advice: Boolean(result.note_for_eric), source: result.history_source || null }));
+          await applyBrain2Thinking(result);
+          if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation
+              || userSpeechActive || userTurnPending() || userActivityAt !== lastUserTurnActivityAt) return;
           brain2Advisories.acceptHistory(result, history);
           return;
         }
         if (readHeadlines) {
-          if (headlineWorkCurrent()) acceptBrain2Headline(result, headlines);
+          if (headlineWorkCurrent()) { await applyBrain2Thinking(result); if (headlineWorkCurrent()) acceptBrain2Headline(result, headlines); }
           else logBrain2("headlines stale", "discarded after operator activity or idle reading disabled");
           return;
         }
+        await applyBrain2Thinking(result);
+        if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation
+            || userSpeechActive || userActivityAt !== lastUserTurnActivityAt) return;
         if (result.art_proposal && typeof idleArt !== "undefined") idleArt.offer(result.art_proposal);
         if (result.body_beat) {
           await surfaceBrain2BodyCue(result);
@@ -12578,6 +12878,16 @@
       if (!realtimeConnected()) {
         log(events, "idle ponder skipped: disconnected");
         updateIdleSchedulerStatus();
+        return;
+      }
+      // Give overdue reading this quiet window before another B1 idle turn takes it.
+      if (!manual && brain2HeadlinesDue() && !brain2BlockedReason()) {
+        log(events, "idle ponder deferred: Brain 2 reading due");
+        try {
+          await triggerBrain2Mull();
+        } finally {
+          if (activeRealtimeSession(socket, generation)) scheduleIdlePonder();
+        }
         return;
       }
       idleInFlight = true;
@@ -13375,8 +13685,7 @@
     }
 
     function currentTypedThinkEffort() {
-      const value = String(typedThinkEffort?.value || "medium").trim().toLowerCase();
-      return ["low", "medium", "xhigh"].includes(value) ? value : "medium";
+      return "medium";
     }
 
     function deliberateEffortLabel(effort = currentTypedThinkEffort()) {
@@ -13567,8 +13876,6 @@
       const connected = realtimeConnected();
       const disabled = !connected || !typedInputText() || deliberateTurnInFlight;
       typedSendButton.disabled = disabled;
-      typedThinkButton.disabled = disabled || !deliberateThinkingEnabled;
-      typedThinkEffort.disabled = !deliberateThinkingEnabled;
       typedSayButton.disabled = disabled;
       typedStatus.textContent = !connected
         ? "Connect first"
@@ -18368,6 +18675,8 @@
       if (name === "set_voice") return setVoice(args);
       if (name === "deliberate_once") return deliberateOnceForEric(args);
       if (name === "get_ui_controls") return getUiControls(args);
+      if (name === "get_thinking") return thinkingReport();
+      if (name === "set_thinking") return setThinking(args);
       if (name === "set_ui_control") return setUiControl(args);
       if (name === "start_gpu_watch") return startGpuWatch(args);
       if (name === "stop_gpu_watch") return stopGpuWatch(args);
@@ -18969,6 +19278,7 @@
         type: "realtime",
         instructions,
         ...ttsRuntimeConfig(),
+        ...thinkingRuntimeConfig(),
         tools: enabledTools,
         tool_choice: toolChoice,
         turn_detection: {
@@ -19008,6 +19318,7 @@
         ...(deliberateThinkingEnabled ? deliberationTools : []),
         ...(llmVoiceTools?.checked ? voiceTools : []),
         ...(llmUiControlTools?.checked ? uiControlTools : []),
+        ...(llmUiControlTools?.checked ? thinkingToolList() : []),
         ...runtimeWatchTools,
         ...(llmBodySensorTools?.checked ? bodySensorTools : []),
         ...(llmTools?.checked ? embodimentTools() : []),
@@ -19666,6 +19977,7 @@
         return;
       }
       if (!activeRealtimeSession(socket, generation)) return;
+      observeSessionThinking(event, socket);
       observeContextUsage(event);
       if (llmRunOverview?.observe(event, performance.now())) recordLlmOverview("first measured response");
       if ((String(event.type || "").startsWith("response.output_") || event.type === "response.function_call_arguments.done") && responseOutputSuppressed(event)) return;
@@ -19685,13 +19997,13 @@
         lastSpeechStartedAt = Date.now();
         userSpeechActive = true;
         inputAudioTranscriptionPending = true;
-        noteUserTurnActivity();
+        noteUserTurnActivity({ inputAudio: true });
         updateSessionTools({ quiet: true });
         appendBrain2AdvisoryToConversation({ reason: "user speech started" });
         cueFaceMode("listening", 0.35);
       } else if (event.type === "input_audio_buffer.speech_stopped") {
         userSpeechActive = false;
-        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
+        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs, inputAudio: true });
         cueFaceMode("thinking", 0.45);
         scheduleMicFreshnessCheck();
       } else if (event.type === "response.created") {
@@ -19726,7 +20038,7 @@
       } else if (event.type === "response.output_audio_transcript.delta") {
         noteSpeechMouthTextDelta(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.delta") {
-        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
+        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs, inputAudio: true });
         updateInputDraft(event.delta || "");
       } else if (event.type === "conversation.item.input_audio_transcription.completed") {
         inputAudioTranscriptionPending = false;
@@ -19740,7 +20052,7 @@
         const recorded = recordUserTranscript(event.transcript || "", event);
         if (!recorded.accepted) return;
         rememberConversationProsody(recorded.index, completedVoiceShape);
-        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs });
+        noteUserTurnActivity({ pendingMs: idlePendingUserTurnMs, inputAudio: true });
         idleExhaustionCount = 0;
         idleCooldownUntil = 0;
         cueFaceMode("thinking", 0.45);
@@ -20204,6 +20516,7 @@
               type: "realtime",
               instructions: fallbackInstructions,
               ...ttsRuntimeConfig(),
+              ...thinkingRuntimeConfig(),
               tools: [],
               tool_choice: "none"
             }
@@ -20530,6 +20843,9 @@
         return;
       }
       micStream = stream;
+      brain2MicWarning = "";
+      await brain2Mic.sync();
+      updateBrain2MicStatus();
       await refreshMicDevices({ preserveSelection: deviceId, quiet: true });
       if (!activeRealtimeSession(socket, generation) || micStream !== stream) {
         if (micStream === stream) await stopMic({ reason: "stopped during microphone setup" });
@@ -20548,7 +20864,7 @@
           sumSquares += sample * sample;
         }
         updateMicLevelMeters(peak);
-        if (micMutedForNarration || brain2MonitorAudioShouldMuteMic()) {
+        if (micMutedForNarration || brain2MonitorAudioShouldMuteMic() || brain2Mic.blocksInput()) {
           resetMicInterruptCandidate();
           return;
         }
@@ -20582,6 +20898,7 @@
       micProcessor = null;
       micSource = null;
       micStream = null;
+      updateBrain2MicStatus();
       micContext = null;
       if (processor) processor.disconnect();
       if (source) source.disconnect();
@@ -20614,7 +20931,8 @@
       modelPreset: "Choose the LLM backend preset used when restarting the realtime server.",
       modelMtp: "Multi-token prediction for the next model load. Remembered in this browser; apply with Restart. This is a requested setting, not a reading of the running model.",
       customModelKey: "Installed LM Studio model key from lms ls. A name assigned to a loaded model may differ.",
-      customModelReasoning: "Reasoning/thinking effort sent to the LLM backend when supported.",
+      customModelReasoning: "Eric's Thinking setting. Uses the loaded model's capabilities; applies to the next response. You, Eric, or B2 can change it.",
+      brain2Thinking: "B2's separate Thinking setting. Uses its loaded model's capabilities; applies to its next scheduled mull. You, Eric, or B2 can change it.",
       customModelContext: "Context window requested for the model backend.",
       customModelParallel: "Parallel prediction count for the loaded LM Studio model.",
       connect: "Connect the browser UI to the realtime STS server.",
@@ -20650,9 +20968,6 @@
       resetMic: "Reset the input audio buffer after long or garbled listening.",
       typedInput: "Typed fallback input; useful for controlled tests or pronunciation.",
       typedSend: "Send typed text as a user turn.",
-      typedThink: "Run this typed ask through one bounded local deliberate pass, then have Eric answer from its compact conclusion.",
-      typedThink: "Experimental deep thinking is disabled. Normal conversation remains available through Send.",
-      typedThinkEffort: "Experimental deep thinking is disabled; this does not change normal conversation, B2 or idle thought.",
       typedSay: "Speak typed text through Eric's current voice without adding a user turn.",
       autoAudioRecord: "Automatically start recording when the microphone starts. Turn off for non-recorded test runs.",
       startAudioRecord: "Start recording the current STS session audio/video artifact.",
@@ -20671,15 +20986,15 @@
       chassisUrl: "HTTP URL for the chassis controller.",
       chassisStop: "Send a stop command to the chassis controller.",
       ttsVoice: "Main Qwen3-TTS speaker voice.",
-      ttsPrecision: "Qwen3-TTS precision; bfloat16 is the usual stable default.",
+      ttsModel: "Speech model to load on server restart. 1.7B supports delivery styles; 0.6B supports named voices only.",
       ttsInstruct: "Operator-side TTS delivery instruction.",
       ericAudioVolume: "Real browser playback volume for Eric's main voice.",
       ttsPreset: "Apply a saved voice-style instruction.",
-      ttsApply: "Apply the selected voice, precision, and delivery instruction.",
+      ttsApply: "Apply the delivery instruction to future speech. Does not restart or change the speech model or precision.",
       labGoal: "Session-only directed question/job that idle should keep returning to.",
       labGoalClear: "Clear the pinned lab goal for this session.",
       labGoalOneShot: "Make the current lab goal a one-response launch job, then clear it automatically.",
-      clearLog: "Clear visible conversation, event, and Brain 2 panes.",
+      clearLog: "Reset conversation context and clear conversation, events, and Brain 2 logs. Earlier cleared dialogue is not included in the next session save.",
       runPreset: "Apply a session-only bundle of lab dials.",
       creatureProfile: "Thin first-contact identity seed; resets to Eric on reload.",
       idleFastClockSpeed: "Compress idle scheduling for lab observation; resets to 1x on reload.",
@@ -20693,7 +21008,7 @@
       idleSubstrateTest: "Let a loaded note act as the temporary world by suppressing normal Robot 790 self-reference.",
       brain2MouthBrain: "Allow Brain 2 to put short private asides on the mouth display.",
       brain2VoiceMonitor: "Read Brain 2 surfaced asides through a quiet browser voice for monitoring.",
-      brain2MuteMic: "Mute microphone input to Eric while Brain 2 speaks and for half a second afterward. Uncheck to let Eric listen during Brain 2 speech.",
+      brain2MuteMic: "Checked: mute mic input during B2 speech and its half-second tail. Unchecked: keep the mic open and temporarily disable browser echo cancellation so it can hear B2 through speakers. Speech enters the transcript only if the mic actually hears and transcribes it.",
       brain2VoiceSelect: "Browser speech-synthesis voice used only for the Brain 2 monitor.",
       brain2VoiceVolume: "Volume for the Brain 2 monitor voice.",
       brain2VoicePace: "Real browser speech rate for the Brain 2 monitor voice.",
@@ -20777,7 +21092,9 @@
     function ttsControlDetails() {
       return {
         voice: currentTtsVoice(),
-        precision: currentTtsPrecision(),
+        model_for_restart: currentTtsModel(),
+        active: ttsControls.active,
+        style_supported: ttsControls.supportsStyles(),
         preset: ttsPreset?.value || "",
         instruct: currentTtsInstruct(),
         effective_instruct: effectiveTtsInstruct()
@@ -21053,22 +21370,36 @@
       updateCustomModelControls();
       recordUiEvent("model preset", modelPreset.options[modelPreset.selectedIndex]?.text || currentModelPreset(), modelControlDetails());
       log(events, `model preset ${modelPreset.options[modelPreset.selectedIndex]?.text || currentModelPreset()}`);
+      void refreshThinkingProfiles();
+    });
+    document.querySelector("#connectionSettingsExpando")?.addEventListener("toggle", event => {
+      if (event.currentTarget.open) void refreshThinkingProfiles();
     });
     modelMtp?.addEventListener("change", () => {
       saveModelPreset();
       recordUiEvent("model MTP on restart", currentModelMtp(), modelControlDetails());
       log(events, `MTP ${currentModelMtp()} selected for next Restart; running model unchanged`);
     });
-    [customModelKey, customModelReasoning, customModelContext, customModelParallel].forEach((control) => {
+    [customModelKey, customModelContext, customModelParallel].forEach((control) => {
       control?.addEventListener("change", () => {
+        updateCustomModelControls();
         saveModelPreset();
         recordUiEvent(`model ${control.id || "custom"}`, control.value || "", modelControlDetails());
       });
       control?.addEventListener("input", () => {
+        updateCustomModelControls();
         saveModelPreset();
         recordUiEvent(`model ${control.id || "custom"}`, control.value || "", modelControlDetails(), { quiet: true });
       });
     });
+    for (const [brain, control, help] of [["eric", customModelReasoning, modelThinkingHelp], ["brain2", brain2Thinking, brain2ThinkingHelp]]) {
+      control.addEventListener("change", () => {
+        setThinking({ brain, mode: control.value }, { source: "operator" }).catch(error => {
+          renderThinkingControls(); help.textContent = error.message;
+          log(events, `Thinking not confirmed: ${error.message}`);
+        });
+      });
+    }
     labGoal?.addEventListener("input", () => {
       updateLabGoalUi({ quiet: true });
       recordUiEvent("lab goal edit", currentLabGoal(), idleControlDetails(), { quiet: true });
@@ -21184,12 +21515,6 @@
       }
     });
     typedSendButton.addEventListener("click", () => sendTypedInput("user"));
-    typedThinkButton.addEventListener("click", () => sendTypedInput("think"));
-    typedThinkEffort.addEventListener("change", () => {
-      if (!deliberateTurnInFlight) setDeliberateIndicator();
-      recordUiEvent("think depth", currentTypedThinkEffort(), { rounds: 1 });
-      log(events, `think depth ${currentTypedThinkEffort()} / 1 round`);
-    });
     typedSayButton.addEventListener("click", () => sendTypedInput("say"));
     visionDrop.addEventListener("click", () => visionFile.click());
     visionDrop.addEventListener("keydown", (event) => {
@@ -21515,10 +21840,12 @@
       updateSessionTtsStyle();
       recordUiEvent("B1 voice", currentTtsVoice(), ttsControlDetails());
     });
-    ttsPrecision.addEventListener("change", () => {
-      saveTtsPrecision();
-      recordUiEvent("B1 tts precision", currentTtsPrecision(), ttsControlDetails());
-      log(events, `tts precision ${currentTtsPrecision()} (restart required)`);
+    document.querySelector("#ttsModel").addEventListener("change", () => {
+      ttsControls.modelChanged();
+      recordUiEvent("B1 speech model for restart", currentTtsModel(), ttsControlDetails());
+    });
+    document.querySelector("#brain1Expando").addEventListener("toggle", event => {
+      if (event.target.open) void refreshTtsRuntime();
     });
     ttsPreset.addEventListener("change", () => {
       if (ttsPreset.value === "custom") return;
@@ -21640,6 +21967,9 @@
     });
     brain2MuteMic.addEventListener("change", () => {
       localStorage.setItem(brain2MuteMicStorageKey, String(brain2MuteMic.checked));
+      brain2MicWarning = "";
+      void brain2Mic.sync();
+      updateBrain2MicStatus();
       recordUiEvent("brain2 microphone muting", brain2MuteMic.checked ? "on" : "off", brain2ControlDetails());
       log(events, `brain2 microphone muting ${brain2MuteMic.checked ? "on" : "off"}`);
     });
@@ -22018,8 +22348,9 @@
     loadMicPanelState();
     syncServerPanelToConnection();
     loadTtsVoice();
-    loadTtsPrecision();
     loadTtsStyle();
+    ttsControls.load();
+    void refreshTtsRuntime();
     resetCreatureProfileForReload();
     loadAutoAudioRecordPref();
     loadEricAudioMutePref();

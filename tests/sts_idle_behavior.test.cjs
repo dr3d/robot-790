@@ -32,6 +32,7 @@ function idleContext(overrides = {}) {
     formatLoadedNotesForIdleContext: () => 'SUBSTRATE', firstContactIdleContext: () => 'FIRST_CONTACT',
     currentLabGoal: () => '', visionImageUrl: '', visionImageStaged: false, noteAloneActivity: noop, cueFaceMode: noop,
     formatIdleHeadlineContext: () => '', brain2HeadlineSeed: null,
+    brain2HeadlinesDue: () => false, brain2BlockedReason: empty,
     events: {}, log: noop, rememberPromptLedger: noop, send: packet => packets.push(packet),
     ttsRuntimeConfig: () => ({}), recentIdleOutputs: [], substrateIdleOutputs: [], idleOutputLog: [], maxIdleOutputLog: 100,
     idleExhaustionCount: 0, idleCooldownUntil: 0,
@@ -41,6 +42,68 @@ function idleContext(overrides = {}) {
   });
   return { c, packets };
 }
+
+test('overdue B2 reading gets the quiet window before the next idle response', async () => {
+  let finish, scheduled = 0, reads = 0;
+  const { c, packets } = idleContext({
+    brain2HeadlinesDue: () => true,
+    triggerBrain2Mull: () => { reads++; return new Promise(resolve => { finish = resolve; }); },
+    scheduleIdlePonder: () => scheduled++,
+  });
+  const pending = c.triggerIdlePonder({ statusChecked: true });
+  assert.equal(reads, 1);
+  assert.equal(packets.length, 0);
+  assert.equal(c.idleInFlight, false);
+  assert.equal(scheduled, 0);
+  finish(); await pending;
+  assert.equal(scheduled, 1);
+  c.brain2HeadlinesDue = () => false;
+  await c.triggerIdlePonder({ statusChecked: true });
+  assert.equal(packets.length, 1, 'Eric resumes after the reading opportunity');
+});
+
+test('reading handoff respects user activity, B2 cooldown, and manual idle', async () => {
+  for (const scenario of ['user speaking', 'user turn pending', 'B2 cooldown', 'manual']) {
+    let reads = 0;
+    const { c, packets } = idleContext({
+      brain2HeadlinesDue: () => true,
+      idleBlockedReason: () => scenario.startsWith('user') ? scenario : '',
+      brain2BlockedReason: () => scenario === 'B2 cooldown' ? 'cooldown' : '',
+      triggerBrain2Mull: async () => reads++,
+    });
+    await c.triggerIdlePonder({ statusChecked: true, manual: scenario === 'manual' });
+    assert.equal(reads, 0, scenario);
+    assert.equal(packets.length, scenario.startsWith('user') ? 0 : 1, scenario);
+  }
+});
+
+test('failed reading reschedules idle instead of leaving Eric parked', async () => {
+  let scheduled = 0;
+  const { c, packets } = idleContext({
+    brain2HeadlinesDue: () => true,
+    triggerBrain2Mull: async () => { throw new Error('reading failed'); },
+    scheduleIdlePonder: () => scheduled++,
+  });
+  await assert.rejects(c.triggerIdlePonder({ statusChecked: true }), /reading failed/);
+  assert.equal(scheduled, 1);
+  assert.equal(packets.length, 0);
+  assert.equal(c.idleInFlight, false);
+});
+
+test('reading completion cannot restart idle after disconnect or session replacement', async () => {
+  for (const change of [c => { c.realtimeStopRequested = true; }, c => { c.realtimeSessionGeneration++; }]) {
+    let finish, scheduled = 0;
+    const { c, packets } = idleContext({
+      brain2HeadlinesDue: () => true,
+      triggerBrain2Mull: () => new Promise(resolve => { finish = resolve; }),
+      scheduleIdlePonder: () => scheduled++,
+    });
+    const pending = c.triggerIdlePonder({ statusChecked: true });
+    change(c); finish(); await pending;
+    assert.equal(scheduled, 0);
+    assert.equal(packets.length, 0);
+  }
+});
 test('idle shares full history and stable schemas; Eric chooses research and words', async () => {
   const { c, packets } = idleContext();
   await c.triggerIdlePonder({ statusChecked: true });
@@ -231,6 +294,8 @@ test('speech-start refreshes session instructions after capturing the quiet inte
   Object.assign(c, {
     llmRunOverview: null,
     observeContextUsage: () => {},
+    observeSessionThinking: noop,
+    brain2MicrophoneListening: () => false,
     realtimeStopRequested: false, ws: {}, realtimeSessionGeneration: 1,
     eyeRecallResponses: new Map(), eventResponseId: event => event.response_id || '',
     activeRealtimeSession: () => true, clearConversationReengageTimer: noop,

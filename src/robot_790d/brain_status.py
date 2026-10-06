@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from robot_790d.tts_activity import read_tts_activity
+from robot_790d.tts_settings import describe_tts
 
 DEFAULT_TAIL_BYTES = 2_000_000
 NVIDIA_SMI_CACHE_SECONDS = 2.0
@@ -64,6 +65,7 @@ def get_brain_status(repo_root: str | Path | None = None) -> dict[str, Any]:
         "source": "local_logs",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "model": model,
+        "tts": describe_tts(runtime_args),
         "session": session,
         "latest_response": latest_response,
         "latest_request": request_usage,
@@ -84,6 +86,11 @@ def get_gpu_status() -> dict[str, Any]:
     """Read compact GPU telemetry for the local STS dashboard."""
     status = _get_gpu_hardware_status()
     return {**status, "tts_activity": read_tts_activity()}
+
+
+def get_tts_status(repo_root: Path | None = None) -> dict[str, Any]:
+    root = repo_root or Path(__file__).resolve().parents[2]
+    return describe_tts(_read_realtime_runtime_args(root))
 
 
 def _get_gpu_hardware_status() -> dict[str, Any]:
@@ -675,8 +682,10 @@ def _read_realtime_runtime_args(repo_root: Path) -> dict[str, str]:
         for key in (
             "model_name",
             "responses_api_reasoning_effort",
+            "responses_api_base_url",
             "responses_api_audio_max_tokens",
             "qwen3_tts_dtype",
+            "qwen3_tts_model_name",
             "qwen3_tts_speaker",
             "stt",
             "tts",

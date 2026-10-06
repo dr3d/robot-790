@@ -31,7 +31,7 @@ function fixture() {
     resetConversationReengageCycle() {}, captureCompletedAloneInterval() {},
     renderConversation() {}, noteConversationActivity() { calls.push('activity'); },
     events: {}, log: (_, text) => logs.push(text), realtimeConnection,
-    llmRunOverview: null, observeContextUsage() {}, performance: { now: () => now },
+    llmRunOverview: null, observeContextUsage() {}, observeSessionThinking() {}, performance: { now: () => now },
     noteUserTurnActivity() { calls.push('user activity'); }, idlePendingUserTurnMs: 2000,
     cueFaceMode() { calls.push('face'); }, responseOutputSuppressed: () => false,
     containsToolMarkup: () => false, noteAudioCaption() {}, noteAssistantText() {},

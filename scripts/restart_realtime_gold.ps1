@@ -3,14 +3,16 @@ param(
     [ValidateSet("qwen27-mtp-vlow", "qwen27", "qwen9", "qwen4", "nemotron30", "openai", "custom")]
     [string] $Preset = "qwen27-mtp-vlow",
     [string] $Model = "",
-    [ValidateSet("", "low", "medium", "xhigh", "none")]
+    [ValidateSet("", "on", "low", "medium", "xhigh", "none")]
     [string] $Reasoning = "none",
     [int] $ContextLength = 131072,
     [int] $Parallel = 0,
     [ValidateSet("default", "on", "off")]
     [string] $Mtp = "default",
-    [ValidateSet("bfloat16", "float16")]
-    [string] $TtsDtype = "bfloat16"
+    [ValidateSet("", "bfloat16", "float16")]
+    [string] $TtsDtype = "",
+    [ValidateSet("0.6B", "1.7B")]
+    [string] $TtsModelSize = "0.6B"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +28,7 @@ $EnvLoader = Join-Path $PSScriptRoot "load_env.ps1"
 if (Test-Path -LiteralPath $EnvLoader) {
     . $EnvLoader -Quiet
 }
+$TtsDtype = & (Join-Path $PSScriptRoot "tts_precision.ps1") -Override $TtsDtype
 
 function Stop-StaleLmStudioBackends {
     param(
@@ -62,7 +65,7 @@ $presets = @{
         Provider = "lmstudio"
         Model = "qwen3.8-27b-nvfp4-mtp"
         LoadModel = "qwen3.8-27b-mtp"
-        Reasoning = "none"
+        Reasoning = if ($Reasoning -in @("on", "low", "medium", "xhigh")) { "on" } else { "none" }
         AudioMaxTokens = 64
         ContextLength = 131072
         Parallel = 2
@@ -154,6 +157,17 @@ if ($selected.Provider -eq "lmstudio") {
     }
 }
 
+$TtsModelDirectory = if ($env:ROBOT_790_TTS_MODEL_DIR) {
+    $env:ROBOT_790_TTS_MODEL_DIR
+} else {
+    Join-Path $env:USERPROFILE "ComfyUI_windows_portable\ComfyUI\models\TTS"
+}
+$TtsModelPath = Join-Path $TtsModelDirectory "Qwen3-TTS-12Hz-$TtsModelSize-CustomVoice"
+if (-not (Test-Path -LiteralPath (Join-Path $TtsModelPath "config.json")) -or
+    -not (Get-ChildItem -LiteralPath $TtsModelPath -Filter '*.safetensors' -File -ErrorAction SilentlyContinue)) {
+    throw "Speech model $TtsModelSize is not installed at $TtsModelPath. Realtime has not been stopped."
+}
+
 & $StopScript -RealtimeOnly
 if ($DelaySeconds -gt 0) {
     Start-Sleep -Seconds $DelaySeconds
@@ -214,7 +228,9 @@ $startArgs = @(
     "-AudioMaxTokens",
     [string] $selected.AudioMaxTokens,
     "-TtsDtype",
-    $TtsDtype
+    $TtsDtype,
+    "-TtsModel",
+    ('"{0}"' -f $TtsModelPath)
 )
 
 if ($selected.Reasoning) {

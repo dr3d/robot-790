@@ -483,6 +483,9 @@
     let archiveBusy = false;
     let preparationPollTimer = null;
     let sessionsFingerprint = "";
+    let sessionsRequestController = null;
+    let detailsRequestController = null;
+    let detailsRequestKey = "";
     let selectedFilename = "";
     const realtimeReadiness = Robot790RealtimeReadiness.create({
       probe: Robot790RealtimeReadiness.probeLocal,
@@ -728,25 +731,34 @@
     function buildLineageTints(items, previousTints = new Map()) {
       const byFilename = new Map(items.map((item) => [lineageKey(item.filename), item]));
       const tints = new Map();
+      const remember = (key, rootKey, depth) => tints.set(key, {
+        hue: 0,
+        lightness: depth ? 27 + (depth - 1) % 4 * 2 + lineageHash(key) % 2 : 22,
+        rootKey,
+        depth
+      });
       for (const item of items) {
-        let root = item;
-        let depth = 0;
-        const seen = new Set([lineageKey(item.filename)]);
-        while (byFilename.has(lineageKey(root.parent_session_filename))) {
-          const parentKey = lineageKey(root.parent_session_filename);
-          if (seen.has(parentKey)) break;
-          seen.add(parentKey);
-          root = byFilename.get(parentKey);
-          depth += 1;
+        let key = lineageKey(item.filename);
+        const path = [];
+        const positions = new Map();
+        // Resolve each ancestor once, including when the newest leaf comes first.
+        while (byFilename.has(key) && !tints.has(key) && !positions.has(key)) {
+          positions.set(key, path.length);
+          path.push(key);
+          key = lineageKey(byFilename.get(key).parent_session_filename);
         }
-        const rootKey = lineageKey(root.filename);
-        const key = lineageKey(item.filename);
-        tints.set(key, {
-          hue: 0,
-          lightness: depth ? 27 + (depth - 1) % 4 * 2 + lineageHash(key) % 2 : 22,
-          rootKey,
-          depth
-        });
+        if (positions.has(key)) {
+          const cycle = path.splice(positions.get(key));
+          const rootKey = [...cycle].sort()[0];
+          const rootIndex = cycle.indexOf(rootKey);
+          cycle.forEach((cycleKey, index) => remember(cycleKey, rootKey,
+            (rootIndex - index + cycle.length) % cycle.length));
+        }
+        while (path.length) {
+          const pathKey = path.pop();
+          const parent = tints.get(lineageKey(byFilename.get(pathKey).parent_session_filename));
+          remember(pathKey, parent?.rootKey || pathKey, parent ? parent.depth + 1 : 0);
+        }
       }
       const roots = [...new Set([...tints.values()].map((tint) => tint.rootKey))].sort();
       const rootHues = new Map();
@@ -815,10 +827,11 @@
       if (!value) return fallback;
       const date = new Date(value);
       if (!Number.isFinite(date.getTime())) return fallback;
-      return new Intl.DateTimeFormat(undefined, {
+      const formatter = formatSessionDate.formatter ||= new Intl.DateTimeFormat(undefined, {
         year: "numeric", month: "short", day: "numeric",
         hour: "numeric", minute: "2-digit", hour12: true
-      }).format(date);
+      });
+      return formatter.format(date);
     }
 
     function sessionContextAtSave(item) {
@@ -930,7 +943,18 @@
 
     async function refreshSessions({ quiet = false } = {}) {
       if (!quiet) setStatus("refreshing");
-      const result = await apiJson(new URL("/api/continuity/sessions", location.href));
+      clearTimeout(preparationPollTimer);
+      sessionsRequestController?.abort();
+      const controller = new AbortController();
+      sessionsRequestController = controller;
+      let result;
+      try {
+        result = await apiJson(new URL("/api/continuity/sessions", location.href), { signal: controller.signal });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        throw error;
+      }
+      if (controller.signal.aborted) return;
       const fingerprint = JSON.stringify(result);
       if (quiet && fingerprint === sessionsFingerprint) {
         schedulePreparationPoll();
@@ -953,9 +977,11 @@
         selectedFilename = currentFilename || sessions[0]?.filename || "";
       }
       render();
-      await loadDetails();
       setStatus(`${sessions.length} sessions`);
       schedulePreparationPoll();
+      // A history preview can read many ancestors; it must not hold the map or
+      // a completed archive open, and rapid selection must not queue previews.
+      void loadDetails({ force: !quiet });
     }
 
     function render() {
@@ -1095,7 +1121,7 @@
       node.classList.toggle("current", item.filename === currentFilename);
       node.classList.toggle("is-selected", item.filename.toLowerCase() === selectedFilename.toLowerCase());
       node.classList.toggle("orphan", Boolean(item.parent_session_filename)
-        && !sessions.some((candidate) => candidate.filename.toLowerCase() === item.parent_session_filename.toLowerCase()));
+        && !knownLineageNodes.has(lineageKey(item.parent_session_filename)));
       node.addEventListener("click", () => setSelected(item.filename));
       const title = document.createElement("div");
       title.className = "session-title";
@@ -1110,8 +1136,21 @@
       return row;
     }
 
-    async function loadDetails() {
+    function updateArchiveButtons() {
+      for (const button of detailsEl.querySelectorAll("[data-archive]")) {
+        button.disabled = archiveBusy || (button.dataset.archive === "single" && sessions.length <= 1);
+      }
+    }
+
+    async function loadDetails({ force = false } = {}) {
       const item = selectedSession();
+      const resumeForm = selectedResumeForm(item);
+      const requestKey = JSON.stringify([item, resumeForm]);
+      if (!force && requestKey === detailsRequestKey) return;
+      detailsRequestKey = requestKey;
+      detailsRequestController?.abort();
+      const controller = new AbortController();
+      detailsRequestController = controller;
       detailsEl.replaceChildren();
       if (!item) {
         const empty = document.createElement("div");
@@ -1122,7 +1161,6 @@
       }
       const actions = document.createElement("div");
       actions.className = "detail-actions";
-      const resumeForm = selectedResumeForm(item);
       const formRecord = resumeFormRecord(item, resumeForm);
       const loadFilename = String(formRecord.filename || item.filename);
       const openButton = document.createElement("button");
@@ -1144,12 +1182,14 @@
       const archiveButton = document.createElement("button");
       archiveButton.type = "button";
       archiveButton.className = "warn";
+      archiveButton.dataset.archive = "single";
       archiveButton.textContent = "Archive";
       archiveButton.disabled = archiveBusy || sessions.length <= 1;
       archiveButton.addEventListener("click", () => archiveSelected().catch((error) => setStatus(error.message)));
       const branchButton = document.createElement("button");
       branchButton.type = "button";
       branchButton.className = "warn archive-branch";
+      branchButton.dataset.archive = "branch";
       branchButton.textContent = "Archive Branch";
       branchButton.disabled = archiveBusy;
       branchButton.addEventListener("click", () => archiveBranchSelected().catch(error => setStatus(error.message)));
@@ -1231,8 +1271,10 @@
         if (resumeForm === "auto") {
           const plan = await apiJson(new URL("/api/continuity/history", location.href), {
             method: "POST", headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
             body: JSON.stringify({ session_filename: item.filename, preview: true })
           });
+          if (controller.signal.aborted) return;
           if (plan.status === "preparing") preparationStatus.textContent = "History needs preparation";
           preview.textContent = plan.status === "preparing" ?
             `History forms needed:\n${plan.preparation_required.join("\n")}` :
@@ -1241,9 +1283,12 @@
         }
         const url = new URL("/api/notes/read", location.href);
         url.searchParams.set("filename", loadFilename);
-        const note = await apiJson(url);
+        const note = await apiJson(url, { signal: controller.signal });
+        if (controller.signal.aborted) return;
         preview.textContent = String(note.content || "").slice(0, 24000);
       } catch (error) {
+        if (controller.signal.aborted) return;
+        detailsRequestKey = "";
         preview.textContent = `Could not load preview: ${error.message}`;
       }
     }
@@ -1273,6 +1318,7 @@
       const item = selectedSession();
       if (!item) return;
       archiveBusy = true;
+      updateArchiveButtons();
       try {
         if (!await confirmBranchArchive({
           sessions: [{ ...item }], session_count: 1, allowed: sessions.length > 1,
@@ -1291,7 +1337,7 @@
         setStatus(`archived${assetCount ? ` with ${assetCount} eye capture${assetCount === 1 ? "" : "s"}` : ""}`);
       } finally {
         archiveBusy = false;
-        void loadDetails();
+        updateArchiveButtons();
       }
     }
 
@@ -1343,6 +1389,7 @@
       const item = selectedSession();
       if (!item) return;
       archiveBusy = true;
+      updateArchiveButtons();
       try {
         const url = new URL("/api/continuity/archive-branch", location.href);
         const post = body => apiJson(url, {
@@ -1359,7 +1406,7 @@
           : `Archived ${result.archived_session_count} sessions and ${result.archived_sensing_eye_asset_count} eye assets${result.asset_archive_issues?.length ? `; ${result.asset_archive_issues.length} asset warnings (missing, changed, or not moved)` : ""}`);
       } finally {
         archiveBusy = false;
-        void loadDetails();
+        updateArchiveButtons();
       }
     }
 

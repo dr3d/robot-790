@@ -13,7 +13,7 @@ function fixture(confirmed, result = { status: 'ok', archived_session_count: 2, 
     selectedSession: () => ({ filename: 'sessions/root.txt' }),
     apiJson: async (url, options) => { requests.push(JSON.parse(options.body)); return requests.length === 1 ? plan : result; },
     confirmBranchArchive: async received => { assert.equal(received, plan); return confirmed; },
-    setStatus: text => statuses.push(text), postToSts: () => {}, refreshSessions: async () => {}, loadDetails: () => {},
+    setStatus: text => statuses.push(text), postToSts: () => {}, refreshSessions: async () => {}, updateArchiveButtons: () => {},
   });
   const start = page.indexOf('    async function archiveBranchSelected(');
   const end = page.indexOf('\n    }\n', start);
@@ -73,7 +73,7 @@ function singleFixture(confirmed) {
     selectedSession: () => selected,
     confirmBranchArchive: async (plan, options) => { confirmations.push({plan,options}); return confirmed; },
     apiJson: async (url, options) => { requests.push({url:String(url),body:JSON.parse(options.body)}); return { status:'ok' }; },
-    setStatus: () => {}, postToSts: value => notices.push(value), refreshSessions: async () => {}, loadDetails: () => {},
+    setStatus: () => {}, postToSts: value => notices.push(value), refreshSessions: async () => {}, updateArchiveButtons: () => {},
   });
   const start = page.indexOf('    async function archiveSelected(');
   const end = page.indexOf('\n    }\n', start);

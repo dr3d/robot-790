@@ -519,7 +519,10 @@ class SessionPreparer:
             if filename in self.jobs:
                 return dict(self.jobs[filename])
         try:
-            result = json.loads(read_note_file(self.instance_path, self._status_filename(filename)).content)
+            status_filename = self._status_filename(filename)
+            if not resolve_note_path(status_filename, self.instance_path).is_file():
+                return {"state": "not_prepared"}
+            result = json.loads(read_note_file(self.instance_path, status_filename).content)
             if not isinstance(result, dict):
                 raise ValueError("Invalid job status")
             if result.get("state") in {"queued", "running", "waiting"}:

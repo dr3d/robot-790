@@ -125,9 +125,11 @@ them from the actual search query.
 Connection Settings now includes **MTP on restart**, and the NVFP4 restart path
 uses the installed model key separately from its API name. A missing model is
 rejected before stopping realtime. Brain 2 has a checked-by-default **Mute
-microphone** control: unchecking it permits microphone input while its browser
-voice speaks. The choice is remembered; acoustic B1/B2 conversation is still an
-experiment, not a demonstrated capability.
+microphone during B2 speech** control. Unchecking it permits microphone input
+and temporarily disables browser echo cancellation during that speech, restoring
+normal capture afterward. The choice is remembered; acoustic B1/B2 conversation
+is still an experiment, not a demonstrated capability. B2 already receives
+Eric's dialogue and sends him advice through text.
 
 Search fallbacks reject the observed dictionary and unrelated headline results
 and can try a news index after an empty general search. Tool instructions allow
@@ -678,16 +680,32 @@ Or stop one side:
 
 ## Brain Presets
 
-The STS Connection Settings panel has a `Brain` dropdown. Pick a model, then
+Speech controls are under **Robot Controls → Brain 1**. Voice and volume apply
+immediately; the **In use** line identifies the running speech model.
+**Speech model** selects **0.6B** (named voices) or **1.7B** (named voices plus
+delivery styles) for the next **Server Management → Restart**. Style controls
+stay hidden until the running model supports them. Speech precision is configured
+in `.env` with `ROBOT_790_TTS_DTYPE=bfloat16` (the default for both models);
+`float16` is available for manual experiments. This takes effect on realtime
+start/restart; browser preferences do not override it. Model folders default to
+`%USERPROFILE%/ComfyUI_windows_portable/ComfyUI/models/TTS`;
+set `ROBOT_790_TTS_MODEL_DIR` for another location. Missing models are rejected
+before restarting. The conversation pane's **Reset conversation** is separate
+from voice settings and clears the current browser history and run ledgers.
+
+The STS Connection Settings panel has a `Brain on restart` dropdown. Pick a model, then
 use Server Management's `Restart` to stop realtime, unload the current LM Studio
 model, load the chosen model, and start realtime again with Eric's Qwen3-TTS voice.
+The **Restart loads** line shows the selected local model's load key. Custom
+model key, context, and parallel fields appear only for **Custom LM Studio**;
+saved custom values do not override a named preset.
 
 Current presets:
 
 | Preset | LM Studio model | Context | Parallel | Reasoning | Notes |
 | --- | --- | ---: | ---: | --- | --- |
-| Qwen 27B NVFP4 | API name `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | `none` | Daily preset; MTP On/Off is chosen separately for the next restart. Extended-session stalls remain open. |
-| Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | `low` | Old-brain comparison preset: slower, subtly familiar, useful for calibration days. |
+| Qwen 27B NVFP4 | API name `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | Off / On | Thinking defaults Off and applies live; MTP needs restart. Extended-session stalls remain open. |
+| Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | Off / Low / Medium / Extra high / On | Preset starts at Low; the live controls default Off. On selects the advertised enabled default. |
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | 1 | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | 1 | `none` | Small/fast comparison model. |
 | Nemotron 30B | `nvidia-nemotron-3.5-lightning-30b-a3b` | 64K requested / 32K observed | 1 | `none` | Alternate brain. Potent and fast, but more verbose and assistant-like; verify actual context with brain status after restart. |
@@ -700,6 +718,28 @@ checks the installed catalogue before stopping realtime. **MTP on restart**
 appears for NVFP4 and Custom; Connect alone does not apply it. The command-line
 launcher accepts `-Mtp on`, `-Mtp off`, or `-Mtp default` (inherit LM Studio's
 setting). Omitting that argument uses `default`.
+
+**Eric Thinking** and **Brain 2 Thinking** sit side by side in Connection
+Settings, beside the model configuration. They are independent settings,
+initially **Off**. You, Eric, or B2 can change either one;
+choices persist until changed again. Changes affect Eric's next response or
+B2's next scheduled mull, without restarting or launching an extra call.
+In-flight requests retain their original setting. The Events pane records who
+requested a change; Eric's tool waits for backend confirmation.
+
+Controls and the brains' instructions come from the **loaded model's** advertised
+capabilities, independently for each brain. Selecting a different restart preset
+does not relabel the running model; the help text identifies the **Running** model.
+NVFP4 has Off/On only (`none`/`low` on the compatible wire). Graded models expose
+their advertised levels directly. The installed regular Qwen 27B advertises
+Off, Low, Medium, Extra high (`xhigh`), and On. On uses the advertised enabled
+default, or first enabled option if the default is Off; the dropdown labels that
+alias explicitly. Unsupported choices are not offered.
+Hover over the help text or use `get_thinking` for the model's full instructions.
+`set_thinking` accepts `brain: eric|brain2` and a supported `mode` such as
+`off`, `on`, `low`, `medium`, or `xhigh`. B2's validated
+`thinking_changes` follows the same controls and cannot overwrite a newer choice.
+These switches are separate from MTP and the disabled experimental **Think** pass.
 
 The restart script behind the dropdown is:
 

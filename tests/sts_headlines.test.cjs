@@ -16,6 +16,7 @@ function setup(overrides = {}, extraFunctions = []) {
   let now = 120001;
   const context = vm.createContext({
     Robot790Brain2Request: require('../web/sts/brain2-request.js'),
+    thinkingControls: { packet: () => ({}) }, applyBrain2Thinking: async () => {},
     Robot790NoteBrains: require('../web/sts/note-brains.js'), loadedNoteContexts: [],
     pendingEyeRecallResponse: null,
     eyeRecallResponses: new Map(),

@@ -5,6 +5,26 @@ import numpy as np
 import pytest
 
 
+def test_thinking_switch_reaches_the_local_request_without_changing_other_modes(monkeypatch):
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+    from robot_790d.realtime_entry import apply_chat_thinking_switch_patch
+
+    monkeypatch.setattr(Handler, "_build_extra_body", Handler.__dict__.get(
+        "_build_extra_body", classmethod(Handler._build_extra_body.__func__)))
+    monkeypatch.setattr(Handler, "_robot_790_thinking_switch_patch", False, raising=False)
+    apply_chat_thinking_switch_patch()
+    wrapped = Handler._build_extra_body.__func__
+    apply_chat_thinking_switch_patch()
+    assert Handler._build_extra_body.__func__ is wrapped
+    for url in ["http://127.0.0.1:1234/v1", "http://localhost:1234/v1", "http://[::1]:1234/v1"]:
+        assert Handler._build_extra_body(url, True, "on") == {"reasoning_effort": "low"}
+        assert Handler._build_extra_body(url, True, "none") == {"reasoning_effort": "none"}
+        assert Handler._build_extra_body(url, True, "medium") == {"reasoning_effort": "medium"}
+        assert Handler._build_extra_body(url, True, "") == {"chat_template_kwargs": {"enable_thinking": False}}
+    assert Handler._build_extra_body("https://api.openai.com/v1", True, "on") is None
+    assert Handler._build_extra_body("https://example.com/v1", True, "on") == {"reasoning_effort": "on"}
+
+
 def test_llm_read_timeout_defaults_and_validation(monkeypatch):
     from robot_790d.realtime_entry import _llm_read_timeout_from_env
     monkeypatch.delenv("ROBOT_790_LLM_READ_TIMEOUT_SECONDS", raising=False)

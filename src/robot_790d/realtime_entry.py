@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import math
 import os
 import time
+import weakref
 from collections.abc import Iterator
+from contextvars import ContextVar
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -17,6 +21,7 @@ from uuid import uuid4
 
 from robot_790d.request_diagnostics import begin_request, finish_request
 from robot_790d.provider_output_capture import begin_output_capture
+from robot_790d.thinking import model_profile, request_options as thinking_request_options
 
 _VOICE_SHAPE_PREFIX = "[voice-shape:"
 _LLM_WIRE_CAPTURE_LOCK = Lock()
@@ -25,6 +30,10 @@ logger = logging.getLogger(__name__)
 PRIVATE_OUTPUT_SUPPRESSED = "robot790_private_output_suppressed"
 FOLLOWUP_TOOL_BLOCKED = "robot790_spoken_followup_tool_blocked"
 IDLE_TOOL_BLOCKED = "robot790_idle_tool_blocked"
+_CHAT_REQUEST_EXTRA_BODY: ContextVar[dict[str, Any] | None] = ContextVar(
+    "robot790_chat_request_extra_body", default=None)
+_THINKING_MODES = {"", "none", "on", "minimal", "low", "medium", "high", "xhigh"}
+_THINKING_HANDLER: Any = None
 
 
 class _PrivateAdvisoryTextFilter:
@@ -169,6 +178,9 @@ def apply_interruptible_chat_generation_patch() -> None:
                  optional_kwargs: dict[str, Any], **kwargs: Any) -> Iterator[Any]:
         optional_kwargs = dict(optional_kwargs)
         optional_kwargs.setdefault("temperature", _b1_temperature_from_env())
+        # Snapshot once for this generation, including retries. A session update
+        # during inference belongs to the next response, never this one.
+        request_extra_body = _runtime_chat_extra_body(self, turn)
         followup = _extra_value(turn.response, "robot790_tool_followup")
         is_followup = isinstance(followup, str) and bool(followup.strip())
         is_idle = _extra_value(turn.response, "robot790_idle_continuation") is True
@@ -217,7 +229,7 @@ def apply_interruptible_chat_generation_patch() -> None:
             nonlocal public_text_seen
             capture = begin_output_capture(request_id, ticket=ticket,
                                            stream=bool(getattr(self, "stream", False)),
-                                           extra_body=getattr(self, "_extra_body", None))
+                                           extra_body=request_extra_body)
             events = iterate(capture.wrap(response) if capture else response)
             usage = None
             outcome = "completed"
@@ -233,6 +245,7 @@ def apply_interruptible_chat_generation_patch() -> None:
                             "conversation": getattr(turn.response, "conversation", None) or "default",
                             "input_tokens": event.input_tokens,
                             "output_tokens": event.output_tokens,
+                            "reasoning_effort": request_extra_body.get("reasoning_effort", "omitted"),
                         }))
                     if no_tools and isinstance(event, ToolCall):
                         # Enforce the original permission before history or execution sees a call.
@@ -266,15 +279,24 @@ def apply_interruptible_chat_generation_patch() -> None:
                 wire_options["tool_choice"] = "auto"
             ticket = begin_request(
                 request_id, family="B1", owner=str(id(original_chat)), model=str(getattr(self, "model_name", "")),
-                messages=api_input, options={**wire_options, "extra_body": getattr(self, "_extra_body", None)},
+                messages=api_input, options={**wire_options, "extra_body": request_extra_body},
             )
 
             def send_request() -> Any:
+                # Provider calls run on a worker thread; establish its context
+                # explicitly instead of mutating the shared handler default.
+                token = _CHAT_REQUEST_EXTRA_BODY.set(request_extra_body)
                 try:
+                    logger.info("B1 request thinking: %s", json.dumps({
+                        "request_id": request_id,
+                        "reasoning_effort": request_extra_body.get("reasoning_effort", "omitted"),
+                    }))
                     return request(api_input, wire_options)
                 except Exception as exc:
                     finish_request(ticket, outcome=type(exc).__name__)
                     raise
+                finally:
+                    _CHAT_REQUEST_EXTRA_BODY.reset(token)
 
             return CancellableProviderEvents(
                 send_request,
@@ -692,6 +714,130 @@ def _llm_read_timeout_from_env() -> float:
     return value if math.isfinite(value) and 5 <= value <= 300 else 60.0
 
 
+def apply_chat_thinking_switch_patch() -> None:
+    """Translate the local UI's On switch to the compatible endpoint's Low value.
+
+    LM Studio advertises off/on capabilities for the installed NVFP4 model, but
+    its OpenAI-compatible endpoint accepts none/low, not the literal value on.
+    For this binary model low enables thinking; it does not select a depth.
+    """
+    from speech_to_speech.LLM.chat_completions_language_model import ChatCompletionsApiModelHandler as Handler
+
+    if getattr(Handler, "_robot_790_thinking_switch_patch", False):
+        return
+    original = Handler._build_extra_body
+
+    def build(cls: Any, base_url: str | None, disable_thinking: bool, reasoning_effort: str | None) -> Any:
+        if base_url and cls._is_local_base_url(base_url) and reasoning_effort == "on":
+            reasoning_effort = "low"
+        return original(base_url, disable_thinking, reasoning_effort)
+
+    Handler._build_extra_body = classmethod(build)
+    Handler._robot_790_thinking_switch_patch = True
+
+
+def _chat_request_extra_body(handler: Any) -> dict[str, Any] | None:
+    scoped = _CHAT_REQUEST_EXTRA_BODY.get()
+    return scoped if scoped is not None else getattr(handler, "_extra_body", None)
+
+
+def _runtime_chat_extra_body(handler: Any, turn: Any) -> dict[str, Any]:
+    body = copy.deepcopy(getattr(handler, "_extra_body", None) or {})
+    session = getattr(getattr(turn, "runtime_config", None), "session", None)
+    mode = _extra_value(session, "robot790_reasoning_effort")
+    if not isinstance(mode, str) or mode not in _THINKING_MODES:
+        return body
+    expected_model = _extra_value(session, "robot790_thinking_model")
+    if expected_model and expected_model != handler.model_name:
+        raise ValueError("Thinking settings belong to a different model; refresh the model controls.")
+    profile = _handler_thinking_profile(handler)
+    override = thinking_request_options(profile, mode or "none")
+    body.pop("reasoning_effort", None)
+    template = body.get("chat_template_kwargs")
+    if isinstance(template, dict):
+        template.pop("enable_thinking", None)
+        if not template:
+            body.pop("chat_template_kwargs", None)
+    for key, value in override.items():
+        if key == "chat_template_kwargs":
+            body.setdefault(key, {}).update(value)
+        else:
+            body[key] = value
+    return body
+
+
+def _handler_thinking_profile(handler: Any = None) -> dict:
+    if handler is None:
+        handler = _THINKING_HANDLER() if _THINKING_HANDLER else None
+    if handler is None:
+        return {"status": "unverified", "can_off": False, "can_on": False,
+                "manual": "The realtime model is not ready."}
+    api_key = str(getattr(handler.client, "api_key", "none"))
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key.lower() not in {"", "none", "null"} else {}
+    return model_profile(str(handler.client.base_url), handler.model_name, headers)
+
+
+def apply_live_chat_thinking_patch() -> None:
+    """Accept session thinking updates and consume them per provider request."""
+    from speech_to_speech.LLM.chat_completions_language_model import (
+        ChatCompletionsApiModelHandler as Handler, _request_chat_completions,
+    )
+    from speech_to_speech.api.openai_realtime.handlers.session import SessionHandler
+
+    if getattr(Handler, "_robot_790_live_thinking_patch", False):
+        return
+    original_request = Handler._request
+    original_init = Handler.__init__
+    original_update = SessionHandler.handle_session_update
+    original_created = SessionHandler.build_session_created
+    original_updated = SessionHandler.build_session_updated
+
+    @wraps(original_init)
+    def initialize(self: Any, *args: Any, **kwargs: Any) -> None:
+        global _THINKING_HANDLER
+        original_init(self, *args, **kwargs)
+        _THINKING_HANDLER = weakref.ref(self)
+
+    def request(self: Any, api_input: Any, optional_kwargs: Any) -> Any:
+        if _CHAT_REQUEST_EXTRA_BODY.get() is None:
+            return original_request(self, api_input, optional_kwargs)
+        return _request_chat_completions(
+            client=self.client, model_name=self.model_name, messages=api_input,
+            stream=self.stream, extra_body=_chat_request_extra_body(self),
+            timeout=self.request_timeout, optional_kwargs=optional_kwargs,
+        )
+
+    def update(self: Any, conn_id: str, event: Any) -> Any:
+        mode = _extra_value(event.session, "robot790_reasoning_effort")
+        if mode is not None and (not isinstance(mode, str) or mode not in _THINKING_MODES):
+            return self.make_error("Unsupported Thinking setting.", "invalid_thinking_setting")
+        if mode is not None:
+            profile = _handler_thinking_profile()
+            expected = _extra_value(event.session, "robot790_thinking_model")
+            try:
+                if expected and expected != profile.get("model"):
+                    raise ValueError("The loaded model changed; refresh Thinking controls.")
+                thinking_request_options(profile, mode or "none")
+            except ValueError as exc:
+                return self.make_error(str(exc), "invalid_thinking_setting")
+        return original_update(self, conn_id, event)
+
+    def created(self: Any, conn_id: str) -> Any:
+        return original_created(self, conn_id).model_copy(update={
+            "robot790_live_thinking": True, "robot790_thinking_profile": _handler_thinking_profile()})
+
+    def updated(self: Any, conn_id: str) -> Any:
+        return original_updated(self, conn_id).model_copy(update={
+            "robot790_live_thinking": True, "robot790_thinking_profile": _handler_thinking_profile()})
+
+    Handler._request = request
+    Handler.__init__ = initialize
+    SessionHandler.handle_session_update = update
+    SessionHandler.build_session_created = created
+    SessionHandler.build_session_updated = updated
+    Handler._robot_790_live_thinking_patch = True
+
+
 def apply_chat_read_timeout_patch() -> None:
     """Allow long prefills without changing cancellation or adding retries."""
     import httpx
@@ -760,7 +906,7 @@ def apply_chat_completions_wire_capture_patch() -> None:
             model_name=getattr(self, "model_name", ""),
             messages=api_input,
             optional_kwargs=optional_kwargs,
-            extra_body=getattr(self, "_extra_body", None),
+            extra_body=_chat_request_extra_body(self),
             stream=getattr(self, "stream", False),
         )
         return original_request(self, api_input, optional_kwargs)
@@ -855,6 +1001,8 @@ def main() -> None:
     print(f"Robot 790 LLM read timeout: {_llm_read_timeout_from_env():g}s", flush=True)
     apply_qwen3_tts_runtime_instruct_patch()
     apply_chat_text_token_cap_patch()
+    apply_chat_thinking_switch_patch()
+    apply_live_chat_thinking_patch()
     apply_chat_auxiliary_temperature_patch()
     apply_chat_read_timeout_patch()
     apply_chat_completions_wire_capture_patch()

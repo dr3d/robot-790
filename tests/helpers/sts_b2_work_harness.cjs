@@ -49,6 +49,9 @@ function fixture(name, page, installOwner = null) {
     scheduleBrain2Mull: () => trace.push(['schedule']),
     fetchIdleHeadlines: () => { trace.push(['fetch']); return feed.promise; },
     requestBrain2Mull: options => { trace.push(['request', clone(options)]); return request.promise; },
+    // Thinking's own state/ack contract is covered by sts_thinking; these older
+    // dispatcher scenarios return no Thinking intents.
+    applyBrain2Thinking: async () => {},
     acceptBrain2Headline: (r, headlines) => trace.push(['headline', clone(r), clone(headlines)]),
     idleArt: { offer: proposal => trace.push(['art', proposal]) },
     surfaceBrain2BodyCue: () => { trace.push(['body']); return action.promise; },

@@ -69,7 +69,7 @@ const edits = [
     "        const result = await requestBrain2Mull({ manual, headlines });\n"
   ],
   [
-    "        if (history) {\n          if (!brain2HistoryEnabled() || userSpeechActive || userTurnPending() || userActivityAt !== lastUserTurnActivityAt\n            || !brain2History.complete(history, brain2HistoryInput())) {\n            logBrain2(\"history stale\", \"operator activity, source change, or session reset\");\n            return;\n          }\n          logBrain2(\"history examined\", JSON.stringify({ id: history.id, advice: Boolean(result.note_for_eric), source: result.history_source || null }));\n          brain2Advisories.acceptHistory(result, history);\n          return;\n        }\n",
+    "        if (history) {\n          if (!brain2HistoryEnabled() || userSpeechActive || userTurnPending() || userActivityAt !== lastUserTurnActivityAt\n            || !brain2History.complete(history, brain2HistoryInput())) {\n            logBrain2(\"history stale\", \"operator activity, source change, or session reset\");\n            return;\n          }\n          logBrain2(\"history examined\", JSON.stringify({ id: history.id, advice: Boolean(result.note_for_eric), source: result.history_source || null }));\n          await applyBrain2Thinking(result);\n          if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation\n              || userSpeechActive || userTurnPending() || userActivityAt !== lastUserTurnActivityAt) return;\n          brain2Advisories.acceptHistory(result, history);\n          return;\n        }\n",
     ""
   ],
   [
@@ -109,8 +109,19 @@ const edits = [
     "      accept, clear, reset,\n"
   ]
 ];
+// Historical checkpoints predate live Thinking. Match either exact reviewed
+// history branch, without loosening the comparison of its other statements.
+const historyThinkingGuard = [
+  '          await applyBrain2Thinking(result);',
+  '          if (realtimeConnection.stopped || socket !== realtimeConnection.socket || generation !== realtimeConnection.generation',
+  '              || userSpeechActive || userTurnPending() || userActivityAt !== lastUserTurnActivityAt) return;',
+  '',
+].join('\n');
 function normalizeHistoryScope(source) {
-  for (const [after, before] of edits) source = source.replace(after, before);
+  for (const [after, before] of edits) {
+    source = source.replace(after, before);
+    if (after.includes(historyThinkingGuard)) source = source.replace(after.replace(historyThinkingGuard, ''), before);
+  }
   return source;
 }
 module.exports = { edits, normalizeHistoryScope };

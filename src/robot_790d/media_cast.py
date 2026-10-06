@@ -4,6 +4,8 @@ import importlib
 import logging
 import os
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -99,17 +101,10 @@ class CastMediaClient:
         self.settings = settings or settings_from_env()
 
     def list_devices(self) -> dict[str, object]:
-        pychromecast = importlib.import_module("pychromecast")
-        chromecasts, browser = pychromecast.get_chromecasts(
-            timeout=self.settings.timeout_s,
-            known_hosts=list(self.settings.known_hosts) or None,
-        )
-        try:
+        with self._discover_casts() as chromecasts:
             return {"status": "ok", "tool": "cast_media", "action": "devices", "devices": [
                 self._device_payload(cast) for cast in chromecasts
             ]}
-        finally:
-            pychromecast.discovery.stop_discovery(browser)
 
     def search_youtube(self, query: str, max_results: int = 3) -> dict[str, object]:
         results = self._search_youtube_entries(query, max_results)
@@ -133,53 +128,51 @@ class CastMediaClient:
             selected_result = results[0]
             selected_video_id = str(selected_result["video_id"])
 
-        pychromecast = importlib.import_module("pychromecast")
-        cast, devices, browser = self._find_cast(device_name)
-        try:
-            if cast is None:
-                target = device_name or self.settings.device_name
+        with self._discover_casts() as chromecasts:
+            cast, devices = self._find_cast(chromecasts, device_name)
+            try:
+                if cast is None:
+                    target = device_name or self.settings.device_name
+                    return {
+                        "status": "error",
+                        "error": f"Cast device not found: {target}",
+                        "target": target,
+                        "devices": devices,
+                    }
+                cast.wait(timeout=self.settings.timeout_s)
+                youtube = importlib.import_module("pychromecast.controllers.youtube")
+                try:
+                    self._play_youtube_video(cast, youtube, selected_video_id)
+                    recovered = False
+                except Exception as exc:
+                    if not _is_youtube_pairing_error(exc):
+                        raise
+                    logger.warning("Resetting Cast receiver after YouTube pairing failure: %s", exc)
+                    cast.quit_app(timeout=self.settings.timeout_s)
+                    time.sleep(1.0)
+                    cast.wait(timeout=self.settings.timeout_s)
+                    self._play_youtube_video(cast, youtube, selected_video_id)
+                    recovered = True
+            except Exception as exc:
+                logger.warning("Failed to cast YouTube video %s: %s", selected_video_id, exc)
                 return {
                     "status": "error",
-                    "error": f"Cast device not found: {target}",
-                    "target": target,
-                    "devices": devices,
+                    "error": f"Failed to cast YouTube video: {type(exc).__name__}: {exc}",
+                    "video_id": selected_video_id,
+                    "device": self._device_payload(cast),
+                    "result": selected_result,
                 }
-            cast.wait(timeout=self.settings.timeout_s)
-            youtube = importlib.import_module("pychromecast.controllers.youtube")
-            try:
-                self._play_youtube_video(cast, youtube, selected_video_id)
-                recovered = False
-            except Exception as exc:
-                if not _is_youtube_pairing_error(exc):
-                    raise
-                logger.warning("Resetting Cast receiver after YouTube pairing failure: %s", exc)
-                cast.quit_app(timeout=self.settings.timeout_s)
-                time.sleep(1.0)
-                cast.wait(timeout=self.settings.timeout_s)
-                self._play_youtube_video(cast, youtube, selected_video_id)
-                recovered = True
-        except Exception as exc:
-            logger.warning("Failed to cast YouTube video %s: %s", selected_video_id, exc)
+
             return {
-                "status": "error",
-                "error": f"Failed to cast YouTube video: {type(exc).__name__}: {exc}",
+                "status": "ok",
+                "tool": "cast_media",
+                "action": "play_youtube",
                 "video_id": selected_video_id,
+                "url": f"https://www.youtube.com/watch?v={selected_video_id}",
                 "device": self._device_payload(cast),
                 "result": selected_result,
+                "recovered": recovered,
             }
-        finally:
-            pychromecast.discovery.stop_discovery(browser)
-
-        return {
-            "status": "ok",
-            "tool": "cast_media",
-            "action": "play_youtube",
-            "video_id": selected_video_id,
-            "url": f"https://www.youtube.com/watch?v={selected_video_id}",
-            "device": self._device_payload(cast),
-            "result": selected_result,
-            "recovered": recovered,
-        }
 
     def show_image(
         self,
@@ -197,127 +190,143 @@ class CastMediaClient:
                 "error": "Provide a direct HTTP or HTTPS image URL ending in jpg, jpeg, png, webp, or gif.",
             }
 
-        pychromecast = importlib.import_module("pychromecast")
-        cast, devices, browser = self._find_cast(device_name)
-        try:
-            if cast is None:
-                target = device_name or self.settings.device_name
+        with self._discover_casts() as chromecasts:
+            cast, devices = self._find_cast(chromecasts, device_name)
+            try:
+                if cast is None:
+                    target = device_name or self.settings.device_name
+                    return {
+                        "status": "error",
+                        "error": f"Cast device not found: {target}",
+                        "target": target,
+                        "devices": devices,
+                    }
+                cast.wait(timeout=self.settings.timeout_s)
+                display_title = title.strip()[:80] if title else "Robot 790 image"
+                cast.media_controller.play_media(
+                    selected_image_url,
+                    content_type,
+                    title=display_title,
+                    thumb=selected_image_url,
+                    stream_type="BUFFERED",
+                    metadata={
+                        "metadataType": 4,
+                        "title": display_title,
+                        "images": [{"url": selected_image_url}],
+                    },
+                )
+                cast.media_controller.block_until_active(timeout=self.settings.timeout_s)
+            except Exception as exc:
+                logger.warning("Failed to cast image %s: %s", selected_image_url, exc)
                 return {
                     "status": "error",
-                    "error": f"Cast device not found: {target}",
-                    "target": target,
-                    "devices": devices,
+                    "error": f"Failed to cast image: {type(exc).__name__}: {exc}",
+                    "image_url": selected_image_url,
+                    "device": self._device_payload(cast),
+                    "receiver_status": self._media_status_payload(cast),
                 }
-            cast.wait(timeout=self.settings.timeout_s)
-            display_title = title.strip()[:80] if title else "Robot 790 image"
-            cast.media_controller.play_media(
-                selected_image_url,
-                content_type,
-                title=display_title,
-                thumb=selected_image_url,
-                stream_type="BUFFERED",
-                metadata={
-                    "metadataType": 4,
-                    "title": display_title,
-                    "images": [{"url": selected_image_url}],
-                },
-            )
-            cast.media_controller.block_until_active(timeout=self.settings.timeout_s)
-        except Exception as exc:
-            logger.warning("Failed to cast image %s: %s", selected_image_url, exc)
+
             return {
-                "status": "error",
-                "error": f"Failed to cast image: {type(exc).__name__}: {exc}",
+                "status": "ok",
+                "tool": "cast_media",
+                "action": "show_image",
                 "image_url": selected_image_url,
+                "content_type": content_type,
+                "title": title.strip()[:80] if title else None,
                 "device": self._device_payload(cast),
                 "receiver_status": self._media_status_payload(cast),
             }
-        finally:
-            pychromecast.discovery.stop_discovery(browser)
-
-        return {
-            "status": "ok",
-            "tool": "cast_media",
-            "action": "show_image",
-            "image_url": selected_image_url,
-            "content_type": content_type,
-            "title": title.strip()[:80] if title else None,
-            "device": self._device_payload(cast),
-            "receiver_status": self._media_status_payload(cast),
-        }
 
     def stop(self, device_name: str | None = None) -> dict[str, object]:
-        pychromecast = importlib.import_module("pychromecast")
-        cast, devices, browser = self._find_cast(device_name)
-        try:
-            if cast is None:
-                target = device_name or self.settings.device_name
-                return {
-                    "status": "error",
-                    "error": f"Cast device not found: {target}",
-                    "target": target,
-                    "devices": devices,
-                }
-            cast.wait(timeout=self.settings.timeout_s)
+        with self._discover_casts() as chromecasts:
+            cast, devices = self._find_cast(chromecasts, device_name)
             try:
-                cast.media_controller.stop()
-            except Exception:
-                cast.quit_app(timeout=self.settings.timeout_s)
-        except Exception as exc:
-            logger.warning("Failed to stop Cast playback: %s", exc)
-            return {"status": "error", "error": f"Failed to stop Cast playback: {type(exc).__name__}: {exc}"}
-        finally:
-            pychromecast.discovery.stop_discovery(browser)
+                if cast is None:
+                    target = device_name or self.settings.device_name
+                    return {
+                        "status": "error",
+                        "error": f"Cast device not found: {target}",
+                        "target": target,
+                        "devices": devices,
+                    }
+                cast.wait(timeout=self.settings.timeout_s)
+                try:
+                    cast.media_controller.stop()
+                except Exception:
+                    cast.quit_app(timeout=self.settings.timeout_s)
+            except Exception as exc:
+                logger.warning("Failed to stop Cast playback: %s", exc)
+                return {"status": "error", "error": f"Failed to stop Cast playback: {type(exc).__name__}: {exc}"}
 
-        return {"status": "ok", "tool": "cast_media", "action": "stop", "device": self._device_payload(cast)}
+            return {"status": "ok", "tool": "cast_media", "action": "stop", "device": self._device_payload(cast)}
 
     def status(self, device_name: str | None = None) -> dict[str, object]:
-        pychromecast = importlib.import_module("pychromecast")
-        cast, devices, browser = self._find_cast(device_name)
-        try:
-            if cast is None:
-                target = device_name or self.settings.device_name
-                return {
-                    "status": "error",
-                    "error": f"Cast device not found: {target}",
-                    "target": target,
-                    "devices": devices,
-                }
-            cast.wait(timeout=self.settings.timeout_s)
-            controller = getattr(cast, "media_controller", None)
-            update_status = getattr(controller, "update_status", None)
-            if callable(update_status):
-                update_status()
-        except Exception as exc:
-            logger.warning("Failed to read Cast status: %s", exc)
-            return {"status": "error", "error": f"Failed to read Cast status: {type(exc).__name__}: {exc}"}
-        finally:
-            pychromecast.discovery.stop_discovery(browser)
+        with self._discover_casts() as chromecasts:
+            cast, devices = self._find_cast(chromecasts, device_name)
+            try:
+                if cast is None:
+                    target = device_name or self.settings.device_name
+                    return {
+                        "status": "error",
+                        "error": f"Cast device not found: {target}",
+                        "target": target,
+                        "devices": devices,
+                    }
+                cast.wait(timeout=self.settings.timeout_s)
+                controller = getattr(cast, "media_controller", None)
+                update_status = getattr(controller, "update_status", None)
+                if callable(update_status):
+                    update_status()
+            except Exception as exc:
+                logger.warning("Failed to read Cast status: %s", exc)
+                return {"status": "error", "error": f"Failed to read Cast status: {type(exc).__name__}: {exc}"}
 
-        receiver_status = self._media_status_payload(cast)
-        player_state = str(receiver_status.get("player_state") or "").upper()
-        playback_active = player_state in {"PLAYING", "BUFFERING", "PAUSED"}
-        return {
-            "status": "ok",
-            "tool": "cast_media",
-            "action": "status",
-            "device": self._device_payload(cast),
-            "receiver_status": receiver_status,
-            "playback_active": playback_active,
-        }
+            receiver_status = self._media_status_payload(cast)
+            player_state = str(receiver_status.get("player_state") or "").upper()
+            playback_active = player_state in {"PLAYING", "BUFFERING", "PAUSED"}
+            return {
+                "status": "ok",
+                "tool": "cast_media",
+                "action": "status",
+                "device": self._device_payload(cast),
+                "receiver_status": receiver_status,
+                "playback_active": playback_active,
+            }
 
-    def _find_cast(self, device_name: str | None) -> tuple[Any | None, list[dict[str, object]], Any]:
+    @contextmanager
+    def _discover_casts(self) -> Iterator[list[Any]]:
         pychromecast = importlib.import_module("pychromecast")
-        target = (device_name or self.settings.device_name).strip().casefold()
         chromecasts, browser = pychromecast.get_chromecasts(
             timeout=self.settings.timeout_s,
             known_hosts=list(self.settings.known_hosts) or None,
         )
+        try:
+            yield chromecasts
+        finally:
+            # A worker may reconnect long after a cast command returns. Stop it
+            # before closing its shared Zeroconf loop or it can retry forever.
+            for cast in chromecasts:
+                try:
+                    worker = getattr(cast, "socket_client", None)
+                    if worker is not None and worker.ident is None:
+                        # Discovery also creates connections we never start;
+                        # Chromecast.disconnect() would try to join that thread.
+                        worker.disconnect()
+                    else:
+                        cast.disconnect(timeout=self.settings.timeout_s)
+                except Exception as exc:
+                    logger.warning("Failed to disconnect Cast connection: %s", exc)
+            pychromecast.discovery.stop_discovery(browser)
+
+    def _find_cast(
+        self, chromecasts: list[Any], device_name: str | None,
+    ) -> tuple[Any | None, list[dict[str, object]]]:
+        target = (device_name or self.settings.device_name).strip().casefold()
         devices = [self._device_payload(cast) for cast in chromecasts]
         for cast in chromecasts:
             if str(cast.cast_info.friendly_name).casefold() == target:
-                return cast, devices, browser
-        return None, devices, browser
+                return cast, devices
+        return None, devices
 
     def _play_youtube_video(self, cast: Any, youtube: Any, video_id: str) -> None:
         # Casttube has no sender-name parameter; its pairing payload uses this shared default.

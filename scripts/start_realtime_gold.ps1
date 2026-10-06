@@ -9,6 +9,9 @@ $Model = "qwen3.8-27b-nvfp4-mtp"
 $ContextLength = 131072
 $Parallel = 2
 
+. (Join-Path $PSScriptRoot "load_env.ps1") -Quiet
+$TtsDtype = & (Join-Path $PSScriptRoot "tts_precision.ps1")
+
 function Stop-StaleQwen27Backend {
     Get-CimInstance Win32_Process |
         Where-Object {
@@ -38,7 +41,7 @@ $launcherArgs = @{
     NumPipelines = 1
     StreamBatchSentences = 1
     AudioMaxTokens = 64
-    TtsDtype = "bfloat16"
+    TtsDtype = $TtsDtype
     Speaker = "Eric"
     TtsInstruct = "Speak in English as Eric with dry wit, natural pacing, restrained warmth, and crisp articulation."
 }

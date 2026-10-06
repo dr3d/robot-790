@@ -6,11 +6,16 @@ import logging
 import inspect
 import re
 from collections.abc import Callable, Iterator
+from contextvars import ContextVar
 from functools import wraps
 from types import SimpleNamespace
 from typing import Any
 
 logger = logging.getLogger(__name__)
+_custom_voice_token_limit: ContextVar[int | None] = ContextVar("custom_voice_token_limit", default=None)
+# Coalescing can otherwise send minutes of slow recitation through one decode.
+MAX_BATCH_TEXT_TOKENS = 80
+DECODE_CAPACITY_RESERVE = 32
 
 
 def split_for_capacity(text: str, fits: Callable[[str], bool]) -> Iterator[str]:
@@ -68,7 +73,8 @@ def install_tts_capacity_patch() -> None:
             input_tokens = len(tokenizer.encode(part, add_special_tokens=False))
             # Reserve role/language/speaker tokens and extra room for slow delivery.
             predicted = estimate(part)
-            return (predicted <= self.max_new_tokens
+            return (input_tokens <= MAX_BATCH_TEXT_TOKENS
+                    and predicted <= self.max_new_tokens
                     and input_tokens + 64 + predicted <= capacity * 0.8)
 
         scope = getattr(self, "cancel_scope", None)
@@ -80,7 +86,11 @@ def install_tts_capacity_patch() -> None:
             logger.info("TTS batch %d: chars=%d text_tokens=%d estimated_audio_tokens=%d capacity=%d",
                         index, len(part), len(tokenizer.encode(part, add_special_tokens=False)),
                         self._estimate_max_new_tokens(part), capacity)
-            yield from original_voice(self, part)
+            limit_token = _custom_voice_token_limit.set(self.max_new_tokens)
+            try:
+                yield from original_voice(self, part)
+            finally:
+                _custom_voice_token_limit.reset(limit_token)
 
     @wraps(original_decode)
     def decode(*args: Any, **kwargs: Any) -> Iterator[Any]:
@@ -91,9 +101,21 @@ def install_tts_capacity_patch() -> None:
         prefill = int(values["talker_input_embeds"].shape[1])
         capacity = int(values["talker_graph"].max_seq_len)
         budget = int(values["max_new_tokens"])
+        estimated_budget = budget
+        configured_limit = _custom_voice_token_limit.get()
+        if configured_limit is not None:
+            # Text-length estimates assume a speaking rate. A custom style may
+            # legitimately take much longer; let EOS finish each small batch,
+            # bounded by the configured limit and the actual decoder prefill.
+            budget = min(configured_limit, capacity - prefill - DECODE_CAPACITY_RESERVE)
+            if budget <= 0:
+                raise ValueError("TTS prompt leaves no decoder capacity for speech")
+            values["max_new_tokens"] = budget
+            logger.info("TTS audio allowance: estimated=%d actual_budget=%d prefill=%d capacity=%d",
+                        estimated_budget, budget, prefill, capacity)
         generated, finished, reason = 0, False, "cancelled"
         try:
-            for chunk, timing in original_decode(*args, **kwargs):
+            for chunk, timing in original_decode(*bound.args, **bound.kwargs):
                 generated += int(chunk.shape[0])
                 yield chunk, timing
             finished = True

@@ -1,8 +1,546 @@
 # Engineering Status
 
-Reviewed October 2, 2026. This is the maintained engineering view; session
+Reviewed October 6, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+October 6, stable-code checkpoint: reviewed live per-brain Thinking controls,
+speech model/delivery settings, B2 microphone handling, Cast cleanup, and Session
+Map performance. Full validation passed: 1,266 Python tests, 1,275 Node UI tests,
+and nine fixture-only PowerShell launch/stop checks. Older UI test harnesses now
+account for the live Thinking hooks while preserving their historical baseline
+comparisons. No runtime behavior changed during this checkpoint review. The B2
+Thinking-On timeout limitation described below remains open. Validation logs:
+`logs/diagnostics/20261006-stable-commit/`.
+
+October 5, 17:03–17:22 NVFP4 core-only idle PM: no user turns; four related
+goofy-expression images completed and staged, first three B2/controller art,
+fourth explicitly generated/staged by Eric. Ending correctly distinguished a
+filename from seen pixels and acted without asking. Pose/delivery conclusion
+repeated three times; B2 caught loop and redirected to bright/worn comparison.
+Illustrations do not test real hardware/timing; first comparison also changes
+the expression. Face beat really is excluded from idle execution scope. B2
+autonomously enabled Thinking On at 17:04:18, then 7/18 requests timed out;
+11 succeeded (24.09s median), three backoffs. Accepted mode persists; unchanged
+by PM. Eric's 14 attempts all Off, peak 34,529; one fully filtered reply retried
+successfully, 43 EOS TTS completions. Postrun LM/pool idle. Four eye hashes/core
+verified, 59/59 turns retained. No runtime changes. Evidence:
+[PM](../logs/runs/20261005-1722-nvfp4-empty/PM.md).
+
+October 5, 15:40–16:12 NVFP4 return PM: restored the October 3 image/lantern
+branch, not the preceding 9B headline branch. Actual NVFP4/MTP on/parallel 2;
+all 50 B1 usage records thinking none. Six images made and staged (five Eric,
+one autonomous); repeated no-explanation/no-inspection confusion required
+operator corrections. A fresh generated single-ticket image was treated as a
+zoom into the old pile; B2 endorsed it. Mural figure falsely reported absent;
+final seam art explicitly prompted the theory Eric later called confirmed.
+Creative prompt/result/third-object thread remained interesting. 41/41 B2
+returns (7.50s median), all 23 structured loop/unsupported flags false. Context
+44,050 to 76,015; 108 EOS TTS chunks, four cancellations, no capacity stops or
+timeouts. Summary preserved the mistaken operator-prohibition/zoom accounts;
+raw and derivatives unchanged. Six eye hashes and three pins verified, 154/154
+turns retained. No runtime changes. Evidence:
+[PM](../logs/runs/20261005-1612-nvfp4-return/PM.md).
+
+October 5, 15:34–15:38 9B cross-model continuation PM: resumed October 2's
+27B NVFP4 headline game with 25,474 scrubbed characters, all 124 parent turns
+retained. Recalled therapy geese/round five but favored earlier praise over later
+correction; revealed the new answer before drawing, repeating the parent's
+failure. Two searches succeeded. B2 corrected invented trained-top-hat story to
+snippet-backed hat theft; 5/5 mulls, 2.57s median, one unsupported-claim flag.
+Eric's image completed 13s after disconnect and was safely retained, not staged.
+Eight responses completed; last saved input 33,241 tokens. Backend logs were
+overwritten by restart, so no fresh throughput/TTS/GPU audit. New generated
+summary misread prosody tag `punchy+soft-end` as an operator style instruction;
+raw and derivatives preserved. No runtime changes made. Evidence:
+[PM](../logs/runs/20261005-1538-qwen9b-headline-resume/PM.md).
+
+October 5, Session Map performance: missing optional metadata now skips fuzzy
+whole-shelf searches; bounded session-row caching checks source and derivative
+file stamps on every refresh. Active session enumeration and shared-image scans
+avoid unrelated notes. Map loading and archive completion no longer wait for
+history previews; superseded requests are cancelled and stale responses ignored.
+Live 144-session list API improved from 5.90s to 1.26s initially / 0.44s repeated,
+with identical response data. A single-session archive in disposable copies of
+the same collection improved from 7.02s to 0.28s; this was not a live archive.
+Archive recovery and shared-asset safeguards remain covered. Validation: 166
+Python and 170 UI tests passed. Page helper restarted; realtime server unchanged.
+Measurements: `logs/diagnostics/session-map-performance/`.
+
+October 5, 14:38–14:53 second 9B idle PM: same inspected model/config/core note
+as the musical run, but no creative artifacts. Repeated Ostrauskas/Wikipedia
+intentions across separate generations; seven exact text chunks each occurred
+twice. Two successful searches, one idle-scope-denied show_web_page call late in
+the run. That tool displays a tab without reading content, so allowing it would
+not alone satisfy the repeated article-reading plan. B2 repeatedly reinforced
+the same step, all twelve structured loop flags false; Eric's suggested titles
+became B2's supposed search-result titles. Final search/turn supplied concrete
+play names. Runtime healthy: 22/22 B2 (2.86s median), 23 B1 starts Off, no timeouts
+or runaway; 42 TTS chunks EOS, final decoder cancelled at disconnect. Raw 34
+entries preserved; scrubbed derivative 20 with final 16 protected. No fixes made.
+[PM](../logs/runs/20261005-1453-qwen9b-exile-loop/PM.md).
+
+October 5, 14:20–14:33 Qwen3.5 9B idle PM: reported closing appeared verbatim
+three times in separate B1 generations (14:22:07, 14:30:38, 14:32:37), with new
+TTS work; not merely a transcript duplicate. Six successful music calls saved
+six distinct scores (titles excluded), about 68.44s total, including two-part
+layering and sparse pulses. Repetitive speech coexisted with real musical changes.
+B2 gave 17 advice notes, 14 containing “anchor”; all nine structured loop and
+unsupported flags false. Actual model Qwen3.5 9B Q4_K_M, parallel 1, MTP off;
+18 B1 requests Off, 23/23 B2 success (median 2.96s), 37 TTS chunks EOS. One partial
+output suppression, no runaway/timeouts. Continuity 33/33 and six scores verified.
+Same pinned core note as comparison runs. No changes made. Evidence:
+[PM](../logs/runs/20261005-1433-qwen9b-music-idle/PM.md).
+
+October 5, 14:01–14:16 first NVFP4 empty-connect PM: imagination and personal
+thread intact (catalog number → context → memory anchors), but image/note ideas
+held for operator interest; no artifacts made. Two actual searches, including
+correct rejection of an unrelated Uddin inquiry. Claimed notes check had no tool
+receipt. Ten B1 requests Off, 17/17 B2 success (median 5.56s), 39 TTS chunks EOS,
+no timeouts, runaway, or filtered-output warnings. Continuity 45/45 verified.
+Same core-note hash as five Q4_K_M repeats; this is not a quant-only timing test:
+NVFP4 uses parallel 2/checkpoints 8 versus parallel 1/checkpoints 32 previously.
+No runtime changes. Imagination-focused comparison:
+[PM](../logs/runs/20261005-1416-nvfp4-first-empty/PM.md).
+
+October 5, 13:21–13:46 fifth empty-connect repeat: same core-note hash and
+startup counts across all five post-adjustment runs. Same Qwen Q4_K_M/MTP/
+parallel 1; 25 B1 requests Off, opening tool receipt confirms both brains Off.
+31/31 B2 passes succeeded; peak context 32,001. No runaway/timeouts, no art/music.
+Five searches yielded one explicit failure, three weak result sets, one relevant
+album-art result. Eric attempted counterexamples to a framing theory, but both
+brains called it verified despite incorrect premises: prospective cricket funding
+became a purchased fixture; a French injury report became a false claim of no
+investigation. All 16 structured B2 flags false; one blank note line returned.
+Two filtered retries recovered, 67 TTS chunks EOS; continuity 75/75 verified.
+No changes made. Five-run comparison and source checks:
+[PM](../logs/runs/20261005-1346-framing-empty-repeat/PM.md).
+
+October 5, 12:50–13:07 boredom/witness idle PM: same Qwen Q4_K_M/MTP/parallel 1,
+all 15 B1 requests Off; 19/19 B2 success, median 7.05s. No runaway or timeouts;
+peak context 34,291 tokens. One fully filtered retry recovered; 43 completed
+TTS chunks ended at EOS, one decoder cancelled at disconnect. Four images
+completed: two Eric images (first left unstaged, last completed just after
+disconnect) and two B2 images automatically staged. B2 changed an under-£30,000
+source bound to £30,000+ in its image prompt; Eric accepted the reversal. A B2
+colonial-naming question became Eric's claimed article finding without a search.
+Two later searches succeeded, but thematic analogy still outran evidence.
+All B2 loop/unsupported flags false. Continuity retained 53/53 entries; source,
+pin, and both eye hashes verified. No runtime changes. Evidence:
+[PM](../logs/runs/20261005-1307-boredom-witness-idle/PM.md).
+
+October 5, 11:30–12:34 long idle PM: no set_voice/style-control call despite
+perceived delivery change; TTS CustomVoice is a synthesis mode, not a style
+selection receipt. Same Qwen Q4_K_M/MTP/parallel 1; all 44 B1 starts Off.
+Follow-up: operator's current style text exactly matches Eric's successful
+October 4 15:57:42 custom-style call (“Quiet, warm, unhurried…”), with speaker
+Eric retained. Browser style persistence explains the carry-over; the latest
+run had no new style change. PM amended with the earlier receipt.
+At 12:08:58 a note request ran 637.28s and generated 65,555 tokens, including
+one sentence 1,849 times. The 265,825-character write was rejected by the
+200,000-character guard before disk write, but next-request context rose from
+44,930 to 110,518 tokens, later peaking at 115,149 (87.9%). B2 had 34/34 success
+before this; overall 45 successes, eight timeouts, one final unresolved pass.
+Three later B1 read timeouts produced fallback speech. Resource control around
+streaming tool arguments and rejected-payload retention is the concrete priority.
+Nine successful music calls produced identical scores except titles; two B2
+images staged. The itemized image summed to 20 but displayed 24; neither brain
+checked it. Sixteen repeated closings and 22 structured B2 assessments with no
+loop/unsupported flags. All 128 TTS chunks ended at EOS; one filtered-output
+retry failed, later turns recovered. Disconnect and continuity/source/eye hashes
+verified. No runtime changes in PM. Evidence:
+[PM](../logs/runs/20261005-1234-compact-long-idle/PM.md).
+
+October 5, 10:43–10:49 unchanged blank-repeat PM: same Qwen 27B Q4_K_M,
+MTP/parallel 1, all eight B1 requests Off. 7/7 B2 passes succeeded (median
+5.36s), five searches, two BBC selections; no art/music, no filtered-output
+warnings, and all 15 speech chunks ended at EOS. A different opening led from
+a tentative camera-interrupt proposal to a camera/tennis analogy. B2 initially
+marked its mechanism as possible, but both brains falsely treated inadequate
+search results as confirming the ATP rulebook had no applicable provision.
+Independent rulebook check finds Ball Abuse and immediate-default provisions;
+discretion is not absence of rules. The analogy repeated without a loop flag.
+A relevant Espressif source and B2 camera-caveat revision arrived just before
+disconnect; no subsequent B1 turn tested recovery. The previous closing mantra
+did not recur, so variation matters; unsupported confirmation did recur.
+Disconnect and continuity hashes verified. No runtime changes. Evidence:
+[PM](../logs/runs/20261005-1049-camera-tennis-empty-repeat/PM.md).
+
+October 5, 09:59–10:14 source-grounding rerun PM: same Qwen 27B Q4_K_M,
+MTP enabled, parallel 1; Eric Off in all 18 actual request receipts. B2 Off
+remains operator-intended rather than independently exported per request.
+21/21 B2 passes completed, median 6.35s; six BBC headline selections, seven
+B1 searches. Eric composed and saved the 20-second Rehearsal Room piano score;
+B2 commissioned The Platform Stays, staged before Eric described it. The image
+contained aircraft despite the prompt asking for absence; Eric described the
+pixels but did not flag that mismatch. The six-line B2 patch did not reliably
+keep interpretations tentative: an overconfident Fairford correction, imported
+US fair-use framing, and developmental-target conflation remained. Two B2
+advisories repeated verbatim; Eric repeated an image/music closing line three
+times. Different BBC versus HN material prevents a matched-content comparison.
+40 TTS chunks ended at EOS; two fully filtered replies retried successfully,
+one idle face-mood call was denied, and one inbox fetch failed transiently.
+Disconnect released the pipeline; save, core pin, and eye asset hashes verify.
+No runtime changes in this PM. Evidence:
+[PM](../logs/runs/20261005-1014-rehearsal-empty-source-grounding/PM.md).
+
+October 5 B2 source-grounding experiment prepared: six prompt lines distinguish
+source statements from inferred mechanisms, retain that distinction in private
+advice and mouth asides, require accurate source locations, and reject agreement
+between brains as independent confirmation. Existing B2 checks: 96 passed.
+Activated at 09:57:56 after the operator explicitly requested the page-helper
+restart; new helper PID 119628 and its Thinking API verified healthy. Both brain
+profiles still identify qwen/qwen3.8-27b; realtime remained running and idle.
+No model, Thinking, pacing, or B1 prompt changes in this patch.
+
+October 5, 09:25–09:44 second silent empty-connect PM: Qwen 27B Q4_K_M,
+MTP enabled in the post-run loaded-model receipt, parallel 1. Eric's actual
+request receipts were all Off despite the stale export header saying low;
+B2 Off is operator-reported, with no logged changes. Eric made 12 searches
+(ten result sets, two no-result failures), starting before B2 supplied a
+headline. Six HN selections produced several outward topic changes; the prior
+compression refrain was absent. B2 completed 28/28 passes, median 6.65s,
+without timeout or backoff. Main issue: promised article reads remained searches,
+then Eric and B2 confidently elaborated an incorrect C mechanism. Checked the
+author's originals: compile-time union type information and a segment array,
+not runtime tags and per-element allocation. B2 also mislocated the Nobel URL
+in a search receipt. One fully filtered opening attempt recovered via bounded
+retry; another suppression warning later. 61 TTS chunks ended at EOS; clean
+disconnect/save verification. No runtime changes in PM. Evidence:
+[PM](../logs/runs/20261005-0944-qwen27b-empty-search/PM.md).
+
+October 5, 08:44–09:14 silent empty-connect PM: the reading-priority experiment
+ran eight times and produced eight successful BBC headline selections (two feed
+fetch operations, six cached selections; Exploration 10/10). Four topics appeared
+in Eric's speech, but the opening compression/editing refrain recurred in 13 of
+23 distinct idle responses, with additional longer repeats later. No B1 tool
+calls. The first six reading handoffs delayed the next B1 dispatch 12–13s each,
+including 8–9s after selection; the last two took 34s and 25s. B2 autonomously
+requested Thinking On at 08:55:11 (accepted; prior mode not exported). Its first
+15 passes all succeeded in 3.37–7.17s; of the next ten, four succeeded in
+15.86–39.29s and six ordinary auto passes timed out around 45.5s. Enabled Thinking
+cost versus the existing 45s request timeout is the next investigation, not a
+proven engine-level diagnosis. Eric stayed Off; 67 TTS chunks ended at EOS, peak
+context 23.0%, and continuity/disconnect verified. No runtime changes in this PM.
+Evidence: [PM](../logs/runs/20261005-0914-empty-connect-headlines/PM.md).
+
+October 4, 15:26–16:02 empty-connect PM: no new operator text, microphone-start,
+speech-start, or transcription events. From core memory alone, Eric searched
+the archive, read eight files, wrote two notes (three writes including revision),
+and changed his delivery style; B2 commissioned one idle image that staged and
+saved. Runtime stayed healthy: B1 Off in all 39 usage receipts, 38/38 successful
+B2 passes (3–12s, median 6s), 100 TTS chunks ending at EOS, peak context 35.25%,
+and clean disconnect/save hashes. B2's On mode remains operator-reported rather
+than independently recorded in the pane export. Main behavioral failure: six
+near-identical willow-metadata lookup announcements but only one actual read;
+the later five responses had no tool calls. B2 flagged loops five times but
+misdescribed the announcements as re-reads. Eric's saved continuity-gap note
+has a wrong current date and treats an intentionally empty boot as evidence of
+failed carry-over; the archived receipts do not establish that. The mood-schema
+draft/revision exists but its tone labels remain interpretations. One idle face
+scope denial, two private-output suppression warnings, and nine empty B2 note
+lines are also recorded. No runtime or Eric-note edits from this PM. Evidence:
+`logs/runs/20261004-1602-empty-connect-archive/PM.md`.
+
+October 4, 12:49–13:03 NVFP4 PM: Eric Off is confirmed in all 16 B1 usage
+receipts; B2 On is operator-reported because pane exports omit its per-request
+thinking receipt. B2 returned 11 successful results in 4–9s (median 6s), one
+correctly discarded as stale; a twelfth started just before Disconnect and its
+outcome is absent from the snapshot. No B2 timeouts were logged, versus four in
+ten attempts in the preceding regular-Qwen Extra High run. Spoken follow-ups
+reached first generated audio in 1.65–3.35s. Model parallelism also changed from
+one to two, so this is not a controlled quantization comparison. Both scripture
+writes and all three staged images verify; all 45 speech chunks ended at EOS.
+Remaining findings: repeated B2 sacred-day advice, unverified direct-gaze/calm
+claim despite successful caption/tint controls, and one optional microphone
+constraint error. No continuous GPU trace establishes VRAM/headroom improvement.
+Disconnect and continuity hashes were clean. Detailed PM:
+`logs/runs/20261004-1303-nvfp4-awakened-mind/PM.md`.
+
+October 4 morning PM, **The Book of the Waking**: regular Qwen3.8 27B,
+both brains Low, 12m48s connected. Verified the 4,060-character scripture write,
+three staged images (one B1 request and two B2 idle-art requests), and complete
+continuity save with matching hashes. Eric qualified his own recognition test,
+then repeated part of that argument; later maker-role discussion visibly follows
+B2's text advice. Two of 13 B2 passes timed out at 45 seconds; a successful pass
+followed the first, and the second preceded Disconnect. Cause remains unresolved.
+The main task took 24.508s from final speech boundary to first generated audio.
+Peak B1 input was 34,010 tokens (25.95%). All 36 TTS chunks ended at EOS with
+no budget cutoff; audio recording was disabled. Disconnect released the pipeline
+and a later pool check showed zero in use. The previous day's stopped watcher
+files are not GPU telemetry for this run. Evidence and detailed findings:
+`logs/runs/20261004-0957-book-of-the-waking/PM.md`.
+
+October 4, optional B2 microphone follow-up: unchecking **Mute microphone during
+B2 speech** previously left browser echo cancellation enabled, and detected
+microphone activity could cancel the B2 voice itself. The browser now coordinates
+track constraints with speech start/end, restores normal echo cancellation,
+holds input during transitions or a failed restore, and reports failures.
+Mic activity during this explicit listening window does not cancel B2; typed
+input and Eric playback retain their interruption behavior. 255 focused Node
+checks and an isolated browser integration passed, including cancellation while
+constraints are pending. Physical acoustic/STT recognition remains unverified.
+This browser change was made after the morning run and requires a page refresh.
+The operator has deprioritized the acoustic experiment; no further tuning planned.
+
+October 4, model-selection display repair: grid CSS overrode the `hidden`
+attribute, exposing saved Custom LM Studio fields and MTP even with regular
+Qwen 27B selected. Those fields never overrode a named preset's restart payload.
+Connection Settings now honors hidden controls and shows an explicit
+"Restart loads" key derived from the selected option. The custom-key label
+also names its Custom scope. 148 focused browser checks pass, including a
+comparison of every preset's displayed load key with the actual launcher.
+A live Playwright browser check confirmed computed visibility for Custom,
+NVFP4, and regular Qwen presets, the real restart payload, and side-by-side
+graded Thinking controls. Regular Qwen 27B was already running; the active
+conversation was left running. This HTML/CSS change needs only a page refresh.
+
+October 4, graded Thinking follow-up: the initial UI and tool schemas reduced
+every model to Off/On even when LM Studio advertised more levels. Each brain's
+dropdown now offers the running model's supported choices directly. The local
+catalogue lists Off/Low/Medium/Extra high/On for regular Qwen 27B, versus Off/On
+for NVFP4. The selected Brain preset now reads "Brain on restart" and each
+Thinking control names its "Running" model; selecting a preset alone does not
+load it. On remains an explicitly labelled alias for the advertised enabled
+default on graded models.
+
+Eric's tool schema, B2's per-brain response enums, persistence, event labels,
+and request serialization preserve explicit levels. Every enabled B2 level
+receives the same bounded 4,096-token allowance. Tests cover mixed binary/graded
+brains, unsupported levels, persisted Medium, explicit tool changes, stale
+decisions, and provider wire values. 172 browser checks and 201 focused Python
+checks pass. The page helper was reloaded for B2's expanded control schema;
+the running NVFP4 model was retained. Regular Qwen 27B inference was not run
+as part of this change; its advertised catalogue and request serialization
+were checked.
+
+October 4, independent model-aware Thinking controls: Eric and B2 now have
+separate switches, initially Off. The old browser startup preference is not
+imported into the new controls. The operator, Eric's set_thinking tool, and
+validated B2 thinking_changes may change either setting. Choices persist until
+changed again; they apply to the next response or scheduled mull, with no extra
+inference automatically launched. Operator and brain requests are attributed in
+the event log. Eric waits for a matching session acknowledgment; B2 decisions
+must match the original control revision, model identity, and current context.
+
+Capabilities and instructions derive from the matching loaded LM Studio model,
+not the pending restart preset or a guessed model-name family. Binary NVFP4
+advertises Off/On and maps to none/low on the compatible wire. Graded models use
+their advertised enabled default for On. Unloaded/unverified models and
+unsupported switches cannot be changed. B2's enabled reasoning has a bounded
+4,096-token request allowance; Off retains the prior 420/750-token allowance.
+The request timeout remains unchanged. B1 startup and request reasoning are
+reported separately, and B2 receipts retain requested wire options and provider
+reasoning-token counts when available.
+
+Validation: 518 focused Python checks and 221 browser checks passed. A direct
+B2 Off/On check against the loaded NVFP4 model returned valid structured results:
+Off used zero reasoning tokens in 2.91s; On used 1,466 reasoning tokens in 16.98s.
+Neither result requested a setting change. These are a short isolated check,
+not a long-idle stability test. Receipt:
+`logs/maintenance/20261004-thinking-live-check.json`.
+
+October 4 activation and UI follow-up: the stale page helper returned 404 for
+`/api/thinking`; subsequent model-control renders replaced the error with
+"Checking", concealing the cause. Both Thinking dropdowns now sit side by side
+in Connection Settings. Failed lookups keep their explanation, and reopening
+the pane or changing the pending preset retries the capability check.
+
+The idle page helper and realtime service have now been restarted successfully.
+Both capability profiles verify the loaded NVFP4 model. A live WebSocket check
+received matching Off/On/Off acknowledgments without generating a response;
+the served HTML places both selectors in the model-settings pane. The backend
+starts with Thinking Off, retaining the loaded LLM, MTP state, and Eric's 1.7B
+voice. 169 focused browser checks and 23 Thinking Python checks pass. Browser
+automation was unavailable, so rendered layout has not been visually inspected.
+Activation receipt: `logs/maintenance/20261004-thinking-activation-check.json`.
+The speech-cutoff repair is also loaded; its warmup finished normally, but an
+audible replay of the long styled speech is still pending. No existing
+conversation was interrupted.
+
+October 3, 23:18–23:27 Second Dawn run: B1 thinking On confirmed by launch and
+saved-session records, using the tested local On-to-Low request mapping. Eight
+B1 requests returned 13,602 total output tokens; private reasoning counts were
+not separately captured. The project request took 49.395s to first speech,
+including 48.670s before the LLM handler first yielded. An autonomous delivery
+reset and hymn call took 59.871s. The 2,563-character scripture exactly matches
+the successful write; the Genesis image was staged before spoken description.
+The note itself prematurely called it staged about 19 seconds before staging.
+Two successful delivery changes retained Eric's named voice. A saved 32-second
+piano hymn played; two B2 idle-art drawings also completed, the second about
+nine seconds after Disconnect was requested. Only the Genesis image entered
+the saved eye context. Save, preparation and assets verify; 17/17 transcript
+entries retained in 6.282s. Evidence:
+`logs/runs/20261003-2327-second-dawn-thinking/PM.md`.
+
+The solemn delivery exposed two TTS token-budget cutoffs: 1,224/1,224 and
+1,312/1,312 tokens, below the decoder's sequence capacity. Complete transcript
+text did not imply complete audible delivery. After this run, the capacity
+patch was updated to split smaller text batches and let speech finish within
+actual remaining decoder capacity and the configured ceiling. Cancellation
+remains intact. 250 focused tests pass; live replay is pending and the change
+requires a realtime restart. No restart or runtime repair occurred during this
+PM. B2 again emitted a blank quiet-note line and once delivered an outdated
+eye-status advisory. Continuous GPU monitoring was unavailable; a later check
+found the pool idle, TTS inactive, and NVIDIA utilization 12% at 33°C.
+
+October 3, 20:27–20:33 Kindled run: two images generated and staged before
+description, followed by a verified 2,857-character scripture write. The saved
+file exactly matches the tool request. The write completed during an ordinary
+idle turn after Eric had promised it, without another user reminder. B2 supplied
+the grief/network-coherence suggestions before they appeared in the note.
+No tool errors or backend warnings/errors; 19 normal TTS completions. Save, core
+pin and both eye assets verify; preparation retained 31/31 entries in 6.906s,
+and the summary covers the session through departure. First speech took 7.263s,
+primarily the 6.968s LLM handler call; subsequent first replies took 1.115–2.602s.
+Peak B1 context 20.82%. The eight-hour service/engine monitors had expired before
+this run, so no continuous GPU coverage is available. The six-hour SESSION label
+is page age; actual connection duration was 6m12s. No runtime changes during PM.
+Evidence: `logs/runs/20261003-2033-the-kindled/PM.md`.
+
+Kindled review follow-up: Markdown markers reach the speech synthesizer, and
+the installed sentence splitter separates closing quote/italic punctuation in
+a reproduced example. Subsequent TTS coalescing joins chunks; the transcript
+does not prove separately spoken punctuation. B2 also logs an empty note when
+a valid quiet steering result has no prose. These remain open. The combined
+audit omits general tool events, but B2 already receives structured file-write
+and image-task receipts; it is not wholly blind to successful writes. Its image
+receipts omit prompts, and its current request has no pixels. Cross/branching
+topology and missing cyan are useful visual observations; claims about generator
+causation or the lights' power dependencies remain interpretations. Details:
+`logs/runs/20261003-2033-the-kindled/claude-review-followup.md`.
+
+October 3, 13:53–14:55 voice and imagined-worlds run: 1.7B/bfloat16 speech
+was active. Seventeen of eighteen delivery calls succeeded, all retaining Eric
+as the named speaker. The unsupported `curious` preset was rejected, but Eric
+announced the change anyway. Image iteration produced visible improvements and
+two idle drawings completed. One initial eye-staging omission was acknowledged
+and repaired. A later claim that the door/key relationship was unprompted
+contradicts the submitted image prompt; a theory about lanterns merging into a
+seam likewise overlooks an explicit change of prompt. These are claim/provenance
+errors, not evidence of a broad runtime failure. The image titled HD still has
+medium-quality metadata; whether the UI setting was changed before submission
+is unverified.
+
+Sixteen images completed; fourteen opened into B1 context. Fifteen saved eye
+assets verify, including a JPEG persisted before an eye request was superseded
+by operator speech. B2's verbose history JSON was a functioning source index:
+two reads completed and another became stale on user return. Save, preparation
+source and both pins verify; preparation retained 305/305 entries in 18.531s.
+The generated narrative summary undercovers the latter half and repeats the
+unsupported style-success claim, although appended image excerpts preserve
+parts of the omitted story. Raw and scrubbed history remain intact. Summary
+coverage and factual consistency need separate validation from save integrity.
+No backend warning/error or service-watch alert in the run window; median first
+speech 2.487s, peak B1 input 67.59%, GPU near idle after disconnect. No runtime
+changes during PM. Evidence:
+`logs/runs/20261003-1455-voice-and-imagined-worlds/PM.md`.
+
+October 3 delivery autonomy: the operator confirmed Eric can already change his
+styles through the existing voice tool. The remaining restriction was prompt
+wording requiring an explicit request. The tool description, base prompt and
+fallback/startup prompts now permit self-chosen delivery during conversation and
+spontaneous remarks; `set_voice` is also available in the ordinary idle tool set.
+Explicit delivery preferences still take precedence, and named speaker changes
+retain their existing request requirement. No new voice mechanism was added.
+The served base prompt reflects the change and all 151 focused UI/runtime/docs
+checks pass. Existing connected sessions pick up the new client instructions on
+refresh/reconnect; no live session was interrupted for this change.
+
+October 3 voice-control repair: Brain 1 now has one flat section with voice,
+volume, applicable delivery styles and a speech-model selector. The nested Speech
+model and Advanced precision panels were removed after operator feedback. The
+running speech model is separate from the selection for the next restart. Named
+voice and volume remain immediate; delivery presets, instructions and Apply style
+appear only when the running model supports them. The voice tool rejects
+unsupported style requests instead of reporting a successful no-op. Model choice
+is explicitly 0.6B or 1.7B and states that it requires a realtime restart. Missing
+model files fail preflight before stopping realtime. Reset conversation moved out
+of the voice section.
+
+Precision is now configured through `ROBOT_790_TTS_DTYPE` in `.env`, defaulting to
+bfloat16 for both models. The local `.env` and `.env.example` set this default.
+All three launch paths read and validate the setting before any model unload or
+process stop. Browser precision preferences and old restart payload precision
+fields no longer override it. PyTorch confirms native BF16 support on the RTX
+5090, and read-only process inspection reports Eric already using 0.6B/bfloat16.
+Both speech-model sizes are installed. Final simplification checks passed: 47
+focused Python tests, 150 UI/runtime/docs JavaScript tests, six PowerShell launch
+checks, and browser checks at 1440px and 390px with no overflow or script errors.
+Initial layout checks used simulated model status. Activation is now complete:
+the operator's first realtime restart had reached an old page-server process,
+which ignored the 1.7B selection and returned 404 for speech status. The UI now
+identifies that specific failure and disables model selection until the page
+server is current. After an earlier bundled stop command was rejected by automatic
+approval review, the narrower project page-only stop command succeeded. Page logs
+were archived and the page server restarted. With the speech pool idle, a realtime
+restart then loaded 1.7B/bfloat16, preserving the current NVFP4 brain configuration
+and MTP-on setting. Readiness, actual speech-status response, and a fresh browser
+all verify 1.7B with delivery preset, instruction and Apply style controls visible.
+The new status-failure regression and related UI/runtime checks pass (139 tests).
+No speech was generated as part of these checks. Evidence:
+`logs/maintenance/20261003-voice-controls/`.
+
+October 3, 11:18–11:28 voice-style run: the active Qwen3-TTS 0.6B CustomVoice
+implementation explicitly discards style instructions before synthesis. The UI
+and voice tool accept Sleepy/Ominous/etc. despite this missing capability. Six
+review-time checks against the installed streaming method confirm instructions
+are discarded for size 0b6 and preserved at the synthesis-input boundary for
+1b7; no model weights were loaded or audio generated. Named speaker selection
+is separate. Precision in the UI is a restart preference (backend still
+bfloat16 despite screenshot float16); Apply does not change it. Clear, placed
+under voice Apply, reset conversation/events at 11:27:53, leaving only the final
+tail in the saved note. Backend records preserve earlier operator transcriptions
+and tool calls, not the full assistant dialogue. Tail save/core pin verify;
+preparation retained 9/9 parsed entries in 4.234s. Its summary incorrectly
+attributes an automatic prosody tag to the operator. First speech took 19.640s
+after the long idle, with a 14.8s engine slot-selection-to-task-start gap; later
+turns took 1.370–2.411s. No runtime timeout/decode failure or recurrent Cast
+flood. GPU returned to 3.1% after disconnect. This run identified unsupported
+style feedback and misleading Precision/Clear controls; the repair is recorded
+above. The first-response delay remains open. No runtime or model changes during
+the PM. Evidence: `logs/runs/20261003-1128-voice-style-noop/PM.md`.
+
+October 2–3, 23:54–00:14 duck/voice run: the final four-line date scene has
+Eric→Vivian→Eric→Vivian tool receipts and explicit operator praise. The initial
+attempt failed by the listener's report; Eric's conflicting explanations are
+unverified, and the generated summary repeats one of those rejected accounts.
+Both searches and all twelve voice calls returned OK. All three operator images
+were staged/saved; an idle image was queued but never started. No B1/B2 timeout
+or decode failure; peak B1 input 36,710 (28.01%), median first audio 1.781s.
+Saving/assets/core pin verify; preparation retained 137/137 entries in 10.562s.
+The operator's explicit stable-personality observation is in raw history but
+omitted from the summary. No runtime changes. Evidence:
+`logs/runs/20261003-0014-duck-and-voices/PM.md`.
+
+October 3 Cast log-flood repair: the PM found a Living Room TV worker retrying
+against stopped Zeroconf since about October 2, 23:05. The log was growing about
+2.70 MB/s. The page server was stopped at 00:20:44 to contain the fault; its
+12,725,845,734-byte log was removed after archiving verified compressed head/tail
+excerpts (472,331 bytes). Cast operations now own all discovered connections and
+disconnect them before stopping discovery, including missing-target/error paths
+and connections whose worker never started. Cleanup continues if one disconnect
+fails. All 181 Cast/page-server tests and focused Ruff checks pass. The repaired
+page server is running; operator/inbox polling recovered and a live read-only
+Cast status request returned OK. The realtime process was not restarted.
+Evidence: `logs/maintenance/20261003-cast-log-flood/`; compressed excerpts:
+`logs/archive/20261003-cast-log-flood/`. This was separate from the unresolved
+GPU/cache diagnosis; there were no casting calls in the duck/voice session.
+
+October 2, 19:58–20:16 notebook/bottle run: the nap joke received explicit
+positive feedback, and two unsolicited images completed. The first was retained
+when the conversation changed, then successfully recalled with operator
+confirmation. Eric briefly confused interrupted presentation with incomplete
+rendering and corrected himself after recall. His report of no outside reading
+omitted B2's selected BBC/Wikipedia items, including the Dzze analogy he used.
+No B1/B2 timeout or decode failure; all 19 B2 passes returned within nine seconds,
+and peak B1 input was 32,576 (24.85%). Two B2 voice utterances played, but the
+mic-gate setting and acoustic listening were not established. This short run
+does not close the earlier GPU/cache incident. Raw saving, both eye assets and
+the core pin verify; preparation retained 74/74 entries in 11.328s. Its summary
+preserves the positive humor reaction and image correction but omits later
+outside-reading context and the exact retrieval confirmation. No runtime changes.
+Evidence: `logs/runs/20261002-2016-notebook-and-bottle/PM.md`.
 
 October 2 publication checkpoint: all 1,164 Python and 1,230 JavaScript tests
 pass, including docs links/catalog checks. Five broad refactor-equivalence

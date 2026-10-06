@@ -41,14 +41,19 @@ function modelSettingsContext() {
     'currentModelPreset', 'currentModelMtp', 'modelHasMtpControl',
     'currentCustomModelKey', 'currentCustomModelReasoning', 'currentCustomModelContext',
     'currentCustomModelParallel', 'updateCustomModelControls', 'loadModelPreset',
-    'saveModelPreset', 'currentModelRestartPayload',
+    'saveModelPreset', 'currentModelRestartPayload', 'currentModelRestartDescription',
+    'modelHasBinaryThinking',
   ], {
-    modelPreset: { value: 'qwen27-mtp-vlow', options: [{ value: 'qwen27-mtp-vlow' }, { value: 'custom' }] },
+    modelPreset: { value: 'qwen27-mtp-vlow', options: [...page.match(/<select id="modelPreset">([\s\S]*?)<\/select>/)[1]
+      .matchAll(/<option value="([^"]+)"([^>]*)>([^<]+)<\/option>/g)].map(([, value, attrs, text]) =>
+        ({ value, text, dataset: { loadModel: attrs.match(/data-load-model="([^"]+)"/)?.[1] } })) },
+    modelRestartPreview: { textContent: '' },
     modelMtp: { value: 'off' }, modelMtpControls: { hidden: false }, customModelControls: { hidden: true },
+    modelThinkingControls: { hidden: false },
     customModelKey: { value: 'fixture/model' },
-    customModelReasoning: { value: 'none', options: [{ value: 'none' }] },
+    customModelReasoning: { value: 'none', options: ['none', 'on', 'low', '', 'medium', 'xhigh'].map(value => ({ value })) },
     customModelContext: { value: '131072' }, customModelParallel: { value: '2' },
-    currentTtsPrecision: () => 'bfloat16',
+    currentTtsModel: () => '0.6B',
     modelPresetStorageKey: 'preset', modelMtpStorageKey: 'mtp', customModelKeyStorageKey: 'key',
     customModelReasoningStorageKey: 'reasoning', customModelContextStorageKey: 'context',
     customModelParallelStorageKey: 'parallel',
@@ -70,7 +75,7 @@ test('MTP is a remembered restart request, defaults off, and retains the custom 
   c.loadModelPreset();
   assert.equal(c.modelMtp.value, 'on');
   assert.deepEqual(JSON.parse(JSON.stringify(c.currentModelRestartPayload())), {
-    preset: 'custom', tts_dtype: 'bfloat16', mtp: 'on', model: 'fixture/model',
+    preset: 'custom', tts_model: '0.6B', mtp: 'on', model: 'fixture/model',
     reasoning: 'none', context_length: 65536, parallel: 4,
   });
   stored.set('mtp', 'invalid');
@@ -91,6 +96,55 @@ test('a saved MTP-on choice is hidden and omitted for other presets', () => {
   c.updateCustomModelControls();
   assert.equal(c.modelMtpControls.hidden, false);
   assert.equal(c.currentModelRestartPayload().mtp, 'on');
+});
+
+test('regular Qwen restart ignores stale custom NVFP4 fields and identifies the real load target', () => {
+  const { context: c } = modelSettingsContext();
+  c.customModelKey.value = 'qwen3.8-27b-nvfp4-mtp';
+  c.customModelParallel.value = '2';
+  c.modelMtp.value = 'on';
+  c.modelPreset.value = 'qwen27';
+  c.updateCustomModelControls();
+  assert.equal(c.customModelControls.hidden, true);
+  assert.equal(c.modelMtpControls.hidden, true);
+  assert.equal(c.modelRestartPreview.textContent, 'Restart loads: qwen/qwen3.8-27b');
+  assert.deepEqual(JSON.parse(JSON.stringify(c.currentModelRestartPayload())), { preset: 'qwen27', tts_model: '0.6B' });
+  // A grid display rule must not resurrect controls marked hidden.
+  assert.match(page, /#connectionSettingsExpando \[hidden\]\s*\{\s*display:\s*none\s*!important;/);
+  c.modelPreset.value = 'custom';
+  c.updateCustomModelControls();
+  assert.equal(c.customModelControls.hidden, false);
+  assert.equal(c.modelMtpControls.hidden, false);
+  assert.equal(c.modelRestartPreview.textContent, 'Restart loads: qwen3.8-27b-nvfp4-mtp');
+  assert.equal(c.currentModelRestartPayload().model, 'qwen3.8-27b-nvfp4-mtp');
+});
+
+test('each preset restart description agrees with the actual launcher load key', () => {
+  const { context: c } = modelSettingsContext();
+  const launcher = fs.readFileSync(path.join(__dirname, '../scripts/restart_realtime_gold.ps1'), 'utf8');
+  for (const option of c.modelPreset.options.filter(option => option.dataset.loadModel)) {
+    const block = launcher.match(new RegExp(`"?${option.value}"? = @\\{([\\s\\S]*?)\\n    \\}`))[1];
+    const key = (block.match(/LoadModel = "([^"]+)"/) || block.match(/Model = "([^"]+)"/))[1];
+    c.modelPreset.value = option.value;
+    c.updateCustomModelControls();
+    assert.equal(c.modelRestartPreview.textContent, `Restart loads: ${key}`);
+  }
+});
+
+test('Thinking follows the loaded model rather than the pending restart preset', () => {
+  const { context: c } = modelSettingsContext();
+  c.thinkingControls.configure('eric', { status: 'verified', model: 'loaded', identity: 'loaded',
+    can_off: true, can_on: true, options: ['off', 'on'], on_option: 'on' });
+  c.thinkingControls.change('eric', 'on', { source: 'operator' });
+  c.modelPreset.value = 'custom';
+  c.customModelKey.value = 'a-different-model-for-restart';
+  c.updateCustomModelControls();
+  assert.equal(c.currentModelRestartPayload().reasoning, 'on');
+  assert.equal(c.modelHasBinaryThinking(), true);
+  c.thinkingControls.configure('eric', { status: 'verified', model: 'graded', identity: 'graded',
+    can_off: true, can_on: true, options: ['off', 'low', 'medium', 'high'], on_option: 'medium' });
+  assert.equal(c.modelHasBinaryThinking(), false);
+  assert.equal(c.currentCustomModelReasoning(), 'none');
 });
 
 test('session map reuses the STS diamond-metal texture and title family', () => {
@@ -442,11 +496,7 @@ test('experimental deliberation stays implemented but is disabled in the tool ca
   assert.match(page, /Tool results are available in this conversation/);
   assert.doesNotMatch(prompt, /deliberate_once/);
   assert.doesNotMatch(page, /call deliberate_once before answering/);
-  assert.match(page, /id="typedThink"[^>]*>Think<\/button>/);
-  assert.match(page, /id="typedThinkEffort"[^>]*aria-label="Think depth"/);
-  assert.match(page, /option value="low">Low<\/option>/);
-  assert.match(page, /option value="medium" selected>Medium<\/option>/);
-  assert.match(page, /option value="xhigh">Hard<\/option>/);
+  assert.doesNotMatch(page, /typedThinkButton|typedThinkEffort|id="typedThink"|think-action-row/);
   assert.match(page, /id="deliberateIndicator"[\s\S]*?THINK OFF/);
   assert.match(page, /async function sendTypedDeliberateTurn\(text\)/);
   assert.match(page, /fetch\("\/api\/deliberate"/);
@@ -466,15 +516,13 @@ test('disabled deliberation does no I/O or conversation mutation and leaves Send
     deliberateThinkingEnabled: false, deliberateTurnInFlight: false,
     fetch: () => { throw new Error('unexpected network call'); },
     realtimeConnected: () => true, typedInputText: () => 'Think about this',
-    typedSendButton: {}, typedThinkButton: {}, typedSayButton: {}, typedThinkEffort: {}, typedStatus: {},
+    typedSendButton: {}, typedSayButton: {}, typedStatus: {},
   });
   await assert.rejects(context.requestDeliberateOnce({}), /disabled/);
   assert.equal((await context.deliberateOnceForEric({ question: 'Think harder' })).code, 'disabled');
   await context.sendTypedDeliberateTurn('Think harder');
   assert.equal(context.typedStatus.textContent, 'Deep thinking disabled');
   context.updateTypedInputButtons();
-  assert.equal(context.typedThinkButton.disabled, true);
-  assert.equal(context.typedThinkEffort.disabled, true);
   assert.equal(context.typedSendButton.disabled, false);
   assert.equal(context.typedSayButton.disabled, false);
   assert.equal(context.deliberateIdleLabel(), 'THINK OFF');
@@ -1385,6 +1433,11 @@ test('a deliberate quiet Brain2 result succeeds without speech, advisories, or f
 
 // Exercise the shipped functions without starting a socket, microphone, or device.
 function loadFunctions(names, globals, source = page) {
+  globals.thinkingControls ??= require('../web/sts/thinking-controls.js').create({ storage: {
+    getItem: () => null, setItem: () => {} } });
+  globals.thinkingToolList ??= () => [];
+  globals.applyBrain2Thinking ??= async () => {};
+  globals.renderThinkingControls ??= () => {};
   globals.Robot790ConnectionContext ??= require('../web/sts/connection-context.js');
   globals.Robot790Brain2Request ??= require('../web/sts/brain2-request.js');
   globals.continuitySessions ??= [];

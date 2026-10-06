@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from robot_790d import media_cast
 from robot_790d.media_cast import CastMediaClient, CastMediaSettings, extract_youtube_video_id
 
@@ -75,6 +77,7 @@ def test_play_youtube_sends_video_to_matching_cast(monkeypatch) -> None:
             uuid="uuid-1",
         ),
         wait=MagicMock(),
+        disconnect=MagicMock(),
         register_handler=MagicMock(),
     )
 
@@ -127,6 +130,7 @@ def test_show_image_sends_direct_image_url_to_matching_cast(monkeypatch) -> None
             uuid="uuid-1",
         ),
         wait=MagicMock(),
+        disconnect=MagicMock(),
         media_controller=media_controller,
     )
     fake_pychromecast = SimpleNamespace(
@@ -198,6 +202,7 @@ def test_status_reports_inactive_cast_playback(monkeypatch) -> None:
             uuid="uuid-1",
         ),
         wait=MagicMock(),
+        disconnect=MagicMock(),
         media_controller=media_controller,
     )
     fake_pychromecast = SimpleNamespace(
@@ -219,3 +224,112 @@ def test_status_reports_inactive_cast_playback(monkeypatch) -> None:
     assert result["playback_active"] is False
     assert result["receiver_status"]["player_state"] == "IDLE"
     media_controller.update_status.assert_called_once_with()
+
+
+@pytest.fixture
+def cast_connections(monkeypatch):
+    """Discovery owns active and never-started connections until cleanup."""
+    calls = []
+
+    def connection(name, started):
+        worker = SimpleNamespace(ident=1 if started else None)
+        worker.disconnect = MagicMock(side_effect=lambda: calls.append((name, "signal")))
+        cast = SimpleNamespace(
+            cast_info=SimpleNamespace(friendly_name=name, uuid=name, model_name="Receiver", manufacturer="Test"),
+            socket_client=worker,
+            wait=MagicMock(),
+            disconnect=MagicMock(side_effect=lambda **_kw: calls.append((name, "disconnect"))),
+            media_controller=SimpleNamespace(
+                play_media=MagicMock(), block_until_active=MagicMock(),
+                stop=MagicMock(), update_status=MagicMock(),
+                status=SimpleNamespace(player_state="PLAYING"),
+            ),
+        )
+        return cast
+
+    selected = connection("Living Room TV", True)
+    other = connection("Other TV", True)
+    unopened = connection("Unopened TV", False)
+    connections = [selected, other, unopened]
+    browser = object()
+
+    def stop_discovery(actual_browser):
+        assert actual_browser is browser
+        # Closing Zeroconf while any active connection can reconnect caused
+        # the real worker's exception/retry loop and the 12 GB log.
+        assert calls == [
+            ("Living Room TV", "disconnect"), ("Other TV", "disconnect"),
+            ("Unopened TV", "signal"),
+        ]
+        calls.append(("discovery", "stop"))
+
+    module = SimpleNamespace(
+        get_chromecasts=MagicMock(return_value=(connections, browser)),
+        discovery=SimpleNamespace(stop_discovery=MagicMock(side_effect=stop_discovery)),
+    )
+    monkeypatch.setattr(media_cast.importlib, "import_module", lambda _name: module)
+    monkeypatch.setattr(CastMediaClient, "_play_youtube_video", MagicMock())
+    return SimpleNamespace(calls=calls, module=module, selected=selected, other=other, unopened=unopened)
+
+
+@pytest.mark.parametrize("action", ["list_devices", "status", "stop", "show_image", "play_youtube"])
+def test_cast_actions_close_all_connections_before_discovery(action, cast_connections):
+    client = CastMediaClient(CastMediaSettings(timeout_s=0.5))
+    arguments = {"show_image": {"image_url": "https://example.com/test.jpg"},
+                 "play_youtube": {"video_id": "test"}}.get(action, {})
+
+    result = getattr(client, action)(**arguments)
+
+    assert result["status"] == "ok"
+    cast_connections.selected.disconnect.assert_called_once_with(timeout=0.5)
+    cast_connections.other.disconnect.assert_called_once_with(timeout=0.5)
+    cast_connections.unopened.disconnect.assert_not_called()  # no joining an unstarted thread
+    cast_connections.unopened.socket_client.disconnect.assert_called_once_with()
+    assert cast_connections.calls[-1] == ("discovery", "stop")
+    if action == "status":
+        assert result["playback_active"] is True
+        cast_connections.selected.media_controller.stop.assert_not_called()
+
+
+def test_missing_cast_still_closes_every_discovered_connection(cast_connections):
+    result = CastMediaClient().status(device_name="Missing TV")
+
+    assert result["status"] == "error"
+    cast_connections.selected.wait.assert_not_called()
+    assert cast_connections.calls[-1] == ("discovery", "stop")
+
+
+@pytest.mark.parametrize("action", ["status", "stop", "show_image", "play_youtube"])
+def test_failed_cast_wait_still_closes_connections(action, cast_connections):
+    cast_connections.selected.wait.side_effect = TimeoutError("receiver unavailable")
+    arguments = {"show_image": {"image_url": "https://example.com/test.jpg"},
+                 "play_youtube": {"video_id": "test"}}.get(action, {})
+
+    result = getattr(CastMediaClient(), action)(**arguments)
+
+    assert result["status"] == "error"
+    assert "receiver unavailable" in result["error"]
+    assert cast_connections.calls[-1] == ("discovery", "stop")
+
+
+def test_device_payload_failure_still_cleans_up_discovery(monkeypatch, cast_connections):
+    monkeypatch.setattr(CastMediaClient, "_device_payload", MagicMock(side_effect=ValueError("bad device")))
+
+    with pytest.raises(ValueError, match="bad device"):
+        CastMediaClient().status()
+
+    assert cast_connections.calls[-1] == ("discovery", "stop")
+
+
+def test_disconnect_failure_does_not_skip_other_connections(cast_connections, caplog):
+    def fail_disconnect(**_kwargs):
+        cast_connections.calls.append(("Living Room TV", "disconnect"))
+        raise TimeoutError("join timed out after stop was signalled")
+
+    cast_connections.selected.disconnect.side_effect = fail_disconnect
+
+    result = CastMediaClient().status()
+
+    assert result["status"] == "ok"
+    assert cast_connections.calls[-1] == ("discovery", "stop")
+    assert "Failed to disconnect Cast connection" in caplog.text

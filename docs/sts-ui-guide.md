@@ -1,6 +1,6 @@
 # STS UI Operator Guide
 
-Updated: 2026-09-26. Screenshots: the local STS build on 2026-09-10;
+Updated: 2026-10-06. Screenshots: the local STS build on 2026-09-10;
 some panel layouts have since changed. Current control descriptions take precedence.
 
 This is the operating guide for the STS browser page: where to click, what
@@ -21,7 +21,7 @@ make these pictures.
 - [Stop, Pause, Or Restart](#stop-pause-or-restart)
 - [Microphone And Listening](#microphone-and-listening)
 - [Show Eric Something](#show-eric-something)
-- [Type, Think, Or Say](#type-think-or-say)
+- [Typed Input](#typed-input)
 - [Record And Finish A Run](#record-and-finish-a-run)
 - [Body And Voice](#body-and-voice)
 - [Brain 2](#brain-2)
@@ -175,9 +175,36 @@ transcript is retained; retry Disconnect before starting another session.
 ![Connection Settings and model configuration](assets/sts-ui/2026-09-10/04-connection-settings.png)
 
 **Connection Settings** contains the realtime WebSocket address, Brain preset,
-and custom LM Studio fields. These configure the backend launch. They are not
-the one-turn **Think** control. Leave a working brain configuration alone for
-ordinary conversation; changing it is a deliberate server-management task.
+and custom LM Studio fields. Model-load settings configure the backend launch;
+Thinking applies live to the next response. Changing the loaded model requires
+a server restart; changing Thinking does not.
+
+**Eric Thinking** and **Brain 2 Thinking** are separate settings, side by side
+here in Connection Settings with the model configuration.
+Both initially default **Off**, including when upgrading from the old shared
+startup preference. You, Eric, or B2 may change either setting. Choices persist
+until changed again; they affect the next response or next scheduled B2 mull.
+They do not restart the server, interrupt current work, or launch an extra pass.
+Events identify who requested each change and confirm Eric's backend acceptance.
+
+Each control names the model actually serving that brain and uses its advertised
+capabilities. **Brain on restart** chooses the next model to load; apply that
+choice with **Server Management > Restart**. The **Running** label under each
+Thinking control identifies the current model, while **Restart loads** identifies
+the pending load key. Custom key/context/parallel fields appear only for
+**Custom LM Studio**, and their saved values do not override a named preset. Unavailable
+capabilities are shown as unavailable. NVFP4 has Off/On only. Graded models
+offer their supported levels directly: the installed regular Qwen 27B exposes
+Off, Low, Medium, Extra high, and On (Extra high default). No restart is needed
+to change levels once that model is running. Unsupported levels are omitted.
+On uses the advertised enabled default (or first enabled option when the default
+is Off); hover over the help text for full details. Eric's `get_thinking` and
+`set_thinking` tools and B2's control instructions use the same model information.
+A stale B2 decision cannot overwrite a newer operator or Eric choice.
+
+An older installation needs its page helper and realtime backend restarted once
+to load this support. Subsequent changes are live. Thinking remains separate
+from MTP and the disabled experimental extra **Think** pass.
 
 **MTP on restart** appears for **Qwen 27B NVFP4** and **Custom LM Studio**.
 It controls multi-token prediction, a generation speed optimization. The choice
@@ -318,21 +345,19 @@ refreshing when the filename is
 still in context. Without a filename, the tool uses the current preview or
 pending idle image. The manual **Move To Eye** button still uses the preview.
 
-## Type, Think, Or Say
+## Typed Input
 
 ![Typed Input](assets/sts-ui/2026-09-10/09-typed-input.png)
 
 | Button | What the typed text means |
 | --- | --- |
 | Send | A normal user message to Eric, without needing the mic. |
-| Think | Disabled experimental extra reasoning call. Use Send for normal conversation. |
 | Say | Text to speak through Eric's current voice, without adding a normal user question. Useful for pronunciation/delivery tests. |
 
-The experimental Think button, depth selector and `deliberate_once` model tool
-are disabled in STS as of September 20. The underlying implementation is retained
-for future experiments. Asking Eric to reconsider now stays in ordinary
-conversation; no prompt rule directs him into a separate deliberation call.
-This does not disable B2, normal model responses or full-context idle thinking.
+The obsolete experimental Think button and depth selector have been removed.
+Use **Eric Thinking** and **Brain 2 Thinking** in Connection Settings to choose
+the running model's supported reasoning settings. The separate experimental
+`deliberate_once` implementation remains disabled.
 
 ## Record And Finish A Run
 
@@ -400,14 +425,43 @@ physical environment before enabling or testing motion.
 
 ![Brain 1 voice and delivery](assets/sts-ui/2026-09-10/12-brain1.png)
 
-**Brain 1** holds Eric's TTS voice, precision, delivery style, and output level.
-Use the style controls and **Apply** to update delivery. A voice/style change
-is not a new creature prompt or a new conversation memory.
+**Robot Controls → Brain 1** holds Eric's speech controls. The **In use** line
+shows the running speech model. **Voice** selects a named speaker
+such as Eric or Vivian; **Volume** controls playback. Both changes apply immediately.
 
-> **Watch the Clear button here.** In this build it clears the hot conversation,
-> Events, Brain 2 scratch state, and related run ledgers. It is not "clear voice
-> style." Save the run first. It also is not a guaranteed wipe of the backend's
-> already accumulated conversation.
+**Speech model** selects the model for the next **Realtime Server → Server
+Management → Restart**. **0.6B** supports named voices; **1.7B** also supports
+delivery instructions. Style presets, the instruction field, and **Apply style**
+are hidden when the running model cannot use them. Choosing 1.7B before restarting
+does not reveal them yet. Presets apply immediately to future speech; after
+editing the instruction directly, click **Apply style**.
+
+Eric has no separate numeric speech-speed control. With the 1.7B speech model,
+choose **Custom**, describe the desired pace in **Style instruction**, and click
+**Apply style**. For example: "Speak at a brisk, natural pace with short pauses."
+This guides future synthesis rather than setting an exact playback multiplier.
+The **Pace** slider in Brain 2 affects only B2's browser voice.
+
+With **Voice tools** enabled, Eric may choose his own delivery using a preset or
+custom instruction, including for spontaneous remarks. He is instructed to honor
+your delivery preferences and return to his usual delivery after a special moment.
+Named speaker changes still require your request. These changes affect future
+speech and remain active until changed again.
+
+The controls form one flat section inside Brain 1. Precision is configured in
+`.env`, with `ROBOT_790_TTS_DTYPE=bfloat16` as the default for both models.
+`float16` is an optional manual override; it takes effect on realtime start/restart.
+Qwen uses bfloat16 for its
+[published evaluations](https://github.com/QwenLM/Qwen3-TTS#evaluation), and the
+installed RTX 5090 supports it. Old browser precision preferences are ignored.
+The pending model choice remains separate from the **In use** readout. Missing
+model installations are disabled and rejected before restarting.
+
+The old screenshot above shows **Clear** beneath the voice settings. That control
+has moved to the conversation pane and is now **Reset conversation**. It clears
+the browser's conversation, Events, Brain 2 state, and related run ledgers; cleared
+dialogue is absent from the next save. Save the run first. It is not a guaranteed
+wipe of the backend's already accumulated conversation.
 
 ## Brain 2
 
@@ -418,10 +472,18 @@ it is more than a cosmetic caption toggle. **Voice** optionally reads surfaced
 monitor lines through the browser's speech synthesis. Browser Voice, Volume,
 Pace, and **Test** affect that monitor voice, not Eric's main TTS.
 
-**Mute microphone** starts checked: microphone audio is withheld from Eric
+**Mute microphone during B2 speech** starts checked: microphone audio is withheld from Eric
 while Brain 2 speaks and for half a second afterward. Uncheck it to let the
-microphone feed Eric during Brain 2 speech. The change applies immediately and
-is remembered in this browser. The separate **Mute Me** control still applies.
+microphone feed Eric during Brain 2 speech. The browser temporarily disables
+echo cancellation for that speech, then restores normal capture. The status
+below the checkbox reports whether the microphone accepted the change. Input
+waits during that transition. The change is remembered in this browser; the
+separate **Mute Me** control still applies.
+
+This is a physical listening experiment: B2 must play through speakers the
+microphone can hear. Its text is not inserted as a microphone transcript.
+Actual speaker-to-microphone recognition remains unverified. B2 already receives
+Eric's dialogue and supplies private advice through its text channel.
 
 **Person Lane** changes how strongly the ordinary observer pass studies the
 operator. **Mull** requests a manual private pass. It is different from
@@ -701,6 +763,12 @@ a new independent thread first if you are retiring the entire old collection.
 On a filesystem error, a batch stops and reports completed sessions rather than
 pretending the whole operation succeeded. Each session keeps its own archive
 package; descendants are not merged into one transcript.
+
+The map and archive result appear without waiting for the selected session's
+history preview. Selecting another session cancels the older preview; selecting
+the same session reuses it. Refresh explicitly reloads the preview. Session
+metadata is reused while its source and derivative files are unchanged; new
+titles, prepared forms, edits, and archives are detected on the next list refresh.
 
 Continuity saves also queue preparation automatically, without delaying
 Disconnect. Session Map polls while work is queued, waiting for disconnect, or

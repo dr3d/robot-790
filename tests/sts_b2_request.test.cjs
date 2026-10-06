@@ -35,3 +35,14 @@ test('baseline records intentional diagnostic/error ordering and mode omissions'
   assert.equal(JSON.parse(baseline.manual.posts[0].body).mode, 'question');
   assert.equal(JSON.parse(baseline.normal.posts[0].body).mode, 'person');
 });
+
+test('request transports both Thinking snapshots and retains them after a newer choice', async () => {
+  const thinking = { eric: { mode: 'none', revision: 3, identity: 'binary' },
+    brain2: { mode: 'on', revision: 5, identity: 'binary' } };
+  const { complete, context } = fixture('normal', page, { thinking });
+  context.thinkingControls.packet = () => ({ ...thinking, brain2: { ...thinking.brain2, mode: 'none', revision: 6 } });
+  const result = await complete();
+  assert.deepEqual(JSON.parse(result.posts[0].body).thinking, thinking);
+  assert.deepEqual(result.trace.find(row => row.ledger).ledger.requestPayload.thinking, thinking);
+  assert.equal(result.result.status, 'ok');
+});

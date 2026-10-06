@@ -11,7 +11,7 @@ const scenarios = [
   'network-error', 'stale-network-error', 'json-user', 'json-socket',
 ];
 
-function fixture(name, page) {
+function fixture(name, page, { thinking } = {}) {
   const trace = [], posts = [];
   let finish, fail, finishJson, markJsonStarted;
   const jsonStarted = new Promise(resolve => { markJsonStarted = resolve; });
@@ -30,6 +30,7 @@ function fixture(name, page) {
     brain2EvidenceGeneration: 4, brain2LastEvidence: null, userSpeechActive: false,
     loadedNoteContexts: [], faceVisualHoldRevision: 7,
     brain2EvidenceSnapshot: () => evidence,
+    thinkingControls: { packet: () => thinking },
     brain2SetupCards: () => evidence.setup_cards,
     Robot790NoteBrains: { forBrain: () => evidence.note_guidance },
     brain2BodyContext: () => {
@@ -62,9 +63,20 @@ function fixture(name, page) {
     : name === 'headlines' ? { manual: true, headlines: [{ title: 'Dated story', url: 'https://example.test/story' }] }
     : name === 'empty-headlines' ? { headlines: [] } : {};
   const initial = clone(evidence);
+  const observedSession = { socket: context.realtimeConnection.socket, generation: context.realtimeConnection.generation };
   const pending = context.requestBrain2Mull(options);
   // Attach rejection handling before releasing the deferred network operation.
-  const outcome = pending.then(result => ({ result: clone(result) }), error => ({ error: error.message }));
+  const outcome = pending.then(result => {
+    if (result.status !== 'stale') {
+      assert.equal(result.observed_thinking, thinking, 'retain the request-time Thinking snapshot');
+      assert.equal(result.observed_session.socket, observedSession.socket, 'retain the captured socket identity');
+      assert.equal(result.observed_session.generation, observedSession.generation, 'retain the captured generation');
+    }
+    // Assert the additive control metadata above, then compare all pre-existing
+    // results and effects against the untouched extraction baseline.
+    const { observed_thinking, observed_session, ...legacyResult } = result;
+    return { result: clone(legacyResult) };
+  }, error => ({ error: error.message }));
   function mutate(change) {
     if (change === 'socket') context.realtimeConnection.socket = {};
     if (change === 'generation') context.realtimeConnection.generation++;
@@ -106,7 +118,7 @@ function fixture(name, page) {
       lastEvidence: clone(context.brain2LastEvidence),
       acceptedCapturedIdentity: context.brain2LastEvidence === evidence };
   }
-  return { complete };
+  return { complete, context };
 }
 
 async function capture(page) {

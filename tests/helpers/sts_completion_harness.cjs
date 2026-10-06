@@ -22,7 +22,8 @@ function fixture(page, install) {
     realtimeConnection: { socket: { id: 'socket' }, generation: 1, stopped: false },
     activeRealtimeSession: (socket, generation) => !c.realtimeConnection.stopped
       && socket === c.realtimeConnection.socket && generation === c.realtimeConnection.generation,
-    observeContextUsage: call('usage'), llmRunOverview: null, performance: { now: () => now },
+    observeContextUsage: call('usage'), observeSessionThinking() {},
+    llmRunOverview: null, performance: { now: () => now },
     responseOutputSuppressed: () => false, suppressedResponseIds: new Set(), eventResponseId: e => e.response_id,
     events: {}, log: (_, line) => trace.push(['log', line]),
     flushAudioQueue: () => { trace.push(['flush']); return Promise.resolve(); },

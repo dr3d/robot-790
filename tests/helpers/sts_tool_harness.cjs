@@ -43,7 +43,13 @@ function fixture() {
 }
 
 function loadFunctions(context, names) {
+  // These fixtures isolate tool/lifecycle ownership. Live Thinking protocol
+  // behavior is exercised with real controls in sts_thinking.test.cjs.
+  context.thinkingRuntimeConfig ??= () => ({});
+  context.observeSessionThinking ??= () => {};
   context.fileWriteReceipts ??= [];
+  context.brain2Mic ??= { begin: () => null, end() {}, sync() {}, blocksInput: () => false };
+  context.updateBrain2MicStatus ??= () => {};
   // Readiness is exercised separately; these fixtures model an available service.
   context.realtimeReadiness ??= { ready: true, invalidate() {} };
   require('./sts_continuation_harness.cjs').installToolContinuation(context);

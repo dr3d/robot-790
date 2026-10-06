@@ -16,6 +16,7 @@ function fixture() {
     Robot790Brain2Speech: require('../web/sts/brain2-speech.js'),
     brain2VoiceUnsupportedLogged: false, brain2VoiceMonitor: { checked: true },
     brain2MuteMic: { checked: true },
+    brain2Mic: { begin: () => null, end() {}, sync() {} }, updateBrain2MicStatus() {},
     brain2MouthBrainEnabled: () => true,
     responseActive: false, audioBusy: false, userSpeechActive: false, userTurnPendingUntil: 0,
     outputAudioActive: () => c.audioBusy,
@@ -31,7 +32,7 @@ function fixture() {
   });
   loadFunctions(c, ['brain2VoiceMonitorEnabled', 'browserSpeechAvailable', 'brain2VoiceCanSpeak',
     'speakBrain2Monitor', 'cancelBrain2MonitorSpeech', 'brain2MonitorAudioShouldMuteMic',
-    'surfaceBrain2MouthText', 'userTurnPending', 'noteUserTurnActivity',
+    'surfaceBrain2MouthText', 'userTurnPending', 'noteUserTurnActivity', 'brain2MicrophoneListening',
     'queueAudioDelta', 'playPcm16Bytes', 'createBrain2SpeechOwner']);
   c.brain2Speech = c.createBrain2SpeechOwner();
   return { c, utterances, logs, cancels: () => cancels, advance: ms => { now += ms; } };
@@ -155,6 +156,34 @@ test('microphone checkbox takes effect during speech and its echo tail without c
   f.advance(1);
   assert.equal(c.brain2MonitorAudioShouldMuteMic(), false);
   assert.equal(f.cancels(), before);
+});
+
+test('acoustic B2 listening does not cancel its own speech when mic VAD fires; typed input still can', () => {
+  const f = fixture(), { c } = f;
+  c.brain2MuteMic.checked = false;
+  c.speakBrain2Monitor('A full sentence for Eric to hear.');
+  f.utterances[0].onstart();
+  const before = f.cancels();
+  c.noteUserTurnActivity({ inputAudio: true });
+  assert.equal(f.cancels(), before);
+  assert.equal(c.userTurnPending(), true);
+  c.noteUserTurnActivity();
+  assert.equal(f.cancels(), before + 1);
+});
+
+test('microphone preparation delays B2 audio, and cancellation during preparation prevents late speech', async () => {
+  const f = fixture(), { c } = f;
+  let ready;
+  c.brain2Mic.begin = () => new Promise(resolve => { ready = resolve; });
+  assert.equal(c.speakBrain2Monitor('Wait for raw microphone audio.'), true);
+  assert.equal(f.utterances.length, 0);
+  ready(); await Promise.resolve();
+  assert.equal(f.utterances.length, 1);
+  c.cancelBrain2MonitorSpeech();
+  c.speakBrain2Monitor('Canceled while preparing.');
+  c.noteUserTurnActivity({ inputAudio: true });
+  ready(); await Promise.resolve();
+  assert.equal(f.utterances.length, 1);
 });
 
 test('microphone muting defaults on and remembers checkbox changes across preference reloads', () => {

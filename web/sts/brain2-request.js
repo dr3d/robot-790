@@ -14,6 +14,7 @@
       ...(Object.hasOwn(input, "idleArt") ? { idle_art: input.idleArt } : {}),
       ...(headlines ? { headlines } : {}),
       ...(body ? { body } : {}),
+      ...(input.thinking ? { thinking: input.thinking } : {}),
       person_focus: input.personFocus,
       setup_cards: evidence.setup_cards,
       note_guidance: evidence.note_guidance,
@@ -51,7 +52,8 @@
       throw new Error("History reading is unavailable on this page server; restart the STS page helper.");
     }
     effects.acceptEvidence(evidence);
-    return { ...result, observed_evidence: evidence, observed_body: observedBody };
+    return { ...result, observed_evidence: evidence, observed_body: observedBody,
+      observed_thinking: input.thinking, observed_session: { socket, generation } };
   }
 
   return { buildPayload, run };

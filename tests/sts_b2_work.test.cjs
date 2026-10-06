@@ -126,6 +126,9 @@ test('page has one busy owner and unchanged scheduling policy functions', () => 
     const source = require('./helpers/sts_b2_history_scope.cjs').normalizeHistoryScope(['formatBrain2AdvisoryContent', 'formatBrain2ForInstructions'].includes(name)
       ? fs.readFileSync(`${__dirname}/../web/sts/brain2-advisories.js`, 'utf8').replace(/\r\n/g, '\n')
       : page)
+      // Live Thinking adds request metadata; its payload and freshness are
+      // checked separately by sts_b2_request and sts_thinking.
+      .replace('        thinking: thinkingControls.packet(),\n', '')
       .replaceAll('a.guidanceCurrent(item)', 'Robot790NoteBrains.isCurrent(item, loadedNoteContexts, "b2")')
       .replaceAll('a.userAt()', 'lastUserTurnActivityAt');
     const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));

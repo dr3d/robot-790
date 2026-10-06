@@ -3,6 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import threading
+from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -12,7 +15,6 @@ from robot_790d import archive_transaction, continuity_save_transaction
 from robot_790d.note_files import (
     MAX_SESSION_ARCHIVE_CHARS,
     find_existing_note_path,
-    list_note_files,
     notes_root_for_instance,
     read_note_file,
     resolve_note_path,
@@ -32,6 +34,13 @@ CONTINUITY_SESSION_VARIANT_LABELS = {
 }
 SENSING_EYE_ASSETS_HEADER = "Sensing-Eye Assets At Save"
 SENSING_EYE_ASSET_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp", ".txt", ".md", ".markdown"})
+
+# Cache derived map rows, never archive decisions or source content. Every list
+# checks source/sidecar stats so edits by the preparation worker or another
+# process are visible without a restart or a time-based stale window.
+_SESSION_ROW_CACHE: OrderedDict[tuple[str, str], tuple[tuple[Any, ...], dict[str, object]]] = OrderedDict()
+_SESSION_ROW_CACHE_LOCK = threading.RLock()
+_SESSION_ROW_CACHE_LIMIT = 4096
 
 
 @dataclass(frozen=True)
@@ -197,30 +206,49 @@ def list_continuity_sessions(
     instance_path: str | Path | None = None,
 ) -> dict[str, object]:
     sessions: list[dict[str, object]] = []
-    for filename in list_note_files(instance_path):
+    root_key = str(notes_root_for_instance(instance_path).resolve())
+    filenames = _active_continuity_session_filenames(instance_path)
+    active_keys = {(root_key, filename) for filename in filenames}
+    with _SESSION_ROW_CACHE_LOCK:
+        for key in list(_SESSION_ROW_CACHE):
+            if key[0] == root_key and key not in active_keys:
+                del _SESSION_ROW_CACHE[key]
+    for filename in filenames:
         normalized = filename.replace("\\", "/")
-        if not _looks_like_continuity_session_filename(normalized):
-            continue
+        key = (root_key, normalized)
         try:
+            stamp = _continuity_session_row_stamp(instance_path, normalized)
+            with _SESSION_ROW_CACHE_LOCK:
+                cached = _SESSION_ROW_CACHE.get(key)
+                if cached is not None and cached[0] == stamp:
+                    sessions.append(deepcopy(cached[1]))
+                    _SESSION_ROW_CACHE.move_to_end(key)
+                    continue
             note = read_note_file(instance_path, normalized)
         except (FileNotFoundError, ValueError):
             continue
         metadata = continuity_session_metadata(note.content)
         if not metadata:
             continue
-        sessions.append(
-            {
-                "filename": note.filename,
-                "title": _continuity_session_title(instance_path, note),
-                "created": metadata["created"],
-                "parent_session_filename": metadata["parent_session_filename"],
-                "characters": len(note.content),
-                "context_at_save": _continuity_context_at_save(instance_path, note),
-                "sensing_eye_asset_count": len(metadata["sensing_eye_assets"]),
-                "variants": _continuity_session_variant_records(instance_path, note),
-                "current": False,
-            }
-        )
+        row = {
+            "filename": note.filename,
+            "title": _continuity_session_title(instance_path, note),
+            "created": metadata["created"],
+            "parent_session_filename": metadata["parent_session_filename"],
+            "characters": len(note.content),
+            "context_at_save": _continuity_context_at_save(instance_path, note),
+            "sensing_eye_asset_count": len(metadata["sensing_eye_assets"]),
+            "variants": _continuity_session_variant_records(instance_path, note),
+            "current": False,
+        }
+        sessions.append(row)
+        # Do not cache a row assembled while a source/derivative was changing.
+        if _continuity_session_row_stamp(instance_path, normalized) == stamp:
+            with _SESSION_ROW_CACHE_LOCK:
+                _SESSION_ROW_CACHE[key] = (stamp, deepcopy(row))
+                _SESSION_ROW_CACHE.move_to_end(key)
+                while len(_SESSION_ROW_CACHE) > _SESSION_ROW_CACHE_LIMIT:
+                    _SESSION_ROW_CACHE.popitem(last=False)
 
     sessions.sort(
         key=lambda item: _session_sort_key(str(item["filename"]), str(item.get("created") or "")),
@@ -235,6 +263,34 @@ def list_continuity_sessions(
         "current_session_filename": current_filename,
         "sessions": sessions,
     }
+
+
+def _active_continuity_session_filenames(instance_path: str | Path | None) -> list[str]:
+    # Active sessions are immediate .txt children; archives, variants, and the
+    # rest of the note shelf cannot contribute rows or active asset references.
+    folder = resolve_note_path("sessions/.map-scan.txt", instance_path).parent
+    if not folder.exists():
+        return []
+    return sorted(
+        f"sessions/{path.name}" for path in folder.iterdir()
+        if path.suffix.lower() == ".txt" and path.is_file()
+    )
+
+
+def _continuity_session_row_stamp(instance_path: str | Path | None, filename: str) -> tuple[Any, ...]:
+    summary = _continuity_session_variant_filename_for_source(filename, "summary")
+    names = (filename, _continuity_session_variant_filename_for_source(filename, "scrubbed"),
+             summary, summary.removesuffix(".summary.txt") + ".title.json",
+             continuity_session_context_filename(filename))
+    stamps = []
+    for name in names:
+        path = resolve_note_path(name, instance_path)
+        try:
+            stat = path.stat()
+            stamps.append((str(path), stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_ino))
+        except FileNotFoundError:
+            stamps.append((str(path), None))
+    return tuple(stamps)
 
 
 def select_continuity_session(
@@ -728,6 +784,8 @@ def _normalize_saved_context(value: Any) -> dict[str, Any] | None:
 def _continuity_context_at_save(instance_path: str | Path | None, source: Any) -> dict[str, Any] | None:
     try:
         filename = continuity_session_context_filename(source.filename)
+        if not resolve_note_path(filename, instance_path).is_file():
+            return None
         metadata = json.loads(read_note_file(instance_path, filename).content)
         if not isinstance(metadata, dict) or metadata.get("version") != 1:
             return None
@@ -752,6 +810,8 @@ def validate_continuity_session_title(title: Any) -> str:
 def _continuity_session_title(instance_path: str | Path | None, source: Any) -> str:
     try:
         filename = continuity_session_title_filename(source.filename, instance_path)
+        if not resolve_note_path(filename, instance_path).is_file():
+            return ""
         metadata = json.loads(read_note_file(instance_path, filename).content)
         if not isinstance(metadata, dict):
             return ""
@@ -1006,8 +1066,10 @@ def _parse_pinned_note_receipts(content: str) -> list[PinnedNoteReceipt]:
 def _shared_sensing_eye_assets(
     instance_path: str | Path | None, source_session_filename: str, names: set[str],
 ) -> set[str]:
+    if not names:
+        return set()
     shared: set[str] = set()
-    for filename in list_note_files(instance_path):
+    for filename in _active_continuity_session_filenames(instance_path):
         if filename == source_session_filename or not _looks_like_continuity_session_filename(filename):
             continue
         try:
@@ -1017,6 +1079,8 @@ def _shared_sensing_eye_assets(
             continue
         shared.update(receipt.filename for receipt in _parse_sensing_eye_asset_receipts(content))
         shared.update(name for name in names if f"file logs/sensing-eye/{name} " in content)
+        if names <= shared:
+            break
     return shared
 
 
@@ -1029,7 +1093,6 @@ def _plan_archive_sensing_eye_assets(
 ) -> dict[str, Any]:
     root = _sensing_eye_asset_root(instance_path)
     archive_relative = f"{Path(archived_session_filename).parent.as_posix()}/sensing-eye"
-    shared = _shared_sensing_eye_assets(instance_path, source_session_filename, {r.filename for r in receipts})
     archived: list[dict[str, object]] = []
     files = []
 
@@ -1050,7 +1113,9 @@ def _plan_archive_sensing_eye_assets(
         files.append({"kind": "eye", "source": receipt.filename,
                       "target": f"{archive_relative}/{receipt.filename}", "sha256": current_digest})
         record["archive_status"] = "archived"
-        record["retained_for_active_session"] = receipt.filename in shared
+        # The final sharing scan immediately before finish_transaction decides
+        # retention, including references added since this package was planned.
+        record["retained_for_active_session"] = False
         sidecar = _sensing_eye_sidecar_path(source)
         if sidecar.is_file():
             files.append({"kind": "eye", "source": sidecar.name,
