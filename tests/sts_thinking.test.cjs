@@ -22,7 +22,7 @@ function ui() {
     renderThinkingControls() {}, updateSessionTools() {}, refreshThinkingProfiles() {}, events: {}, log() {}, logBrain2() {},
     userSpeechActive: false, activeRealtimeSession: s => s === socket, brain2EvidenceSnapshot: () => ({ user_key: 'u1' }) };
   const context = vm.createContext(g);
-  for (const name of ['thinkingRuntimeConfig', 'updateSessionThinking', 'observeSessionThinking', 'setThinking', 'applyBrain2Thinking', 'thinkingToolList']) {
+  for (const name of ['thinkingRuntimeConfig', 'updateSessionThinking', 'observeSessionThinking', 'thinkingReport', 'setThinking', 'applyBrain2Thinking', 'thinkingToolList']) {
     const start = page.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'));
     const end = page.indexOf('\n    }\n', start);
     vm.runInContext(page.slice(start, end + 6), context);
@@ -38,49 +38,69 @@ test('both brains default Off, independently persist choices, and ignore the old
   const { c, storage, changes } = controller();
   assert.equal(c.snapshot('eric').mode, 'none');
   assert.equal(c.snapshot('brain2').mode, 'none');
-  c.change('brain2', 'on', { source: 'B2' });
+  c.change('brain2', 'on', { source: 'operator' });
   assert.equal(c.snapshot('eric').mode, 'none');
   assert.equal(c.snapshot('brain2').mode, 'on');
-  assert.equal(changes[0].source, 'B2');
+  assert.equal(changes[0].source, 'operator');
   const resumed = controls.create({ storage });
   resumed.configure('brain2', profile);
   assert.equal(resumed.snapshot('brain2').mode, 'on');
 });
 
-test('new operator choices, even the same Off choice, invalidate old B2 decisions per brain', () => {
+test('new operator choices, even the same Off choice, invalidate older control snapshots per brain', () => {
   const { c } = controller();
   const observed = c.packet();
   c.change('eric', 'off', { source: 'operator' });
-  assert.throws(() => c.change('eric', 'on', { source: 'B2', observed: observed.eric }), /newer choice/);
-  c.change('brain2', 'on', { source: 'B2', observed: observed.brain2 });
+  assert.throws(() => c.change('eric', 'on', { source: 'operator', observed: observed.eric }), /newer choice/);
+  c.change('brain2', 'on', { source: 'operator', observed: observed.brain2 });
   assert.equal(c.snapshot('brain2').mode, 'on');
+});
+
+test('controller rejects Eric, B2, and unspecified callers without changing settings or persistence', () => {
+  const { c, storage, changes } = controller();
+  c.change('eric', 'on', { source: 'operator' });
+  c.change('brain2', 'on', { source: 'operator' });
+  const before = c.packet();
+  const saved = ['robot790.ericThinking.v2', 'robot790.brain2Thinking.v1'].map(key => storage.getItem(key));
+  for (const brain of ['eric', 'brain2']) {
+    for (const source of ['Eric', 'B2', undefined]) {
+      assert.throws(() => c.change(brain, 'off', { source, observed: c.snapshot(brain) }), /operator/i);
+    }
+    assert.throws(() => c.change(brain, 'off'), /operator/i);
+  }
+  assert.deepEqual(c.packet(), before);
+  assert.deepEqual(['robot790.ericThinking.v2', 'robot790.brain2Thinking.v1'].map(key => storage.getItem(key)), saved);
+  assert.equal(changes.length, 2);
 });
 
 test('switching loaded models resets Off and rejects controls unsupported by the new model', () => {
   const { c } = controller();
-  c.change('eric', 'on', { source: 'Eric' });
+  c.change('eric', 'on', { source: 'operator' });
   const observed = c.snapshot('eric');
   c.configure('eric', { ...profile, identity: 'other', model: 'other', can_on: false, manual: 'No Thinking switch.' });
   assert.equal(c.snapshot('eric').mode, 'none');
-  assert.throws(() => c.change('eric', 'on', { observed }), /loaded model/);
-  assert.throws(() => c.change('eric', 'on'), /No Thinking switch/);
-  assert.throws(() => c.change('brain2', 'high'), /not supported/);
+  assert.throws(() => c.change('eric', 'on', { source: 'operator', observed }), /loaded model/);
+  assert.throws(() => c.change('eric', 'on', { source: 'operator' }), /No Thinking switch/);
+  assert.throws(() => c.change('brain2', 'high', { source: 'operator' }), /not supported/);
 });
 
-test('Eric tool waits for matching acknowledgment before claiming success', async () => {
+test('operator changes to Eric wait for matching acknowledgment before claiming success', async () => {
   const { context, sent, ack, changes } = ui();
   let finished = false;
-  const pending = context.setThinking({ brain: 'eric', mode: 'on', reason: 'Compare the possibilities' }).then(r => { finished = true; return r; });
+  const pending = context.setThinking({ brain: 'eric', mode: 'on', reason: 'Compare the possibilities' }, { source: 'operator' }).then(r => { finished = true; return r; });
   await Promise.resolve();
   assert.equal(finished, false);
   assert.equal(sent[0].session.robot790_thinking_model, profile.model);
   assert.equal(sent[0].session.robot790_reasoning_effort, 'on');
+  ack({ session: { ...sent[0].session, robot790_thinking_revision: sent[0].session.robot790_thinking_revision - 1 } });
+  await Promise.resolve();
+  assert.equal(finished, false);
   ack(sent[0]);
   assert.equal((await pending).status, 'ok');
-  assert.equal(changes[0].source, 'Eric');
+  assert.equal(changes[0].source, 'operator');
 });
 
-test('B2 or operator can change B2 without changing Eric or launching a request', async () => {
+test('operator can change B2 without changing Eric or launching a request', async () => {
   const { context, c, sent } = ui();
   const result = await context.setThinking({ brain: 'brain2', mode: 'on' }, { source: 'operator' });
   assert.equal(result.applies, 'next scheduled mull');
@@ -88,37 +108,65 @@ test('B2 or operator can change B2 without changing Eric or launching a request'
   assert.equal(sent.length, 0);
 });
 
-test('B2 autonomous changes require current context and cannot overwrite a newer setting', async () => {
-  const { context, c, socket } = ui();
-  const result = { thinking_changes: { brain2: 'on' }, observed_thinking: c.packet(),
-    observed_session: { socket, generation: 1 }, observed_evidence: { user_key: 'u1' } };
-  c.change('brain2', 'off', { source: 'operator' });
-  await context.applyBrain2Thinking(result);
-  assert.equal(c.snapshot('brain2').mode, 'none');
-  result.observed_thinking = c.packet();
-  context.userSpeechActive = true;
-  await context.applyBrain2Thinking(result);
-  assert.equal(c.snapshot('brain2').mode, 'none');
-  context.userSpeechActive = false;
-  await context.applyBrain2Thinking(result);
-  assert.equal(c.snapshot('brain2').mode, 'on');
+test('stale tool setters reject both brains and preserve manual On, even with current snapshots', async () => {
+  const { context, c, sent, changes } = ui();
+  const stale = c.packet();
+  c.change('eric', 'on', { source: 'operator' });
+  c.change('brain2', 'on', { source: 'operator' });
+  const before = c.packet();
+  for (const brain of ['eric', 'brain2']) {
+    await assert.rejects(context.setThinking({ brain, mode: 'off' }), /operator/i);
+    for (const source of ['Eric', 'B2']) {
+      for (const observed of [stale[brain], c.snapshot(brain)]) {
+        await assert.rejects(context.setThinking({ brain, mode: 'off' }, { source, observed }), /operator/i);
+      }
+    }
+  }
+  assert.deepEqual(c.packet(), before);
+  assert.equal(changes.length, 2);
+  assert.equal(sent.length, 0);
+  assert.equal(context.thinkingWaiters.size, 0);
 });
 
-test('an old backend echo cannot pass for support or change Eric via tools', async () => {
+test('legacy B2 intents never mutate either brain, including fresh results, but retain request receipts', async () => {
+  const { context, c, socket, sent, changes } = ui();
+  for (const mode of ['on', 'off']) {
+    for (const brain of ['eric', 'brain2']) c.change(brain, mode, { source: 'operator' });
+    const before = c.packet(), count = changes.length;
+    const receipt = { mode, model: profile.model, reasoning_effort: mode };
+    const result = { thinking: receipt, thinking_changes: { eric: mode === 'on' ? 'off' : 'on', brain2: mode === 'on' ? 'off' : 'on' },
+      observed_thinking: before, observed_session: { socket, generation: 1 }, observed_evidence: { user_key: 'u1' } };
+    await context.applyBrain2Thinking(result);
+    assert.deepEqual(c.packet(), before);
+    assert.equal(changes.length, count);
+    assert.equal(context.latestBrain2ThinkingReceipt, receipt);
+    assert.equal(context.thinkingReport().brain2_last_request, receipt);
+  }
+  assert.equal(sent.length, 0);
+});
+
+test('an old backend echo cannot pass for support or apply an operator change', async () => {
   const { context, c, socket } = ui();
   context.observeSessionThinking({ type: 'session.updated', robot790_live_thinking: true,
     session: { robot790_reasoning_effort: 'on' } }, socket);
-  await assert.rejects(context.setThinking({ brain: 'eric', mode: 'on' }), /Restart realtime once/);
+  await assert.rejects(context.setThinking({ brain: 'eric', mode: 'on' }, { source: 'operator' }), /Restart realtime once/);
   assert.equal(c.snapshot('eric').mode, 'none');
 });
 
-test('tool instructions use the actual model manual and allow independent self-directed choices', () => {
+test('only read-only Thinking is advertised, with operator-only instructions and the actual model manuals', () => {
   const { context, c } = ui();
-  const description = context.thinkingToolList().find(t => t.name === 'set_thinking').description;
-  assert.match(description, /own initiative/);
+  const tools = context.thinkingToolList();
+  assert.deepEqual(Array.from(tools, t => t.name), ['get_thinking']);
+  const description = tools[0].description;
+  assert.match(description, /operator/i);
+  assert.doesNotMatch(description, /own initiative|Return to Off/);
   assert.match(description, /loaded-nvfp4.*no depth levels/);
   c.configure('brain2', { ...profile, identity: 'graded', model: 'graded', manual: 'On uses medium reasoning.' });
-  assert.match(context.thinkingToolList()[1].description, /brain2: graded. On uses medium reasoning/);
+  assert.match(context.thinkingToolList()[0].description, /brain2: graded. On uses medium reasoning/);
+  const report = context.thinkingReport();
+  assert.equal(report.tool, 'get_thinking');
+  assert.equal(report.eric.model, profile.model);
+  assert.equal(report.brain2.model, 'graded');
 });
 
 function capabilityUi() {
@@ -180,8 +228,8 @@ test('graded model exposes actual levels while the other brain retains binary co
   assert.deepEqual(context.brain2Thinking.options.filter(o => o.value).map(o => o.value), ['none', 'on']);
   assert.equal(context.customModelReasoning.options.at(-1).textContent, 'On (Extra high default)');
   assert.match(context.modelThinkingHelp.textContent, /Running: qwen\/qwen3.8-27b/);
-  const modes = context.thinkingToolList()[1].parameters.properties.mode.enum;
-  assert.deepEqual(Array.from(modes), ['off', 'low', 'medium', 'xhigh', 'on']);
+  assert.deepEqual(Array.from(context.thinkingToolList(), t => t.name), ['get_thinking']);
+  assert.match(context.thinkingToolList()[0].description, /Choose off, low, medium, xhigh, or on/);
 });
 
 test('explicit graded choices persist independently and reach the next-session configuration unchanged', () => {
@@ -193,24 +241,25 @@ test('explicit graded choices persist independently and reach the next-session c
   resumed.configure('brain2', profile);
   assert.equal(resumed.snapshot('eric').mode, 'medium');
   assert.equal(resumed.snapshot('brain2').mode, 'none');
-  assert.throws(() => resumed.change('brain2', 'xhigh'), /not supported/);
-  assert.throws(() => resumed.change('eric', 'high'), /not supported/);
+  assert.throws(() => resumed.change('brain2', 'xhigh', { source: 'operator' }), /not supported/);
+  assert.throws(() => resumed.change('eric', 'high', { source: 'operator' }), /not supported/);
   const { context } = ui();
   context.thinkingControls = resumed;
   assert.equal(context.thinkingRuntimeConfig().robot790_reasoning_effort, 'medium');
 });
 
-test('Eric tools and B2 intents can select explicit levels with the same acknowledgment and freshness checks', async () => {
+test('operator can select explicit levels independently with live acknowledgment and next-mull behavior', async () => {
   const { context, c, sent, socket } = ui();
   c.configure('eric', graded);
-  const pending = context.setThinking({ brain: 'eric', mode: 'xhigh' });
+  const pending = context.setThinking({ brain: 'eric', mode: 'xhigh' }, { source: 'operator' });
   assert.equal(sent[0].session.robot790_reasoning_effort, 'xhigh');
   context.observeSessionThinking({ type: 'session.updated', robot790_live_thinking: true,
     robot790_thinking_profile: graded, session: sent[0].session }, socket);
   assert.equal((await pending).mode, 'xhigh');
   c.configure('brain2', graded);
-  await context.applyBrain2Thinking({ thinking_changes: { brain2: 'low' }, observed_thinking: c.packet(),
-    observed_session: { socket, generation: 1 }, observed_evidence: { user_key: 'u1' } });
+  const result = await context.setThinking({ brain: 'brain2', mode: 'low' }, { source: 'operator' });
+  assert.equal(result.applies, 'next scheduled mull');
   assert.equal(c.snapshot('brain2').mode, 'low');
   assert.equal(c.snapshot('eric').mode, 'xhigh');
+  assert.equal(sent.length, 1);
 });

@@ -2033,19 +2033,12 @@ def _brain2_headlines(value: object) -> list[dict[str, str]]:
     return items
 
 
-def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: list[str], idle_art: bool = False,
-                            thinking_profiles: dict | None = None) -> dict[str, Any]:
+def _brain2_response_format(headlines: list[dict[str, Any]] | None, body_beats: list[str], idle_art: bool = False) -> dict[str, Any]:
     properties: dict[str, Any] = {
         key: {"type": "string"}
         for key in ("mouth_text", "note_for_eric", "question", "revision_candidate", "reason")
     }
     properties["should_surface"] = {"type": "boolean"}
-    properties["thinking_changes"] = {
-        "type": "object", "properties": {
-            key: {"type": "string", "enum": ["keep", *thinking.control_modes((thinking_profiles or {}).get(key) or {})]}
-            for key in ("eric", "brain2")
-        }, "required": ["eric", "brain2"], "additionalProperties": False,
-    }
     if headlines is not None:
         properties["headline_url"] = {
             "type": "string", "enum": ["", *dict.fromkeys(item["url"] for item in headlines)]
@@ -2240,7 +2233,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "scene, or poetic body-feel. Preserve associative wandering; correct unsupported factual claims, "
         "not imagination. If nothing relevant changed, return empty strings with should_surface false. "
         "Return only JSON with keys mouth_text, note_for_eric, question, revision_candidate, "
-        "should_surface, reason, steering, thinking_changes. "
+        "should_surface, reason, steering. "
         "steering is an object: evidence_id copies last_assistant_output_id from the evidence packet; "
         "loop and unsupported_claim are JSON booleans; topic is a short stable label for the assessed subject "
         "(reuse it while the subject remains the same); next is continue, new_subject, ground, or quiet. "
@@ -2269,13 +2262,8 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "It is advice, not a command."
     )
     system += (
-        "\nThinking controls: the operator authorizes you and Eric to change Thinking independently for either brain. "
-        "Return thinking_changes with eric and brain2 each keep or a supported Thinking setting from that brain's instructions. Choose keep unless you want a change. "
-        "For a control-only choice leave should_surface false. Both settings start Off when supported. "
-        "Changes persist until changed again. They affect the next request, never this one; turning your own "
-        "thinking on takes effect at your next scheduled mull, without an immediate extra call. "
-        "Honor explicit operator preferences. A change request is not proof it applied. "
-        "Use only supported settings in the loaded-model instructions below; do not invent depth levels. "
+        "\nThinking settings are controlled only by the operator. Neither you nor Eric may change them. "
+        "The following settings and model capabilities are read-only context; do not return control changes. "
         "Brain 2: " + json.dumps(thinking_receipt, ensure_ascii=True) +
         "\nEric's current control receipt: " + json.dumps(supplied_thinking.get("eric", {}), ensure_ascii=True)
     )
@@ -2377,8 +2365,7 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
         "temperature": 0.55,
         "max_tokens": 4096 if thinking_enabled else 750 if idle_art else 420,
         "stream": False,
-        "response_format": _brain2_response_format(headlines if headline_mode else None, body_beats, idle_art,
-            {"brain2": thinking_profile, "eric": eric_thinking.get("profile")}),
+        "response_format": _brain2_response_format(headlines if headline_mode else None, body_beats, idle_art),
     }
     if history:
         schema = request["response_format"]["json_schema"]["schema"]
@@ -2442,11 +2429,9 @@ def mull_second_brain(payload: dict[str, Any]) -> dict[str, object]:
                    output_tokens=usage.get("completion_tokens"))
     raw_text = _chat_completion_text(data)
     parsed = _parse_second_brain_json(raw_text)
-    try:
-        thinking_changes = thinking.changes_from_result(parsed.get("thinking_changes"))
-    except ValueError as exc:
-        return {"status": "error", "error": str(exc), "prompt_debug": prompt_debug}
-    thinking_result = {"thinking": thinking_receipt, "thinking_changes": thinking_changes}
+    # Legacy or unsolicited model control fields have no authority. Return only
+    # the receipt for the operator-selected setting used by this request.
+    thinking_result = {"thinking": thinking_receipt}
     if history:
         try:
             source = brain2_history.source_for(history, parsed)

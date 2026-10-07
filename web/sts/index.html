@@ -3850,7 +3850,7 @@
     const legacyContinuityBookmarkNoteFilename = "core/continuity.txt";
     const labGoalOneShotStorageKey = "robot790.labGoalOneShot.v1";
     const idleToolAllowedNames = new Set([
-      "get_thinking", "set_thinking",
+      "get_thinking",
       "set_voice",
       "play_music",
       "read_music",
@@ -9536,7 +9536,7 @@
         select.value = selectable ? state.mode : "";
         select.disabled = choices.length === 0;
         const manual = profile?.manual || "Checking the loaded model's Thinking controls.";
-        help.title = manual;
+        help.title = "Only you can change Thinking. " + manual;
         const concise = choices.length
           ? `Changes apply to the ${brain === "eric" ? "next response" : "next mull"}.`
           : manual;
@@ -9643,6 +9643,7 @@
     }
 
     async function setThinking({ brain, mode, reason = "" }, { source = "Eric", observed = null } = {}) {
+      if (source !== "operator") throw new Error("Only the operator can change Thinking in Connection Settings.");
       if (brain === "eric" && liveThinkingSessions.get(realtimeConnection.socket)?.supported === false) {
         throw new Error("Restart realtime once to load live Thinking support.");
       }
@@ -9653,35 +9654,21 @@
     }
 
     async function applyBrain2Thinking(result) {
+      // Record the request's mode; old helpers may still return model-authored changes.
       if (result.thinking) latestBrain2ThinkingReceipt = result.thinking;
-      for (const [brain, mode] of Object.entries(result.thinking_changes || {})) {
-        try {
-          const session = result.observed_session;
-          if (!session || !activeRealtimeSession(session.socket, session.generation) || userSpeechActive
-              || result.observed_evidence?.user_key !== brain2EvidenceSnapshot().user_key) return;
-          const observed = result.observed_thinking?.[brain];
-          if (!observed) throw new Error("Missing control snapshot; change not applied.");
-          const receipt = await setThinking({ brain, mode, reason: result.reason || "" }, { source: "B2", observed });
-          logBrain2("Thinking changed", JSON.stringify(receipt));
-        } catch (error) { logBrain2("Thinking unchanged", error.message); }
+      if (result.thinking_changes && Object.keys(result.thinking_changes).length) {
+        logBrain2("Thinking unchanged", "Only the operator can change Thinking in Connection Settings.");
       }
     }
 
     function thinkingToolList() {
-      const modes = [...new Set(["eric", "brain2"].flatMap(brain =>
-        thinkingControls.options(brain).map(option => option.value === "none" ? "off" : option.value)))];
       const manual = ["eric", "brain2"].map(brain => {
         const state = thinkingControls.snapshot(brain);
         return `${brain}: ${state.model || "unverified model"}. ${state.profile?.manual || "Thinking unavailable."}`;
       }).join(" ");
       return [
-        { type: "function", name: "get_thinking", description: "Inspect separate Thinking settings and loaded-model instructions for Eric and B2.",
-          parameters: { type: "object", properties: {}, additionalProperties: false } },
-        { type: "function", name: "set_thinking",
-          description: "You and B2 may independently choose any advertised Thinking setting for either brain, including on your own initiative. Honor the operator's preferences. Use that brain's supported levels, not another model's choices. Changes persist until changed again and apply to the next request, not the current generation. Return to Off when extra thinking is no longer useful. B2 changes apply to its next scheduled mull; this does not launch extra work. Only claim success after an ok receipt. " + manual,
-          parameters: { type: "object", properties: { brain: { type: "string", enum: ["eric", "brain2"] },
-            mode: { type: "string", ...(modes.length ? { enum: modes } : { description: "No verified Thinking settings are currently available." }) }, reason: { type: "string", maxLength: 160 } },
-            required: ["brain", "mode"], additionalProperties: false } }
+        { type: "function", name: "get_thinking", description: "Inspect separate Thinking settings and loaded-model instructions for Eric and B2. Only the operator can change these settings in Connection Settings; neither brain can change Thinking. " + manual,
+          parameters: { type: "object", properties: {}, additionalProperties: false } }
       ];
     }
 

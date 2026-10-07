@@ -72,13 +72,16 @@ def profile_from_catalog(catalog: dict, model: str) -> dict:
             manual = f"This model cannot switch thinking off. Advertised settings: {', '.join(options)}. On uses {selected}."
         else:
             manual = "This model cannot switch thinking on."
-        result["manual"] = manual + " Changes apply to the next request, not a request already running."
+        result["manual"] = manual + (
+            " Only the operator changes Thinking settings."
+            " Changes apply to the next request, not a request already running."
+        )
         return result
     return result
 
 
 def control_modes(profile: dict) -> list[str]:
-    """Public choices for UI/tools, without inventing levels the model lacks."""
+    """Operator UI choices, without inventing levels the model lacks."""
     if not isinstance(profile, dict) or profile.get("status") != "verified":
         return []
     modes = ["off"] if profile.get("can_off") else []
@@ -100,13 +103,3 @@ def request_options(profile: dict, mode: str) -> dict:
         raise ValueError(f"The loaded model does not support thinking setting {selected}.")
     # LM Studio's OpenAI-compatible endpoint uses low for the native binary On.
     return {"reasoning_effort": "low" if selected == "on" else selected}
-
-
-def changes_from_result(value: object) -> dict:
-    if value is None:
-        return {}
-    if not isinstance(value, dict) or any(key not in {"eric", "brain2"} for key in value):
-        raise ValueError("Invalid Thinking changes from Brain 2.")
-    if any(not isinstance(mode, str) or mode not in {"keep", "off", *_ENABLED} for mode in value.values()):
-        raise ValueError("Invalid Thinking choice from Brain 2.")
-    return {key: mode for key, mode in value.items() if mode != "keep"}

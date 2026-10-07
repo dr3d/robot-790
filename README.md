@@ -721,11 +721,11 @@ setting). Omitting that argument uses `default`.
 
 **Eric Thinking** and **Brain 2 Thinking** sit side by side in Connection
 Settings, beside the model configuration. They are independent settings,
-initially **Off**. You, Eric, or B2 can change either one;
+initially **Off**. Only you can change them in the UI;
 choices persist until changed again. Changes affect Eric's next response or
 B2's next scheduled mull, without restarting or launching an extra call.
-In-flight requests retain their original setting. The Events pane records who
-requested a change; Eric's tool waits for backend confirmation.
+In-flight requests retain their original setting. The Events pane records the
+operator's changes and Eric's backend confirmation.
 
 Controls and the brains' instructions come from the **loaded model's** advertised
 capabilities, independently for each brain. Selecting a different restart preset
@@ -735,10 +735,10 @@ their advertised levels directly. The installed regular Qwen 27B advertises
 Off, Low, Medium, Extra high (`xhigh`), and On. On uses the advertised enabled
 default, or first enabled option if the default is Off; the dropdown labels that
 alias explicitly. Unsupported choices are not offered.
-Hover over the help text or use `get_thinking` for the model's full instructions.
-`set_thinking` accepts `brain: eric|brain2` and a supported `mode` such as
-`off`, `on`, `low`, `medium`, or `xhigh`. B2's validated
-`thinking_changes` follows the same controls and cannot overwrite a newer choice.
+Hover over the help text for the model's full instructions. Eric can inspect
+the settings with read-only `get_thinking`. Neither brain can change Thinking:
+the setter is absent from Eric's tools, old setter calls are rejected, and B2's
+output cannot change either setting. Existing saved choices remain in effect.
 These switches are separate from MTP and the disabled experimental **Think** pass.
 
 The restart script behind the dropdown is:

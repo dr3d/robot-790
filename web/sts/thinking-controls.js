@@ -51,6 +51,7 @@
       if (profile?.identity) { state.savedIdentity = profile.identity; persist(brain); }
     }
     function change(brain, value, { source, observed, reason = "" } = {}) {
+      if (source !== "operator") throw new Error("Only the operator can change Thinking in Connection Settings.");
       const before = snapshot(brain);
       let mode = value === "off" ? "none" : value;
       if (mode === "on" && !before.profile?.options?.includes("on") && before.profile?.can_on) mode = before.profile.on_option;

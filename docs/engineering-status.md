@@ -1,8 +1,72 @@
 # Engineering Status
 
-Reviewed October 6, 2026. This is the maintained engineering view; session
+Reviewed October 7, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.
+
+October 7, 04:42–04:49 candle second-pass PM: resumed the prior run and used
+the experimentalist prompt. Recovered from two wrong retrieval calls, then
+opened all three original images before analysis. Identified the missing TEG
+converter and questioned convection-to-vibration, with useful B2 input; still
+claimed intended heat/air/panel relationships were drawn. Proposed accelerometer
+test lacked mechanical coupling/control/output criteria; summary strengthened
+its positive outcome to viability. B2 6/6, median 5.62s, no timeouts; all ten B1
+starts Off. 23 TTS EOS, one user interruption, no capacity stops. Clean disconnect
+and 8.265s preparation; postrun idle. All 32 turns preserved verbatim; two pins
+and three reused eye hashes verified. No runtime changes.
+[PM](../logs/runs/20261007-0449-candle-second-pass/PM.md).
+
+October 7, operator-only Thinking commit review: no material blockers in source
+enforcement or stale-call handling. Fresh focused validation passed 280 Python
+and 291 Node tests; diff whitespace checks passed. Existing UI choices and saved
+modes are preserved. Review: `logs/diagnostics/20261007-commit-review/`.
+
+October 7, 03:47–04:06 candle-charging PM: NVFP4/MTP/parallel 2; three distinct
+thermal/light/mechanical concepts, all three B1 diagrams generated and staged
+before description without additional reminders. PV label typo noticed, but
+spatial/wiring inspection shallow; claimed “built and verified” exceeds receipts.
+Domestic thermopile control-power dismissal contradicted by manufacturer manual.
+Supplied YouTube ID was not resolved; other video/paper results were treated as
+its contents, with multi-source concatenation visible in search receipts. B2
+reinforced that association and repeated a measurement suggestion four times.
+B2 recovered to 19/19 returns, median 7.20s, zero timeouts, two stale drops;
+operator confirms B2 Off (per-request mode still unlogged), versus On in prior
+Dana run. This strengthens the reasoning-cost explanation without isolating it.
+All 37 B1 starts Off; operator-only tool
+catalog confirmed. Context peaked at 37,935; 57 TTS EOS, two user interruptions,
+no capacity stops. Clean disconnect/preparation; postrun LM/pool idle. All 13
+operator turns retained (81 to 74 total); summary misattributes Eric's inferred
+video topic to operator. Three eye hashes/core verified. No runtime changes.
+[PM](../logs/runs/20261007-0406-candle-charging/PM.md).
+
+October 6, Thinking made operator-only at Scott's request after the B2-On
+discovery. Eric retains read-only get_thinking; its setter is no longer offered,
+and stale setter calls are rejected. B2 no longer receives a control-change
+schema or authority; unsolicited/legacy changes are ignored in both helper and
+page. The UI still supports separate model-aware choices, persistence, live
+backend acknowledgment, and next-request application; saved modes are preserved.
+Validation: 1,277 Node UI tests and 231 focused Python tests passed. Page helper
+restarted while realtime was idle; served HTML/JS match disk and capability
+manuals now state operator-only. Existing browser tab needs a refresh (no browser
+surface was available to automation). Realtime/model server unchanged. Activation:
+`logs/diagnostics/20261006-thinking-operator/activation.json`.
+
+October 6, 09:34–10:23 visitor/idle PM: NVFP4/MTP/parallel 2; camera portrait,
+six voice-setting receipts, S3 excursion/return, and five generated images
+(two B1 requests, three B2/controller idle drawings). Both demo images needed
+explicit staging reminders. Cast accepted a localhost URL for a separate TV and
+reported ok despite PAUSED/empty content_id; actual image display unverified.
+Idle presence theory stayed coherent but repeated and promoted probe presence
+into felt feedback; B2 misread conversational independence as audience departure.
+B2: 24 starts, seven success, thirteen timeout reports, three stale errors, one
+unfinished at cutoff. Operator follow-up confirms B2 Thinking On in the UI,
+making enabled reasoning the leading timeout explanation; session receipts lack
+the initial B2 mode/per-request reasoning metrics. All 138 B1 starts Off; context peaked at
+66,328. TTS 158 EOS, fourteen cancellations, no capacity stops. Clean realtime
+release, subsequent preparation accounted for, postrun LM/pool idle. All eight
+eye hashes/core verified; all 55 human turns retained in scrub, summary has
+speaker/TV attribution errors and misses positive feedback. No runtime changes.
+[PM](../logs/runs/20261006-1023-dana-visit/PM.md).
 
 October 6, stable-code checkpoint: reviewed live per-brain Thinking controls,
 speech model/delivery settings, B2 microphone handling, Cast cleanup, and Session

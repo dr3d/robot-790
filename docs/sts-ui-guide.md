@@ -182,10 +182,10 @@ a server restart; changing Thinking does not.
 **Eric Thinking** and **Brain 2 Thinking** are separate settings, side by side
 here in Connection Settings with the model configuration.
 Both initially default **Off**, including when upgrading from the old shared
-startup preference. You, Eric, or B2 may change either setting. Choices persist
+startup preference. Only you may change either setting in the UI. Choices persist
 until changed again; they affect the next response or next scheduled B2 mull.
 They do not restart the server, interrupt current work, or launch an extra pass.
-Events identify who requested each change and confirm Eric's backend acceptance.
+Events record your changes and confirm Eric's backend acceptance.
 
 Each control names the model actually serving that brain and uses its advertised
 capabilities. **Brain on restart** chooses the next model to load; apply that
@@ -198,9 +198,10 @@ offer their supported levels directly: the installed regular Qwen 27B exposes
 Off, Low, Medium, Extra high, and On (Extra high default). No restart is needed
 to change levels once that model is running. Unsupported levels are omitted.
 On uses the advertised enabled default (or first enabled option when the default
-is Off); hover over the help text for full details. Eric's `get_thinking` and
-`set_thinking` tools and B2's control instructions use the same model information.
-A stale B2 decision cannot overwrite a newer operator or Eric choice.
+is Off); hover over the help text for full details. Eric's read-only
+`get_thinking` tool uses the same model information. Neither brain can change
+these settings, including through an old tool call or B2 response. Saved choices
+are preserved; removing brain control does not automatically switch Thinking Off.
 
 An older installation needs its page helper and realtime backend restarted once
 to load this support. Subsequent changes are live. Thinking remains separate
