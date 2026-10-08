@@ -927,6 +927,9 @@ def apply_parakeet_voice_shape_patch() -> None:
     def process_with_voice_shape(self: Any, vad_audio: Any) -> Iterator[Any]:
         audio = getattr(vad_audio, "audio", None)
         sample_rate = int(getattr(self, "sample_rate", 16000) or 16000)
+        # Describe current delivery, not a potentially hours-long listening turn.
+        if audio is not None:
+            audio = audio[-15 * sample_rate:]
         voice_shape = _voice_shape_summary(audio, sample_rate)
 
         for output in original_process(self, vad_audio):
@@ -1010,6 +1013,9 @@ def main() -> None:
     apply_interruptible_chat_generation_patch()
     apply_unbounded_live_chat_patch()
     apply_visual_history_patch()
+    from robot_790d.bounded_stt import apply_bounded_stt_patch
+
+    apply_bounded_stt_patch()
     apply_parakeet_voice_shape_patch()
     apply_visible_transcript_voice_shape_filter_patch()
     from speech_to_speech.s2s_pipeline import main as speech_to_speech_main

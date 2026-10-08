@@ -1,0 +1,4 @@
+# Portable STS copies use byte-identical LF files across platforms.
+src/robot_790d/bounded_stt.py text eol=lf
+tests/test_bounded_stt.py text eol=lf
+docs/sts-maintenance.md text eol=lf
