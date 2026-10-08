@@ -1503,6 +1503,10 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     #modelRestartPreview { grid-column: 1 / -1; }
+    #controlSidebar #serverPanel #modelMtpControls {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #modelMtpHelp { grid-column: 1 / -1; }
     #connectionSettingsExpando [hidden] { display: none !important; }
     #controlSidebar #serverPanel .custom-model-controls {
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -2384,14 +2388,18 @@
               <span id="modelRestartPreview" class="subtle" aria-live="polite">Restart loads: qwen3.8-27b-mtp</span>
             </section>
             <section id="modelMtpControls" class="controls">
-              <label>
+              <label id="modelMtpField">
                 MTP on restart
                 <select id="modelMtp" aria-describedby="modelMtpHelp">
                   <option value="off">Off</option>
                   <option value="on">On</option>
                 </select>
               </label>
-              <span id="modelMtpHelp" class="subtle">Multi-token prediction. Apply with Server Management → Restart. Connect alone does not apply this setting. On requires an MTP-capable model.</span>
+              <label>
+                Context on restart
+                <input id="customModelContext" type="number" min="4096" max="262144" step="4096" value="131072" aria-describedby="modelMtpHelp">
+              </label>
+              <span id="modelMtpHelp" class="subtle">Apply with Server Management → Restart. Connect alone does not apply these settings. MTP requires a compatible model.</span>
             </section>
             <section id="modelThinkingControls" class="controls thinking-controls">
               <label>
@@ -2417,10 +2425,6 @@
               <label>
                 Custom LM Studio model key
                 <input id="customModelKey" value="qwen3.8-27b-mtp" spellcheck="false">
-              </label>
-              <label>
-                Context
-                <input id="customModelContext" type="number" min="4096" max="262144" step="4096" value="131072">
               </label>
               <label>
                 Parallel
@@ -3091,6 +3095,7 @@
     const modelPreset = document.querySelector("#modelPreset");
     const modelRestartPreview = document.querySelector("#modelRestartPreview");
     const modelMtpControls = document.querySelector("#modelMtpControls");
+    const modelMtpField = document.querySelector("#modelMtpField");
     const modelMtp = document.querySelector("#modelMtp");
     const customModelControls = document.querySelector("#customModelControls");
     const customModelKey = document.querySelector("#customModelKey");
@@ -8930,7 +8935,8 @@
 
     function updateCustomModelControls() {
       if (customModelControls) customModelControls.hidden = currentModelPreset() !== "custom";
-      if (modelMtpControls) modelMtpControls.hidden = !modelHasMtpControl();
+      if (modelMtpControls) modelMtpControls.hidden = currentModelPreset() === "openai";
+      if (modelMtpField) modelMtpField.hidden = !modelHasMtpControl();
       modelRestartPreview.textContent = currentModelRestartDescription();
       renderThinkingControls();
     }
@@ -8944,8 +8950,9 @@
       const savedModel = localStorage.getItem(customModelKeyStorageKey);
       if (savedModel && customModelKey) customModelKey.value = savedModel;
       customModelReasoning.value = currentCustomModelReasoning();
-      const savedContext = Number(localStorage.getItem(customModelContextStorageKey));
-      if (Number.isFinite(savedContext) && customModelContext) {
+      const storedContext = localStorage.getItem(customModelContextStorageKey);
+      const savedContext = Number(storedContext);
+      if (storedContext && Number.isFinite(savedContext) && customModelContext) {
         customModelContext.value = String(Math.max(4096, Math.min(262144, Math.round(savedContext))));
       }
       const savedParallel = Number(localStorage.getItem(customModelParallelStorageKey));
@@ -8967,12 +8974,12 @@
     function currentModelRestartPayload() {
       const preset = currentModelPreset();
       const payload = { preset, tts_model: currentTtsModel() };
+      if (preset !== "openai") payload.context_length = currentCustomModelContext();
       if (modelHasMtpControl()) payload.mtp = currentModelMtp();
       if (preset === "qwen27-mtp-vlow") payload.reasoning = currentCustomModelReasoning();
       if (preset === "custom") {
         payload.model = currentCustomModelKey();
         payload.reasoning = currentCustomModelReasoning();
-        payload.context_length = currentCustomModelContext();
         payload.parallel = currentCustomModelParallel();
       }
       return payload;

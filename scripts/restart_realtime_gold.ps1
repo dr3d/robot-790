@@ -144,6 +144,11 @@ if ($Preset -eq "custom") {
     }
 }
 
+# A context selected in STS applies to named local presets as well as Custom.
+if ($selected.Provider -eq "lmstudio" -and $PSBoundParameters.ContainsKey("ContextLength")) {
+    $selected.ContextLength = [Math]::Max(4096, [Math]::Min(262144, $ContextLength))
+}
+
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 # An API identifier assigned at load time need not be an installed model key.

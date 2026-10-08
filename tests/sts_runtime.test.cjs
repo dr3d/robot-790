@@ -48,7 +48,7 @@ function modelSettingsContext() {
       .matchAll(/<option value="([^"]+)"([^>]*)>([^<]+)<\/option>/g)].map(([, value, attrs, text]) =>
         ({ value, text, dataset: { loadModel: attrs.match(/data-load-model="([^"]+)"/)?.[1] } })) },
     modelRestartPreview: { textContent: '' },
-    modelMtp: { value: 'off' }, modelMtpControls: { hidden: false }, customModelControls: { hidden: true },
+    modelMtp: { value: 'off' }, modelMtpControls: { hidden: false }, modelMtpField: { hidden: false }, customModelControls: { hidden: true },
     modelThinkingControls: { hidden: false },
     customModelKey: { value: 'fixture/model' },
     customModelReasoning: { value: 'none', options: ['none', 'on', 'low', '', 'medium', 'xhigh'].map(value => ({ value })) },
@@ -89,7 +89,8 @@ test('a saved MTP-on choice is hidden and omitted for other presets', () => {
   for (const preset of ['qwen27', 'qwen9', 'qwen4', 'nemotron30', 'openai']) {
     c.modelPreset.value = preset;
     c.updateCustomModelControls();
-    assert.equal(c.modelMtpControls.hidden, true);
+    assert.equal(c.modelMtpField.hidden, true);
+    assert.equal(c.modelMtpControls.hidden, preset === 'openai');
     assert.equal('mtp' in c.currentModelRestartPayload(), false);
   }
   c.modelPreset.value = 'qwen27-mtp-vlow';
@@ -106,9 +107,10 @@ test('regular Qwen restart ignores stale custom NVFP4 fields and identifies the 
   c.modelPreset.value = 'qwen27';
   c.updateCustomModelControls();
   assert.equal(c.customModelControls.hidden, true);
-  assert.equal(c.modelMtpControls.hidden, true);
+  assert.equal(c.modelMtpControls.hidden, false);
+  assert.equal(c.modelMtpField.hidden, true);
   assert.equal(c.modelRestartPreview.textContent, 'Restart loads: qwen/qwen3.8-27b');
-  assert.deepEqual(JSON.parse(JSON.stringify(c.currentModelRestartPayload())), { preset: 'qwen27', tts_model: '0.6B' });
+  assert.deepEqual(JSON.parse(JSON.stringify(c.currentModelRestartPayload())), { preset: 'qwen27', tts_model: '0.6B', context_length: 131072 });
   // A grid display rule must not resurrect controls marked hidden.
   assert.match(page, /#connectionSettingsExpando \[hidden\]\s*\{\s*display:\s*none\s*!important;/);
   c.modelPreset.value = 'custom';
@@ -129,6 +131,22 @@ test('each preset restart description agrees with the actual launcher load key',
     c.updateCustomModelControls();
     assert.equal(c.modelRestartPreview.textContent, `Restart loads: ${key}`);
   }
+});
+
+test('context retains its fresh default and saved edits reach every local preset restart', () => {
+  const { context: c } = modelSettingsContext();
+  c.loadModelPreset();
+  assert.equal(c.customModelContext.value, '131072');
+  c.customModelContext.value = '65536';
+  c.saveModelPreset();
+  c.customModelContext.value = '131072';
+  c.loadModelPreset();
+  for (const preset of ['qwen27-mtp-vlow', 'qwen27', 'qwen9', 'qwen4', 'nemotron30', 'custom']) {
+    c.modelPreset.value = preset;
+    assert.equal(c.currentModelRestartPayload().context_length, 65536);
+  }
+  c.modelPreset.value = 'openai';
+  assert.equal('context_length' in c.currentModelRestartPayload(), false);
 });
 
 test('Thinking follows the loaded model rather than the pending restart preset', () => {

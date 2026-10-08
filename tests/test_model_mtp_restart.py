@@ -190,6 +190,34 @@ $results | ConvertTo-Json -Compress
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows model launcher")
+def test_named_presets_apply_explicit_context_without_changing_cli_defaults():
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "restart_realtime_gold.ps1"
+    script = r'''
+$text = Get-Content -LiteralPath $env:ROBOT790_TEST_LAUNCHER -Raw
+$start = $text.IndexOf('$presets = @{')
+$end = $text.IndexOf('New-Item -ItemType Directory', $start)
+# Run the actual selection code only; no model/service commands or environment loading.
+$select = [scriptblock]::Create('param([int] $ContextLength = 131072)' + "`n" +
+    $text.Substring($start, $end - $start) + "`n" + '$selected.ContextLength')
+$Reasoning = 'none'; $Model = 'fixture/model'; $Parallel = 0
+$result = @{}
+foreach ($Preset in @('qwen27-mtp-vlow', 'qwen27', 'qwen9', 'qwen4', 'nemotron30', 'custom', 'openai')) {
+    $result[$Preset] = @{ default = (& $select); requested = (& $select -ContextLength 65536) }
+}
+$result | ConvertTo-Json -Compress
+'''
+    result = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-Command", script],
+        env={**os.environ, "ROBOT790_TEST_LAUNCHER": str(script_path)},
+        capture_output=True, text=True, check=True, timeout=15,
+    )
+    values = json.loads(result.stdout)
+    for preset, contexts in values.items():
+        assert contexts["requested"] == (0 if preset == "openai" else 65536)
+        assert contexts["default"] == (0 if preset == "openai" else 65536 if preset == "nemotron30" else 131072)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows model launcher")
 def test_missing_model_is_rejected_before_stopping_realtime(tmp_path):
     scripts = tmp_path / "scripts"
     scripts.mkdir()
