@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 _custom_voice_token_limit: ContextVar[int | None] = ContextVar("custom_voice_token_limit", default=None)
 # Coalescing can otherwise send minutes of slow recitation through one decode.
 MAX_BATCH_TEXT_TOKENS = 80
+# A capacity split should leave a short phrase, not an orphaned word, at the end.
+MIN_BATCH_TAIL_CHARS = 24
 DECODE_CAPACITY_RESERVE = 32
 
 
@@ -42,6 +44,20 @@ def split_for_capacity(text: str, fits: Callable[[str], bool]) -> Iterator[str]:
         # Tokenization need not be monotonic at a preferred boundary.
         if not fits(part):
             boundary, part = low, text[:low]
+        # Keep complete sentences intact, but move an in-sentence cut earlier
+        # if it would leave a tiny final batch (e.g. the single word "for.").
+        # Recheck both sides: moving words changes tokenization, and capacity
+        # always takes precedence when no safe word boundary is available.
+        minimum = min(MIN_BATCH_TAIL_CHARS, max(1, low // 2))
+        if boundary not in ends and len(text[boundary:].strip()) < minimum:
+            for match in reversed(list(re.finditer(r'\s+', text[:boundary]))):
+                candidate = match.end()
+                head, tail = text[:candidate], text[candidate:]
+                if len(head.strip()) < minimum:
+                    break
+                if len(tail.strip()) >= minimum and fits(head) and fits(tail):
+                    boundary, part = candidate, head
+                    break
         yield part
         text = text[boundary:]
 

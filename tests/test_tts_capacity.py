@@ -25,6 +25,45 @@ def test_prefers_complete_sentences():
         'First sentence. ', 'Second one.']
 
 
+def test_capacity_split_keeps_reported_for_tail_with_its_phrase():
+    # The 5090 incident sent the first 332 characters, then synthesized "for."
+    # alone. Keep the exact utterance here without depending on private logs.
+    text = ("Alright, now I've actually looked at it—so no, I was describing the prompt, "
+            "and honestly what came back is a bit of a mess: the person's fine, heat "
+            'arrows on the body side are clear, but the text labels got scrambled '
+            '("TMRPRODUCTHE DEMORATOR", "heesink") and it looks more like a back rather '
+            'than specifically where you were aiming for.')
+    chunks = list(split_for_capacity(text, lambda part: len(part) <= 332))
+    assert ''.join(chunks) == text
+    assert len(chunks) == 2
+    assert all(len(part) <= 332 for part in chunks)
+    assert chunks[-1] == 'where you were aiming for.'
+
+
+@pytest.mark.parametrize('text', [
+    'We can keep this ending intact.',
+    'We can keep this ending intact.”',
+    'We can keep this ending intact.   ',
+])
+def test_short_tail_rebalances_under_small_capacity(text):
+    chunks = list(split_for_capacity(text, lambda part: len(part) <= 24))
+    assert ''.join(chunks) == text
+    assert len(chunks) == 2
+    assert all(12 <= len(part.strip()) <= 24 for part in chunks)
+
+
+def test_short_complete_sentence_and_standalone_reply_are_preserved():
+    assert list(split_for_capacity('This is complete. Yes.', lambda p: len(p) <= 18)) == [
+        'This is complete. ', 'Yes.']
+    assert list(split_for_capacity('Yes.', lambda p: len(p) <= 18)) == ['Yes.']
+
+
+def test_unavoidable_short_tail_still_preserves_words_and_capacity():
+    text = 'Unbreakableword for.'
+    chunks = list(split_for_capacity(text, lambda part: len(part) <= 16))
+    assert chunks == ['Unbreakableword ', 'for.']
+
+
 @pytest.fixture
 def patched(monkeypatch):
     from speech_to_speech.TTS.qwen3_tts_handler import Qwen3TTSHandler as Handler
