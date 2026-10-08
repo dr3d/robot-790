@@ -94,13 +94,19 @@ test('disconnect and session change prevent stale idle callbacks from dispatchin
   }
 });
 
-test('quiet tool experiment is absent; full-context opportunities remain', () => {
+test('retired routine and quiet tools are absent; full-context opportunities remain', () => {
   const start = page.indexOf('    const runtimeWatchTools = [');
   const schema = page.slice(start, page.indexOf('\n    ];', start) + 7);
   const c = vm.createContext({});
   vm.runInContext(schema + '\nglobalThis.tools = runtimeWatchTools;', c);
   assert.equal(c.tools.find(tool => tool.name === 'wait_silently'), undefined);
-  assert.match(c.tools.find(tool => tool.name === 'stop_standing_routine').description, /does not stop ordinary idle/);
+  assert.deepEqual(Array.from(c.tools, tool => tool.name), [
+    'start_gpu_watch', 'stop_gpu_watch', 'get_gpu_watch_status',
+  ]);
+  const instructionsStart = page.indexOf('    const baseSessionInstructions = [');
+  const instructions = page.slice(instructionsStart, page.indexOf('\n    ];', instructionsStart));
+  assert.doesNotMatch(instructions, /standing[_ -]routine|recurring spoken cue|Dial 3/i);
+  assert.doesNotMatch(source('dispatchToolFollowup'), /standing[_ -]routine/i);
   assert.match(source('triggerIdlePonder'), /toolContinuation.startTurn\("idle"\)/);
   assert.match(source('triggerIdlePonder'), /robot790_idle_continuation: true/);
   assert.match(source('triggerIdlePonder'), /do not need a new user question/);

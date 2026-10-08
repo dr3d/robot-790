@@ -63,7 +63,8 @@ choose the rejected call, but it cannot cause an automatic retry chain.
 Every ordinary tool continuation repeats its actual execution scope. The full
 catalogue remains stable within the session for prefix reuse. This grants no
 extra capabilities. Recoverable failures still allow model-chosen recovery.
-`stop_standing_routine` controls an explicitly started routine, not ordinary idle.
+The three standing-routine tools and their follow-up instructions were retired
+on October 7; ordinary idle scheduling does not depend on them.
 
 ## Disclosed Prompt Changes
 

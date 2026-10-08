@@ -77,16 +77,6 @@
       "meaning": "Use a timestamped note under notes/sessions as reconstructable conversation continuity."
     },
     {
-      "term": "Dial 1-2-3",
-      "semantic_verb": "set_activation_posture",
-      "meaning": "Dial 1 is rumination, Dial 2 is conversation, and Dial 3 is assigned on-task standing routine."
-    },
-    {
-      "term": "standing routine",
-      "semantic_verb": "start_recurring_spoken_task",
-      "meaning": "A bounded Dial 3 recurring task; currently speech-only unless a specific runtime routine such as GPU watch is exposed."
-    },
-    {
       "term": "Brain2",
       "semantic_verb": "consult_private_advisory_lane",
       "meaning": "A private slow advisory lane inside the runtime; Eric may use it as steering, but should not present it as the operator or as a sensor."

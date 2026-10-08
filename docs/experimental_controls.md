@@ -97,15 +97,11 @@ ponder, or blocked by a reason such as cooldown, recent user turn, user
 speaking, assistant busy, or pending tool follow-up. It should make pauses
 legible without changing the run's prompt condition.
 
-`Dial 1-2-3` is the current operator language for Eric's activation level.
-Dial 1 is rumination: idle, associative, low-duty. Dial 2 is conversation:
-Eric is engaged with the operator in the normal voice loop. Dial 3 is an
-assigned standing task: Eric is on task at a cadence until the routine ends or
-an interrupt returns him to conversation. Today Dial 3 is partial. GPU/VRAM
-watching is a real repeated sensor routine, and `start_standing_routine` can
-run a repeated speech-only cue such as a joke, question, or compact
-observation. Repeated web, camera, face, file, smart-home, or body-tool chains
-are not wired yet and should not be promised.
+The former Dial 3 recurring-speech experiment is retired from Eric's tool
+catalogue, instructions, and creature vocabulary. Its three standing-routine
+schemas and runner remain dormant in the source for a possible future return.
+GPU/VRAM watching remains available through the separate GPU-watch tools.
+Ordinary idle exploration and Brain 2 scheduling continue independently.
 
 `Creature seed` is a first-contact lab selector. It resets to Eric on page
 reload, is recorded in log snapshots, and is meant for comparing thin identity
