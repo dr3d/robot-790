@@ -31,7 +31,9 @@ def synchronize(source, target, apply=False):
     outputs = []
     manifest = {"schema": 1, "source": "robot-790", "core": "bounded-stt-v1", "files": {}}
     for name, relative in FILES.items():
-        data = (source / name).read_bytes()
+        # Git stores these shared text files as LF. Hash/export that same form
+        # even when an editor has left CRLF in the Windows working copy.
+        data = (source / name).read_bytes().replace(b"\r\n", b"\n")
         expected = digest(data)
         destination = target / relative
         actual = digest(destination.read_bytes()) if destination.exists() else None

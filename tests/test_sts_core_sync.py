@@ -60,3 +60,15 @@ def test_missing_integration_hook_is_rejected(tmp_path):
     (target / "work/src/robot_790d/realtime_entry.py").write_text("missing hook")
     with pytest.raises(ValueError, match="integration"):
         sync.synchronize(source, target, apply=True)
+
+
+def test_windows_line_endings_export_hashes_that_survive_fresh_checkout(tmp_path):
+    source, target = fixture(tmp_path)
+    for name in sync.FILES:
+        (source / name).write_bytes(b"first version\r\n")
+    receipt = sync.synchronize(source, target, apply=True)
+    for name, destination in sync.FILES.items():
+        assert (target / destination).read_bytes() == b"first version\n"
+        assert receipt["files"][destination]["sha256"] == sync.digest(b"first version\n")
+        (source / name).write_bytes(b"first version\n")
+    assert sync.synchronize(source, target) == receipt
