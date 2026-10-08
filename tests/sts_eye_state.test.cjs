@@ -70,7 +70,13 @@ for (const [name, options] of Object.entries({
     try { result = await f.c.selectSensingEyeImage({ image_id: 'eye-1' }); } catch (e) { error = e.message; }
     return plain({ result, error, ...f.snapshot() });
   };
-  assert.deepEqual(await run(page), await run(before));
+  const actual = await run(page), previous = await run(before);
+  if (options.noMatch) {
+    assert.match(actual.error, /list_sensing_eye_images.*generated:.*Nothing in the eye was changed/);
+    // Recovery guidance changed; eye state and side effects must remain identical.
+    previous.error = actual.error;
+  }
+  assert.deepEqual(actual, previous);
 });
 
 test('begin session resets staging without discarding eye content, then permits one fresh stage', () => {

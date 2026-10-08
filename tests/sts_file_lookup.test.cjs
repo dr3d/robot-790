@@ -25,9 +25,10 @@ function fixture(files, local = []) {
     sensingEyeSavedRemarks: () => new Map(),
     fetchSensingEyeFilePage: async args => {
       calls.push(args);
-      const found = files.filter(file => args.filename ? (file.id || file.filename) === args.filename
+      const found = files.filter(file => args.filename ? (file.id || `file:${file.filename}`) === args.filename || file.filename === args.filename
         : args.hints.includes(file.filename) || lookup.matches(`${file.filename} ${file.reason || ''}`, args.query));
-      return { total: found.length, files: found.slice(args.offset, args.offset + args.limit) };
+      return { total: found.length, files: found.slice(args.offset, args.offset + args.limit),
+        resolved_id: args.filename && found.length === 1 ? found[0].id || `file:${found[0].filename}` : '' };
     }
   });
   return { c, calls };
@@ -83,7 +84,7 @@ test('search and exact recall can reach files older than the former 25-file wind
   const exact = await c.sensingEyeLookupItems({ image_id: match.notes[0].id, query: 'irrelevant context' });
   assert.equal(exact.images[0].id, match.notes[0].id);
   assert.equal(exact.images[0].open_url, 'http://localhost:8790/sensing-eye/old-harbor-lighthouse.jpg');
-  assert.equal(calls.at(-1).filename, 'old-harbor-lighthouse.jpg');
+  assert.equal(calls.at(-1).filename, 'file:old-harbor-lighthouse.jpg');
   assert.equal((await c.sensingEyeLookupItems({ image_id: 'file:missing.jpg' })).images.length, 0);
 });
 
@@ -185,4 +186,37 @@ test('selecting a generated result uses exact-file handoff, never a new render',
 test('catalogue functional scope is explicit alongside the ownership extraction checks', () => {
   const { edits } = require('./helpers/sts_generated_catalogue_scope.cjs');
   for (const [after] of edits) assert.equal(page.split(after).length, 2, after);
+});
+
+test('bare filenames and original session IDs resolve to canonical IDs', async () => {
+  const { c, calls } = fixture([{ filename: 'lighthouse.jpg' }],
+    [{ id: 'eye-7', saved_filename: 'saved.jpg' }]);
+  const bare = await c.sensingEyeLookupItems({ image_id: ' lighthouse.jpg ' });
+  assert.equal(calls.at(-1).filename, 'lighthouse.jpg');
+  assert.equal(bare.resolved_id, 'file:lighthouse.jpg');
+  assert.equal((await c.sensingEyeLookupItems({ image_id: 'eye-7' })).resolved_id, 'file:saved.jpg');
+});
+
+test('wrong JPG reference hands the uniquely resolved PNG to existing staging and preserves stale guards', async () => {
+  const calls = [], eye = { generation: 1, imageUrl: 'before', text: '' };
+  const c = load(['selectSensingEyeImage', 'chooseSensingEyeNote'], {
+    sensingEyeContent: eye, requireCurrentSensingEyeLoad: () => {},
+    sensingEyeLookupItems: async () => ({ resolution: 'unique', resolved_id: 'generated:museum.png',
+      images: [{ id: 'generated:museum.png', name: 'museum.png', location: 'generated' }] }),
+    moveGeneratedImageToSensingEye: async args => {
+      calls.push(args); return { status: 'ok', source_image: args.filename, staged: true };
+    },
+  });
+  const result = await c.selectSensingEyeImage({ image_id: 'file:museum.jpg' });
+  assert.equal(calls[0].filename, 'museum.png');
+  assert.equal(result.selected.staged, true);
+  eye.imageUrl = 'new user image';
+  assert.equal(calls[0]._isCurrent(), false);
+  c.sensingEyeLookupItems = async () => ({ resolution: 'ambiguous', images: [
+    { id: 'generated:museum.png' }, { id: 'generated:museum.webp' }] });
+  await assert.rejects(c.selectSensingEyeImage({ image_id: 'file:museum.jpg' }), /Ambiguous.*generated:museum.png.*generated:museum.webp/);
+  c.sensingEyeLookupItems = async () => ({ images: [] });
+  await assert.rejects(c.selectSensingEyeImage({ image_id: 'missing.jpg' }), /list_sensing_eye_images.*generated:/);
+  assert.equal(calls.length, 1);
+  assert.equal(eye.imageUrl, 'new user image');
 });

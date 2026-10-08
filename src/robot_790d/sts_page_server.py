@@ -1771,13 +1771,36 @@ def list_sensing_eye_images(
             )
     # Ordinary search prefers the existing eye copy. Previously issued generated IDs
     # still reopen the exact original, even after that image has since been staged.
-    files.extend(item for name, item in generated.items()
-                 if name not in staged_originals or filename == item["id"])
-    files = [item for item in files if (
-        (item.get("id", item["filename"]) == filename if filename else
-         not query.strip() or item["filename"] in hinted_names or
-         bool(words) and all(word in str(item["_search"]) for word in words))
-    )]
+    eye_files = files
+    files = eye_files + [item for name, item in generated.items() if name not in staged_originals]
+    resolution = {}
+    if filename:
+        # Resolve only enumerated assets, never client-supplied paths or fuzzy titles.
+        prefix, _, name = filename.partition(":")
+        namespace = prefix if prefix in {"file", "generated"} else ""
+        name = name if namespace else filename
+        if namespace == "generated":
+            exact_pool = list(generated.values())
+        elif namespace == "file":
+            exact_pool = eye_files
+        else:
+            exact_pool = eye_files + list(generated.values())
+        found = [item for item in exact_pool if item["filename"] == name]
+        # A missing eye copy may still have its original. Only the complete stem
+        # and a unique image match qualify; text files and partial names do not.
+        if not found and re.fullmatch(r"[a-zA-Z0-9._-]+\.(?:png|jpe?g|webp|svg)", name, re.IGNORECASE):
+            alias_pool = list(generated.values()) if namespace == "generated" else files
+            found = [item for item in alias_pool if item["kind"] == "image"
+                     and Path(str(item["filename"])).stem == Path(name).stem]
+        files = found
+        resolution["resolution"] = "unique" if len(files) == 1 else "ambiguous" if files else "missing"
+        if len(files) == 1:
+            resolution["resolved_id"] = files[0].get("id", f"file:{files[0]['filename']}")
+    else:
+        files = [item for item in files if (
+            not query.strip() or item["filename"] in hinted_names or
+            bool(words) and all(word in str(item["_search"]) for word in words)
+        )]
     files.sort(key=lambda item: (-float(item.get("_sort_mtime") or 0), str(item["filename"])))
     for item in files:
         item.pop("_sort_mtime", None)
@@ -1788,6 +1811,7 @@ def list_sensing_eye_images(
         "directory": str(out_dir),
         "count": len(files),
         "lookup_version": 1,
+        **resolution,
         "total": len(files),
         "offset": offset,
         "limit": limit,

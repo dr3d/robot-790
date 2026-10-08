@@ -37,6 +37,7 @@ async function main() {
         const url = new URL(target, location.href);
         if (url.pathname === '/api/sensing-eye/list') {
           return json({ status: 'ok', lookup_version: 1, total: 1,
+            resolved_id: url.searchParams.get('filename') ? `generated:${name}` : '', resolution: 'unique',
             files: [{ id: `generated:${name}`, filename: name, storage: 'generated', kind: 'image', url: `/generated-images/${name}` }] });
         }
         if (url.pathname === `/generated-images/${name}`) {
@@ -57,7 +58,7 @@ async function main() {
         const discovery = { count: matches.count, id: matches.notes[0].id,
           untouched: !sensingEyeContent.imageUrl, writes: writes.length, reads: reads.length };
         const preview = JSON.stringify({ url: generatedPreview.url, name: generatedPreview.name, revision: generatedPreview.revision });
-        const recalled = await recallSensingEyeNote({ note_id: matches.notes[0].id });
+        const recalled = await recallSensingEyeNote({ note_id: `file:${saved}` });
         await visionPreview.decode();
         const probe = document.createElement('canvas'); probe.width = probe.height = 1;
         probe.getContext('2d').drawImage(visionPreview, 0, 0, 1, 1);

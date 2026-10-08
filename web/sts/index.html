@@ -17941,16 +17941,15 @@
 
     async function sensingEyeLookupItems(selection = {}) {
       const { query, offset, limit } = Robot790FileLookup.options(selection);
-      const exactId = String(selection.image_id || "");
+      const exactId = String(selection.image_id || "").trim();
       const sessionNotes = [
         ...sensingEyeImageHistoryList().map((item) => ({ ...item, location: "session" })),
         ...sensingEyeTextHistoryList().map((item) => ({ ...item, location: "session" }))
       ].sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")))
         .map((item) => ({ ...item, history_id: item.id, id: item.saved_filename ? `file:${item.saved_filename}` : item.id }));
       if (exactId) {
-        const local = sessionNotes.find(item => item.id === exactId);
-        if (local) return { images: [local], total: 1, next_offset: null };
-        if (!exactId.startsWith("file:") && !exactId.startsWith("generated:")) return { images: [], total: 0, next_offset: null };
+        const local = sessionNotes.find(item => item.id === exactId || item.history_id === exactId);
+        if (local) return { images: [local], total: 1, next_offset: null, resolved_id: local.id };
       }
       const matches = Robot790FileLookup.matches;
       const local = exactId ? [] : sessionNotes.filter(item => !item.saved_filename
@@ -17969,7 +17968,7 @@
       const result = await fetchSensingEyeFilePage({
         query, offset: Math.max(0, offset - local.length),
         limit: Math.max(1, limit - localPage.length),
-        filename: exactId.startsWith("generated:") ? exactId : exactId ? exactId.slice(5) : "", hints: [...hints]
+        filename: exactId, hints: [...hints]
       });
       const files = localPage.length === limit ? [] : result.files;
       const images = [...localPage, ...files.map(file => (file.storage !== "generated" && sessionNotes.find(item => item.saved_filename === file.filename)) || ({
@@ -17989,7 +17988,8 @@
             location: file.storage === "generated" ? "generated" : "filesystem"
           }))];
       const total = local.length + result.total;
-      return { images, total, next_offset: offset + images.length < total ? offset + images.length : null };
+      return { images, total, next_offset: offset + images.length < total ? offset + images.length : null,
+        resolved_id: result.resolved_id || "", resolution: result.resolution || "" };
     }
 
     async function listSensingEyeImages(selection = {}) {
@@ -18077,9 +18077,12 @@
       const listed = await sensingEyeLookupItems({ image_id: imageId, query });
       requireCurrent();
       if (!listed.images.length) {
-        throw new Error("No matching sensing-eye file is available. Nothing in the eye was changed.");
+        throw new Error("No matching image or eye note was found. Use list_sensing_eye_images or list_sensing_eye_notes with a short subject query, then recall the returned exact id (including generated: for an unstaged original). Nothing in the eye was changed.");
       }
-      const listedItem = chooseSensingEyeNote(listed.images, { index, id: imageId, query });
+      if (listed.resolution === "ambiguous") {
+        throw new Error(`Ambiguous image reference. Choose an exact id: ${listed.images.map(item => item.id).join(", ")}. Nothing in the eye was changed.`);
+      }
+      const listedItem = chooseSensingEyeNote(listed.images, { index, id: listed.resolved_id || imageId, query });
       if (!listedItem) throw new Error("No unambiguous sensing-eye selection. Find the file by query and use its exact id; the current eye has not been changed.");
 
       if (listedItem.location === "generated") {

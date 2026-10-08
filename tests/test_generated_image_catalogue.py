@@ -67,7 +67,8 @@ def test_generated_and_eye_name_collision_is_not_provenance(catalogue):
         "source": "operator drop",
     }, repo_root=folder.parent.parent)
     assert lookup()["total"] == 2
-    assert lookup(filename="same.png")["files"][0]["url"] == "/sensing-eye/same.png"
+    assert lookup(filename="same.png")["resolution"] == "ambiguous"
+    assert lookup(filename="file:same.png")["files"][0]["url"] == "/sensing-eye/same.png"
     assert lookup(filename="generated:same.png")["files"][0]["url"] == "/generated-images/same.png"
 
 
@@ -99,3 +100,49 @@ def test_configured_generation_directory_is_used(catalogue, monkeypatch, tmp_pat
     (custom / "configured.png").write_bytes(b"original")
     monkeypatch.setenv("ROBOT_790_INSTANCE_PATH", str(custom.parent))
     assert lookup()["files"][0]["filename"] == "configured.png"
+
+
+def test_bare_eye_filename_and_missing_jpeg_resolve_to_existing_assets(catalogue):
+    folder, add, lookup = catalogue
+    add("20261008-110245-openai-salem-witch-museum-interior.png")
+    server.push_sensing_eye_image({
+        "filename": "derby-wharf-light-station.jpg",
+        "image_data_url": "data:image/jpeg;base64,aW1hZ2U=", "source": "operator drop",
+    }, repo_root=folder.parent.parent)
+    for reference in ["derby-wharf-light-station.jpg", "file:derby-wharf-light-station.jpg"]:
+        result = lookup(filename=reference, query="irrelevant")
+        assert result["resolved_id"] == "file:derby-wharf-light-station.jpg"
+    for reference in ["20261008-110245-openai-salem-witch-museum-interior.jpg",
+                      "file:20261008-110245-openai-salem-witch-museum-interior.jpg",
+                      "20261008-110245-openai-salem-witch-museum-interior.png"]:
+        result = lookup(filename=reference)
+        assert result["resolution"] == "unique"
+        assert result["resolved_id"] == "generated:20261008-110245-openai-salem-witch-museum-interior.png"
+        assert result["files"][0]["storage"] == "generated"
+
+
+def test_aliases_never_guess_between_images_or_cross_text_and_path_boundaries(catalogue):
+    _, add, lookup = catalogue
+    add("museum.png")
+    add("museum.webp")
+    ambiguous = lookup(filename="file:museum.jpg")
+    assert ambiguous["resolution"] == "ambiguous"
+    assert "resolved_id" not in ambiguous
+    assert {item["id"] for item in ambiguous["files"]} == {"generated:museum.png", "generated:museum.webp"}
+    assert lookup(filename="generated:museum.png")["resolution"] == "unique"
+    for reference in ["museum", "museum.txt", "file:../museum.jpg", "generated:../museum.png",
+                      "file:C:\\museum.jpg", "file:MUSEUM.jpg", "file:missing.jpg"]:
+        result = lookup(filename=reference)
+        assert result["resolution"] == "missing", reference
+        assert not result["files"]
+
+
+def test_stem_alias_prefers_provenance_linked_eye_copy(catalogue):
+    folder, add, lookup = catalogue
+    add("museum.png")
+    server.push_sensing_eye_image({
+        "filename": "museum.png", "image_data_url": "data:image/jpeg;base64,aW1hZ2U=",
+        "source": "generated image",
+    }, repo_root=folder.parent.parent)
+    assert lookup(filename="file:museum.webp")["resolved_id"] == "file:museum.jpg"
+    assert lookup(filename="generated:museum.png")["resolved_id"] == "generated:museum.png"
