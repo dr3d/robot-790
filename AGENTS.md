@@ -1,6 +1,6 @@
 # Native Windows reference
 
-New Eric development moved to the sibling `robot-790-docker-lab` repository on
+New Eric development moved to the sibling `robot-790-docker` repository on
 2026-10-09. Its `work/` tree is the authoritative application source.
 
 Keep this installation as the native Windows reference and rollback. Only make

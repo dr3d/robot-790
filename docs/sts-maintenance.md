@@ -1,7 +1,7 @@
 # Native Windows STS reference
 
 As of October 9, 2026, new Eric development lives in the sibling
-`robot-790-docker-lab` repository. Its `work/` tree is authoritative. This Windows
+`robot-790-docker` repository. Its `work/` tree is authoritative. This Windows
 checkout remains the native installation/reference and rollback.
 
 The former shared-core export workflow is retired for that destination.

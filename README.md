@@ -1,7 +1,7 @@
 # Robot 790
 
 **Development moved on October 9, 2026:** use the sibling
-[`robot-790-docker-lab`](../robot-790-docker-lab/README.md) for new Eric work.
+[`robot-790-docker`](../robot-790-docker/README.md) for new Eric work.
 This checkout remains the working native Windows reference and rollback.
 The documentation below describes that installation; it is not the container
 project's current setup guide. No personal state was migrated by the handoff.
