@@ -696,15 +696,16 @@ from voice settings and clears the current browser history and run ledgers.
 The STS Connection Settings panel has a `Brain on restart` dropdown. Pick a model, then
 use Server Management's `Restart` to stop realtime, unload the current LM Studio
 model, load the chosen model, and start realtime again with Eric's Qwen3-TTS voice.
-The **Restart loads** line shows the selected local model's load key. Custom
-model key, context, and parallel fields appear only for **Custom LM Studio**;
-saved custom values do not override a named preset.
+The **Restart loads** line shows the selected local model's load key. Context is
+editable beside MTP for local presets. The model key and parallel fields appear
+only for **Custom LM Studio**; saved custom keys do not override a named preset.
 
 Current presets:
 
 | Preset | LM Studio model | Context | Parallel | Reasoning | Notes |
 | --- | --- | ---: | ---: | --- | --- |
 | Qwen 27B NVFP4 | API name `qwen3.8-27b-nvfp4-mtp` | 131K | 2 | Off / On | Thinking defaults Off and applies live; MTP needs restart. Extended-session stalls remain open. |
+| Qwen 27B GSQ-RCO IQ3 (MTP) | `qwen3.8-27b-gsq-rco` | 131K default; editable | 1 | Off / Low / Medium / Extra high / On | Four checkpoints and a bounded 16 GiB host prompt cache; MTP needs restart. |
 | Qwen 27B | `qwen/qwen3.8-27b` | 131K | 1 | Off / Low / Medium / Extra high / On | Preset starts at Low; the live controls default Off. On selects the advertised enabled default. |
 | Qwen 9B | `qwen/qwen3.5-9b` | 131K | 1 | `low` | Middle-size comparison model. |
 | Qwen 4B | `qwen3.5-4b` | 131K | 1 | `none` | Small/fast comparison model. |
@@ -715,9 +716,28 @@ Current presets:
 The NVFP4 preset loads the installed key `qwen3.8-27b-mtp` and assigns the API
 name shown above. Those names are not interchangeable when loading. Restart
 checks the installed catalogue before stopping realtime. **MTP on restart**
-appears for NVFP4 and Custom; Connect alone does not apply it. The command-line
+appears for NVFP4, GSQ-RCO IQ3, and Custom; Connect alone does not apply it. The command-line
 launcher accepts `-Mtp on`, `-Mtp off`, or `-Mtp default` (inherit LM Studio's
 setting). Omitting that argument uses `default`.
+
+The GSQ-RCO IQ3 preset uses `robot_790d.lmstudio_cached_load` so restart can set and
+verify four context checkpoints and `--cache-ram 16384` (MiB of host RAM), which
+the `lms load` CLI does not expose. The adapter uses the existing Python SDK's
+load channel and raw KV-config fields; regression tests cover this compatibility
+boundary and a missing/changed effective setting fails the restart explicitly.
+With 32 checkpoints, a measured 51K-token conversation produced a 14 GiB saved
+state that exceeded the engine's 8 GiB host prompt-cache limit. Switching from B2
+back to Eric then reprocessed the conversation. Four checkpoints retain fewer
+intermediate rollback positions, without removing conversation text or reducing
+the configured context window. The larger cache also avoids eviction when both
+brain states together exceed 8 GiB. On the 5090 at 96K context, alternating 51K/16K
+histories resumed Eric in about 1.15 seconds instead of intermittent 20-second
+reprocessing; at 85K/16K, 1.55 seconds instead of 39 seconds. These are synthetic
+cache tests, not guarantees for changing prefixes or arbitrary session lengths.
+The host cache limit does not cap all process memory. Full GPU offload is preserved;
+vision/template defaults are inherited from LM Studio. Other presets keep their
+existing load path. This is a local LM Studio fix; it does not change Zima or any
+personality/tool instructions.
 
 **Eric Thinking** and **Brain 2 Thinking** sit side by side in Connection
 Settings, beside the model configuration. They are independent settings,

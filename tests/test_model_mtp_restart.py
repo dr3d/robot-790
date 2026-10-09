@@ -28,7 +28,7 @@ def restart_handler(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("mtp", ["on", "off", "default"])
-@pytest.mark.parametrize("preset", ["qwen27-mtp-vlow", "custom"])
+@pytest.mark.parametrize("preset", ["qwen27-mtp-vlow", "qwen27-gsq-iq3", "custom"])
 def test_restart_forwards_mtp_without_changing_other_load_settings(restart_handler, monkeypatch, mtp, preset):
     handler, launched, replies = restart_handler
     payload = {"preset": preset, "mtp": mtp, "model": "fixture/model", "context_length": 65536, "parallel": 4}
@@ -42,7 +42,7 @@ def test_restart_forwards_mtp_without_changing_other_load_settings(restart_handl
 
 
 @pytest.mark.parametrize("reasoning", ["on", "none", "low", "medium", "xhigh"])
-@pytest.mark.parametrize("preset", ["qwen27-mtp-vlow", "custom"])
+@pytest.mark.parametrize("preset", ["qwen27-mtp-vlow", "qwen27-gsq-iq3", "custom"])
 def test_restart_forwards_thinking_choice(restart_handler, monkeypatch, reasoning, preset):
     handler, launched, replies = restart_handler
     monkeypatch.setattr(handler, "_read_json_body", lambda: {

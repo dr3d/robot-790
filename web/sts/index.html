@@ -2378,6 +2378,7 @@
                 <select id="modelPreset">
                   <option value="qwen27-mtp-vlow" data-load-model="qwen3.8-27b-mtp">Qwen 27B NVFP4</option>
                   <option value="qwen27" data-load-model="qwen/qwen3.8-27b">Qwen 27B</option>
+                  <option value="qwen27-gsq-iq3" data-load-model="qwen3.8-27b-gsq-rco">Qwen 27B GSQ-RCO IQ3 (MTP)</option>
                   <option value="qwen9" data-load-model="qwen/qwen3.5-9b">Qwen 9B</option>
                   <option value="qwen4" data-load-model="qwen3.5-4b">Qwen 4B</option>
                   <option value="nemotron30" data-load-model="nvidia-nemotron-3.5-lightning-30b-a3b">Nemotron 30B</option>
@@ -8886,7 +8887,7 @@
 
     function currentModelPreset() {
       const value = modelPreset.value || "qwen27-mtp-vlow";
-      return ["qwen27-mtp-vlow", "qwen27", "qwen9", "qwen4", "nemotron30", "openai", "custom"].includes(value)
+      return ["qwen27-mtp-vlow", "qwen27", "qwen27-gsq-iq3", "qwen9", "qwen4", "nemotron30", "openai", "custom"].includes(value)
         ? value
         : "qwen27-mtp-vlow";
     }
@@ -8917,7 +8918,7 @@
     }
 
     function modelHasMtpControl() {
-      return ["qwen27-mtp-vlow", "custom"].includes(currentModelPreset());
+      return ["qwen27-mtp-vlow", "qwen27-gsq-iq3", "custom"].includes(currentModelPreset());
     }
 
     function currentModelMtp() {
@@ -8976,7 +8977,7 @@
       const payload = { preset, tts_model: currentTtsModel() };
       if (preset !== "openai") payload.context_length = currentCustomModelContext();
       if (modelHasMtpControl()) payload.mtp = currentModelMtp();
-      if (preset === "qwen27-mtp-vlow") payload.reasoning = currentCustomModelReasoning();
+      if (["qwen27-mtp-vlow", "qwen27-gsq-iq3"].includes(preset)) payload.reasoning = currentCustomModelReasoning();
       if (preset === "custom") {
         payload.model = currentCustomModelKey();
         payload.reasoning = currentCustomModelReasoning();

@@ -842,7 +842,7 @@ class StsPageHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"status": "error", "error": str(exc)})
             return
         preset = str(payload.get("preset") or "qwen27-mtp-vlow").strip()
-        allowed_presets = {"qwen27-mtp-vlow", "qwen27", "qwen9", "qwen4", "nemotron30", "openai", "custom"}
+        allowed_presets = {"qwen27-mtp-vlow", "qwen27", "qwen27-gsq-iq3", "qwen9", "qwen4", "nemotron30", "openai", "custom"}
         if preset not in allowed_presets:
             self._send_json(400, {"status": "error", "error": f"Unsupported model preset: {preset}."})
             return
@@ -862,9 +862,9 @@ class StsPageHandler(SimpleHTTPRequestHandler):
         if mtp not in ("default", "on", "off"):
             self._send_json(400, {"status": "error", "error": "MTP must be on, off, or default."})
             return
-        if mtp != "default" and preset not in {"qwen27-mtp-vlow", "custom"}:
+        if mtp != "default" and preset not in {"qwen27-mtp-vlow", "qwen27-gsq-iq3", "custom"}:
             self._send_json(400, {
-                "status": "error", "error": "MTP control requires the NVFP4 or Custom LM Studio preset."
+                "status": "error", "error": "MTP control requires an MTP-capable preset or Custom LM Studio."
             })
             return
         try:

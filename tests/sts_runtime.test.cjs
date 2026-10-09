@@ -121,6 +121,21 @@ test('regular Qwen restart ignores stale custom NVFP4 fields and identifies the 
   assert.equal(c.currentModelRestartPayload().model, 'qwen3.8-27b-nvfp4-mtp');
 });
 
+test('GSQ IQ3 preset uses its installed key and retains operator MTP, context and thinking choices', () => {
+  const { context: c } = modelSettingsContext();
+  c.modelPreset.value = 'qwen27-gsq-iq3';
+  c.customModelKey.value = 'stale/other-model';
+  c.customModelContext.value = '65536';
+  c.modelMtp.value = 'on';
+  c.updateCustomModelControls();
+  assert.equal(c.modelRestartPreview.textContent, 'Restart loads: qwen3.8-27b-gsq-rco');
+  assert.equal(c.modelMtpField.hidden, false);
+  assert.equal(c.customModelControls.hidden, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(c.currentModelRestartPayload())), {
+    preset: 'qwen27-gsq-iq3', tts_model: '0.6B', context_length: 65536, mtp: 'on', reasoning: 'none',
+  });
+});
+
 test('each preset restart description agrees with the actual launcher load key', () => {
   const { context: c } = modelSettingsContext();
   const launcher = fs.readFileSync(path.join(__dirname, '../scripts/restart_realtime_gold.ps1'), 'utf8');

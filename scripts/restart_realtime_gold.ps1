@@ -1,6 +1,6 @@
 param(
     [int] $DelaySeconds = 1,
-    [ValidateSet("qwen27-mtp-vlow", "qwen27", "qwen9", "qwen4", "nemotron30", "openai", "custom")]
+    [ValidateSet("qwen27-mtp-vlow", "qwen27", "qwen27-gsq-iq3", "qwen9", "qwen4", "nemotron30", "openai", "custom")]
     [string] $Preset = "qwen27-mtp-vlow",
     [string] $Model = "",
     [ValidateSet("", "on", "low", "medium", "xhigh", "none")]
@@ -69,6 +69,19 @@ $presets = @{
         AudioMaxTokens = 64
         ContextLength = 131072
         Parallel = 2
+    }
+    "qwen27-gsq-iq3" = @{
+        Label = "Qwen 27B GSQ-RCO IQ3 (MTP)"
+        Provider = "lmstudio"
+        Model = "qwen3.8-27b-gsq-rco"
+        Reasoning = $Reasoning
+        AudioMaxTokens = 64
+        ContextLength = 131072
+        Parallel = 1
+        # Serialized recurrent checkpoints made B1's state exceed the 8 GiB
+        # host prompt cache. Keep recent rollback points without losing B1/B2.
+        ContextCheckpoints = 4
+        PromptCacheMiB = 16384
     }
     qwen27 = @{
         Label = "Qwen 27B"
@@ -196,8 +209,18 @@ if ($selected.Provider -eq "lmstudio") {
             $modelLoadArgs += "--no-speculative-draft-mtp"
         }
         Write-Host "Loading $($selected.Model) with requested MTP setting: $Mtp"
-        & lms @modelLoadArgs | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "LM Studio model load failed." }
+        if ($selected.ContextCheckpoints) {
+            # The CLI omits these controls; the SDK adapter verifies the engine's
+            # effective config and preserves full GPU offload and model defaults.
+            & $Python -m robot_790d.lmstudio_cached_load --model $modelToLoad `
+                --identifier $selected.Model --context $selected.ContextLength `
+                --parallel $parallelPredictions --mtp $Mtp `
+                --checkpoints $selected.ContextCheckpoints --cache-mib $selected.PromptCacheMiB
+            if ($LASTEXITCODE -ne 0) { throw "LM Studio cache-controlled load failed." }
+        } else {
+            & lms @modelLoadArgs | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "LM Studio model load failed." }
+        }
         Stop-StaleLmStudioBackends -SelectedModel $selected.Model
     } catch {
         throw "Could not switch LM Studio to $($selected.Model): $($_.Exception.Message)"
