@@ -72,3 +72,16 @@ def test_windows_line_endings_export_hashes_that_survive_fresh_checkout(tmp_path
         assert receipt["files"][destination]["sha256"] == sync.digest(b"first version\n")
         (source / name).write_bytes(b"first version\n")
     assert sync.synchronize(source, target) == receipt
+
+
+@pytest.mark.parametrize("apply", [False, True])
+def test_authoritative_docker_source_cannot_be_overwritten_by_old_exporter(tmp_path, apply):
+    source, target = fixture(tmp_path)
+    marker = target / "provenance/canonical-source.json"
+    marker.parent.mkdir()
+    marker.write_text('{"role": "authoritative"}', encoding="utf-8")
+    before = (target / "work/src/robot_790d/realtime_entry.py").read_bytes()
+    with pytest.raises(ValueError, match="authoritative Eric source"):
+        sync.synchronize(source, target, apply=apply)
+    assert (target / "work/src/robot_790d/realtime_entry.py").read_bytes() == before
+    assert not (target / "provenance/shared-sts.json").exists()

@@ -19,6 +19,9 @@ def digest(data):
 
 def synchronize(source, target, apply=False):
     source, target = Path(source).resolve(), Path(target).resolve()
+    ownership = target / "provenance/canonical-source.json"
+    if ownership.is_file() and json.loads(ownership.read_text(encoding="utf-8")).get("role") == "authoritative":
+        raise ValueError("Target is the authoritative Eric source. Edit its work/ tree; Windows exports are retired.")
     if source == target or not (target / "work/src/robot_790d/realtime_entry.py").is_file():
         raise ValueError("Target must be the separate Docker repository")
     hook = "    apply_bounded_stt_patch()\n    apply_parakeet_voice_shape_patch()"

@@ -1,5 +1,11 @@
 # Robot 790
 
+**Development moved on October 9, 2026:** use the sibling
+[`robot-790-docker-lab`](../robot-790-docker-lab/README.md) for new Eric work.
+This checkout remains the working native Windows reference and rollback.
+The documentation below describes that installation; it is not the container
+project's current setup guide. No personal state was migrated by the handoff.
+
 Robot 790 is a local, daemon-driven animatronic robot project inspired by
 LEXX 790. The project combines ESP32 device controllers, a browser STS control
 page, local STT/TTS, local LLMs through LM Studio, and a small Python daemon
