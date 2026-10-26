@@ -33,24 +33,16 @@ The page is static, but it loads `catalog.json` with browser `fetch()`. That
 works on GitHub Pages and from a local HTTP file server. It may not work when
 opened directly as a `file://` URL.
 
-October 2 checkpoint: the latest featured report is
-[Robot 790 and the things we make together](articles/2026-10-01-robot-790-field-update.reading.html),
-an illustrated account of drawing, music, tools and corrections. The Memory Jar
-report and edited video remain on the public shelf. This checkpoint adds no new
-article or raw session bundle.
+October 26 checkpoint: [the homepage](index.html#updates) and its
+[Markdown counterpart](index.md) describe the work since the October 9 move to
+Docker. The container implementation is not yet published on GitHub. This public
+repository remains the native Windows / LM Studio reference; the old operator
+and engineering guides are labelled accordingly. The October 1 illustrated
+field report remains the latest article on the catalog shelf.
 
-The implementation update includes timestamped score filenames, optional
-diagnostic snapshots, clearer search/context labels, search fallback repairs,
-more precise image and page-opening receipts, an MTP restart selector with the
-installed-model-key repair, and a default-on B2 microphone-muting checkbox.
-The [STS UI Guide](sts-ui-guide.md) describes the controls. Browser updates need
-a refresh; Python search changes need a page-server restart.
-
-Recent live sessions also reproduced GPU stalls and expensive B1 context
-rebuilds after B2 history work. The cache/scheduling repair is still open, and
-the microphone option enables an experiment rather than proving two-way voice
-communication. [Engineering Status](engineering-status.md) is the maintained
-source for checks, observations and remaining acceptance work.
+Keep public version status explicit. Do not link to an unpublished Docker
+repository as though it were an installation source, imply feature parity,
+or rewrite dated native observations as evidence for current container behavior.
 
 The catalog gives articles, media, and curated logs a canonical artifact time
 and renders each public shelf newest first. It does not use an incidental later

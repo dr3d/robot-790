@@ -4,7 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Eric Robot 790</title>
-  <meta name="description" content="Eric Robot 790: a local companion-shaped robot experiment with face, voice, tools, notes, sensors, idle thought, and public receipts from building practical presence in the room.">
+  <meta name="description" content="Meet Eric, a local robot for conversation, curiosity, pictures and music. Follow the latest Docker development and the preserved native LM Studio version.">
+  <link rel="canonical" href="https://dr3d.github.io/robot-790/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Eric Robot 790 - Conversation, curiosity and company">
+  <meta property="og:description" content="A local robot with a face, a voice and things to say. Watch Eric, explore what we make together, and catch up on the move to Docker.">
+  <meta property="og:url" content="https://dr3d.github.io/robot-790/">
+  <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="assets/site.css?v=2026-09-10-1">
 </head>
 <body>
@@ -13,9 +19,11 @@
     <div>
       <p class="eyebrow">Local Companion Robot</p>
       <h1>Eric Robot 790</h1>
-      <p class="dek">Robot 790 is the platform. Eric is the personage. A local face, voice, tools, notes, sensors, and idle loop being engineered into practical company, with receipts instead of mystery.</p>
+      <p class="dek">A local robot for conversation, curiosity and the things we make together. Robot 790 is the platform; Eric is the personage.</p>
     </div>
     <nav aria-label="Page sections">
+      <a href="#updates">Latest</a>
+      <a href="#versions">Versions</a>
       <a href="#articles">Articles</a>
       <a href="#media">Media</a>
       <a href="#transcripts">Transcripts</a>
@@ -29,74 +37,51 @@
     </section>
 
     <section class="intro-band">
-      <p>
-        This site is the public shelf for building Eric in the open: articles,
-        curated runs, media, references, receipts, and open questions. The focus
-        is narrow on purpose: can a local, embodied, tool-using loop become good
-        company in a room?
-      </p>
-      <p>
-        The project is not a generic agent framework and not a consciousness
-        claim. Models interpret meaning and choose conversational actions;
-        deterministic layers enforce permissions, execution, scheduling and
-        storage. Eric's behavior is shaped by prompt, voice, face, notes, search receipts, sensors,
-        hardware controllers, Brain2 advisories, and the run ledger.
-      </p>
-      <p>
-        The motive is simple and human: Scott wanted to build something that was
-        not just a chatbot, but actual company - fun, responsive, interesting,
-        and present in the room. His phrase for that target is an artificial
-        human: not a hidden person, not a consciousness claim, and not a
-        replacement for human care, but a made social presence with a body,
-        voice, habits, tools, and continuity. It is an adventure in making a
-        companion-shaped machine, and in finding out what that can honestly
-        become.
-      </p>
-      <p>
-        Because the main loop runs locally, idle thought can be a normal behavior
-        instead of a rare scheduled cloud event. That changes the feel of the
-        "active brain" even when the mechanism stays visible.
-      </p>
-      <p>
-        Latest report: <a id="featured-article-link" href="articles/2026-10-01-robot-790-field-update.reading.html" data-feature-source="articles/2026-10-01-robot-790-field-update.md">Robot 790 and the things we make together</a>:
-        a future museum, an alien signal, music, and the drawings Eric makes while Scott is away.
-        Earlier: <a href="?media=media/videos/The%20Memory%20Jar.mp4#media">watch the Memory Jar session (6:32)</a>.
-        More recordings live in the <a href="https://www.youtube.com/playlist?list=PLSMpkQttgaR8">Eric Robot-790 YouTube playlist</a>.
-        Start with <a href="#articles" data-feature-source="articles/2026-09-10-022329-robot-790-project-overview.md">Conversation And Continuity</a>
-        for the project overview, or
-        <a href="#articles" data-feature-source="articles/the-event-loop-grew-a-face.md">The Event Loop Grew A Face</a>
-        for the plain-English mechanics, and use the
-        <a href="https://github.com/dr3d/robot-790/blob/master/docs/evidence_map.md">Receipts And Open Questions</a> for observations, receipts, and
-        open tests. The current memory/session design is published as
-        <a href="https://github.com/dr3d/robot-790/blob/master/docs/context-engineering-architecture.md">Context Engineering Architecture</a>.
-        <a href="https://github.com/dr3d/robot-790/blob/master/docs/engineering-status.md">Engineering Status</a>
-        separates working capabilities from the next repairs and experiments.
-      </p>
-      <p>
-        <strong>October 2 checkpoint:</strong> Eric's recent adventures include
-        a corrected museum exhibit, piano sketches, room designs, and a goofy
-        self-portrait captured from his browser face. Camera capture, saved-image
-        recall and session saving have worked across these sessions. The latest
-        illustrated field report follows the things we make together.
-      </p>
-      <p>
-        STS now has an MTP restart selector, a repaired installed-model lookup,
-        and a default-on <strong>Mute microphone</strong> checkbox for Brain 2's
-        browser voice. Diagnostic snapshots are optional; saved scores use
-        readable titles and timestamps. Search fallbacks and tool receipts now
-        better distinguish useful results, requested actions and confirmed work.
-        The <a href="https://github.com/dr3d/robot-790/blob/master/docs/sts-ui-guide.md">STS UI Guide</a>
-        explains the controls.
-      </p>
-      <p>
-        Long-context GPU stalls and expensive B1 context rebuilds after B2 history
-        work remain unresolved. Opening the microphone path enables a listening
-        experiment; it does not yet prove two-way voice communication.
-        <a href="https://github.com/dr3d/robot-790/blob/master/docs/engineering-status.md">Engineering Status</a>
-        records the checks and open issues. The aim remains a companion with
-        initiative, continuity and room to make things; successful tool calls
-        do not guarantee accurate observations or good judgment.
-      </p>
+      <p>Can a local, embodied, tool-using loop become good company in a room? This site follows Eric through articles, curated sessions, pictures, music and engineering notes. Robot 790 is the platform; Eric is the personage.</p>
+      <p>Eric is still an experiment in company: conversation, banter, curiosity, a face, and the things we make together. Recent sessions have ranged from illustrated children&#x27;s books and impossible-science performances to piano sketches, robot-mask design and the Newsback, an imagined device for sending today&#x27;s headlines to 1985. The strongest moments are often shared improvisation. Finishing unattended work reliably remains an experiment.</p>
+      <p><a href="https://www.youtube.com/playlist?list=PLSMpkQttgaR8">Watch Eric on YouTube</a> &middot; <a href="#updates">See what has changed</a> &middot; <a href="https://github.com/dr3d/robot-790">Explore the public source</a></p>
+      <p>The mechanisms remain visible: a language model, voice, face, tools, saved notes and optional Brain 2 advisories. This is a companion experiment, with no claim that Eric is a conscious person.</p>
+    </section>
+
+    <section id="updates" class="section-grid">
+      <div class="section-heading">
+        <p class="eyebrow">October 26, 2026 &middot; Development update</p>
+        <h2>Eric since the move to Docker</h2>
+        <p>As of October 26, 2026, active development is in the separate Docker workspace. That implementation has not yet been published on GitHub. The source linked on this site remains the native Windows / LM Studio version. This update documents the newer work; it is not a Docker download or installation release.</p>
+      </div>
+      <div class="card-grid">
+        <article class="card"><h3>Eric on more than one machine</h3><p>Development moved into a separate Docker workspace on October 9. The Windows/WSL RTX 5090 installation uses managed llama.cpp inference; the ZimaOS / RTX 2000 Ada installation uses Ollama. The same maintained application serves both, with separate models, hardware settings and personal data. LM Studio does not need to be running for these deployments.</p></article>
+        <article class="card"><h3>Speech can live on another box</h3><p>Zima now delegates voice activity detection, Parakeet speech recognition and Qwen3 TTS to an Ethernet-connected Jetson Orin Nano. The tested portable speech setup uses the 0.6B voice model. This frees GPU room on Zima for the conversation model; the 5090 can keep speech local. It is a working deployment, not a promise that every Jetson or Docker host is ready out of the box.</p></article>
+        <article class="card"><h3>More ways to have a body</h3><p>The Docker work carries forward the browser face and adds working routes for switching to ESP32 face devices and Reachy Mini. Camera and chassis integration have also been ported. Eric can pose and capture his browser face into his sensing eye for drawings and design discussions. Device support is specific: Reachy movement has been exercised, while the chassis port received read-only status checks, not a driving test.</p></article>
+        <article class="card"><h3>A clearer view of what Eric makes</h3><p>Session Map now includes saved model/thinking metadata when available, plus session artwork and notes. An artifact library searches saved image metadata, notes and music. Image browsing is separate from putting pixels into Eric&#x27;s sensing eye: looking through previews does not silently change his context. Generated artwork, music and notes remain saved outside the disposable application containers.</p></article>
+        <article class="card"><h3>More deliberate use of context</h3><p>An optional image-packing experiment replaces older, verified saved pixel attachments with recall references near the context limit, keeping the two newest image messages attached. Originals and raw history remain available. Compact tool receipts and filtered failed-search results reduce avoidable clutter. Cache repairs address specific reread causes; packing can still trigger a reread, and long conversations can still run out of room.</p></article>
+        <article class="card"><h3>A more observable conversation</h3><p>The interface now shows the running model, quantization and voice, with separate idle-thinking and B2 controls. Typed-input sequencing, session ancestry, image delivery and return-after-idle handling have received repairs. A connected STS window now requests confirmation before closing or refreshing on the 5090. Session reviews join dialogue with tool receipts and timing, so an announced action can be checked against what actually happened.</p></article>
+      </div>
+      <div class="intro-band">
+        <h3>What we are still learning</h3>
+        <p>Brain 2 remains optional. It has gained different review focuses, older-material retrieval, better action evidence and independent controls for mulling, captions and voice. Separate inference slots have been tested, but their memory cost and benefit depend on the model and machine. On a single slot, B2 can compete with Eric for time and cached context. Several recent runs leave it off while its contribution is reassessed.</p>
+        <p>The conversation and speech models run locally in the tested setups. Image generation and the optional outside-AI consultation tool use paid cloud APIs; web tools also use the network. Consultation is a separate, switchable tool with recorded requests and answers, not an invisible replacement for the local conversation model.</p>
+        <p>Model and quantization changes can alter the feel of Eric considerably. Exact repeated passages, missed instructions, plausible but unsupported explanations and slow cold-context reads still occur. Better receipts make these easier to distinguish from delivery or scheduling faults; they do not make the model infallible. Improving task execution must preserve the engaged banter that makes Eric worth turning on.</p>
+      </div>
+    </section>
+
+    <section id="versions" class="section-grid">
+      <div class="section-heading">
+        <p class="eyebrow">Keeping the lineage usable</p>
+        <h2>Where the LM Studio version fits</h2>
+      </div>
+      <div class="card-grid">
+        <article class="card"><h3>Native Windows / LM Studio: preserved reference</h3><p>The public source, setup instructions, firmware work and earlier articles remain available. This installation is kept as a reference and rollback. Its operating guide still applies to that version; it should not be read as the current Docker manual.</p></article>
+        <article class="card"><h3>Docker: current development</h3><p>New application work is authored in the Docker workspace. Deployments use shared source with explicit provider and hardware adapters, separate persistent data and recorded release versions. Updates are made with sessions disconnected. Machine-specific model choices are kept separate from application updates.</p></article>
+        <article class="card"><h3>A path forward for both</h3><p>The intention is to retain a usable native reference while preparing the newer work for public release. Any native backport should be an explicit, tested change. Bringing an LM Studio backend into the Docker architecture would require its own provider adapter and validation; it is not already supported merely by changing a server URL. No feature-parity or release-date promise is being made.</p></article>
+      </div>
+      <p><a href="https://github.com/dr3d/robot-790">Public native source</a> &middot; <a href="https://github.com/dr3d/robot-790/blob/master/docs/sts-ui-guide.md">Native STS guide</a> &middot; <a href="https://github.com/dr3d/robot-790/blob/master/docs/engineering-status.md">Native engineering checkpoint</a></p>
+      <p>Older articles and guides retain their original dates and describe the version they observed. Hardware experiments, private session logs and local deployment credentials are not a public release package.</p>
+    </section>
+
+    <section class="intro-band" aria-label="Earlier field reports">
+      <p>Latest illustrated field report: <a id="featured-article-link" href="articles/2026-10-01-robot-790-field-update.reading.html" data-feature-source="articles/2026-10-01-robot-790-field-update.md">Robot 790 and the things we make together</a> (October 1): a future museum, an alien signal, music, and drawings Eric makes while Scott is away. The Docker update above continues that history.</p>
+      <p>Watch the <a href="https://www.youtube.com/playlist?list=PLSMpkQttgaR8">Eric Robot-790 YouTube playlist</a> for the larger video collection, or the <a href="?media=media/videos/The%20Memory%20Jar.mp4#media">Memory Jar session (6:32)</a> for an earlier experiment.</p>
     </section>
 
     <section id="articles" class="section-grid">
@@ -164,8 +149,8 @@
     </section>
 
     <section id="notes" class="notes-grid">
-      <a href="https://github.com/dr3d/robot-790/blob/master/docs/sts-ui-guide.md">STS UI Operator Guide</a>
-      <a href="https://github.com/dr3d/robot-790/blob/master/docs/engineering-status.md">Engineering Status</a>
+      <a href="https://github.com/dr3d/robot-790/blob/master/docs/sts-ui-guide.md">Native STS UI Operator Guide</a>
+      <a href="https://github.com/dr3d/robot-790/blob/master/docs/engineering-status.md">Native Engineering Status</a>
       <a href="https://github.com/dr3d/robot-790/blob/master/docs/companion-design-contract.md">Companion Design Contract</a>
       <a href="https://github.com/dr3d/robot-790/blob/master/docs/brain2-setup-cards.md">Optional B1/B2 Setup Notes</a>
       <a href="https://github.com/dr3d/robot-790/blob/master/docs/idle-art.md">Idle Art And Image Handoffs</a>
@@ -180,7 +165,7 @@
       <a href="https://github.com/dr3d/robot-790/blob/master/docs/creature-runtime-architecture.md">Creature And Embodiment Architecture</a>
       <a href="https://github.com/dr3d/robot-790/blob/master/docs/references.md">Reference Shelf</a>
       <a href="https://github.com/dr3d/robot-790/blob/master/docs/articles/README.md">Article Shelf Notes</a>
-      <a href="https://github.com/dr3d/robot-790">GitHub Source</a>
+      <a href="https://github.com/dr3d/robot-790">GitHub Source &middot; Native / LM Studio</a>
     </section>
   </main>
 

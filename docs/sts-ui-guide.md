@@ -1,5 +1,7 @@
 # STS UI Operator Guide
 
+> **Version scope:** This document describes the native Windows / LM Studio installation. Active development moved to Docker on October 9, 2026. See the [October 26 project update](index.md#eric-since-the-move-to-docker) for the newer work and the role of this preserved reference.
+
 Updated: 2026-10-06. Screenshots: the local STS build on 2026-09-10;
 some panel layouts have since changed. Current control descriptions take precedence.
 

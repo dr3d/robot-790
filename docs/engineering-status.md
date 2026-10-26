@@ -1,5 +1,7 @@
 # Engineering Status
 
+> **Version scope:** This document describes the native Windows / LM Studio installation. Active development moved to Docker on October 9, 2026. See the [October 26 project update](index.md#eric-since-the-move-to-docker) for the newer work and the role of this preserved reference.
+
 Reviewed October 7, 2026. This is the maintained engineering view; session
 postmortems remain evidence of their particular runs. A successful test or an
 expressive session is not a guarantee about extended live operation.

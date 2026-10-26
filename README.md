@@ -1,8 +1,10 @@
 # Robot 790
 
-**Development moved on October 9, 2026:** use the sibling
-[`robot-790-docker`](../robot-790-docker/README.md) for new Eric work.
-This checkout remains the working native Windows reference and rollback.
+**Development moved on October 9, 2026:** new Eric work lives in a separate
+Docker workspace, whose implementation has not yet been published on GitHub.
+Read the [October 26 project update](docs/index.md#eric-since-the-move-to-docker)
+for what changed and how the two versions fit together.
+This checkout remains the native Windows / LM Studio reference and rollback.
 The documentation below describes that installation; it is not the container
 project's current setup guide. No personal state was migrated by the handoff.
 
