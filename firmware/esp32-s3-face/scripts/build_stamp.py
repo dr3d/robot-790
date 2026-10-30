@@ -11,13 +11,14 @@ Import("env")  # noqa: F821
 PROJECT_DIR = Path(env.subst("$PROJECT_DIR")).resolve()  # noqa: F821
 REPO_ROOT = PROJECT_DIR.parent.parent
 HEADER_PATH = PROJECT_DIR / "include" / "firmware_build.h"
-VERSION = "0.3.0"
+VERSION = "0.3.3"
 TARGET = "esp32-s3-face"
 FEATURES = [
     "state_stamp",
     "mouth_marquee_fit",
     "touch_probe",
-    "imu_probe",
+    "imu_play",
+    "imu_saved_reference",
     "display_flip",
     "boot_brightness_cycle",
     "arduino_ota",

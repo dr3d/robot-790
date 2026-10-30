@@ -3,6 +3,7 @@
 #include <Arduino_GFX_Library.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
+#include <Preferences.h>
 #include <SD.h>
 #include <SPI.h>
 #include <WebServer.h>
@@ -13,6 +14,7 @@
 #include <math.h>
 #include "esp_camera.h"
 #include "face_brain_config.h"
+#include "imu_play.h"
 
 #if __has_include("firmware_build.h")
 #include "firmware_build.h"
@@ -71,6 +73,9 @@ bool eyesOk = false;
 bool deferMouthFrameFlush = false;
 bool touchSeen = false;
 bool imuOk = false;
+ImuPlay imuPlay;
+bool imuReferenceSaved = false;
+uint32_t imuBootId = 0;
 bool sdOk = false;
 bool cameraOk = false;
 bool wifiStation = false;
@@ -2497,6 +2502,101 @@ void initDisplay()
   Serial.printf("display=%s mouth_frame=%s\n", displayOk ? "ok" : "fail", mouthFrameOk ? "ok" : "direct");
 }
 
+bool imuWrite(uint8_t reg, uint8_t value)
+{
+  Wire.beginTransmission(FACE_QMI8658_ADDR);
+  Wire.write(reg); Wire.write(value);
+  return Wire.endTransmission() == 0;
+}
+
+// QMI8658C register map: auto-increment, +/-8g, +/-512dps, 125Hz.
+// Check every transaction: a failed read must never become a fresh observation.
+void loadImuReference()
+{
+  Preferences preferences;
+  if (!preferences.begin("imu-play", true)) return;
+  float saved[3];
+  const bool read = preferences.getBytesLength("upright-v1") == sizeof(saved)
+    && preferences.getBytes("upright-v1", saved, sizeof(saved)) == sizeof(saved);
+  preferences.end();
+  imuReferenceSaved = read && imuPlay.restoreUpright(saved);
+}
+
+bool saveImuReference()
+{
+  Preferences preferences;
+  if (!preferences.begin("imu-play", false)) return false;
+  const bool saved = preferences.putBytes("upright-v1", imuPlay.upright,
+    sizeof(imuPlay.upright)) == sizeof(imuPlay.upright);
+  preferences.end();
+  return saved;
+}
+
+bool initImu()
+{
+  uint8_t id = 0;
+  if (!readReg8(FACE_QMI8658_ADDR, 0x00, &id) || id != 0x05) return false;
+  if (!imuWrite(0x60, 0xff)) return false;
+  delay(100);
+  if (!imuWrite(0x02, 0x40) || !imuWrite(0x08, 0x00)
+      || !imuWrite(0x03, 0x26) || !imuWrite(0x04, 0x56)
+      || !imuWrite(0x06, 0x55) || !imuWrite(0x08, 0x03)) return false;
+  imuBootId = esp_random();
+  loadImuReference();
+  delay(100);
+  return true;
+}
+
+void updateImu(uint32_t now)
+{
+  static uint32_t polledAt = 0;
+  if (!imuOk || uint32_t(now-polledAt) < 20) return;
+  polledAt = now;
+  uint8_t status = 0;
+  if (!readReg8(FACE_QMI8658_ADDR, 0x2e, &status) || (status & 3) != 3) return;
+  Wire.beginTransmission(FACE_QMI8658_ADDR);
+  Wire.write(0x35);
+  if (Wire.endTransmission(false) != 0) return;
+  if (Wire.requestFrom(uint8_t(FACE_QMI8658_ADDR), uint8_t(12)) != 12) return;
+  float accel[3], gyro[3];
+  for (int i=0; i<6; ++i) {
+    const uint8_t lo = Wire.read(), hi = Wire.read();
+    const int16_t value = int16_t(uint16_t(lo) | (uint16_t(hi) << 8));
+    if (i<3) accel[i] = value * (8.f/32768.f);
+    else gyro[i-3] = value * (512.f/32768.f);
+  }
+  imuPlay.update(now, accel, gyro);
+}
+
+void addImuState(JsonDocument &doc, uint32_t now)
+{
+  const bool fresh = imuPlay.fresh(now);
+  doc["imu"] = imuOk;
+  doc["imu_probe"] = "qmi8658_accel_gyro";
+  doc["imu_fresh"] = fresh;
+  doc["imu_boot_id"] = imuBootId;
+  doc["imu_seq"] = imuPlay.seq;
+  doc["imu_reference"] = imuPlay.reference;
+  doc["imu_calibrated"] = imuPlay.calibrated;
+  doc["imu_reference_saved"] = imuReferenceSaved;
+  doc["imu_orientation_available"] = fresh && imuPlay.calibrated && !imuPlay.moving && imuPlay.pose != 0;
+  doc["imu_pose"] = imuPlay.poseName(now);
+  if (fresh && imuPlay.calibrated && !imuPlay.moving && imuPlay.pose != 0)
+    doc["imu_tilt_from_upright_deg"] = imuPlay.tiltDegrees();
+  doc["imu_motion"] = imuPlay.motionName(now);
+  doc["imu_jolts"] = imuPlay.jolts;
+  if (imuPlay.jolts) doc["imu_jolt_age_ms"] = uint32_t(now-imuPlay.joltAt);
+  doc["imu_stable_ms"] = fresh && !imuPlay.moving ? uint32_t(now-imuPlay.quietSince) : 0;
+  if (imuPlay.sampled) doc["imu_sample_age_ms"] = uint32_t(now-imuPlay.sampleAt);
+  if (fresh) {
+    for (int i=0; i<3; ++i) {
+      const char *axis = i==0 ? "x" : i==1 ? "y" : "z";
+      doc["imu_accel_g"][axis] = imuPlay.a[i];
+      doc["imu_gyro_dps"][axis] = imuPlay.g[i];
+    }
+  }
+}
+
 void initI2c()
 {
   Wire.begin(FACE_I2C_SDA, FACE_I2C_SCL);
@@ -2507,7 +2607,7 @@ void initI2c()
   }
   Serial.printf("touch=%s id=0x%02x\n", touchSeen ? "ok" : "missing", cst816Id);
 
-  imuOk = i2cAddressResponds(FACE_QMI8658_ADDR);
+  imuOk = initImu();
   Serial.printf("imu=%s\n", imuOk ? "ok" : "missing");
 }
 
@@ -2793,8 +2893,7 @@ void addState(JsonDocument &doc, uint32_t now)
   doc["director"] = idleBeatName(idleDirector.beat);
   doc["touch"] = touchSeen;
   doc["touch_id"] = cst816Id;
-  doc["imu"] = imuOk;
-  doc["imu_probe"] = "i2c_presence";
+  addImuState(doc, now);
   doc["sd"] = sdOk;
   doc["camera"] = cameraOk;
   doc["backlight"] = backlight;
@@ -3352,6 +3451,29 @@ void initHttp()
     sendJson(doc);
   });
   server.on("/state", HTTP_GET, handleHttpState);
+  server.on("/imu", HTTP_GET, [] {
+    JsonDocument doc;
+    doc["ok"] = true;
+    addImuState(doc, millis());
+    sendJson(doc);
+  });
+  server.on("/imu/upright", HTTP_POST, [] {
+    JsonDocument doc;
+    const ImuPlay before = imuPlay;
+    bool ok = imuPlay.setUpright(millis());
+    if (!ok) {
+      doc["error"] = "Hold the face upright and still for one second, then retry.";
+    } else if (!saveImuReference()) {
+      imuPlay = before;
+      ok = false;
+      doc["error"] = "Could not save upright reference; previous calibration retained.";
+    } else {
+      imuReferenceSaved = true;
+    }
+    doc["ok"] = ok;
+    addImuState(doc, millis());
+    sendJson(doc);
+  });
   server.on("/status", HTTP_GET, writeStatusJson);
   server.on("/api/status", HTTP_GET, writeStatusJson);
   server.on("/api/display", HTTP_GET, handleDisplay);
@@ -3479,6 +3601,7 @@ void loop()
     return;
   }
   server.handleClient();
+  updateImu(now);
   updateBootButton(now);
   updateBehavior(now);
   static uint32_t lastDraw = 0;

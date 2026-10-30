@@ -31,6 +31,34 @@ do not treat it as the main one-piece face target.
 
 ## Current Milestone
 
+### IMU play, 0.3.3 (2026-10-30)
+
+The QMI8658 now reports measured acceleration (g) and rotation rate (degrees/sec).
+`GET /imu` is the small polling endpoint; `/state` includes the same fields.
+`POST /imu/upright` sets the current gravity direction as upright, provided the
+unit has been still for a second. Since 0.3.2 the reference is saved in device NVS
+and restored after power-off/reboot; only changing its mounting/resting position
+needs recalibration. Failed saves return an error and keep the previous reference.
+It is independent
+of display rotation and is not a world heading or position estimate.
+
+States are `upright`, `tilted`, `on_side`, `upside_down`, or `unknown`, plus `moving`/`settled`.
+Orientation waits for settling and has threshold hysteresis. A jolt counter records
+large acceleration departures; it is not a tap, pickup, or intentional-shake detector.
+Failed I2C reads do not renew sample freshness; after 500 ms, readings are unavailable.
+The sensor is configured for 125 Hz, +/-8g and +/-512 degrees/sec and polled at
+up to 50 Hz. This first pass uses simple thresholds, not inertial navigation.
+
+The Docker STS app has a **Sense movement** switch under Embodiment. Select
+the S3 face, set its upright reference once in its normal resting position, and connect.
+STS sends coalesced fresh changes only when its conversation is free; the firmware
+does not prescribe dialogue. The switch is enabled by default and remembers your
+choice across page reloads; a saved upright reference survives device power cycles.
+
+Host classifier check: compile and run `tests/imu_play_test.cpp` with a C++11
+compiler. Firmware build: `pio run -e esp32-s3-face-ota`. Hardware thresholds and
+Eric's response remain separate live checks.
+
 This is a safe bring-up target, not a replacement for the live face until it is
 flashed and inspected on the actual board.
 
