@@ -1,15 +1,15 @@
 {
-    "generated":  "2026-11-11 11:31:08",
+    "generated":  "2026-11-11 13:25:40",
     "articles":  [
                      {
                          "title":  "Same Eric, more bodies",
                          "excerpt":  "November field notes: Docker under the hood, Reachy Mini in the room, and a picture that became the next part of a story.",
                          "source":  "articles/2026-11-11-112412-same-eric-more-bodies.md",
-                         "bytes":  10211,
+                         "bytes":  10295,
                          "published":  "2026-11-11 11:24",
                          "published_sort":  "20261111112412",
                          "published_source":  "filename",
-                         "modified":  "2026-11-11 11:30",
+                         "modified":  "2026-11-11 13:25",
                          "html_source":  "articles/2026-11-11-112412-same-eric-more-bodies.reading.html"
                      },
                      {

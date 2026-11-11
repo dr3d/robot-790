@@ -36,7 +36,7 @@ The current choreography has several layers:
 
 - Mood, gaze and listening/thinking/speaking cues establish a base posture. Wider deliberate looks can include body rotation.
 - Face tracking adds a correction toward the nearest visible face. It follows a face; it does not recognize who the person is.
-- A guarded integration of Pollen Robotics' experimental Prosody Wobbler follows outgoing speech audio and adds head-motion accents over that posture.
+- A guarded integration of the experimental **Prosody Wobbler**, created by [Remi Fabre (@RemiFabreRobot)](https://x.com/RemiFabreRobot) at Pollen Robotics, follows outgoing speech audio and adds head-motion accents over that posture.
 - Antenna speech accents share the head renderer's playback clock. They blend bounded variation and speech dynamics over the antenna posture, including asymmetric positions and pauses.
 - Deliberate gestures, sleep, stop and playback ownership take precedence over the automatic speech layers.
 
