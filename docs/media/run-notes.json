@@ -146,5 +146,23 @@
   },
   "media/videos/NapEdge-2026-08-30-Audio-Rumination.mp4": {
     "description": "The long overnight mulling run. Eric was given mechanism-heavy notes, told not to perform, and left with the mic off; the result is the clearest evidence that idle beats can feed future idle beats. He over-orbits wax, SOFAR, tally sticks, fuses, and camera obscura, but some returns climb into real self-correction, which is the exact line between empty repetition and useful mulling."
+  },
+  "media/field-update-20261111/adventure-map.jpg": {
+    "published": "2026-11-11T11:24:12-05:00",
+    "title": "The adventure map",
+    "article": "articles/2026-11-11-112412-same-eric-more-bodies.md",
+    "description": "AI-generated story map. The generator added Where Giants Sleep beneath the Frozen Pass; Eric later read it and used it to continue the adventure. Compressed web copy, not a photograph."
+  },
+  "media/field-update-20261111/sleeping-giant.jpg": {
+    "published": "2026-11-11T11:24:12-05:00",
+    "title": "Where Giants Sleep",
+    "article": "articles/2026-11-11-112412-same-eric-more-bodies.md",
+    "description": "AI-generated revised Frozen Pass scene, after Eric noticed his first attempt had omitted the requested giant. Story illustration, not a photograph of a robot or real place."
+  },
+  "media/field-update-20261111/next-eric-note.jpg": {
+    "published": "2026-11-11T11:24:12-05:00",
+    "title": "A note for the next Eric",
+    "article": "articles/2026-11-11-112412-same-eric-more-bodies.md",
+    "description": "AI-generated illustration of a hypothetical note forbidding doubt. Eric read the generator-added A-17 blueprint label after staging. Fictional robot design, not the physical Reachy Mini."
   }
 }

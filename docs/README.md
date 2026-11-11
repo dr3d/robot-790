@@ -33,12 +33,12 @@ The page is static, but it loads `catalog.json` with browser `fetch()`. That
 works on GitHub Pages and from a local HTTP file server. It may not work when
 opened directly as a `file://` URL.
 
-October 26 checkpoint: [the homepage](index.html#updates) and its
-[Markdown counterpart](index.md) describe the work since the October 9 move to
-Docker. The container implementation is not yet published on GitHub. This public
-repository remains the native Windows / LM Studio reference; the old operator
-and engineering guides are labelled accordingly. The October 1 illustrated
-field report remains the latest article on the catalog shelf.
+November 11 checkpoint: [the homepage](index.html#updates) and its
+[Markdown counterpart](index.md) feature [Same Eric, more bodies](articles/2026-11-11-112412-same-eric-more-bodies.reading.html).
+The illustrated report covers Reachy media and expression, creative image recall,
+Docker deployments and current limits. The container application is not yet a
+public installation package. This repository remains the native Windows /
+LM Studio reference; its older guides retain their scope labels and dates.
 
 Keep public version status explicit. Do not link to an unpublished Docker
 repository as though it were an installation source, imply feature parity,
@@ -123,6 +123,11 @@ the project checkpoint, and keep the featured article pointed at the newest
 published report. Keep dated articles as historical observations; do not silently
 rewrite them to imply their tests cover later code. Changing homepage prose alone
 does not require a new article.
+
+For a dated Markdown report, a standalone reading page can be generated with
+`node scripts/build_reading_page.cjs docs/articles/<dated-report>.md`. It uses the
+shared `assets/field-report.css` and links to compressed images rather than
+embedding copies. Keep generated reading pages and their source together.
 
 After adding articles, logs, images, audio, or video, rebuild the catalog:
 

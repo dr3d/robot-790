@@ -191,6 +191,8 @@ test('repository Markdown article list is generated from the same newest-first c
   const catalog = JSON.parse(fs.readFileSync(path.join(root, 'docs/catalog.json'), 'utf8').replace(/^\uFEFF/, ''));
   const index = fs.readFileSync(path.join(root, 'docs/index.md'), 'utf8');
   assert.doesNotMatch(index, /System\.Object\[\]/);
-  const sources = [...index.matchAll(/]\((articles\/[^)]+)\)/g)].map(match => match[1]);
+  const generatedArticles = index.match(/<!-- generated-articles:start -->([\s\S]*?)<!-- generated-articles:end -->/);
+  assert.ok(generatedArticles, 'The Markdown index must identify its generated article list.');
+  const sources = [...generatedArticles[1].matchAll(/]\((articles\/[^)]+)\)/g)].map(match => match[1]);
   assert.deepEqual(sources, catalog.articles.map(item => item.html_source || item.source));
 });

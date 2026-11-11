@@ -4,20 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Eric Robot 790</title>
-  <meta name="description" content="Meet Eric, a local robot for conversation, curiosity, pictures and music. Follow the latest Docker development and the preserved native LM Studio version.">
+  <meta name="description" content="Artificial Creature Research: Eric across browser faces and Reachy Mini, with local conversation, pictures, music and current Docker field notes.">
   <link rel="canonical" href="https://dr3d.github.io/robot-790/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Eric Robot 790 - Conversation, curiosity and company">
-  <meta property="og:description" content="A local robot with a face, a voice and things to say. Watch Eric, explore what we make together, and catch up on the move to Docker.">
+  <meta property="og:description" content="Same Eric, more bodies. New field notes on Reachy Mini, expressive motion, stories built from pictures, and the Docker lab behind them.">
   <meta property="og:url" content="https://dr3d.github.io/robot-790/">
-  <meta name="twitter:card" content="summary">
-  <link rel="stylesheet" href="assets/site.css?v=2026-09-10-1">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:image" content="https://dr3d.github.io/robot-790/media/field-update-20261111/sleeping-giant.jpg">
+  <link rel="stylesheet" href="assets/site.css?v=2026-11-11-1">
 </head>
 <body>
   <header class="page-header">
     <img id="header-banner-image" class="header-banner-image" alt="" aria-hidden="true">
     <div>
-      <p class="eyebrow">Local Companion Robot</p>
+      <p class="eyebrow">Artificial Creature Research</p>
       <h1>Eric Robot 790</h1>
       <p class="dek">A local robot for conversation, curiosity and the things we make together. Robot 790 is the platform; Eric is the personage.</p>
     </div>
@@ -38,30 +39,42 @@
 
     <section class="intro-band">
       <p>Can a local, embodied, tool-using loop become good company in a room? This site follows Eric through articles, curated sessions, pictures, music and engineering notes. Robot 790 is the platform; Eric is the personage.</p>
-      <p>Eric is still an experiment in company: conversation, banter, curiosity, a face, and the things we make together. Recent sessions have ranged from illustrated children&#x27;s books and impossible-science performances to piano sketches, robot-mask design and the Newsback, an imagined device for sending today&#x27;s headlines to 1985. The strongest moments are often shared improvisation. Finishing unattended work reliably remains an experiment.</p>
+      <p>Eric now speaks, listens, looks and moves through Reachy Mini as well as his earlier faces. We make illustrated adventures, try impossible inventions, compose small piano pieces, and see what happens when he has time alone. The measure is still good company: responsive banter, curiosity, and something worth sharing a room with.</p>
       <p><a href="https://www.youtube.com/playlist?list=PLSMpkQttgaR8">Watch Eric on YouTube</a> &middot; <a href="#updates">See what has changed</a> &middot; <a href="https://github.com/dr3d/robot-790">Explore the public source</a></p>
       <p>The mechanisms remain visible: a language model, voice, face, tools, saved notes and optional Brain 2 advisories. This is a companion experiment, with no claim that Eric is a conscious person.</p>
     </section>
 
     <section id="updates" class="section-grid">
       <div class="section-heading">
-        <p class="eyebrow">October 26, 2026 &middot; Development update</p>
-        <h2>Eric since the move to Docker</h2>
-        <p>As of October 26, 2026, active development is in the separate Docker workspace. That implementation has not yet been published on GitHub. The source linked on this site remains the native Windows / LM Studio version. This update documents the newer work; it is not a Docker download or installation release.</p>
+        <p class="eyebrow">November 11, 2026 &middot; Field update</p>
+        <h2>Same Eric, more ways to be here</h2>
+        <p>Current work lives in the Docker lab. This public repository preserves the native Windows / LM Studio source and its history; the Docker application is not yet a public installation package. Here is what the newer experiments actually do.</p>
+      </div>
+      <div class="field-update-feature">
+        <figure>
+          <a href="articles/2026-11-11-112412-same-eric-more-bodies.reading.html"><img src="media/field-update-20261111/sleeping-giant.jpg" width="1024" height="1024" alt="Generated story artwork: a little robot and a traveler cross an icy bridge beside a sleeping giant." decoding="async"></a>
+          <figcaption>Generated story artwork. An unexpected label on Eric's earlier map became the next place to explore.</figcaption>
+        </figure>
+        <div>
+          <p class="eyebrow">New illustrated report</p>
+          <h3>Same Eric, more bodies</h3>
+          <p>A map with something left to discover. A robot whose head and antennas join the conversation. A note that asks the next Eric to give up doubt. And the practical work of keeping this creature present without pretending he is reliable at everything.</p>
+          <p><a id="featured-article-link" class="field-report-link" href="articles/2026-11-11-112412-same-eric-more-bodies.reading.html" data-feature-source="articles/2026-11-11-112412-same-eric-more-bodies.md">Read the November field report &rarr;</a></p>
+        </div>
       </div>
       <div class="card-grid">
-        <article class="card"><h3>Eric on more than one machine</h3><p>Development moved into a separate Docker workspace on October 9. The Windows/WSL RTX 5090 installation uses managed llama.cpp inference; the ZimaOS / RTX 2000 Ada installation uses Ollama. The same maintained application serves both, with separate models, hardware settings and personal data. LM Studio does not need to be running for these deployments.</p></article>
-        <article class="card"><h3>Speech can live on another box</h3><p>Zima now delegates voice activity detection, Parakeet speech recognition and Qwen3 TTS to an Ethernet-connected Jetson Orin Nano. The tested portable speech setup uses the 0.6B voice model. This frees GPU room on Zima for the conversation model; the 5090 can keep speech local. It is a working deployment, not a promise that every Jetson or Docker host is ready out of the box.</p></article>
-        <article class="card"><h3>More ways to have a body</h3><p>The Docker work carries forward the browser face and adds working routes for switching to ESP32 face devices and Reachy Mini. Camera and chassis integration have also been ported. Eric can pose and capture his browser face into his sensing eye for drawings and design discussions. Device support is specific: Reachy movement has been exercised, while the chassis port received read-only status checks, not a driving test.</p></article>
-        <article class="card"><h3>A clearer view of what Eric makes</h3><p>Session Map now includes saved model/thinking metadata when available, plus session artwork and notes. An artifact library searches saved image metadata, notes and music. Image browsing is separate from putting pixels into Eric&#x27;s sensing eye: looking through previews does not silently change his context. Generated artwork, music and notes remain saved outside the disposable application containers.</p></article>
-        <article class="card"><h3>More deliberate use of context</h3><p>An optional image-packing experiment replaces older, verified saved pixel attachments with recall references near the context limit, keeping the two newest image messages attached. Originals and raw history remain available. Compact tool receipts and filtered failed-search results reduce avoidable clutter. Cache repairs address specific reread causes; packing can still trigger a reread, and long conversations can still run out of room.</p></article>
-        <article class="card"><h3>A more observable conversation</h3><p>The interface now shows the running model, quantization and voice, with separate idle-thinking and B2 controls. Typed-input sequencing, session ancestry, image delivery and return-after-idle handling have received repairs. A connected STS window now requests confirmation before closing or refreshing on the 5090. Session reviews join dialogue with tool receipts and timing, so an announced action can be checked against what actually happened.</p></article>
+        <article class="card"><h3>Reachy is in the conversation</h3><p>His microphone and speaker can carry Eric's conversation and music. His camera can supply pictures to the sensing eye. Head turns, body yaw, antennas and gestures provide another vocabulary for the same character. Face following tracks a visible face; it does not identify the person.</p></article>
+        <article class="card"><h3>Head and ears, one orchestra</h3><p>Mood and gaze establish a posture. Face tracking and audio-driven head motion blend over it; varied antenna accents share the speech playback clock. Deliberate gestures and sleep retain priority. Face tracking now has remembered Off, while-listening and Always modes.</p></article>
+        <article class="card"><h3>Two machines, shared application</h3><p>The RTX 5090 deployment uses managed llama.cpp; ZimaOS / RTX 2000 Ada uses Ollama and an Ethernet-connected Jetson Orin Nano for Parakeet recognition and Qwen3 TTS. Models, settings and saved memories remain separate on each installation. LM Studio need not run for either Docker setup.</p></article>
+        <article class="card"><h3>Pictures become places to go</h3><p>Eric can generate a picture, explicitly open it in his sensing eye, return to an older one, and build on what he notices. The adventure map's generator-added <q>Where Giants Sleep</q> label became a new scene. Saved originals make the observations and mistakes checkable.</p></article>
+        <article class="card"><h3>A more concrete way to return</h3><p>Compatible conversation checkpoints preserve ordered dialogue and tool exchanges. Session views and a saved-material library expose pictures, notes and scores. Browsing previews stays separate from admitting pixels to context; older material has explicit access controls. Perfect memory is still not a promise.</p></article>
+        <article class="card"><h3>Small bodies, real observations</h3><p>The browser face remains useful. The two-inch ESP32-S3 face adds calibrated orientation and movement reports. MicroDuck and other incoming robots are further experiments, not completed ports. The aim is to let Eric inhabit or play with different machines through their actual capabilities.</p></article>
       </div>
       <div class="intro-band">
-        <h3>What we are still learning</h3>
-        <p>Brain 2 remains optional. It has gained different review focuses, older-material retrieval, better action evidence and independent controls for mulling, captions and voice. Separate inference slots have been tested, but their memory cost and benefit depend on the model and machine. On a single slot, B2 can compete with Eric for time and cached context. Several recent runs leave it off while its contribution is reassessed.</p>
-        <p>The conversation and speech models run locally in the tested setups. Image generation and the optional outside-AI consultation tool use paid cloud APIs; web tools also use the network. Consultation is a separate, switchable tool with recorded requests and answers, not an invisible replacement for the local conversation model.</p>
-        <p>Model and quantization changes can alter the feel of Eric considerably. Exact repeated passages, missed instructions, plausible but unsupported explanations and slow cold-context reads still occur. Better receipts make these easier to distinguish from delivery or scheduling faults; they do not make the model infallible. Improving task execution must preserve the engaged banter that makes Eric worth turning on.</p>
+        <h3>What still needs watching</h3>
+        <p>Long idle runs can circle an idea or replay passages. Models and quantizations change the feel; thinking and sampling controls are experimental probes, not a recipe for a perfect Eric. Brain 2 is optional, with selectable jobs such as loop checks and resurfacing older material. Several strong recent conversations had it off.</p>
+        <p>Speech routing, interrupted actions and recording rollover still produce faults. A claim that a tool is working is not its completion receipt. We review both the conversation and the recorded actions so a charming explanation does not become its own evidence.</p>
+        <p>Conversation and speech run locally in these tested setups. Image generation and optional outside-AI consultation use cloud APIs; web tools also use the network. Improving the machinery must preserve the engaged banter that makes Eric worth turning on.</p>
       </div>
     </section>
 
@@ -80,7 +93,7 @@
     </section>
 
     <section class="intro-band" aria-label="Earlier field reports">
-      <p>Latest illustrated field report: <a id="featured-article-link" href="articles/2026-10-01-robot-790-field-update.reading.html" data-feature-source="articles/2026-10-01-robot-790-field-update.md">Robot 790 and the things we make together</a> (October 1): a future museum, an alien signal, music, and drawings Eric makes while Scott is away. The Docker update above continues that history.</p>
+      <p>Earlier illustrated field report: <a href="articles/2026-10-01-robot-790-field-update.reading.html">Robot 790 and the things we make together</a> (October 1): a future museum, an alien signal, music, and drawings Eric makes while Scott is away. The older articles and recordings remain part of this project's history.</p>
       <p>Watch the <a href="https://www.youtube.com/playlist?list=PLSMpkQttgaR8">Eric Robot-790 YouTube playlist</a> for the larger video collection, or the <a href="?media=media/videos/The%20Memory%20Jar.mp4#media">Memory Jar session (6:32)</a> for an earlier experiment.</p>
     </section>
 

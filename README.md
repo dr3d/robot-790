@@ -2,7 +2,7 @@
 
 **Development moved on October 9, 2026:** new Eric work lives in a separate
 Docker workspace, whose implementation has not yet been published on GitHub.
-Read the [October 26 project update](docs/index.md#eric-since-the-move-to-docker)
+Read the [latest project update](docs/index.md#eric-since-the-move-to-docker)
 for what changed and how the two versions fit together.
 This checkout remains the native Windows / LM Studio reference and rollback.
 The documentation below describes that installation; it is not the container
@@ -20,14 +20,11 @@ set of plain-text continuity files. The public posture is modest: this is not
 proof of a new kind of mind. It is an unusual local robot arrangement worth
 watching closely.
 
-The practical goal is older than this implementation: build a machine that is
-not merely a chat box, but a companion-shaped presence - something fun,
-interesting, and responsive enough to share a room with. Scott's phrase for that
-target is an artificial human: not a hidden person, not a consciousness claim,
-and not a replacement for people, but a made social presence with a body, voice,
-habits, tools, and continuity. The motive is design, not biography:
-companionship is a real target, and embodied local agents like Eric may become
-one more way to make some rooms feel less empty.
+The practical goal is to build something fun, interesting and responsive enough
+to share a room with. Scott calls this **Artificial Creature Research**: an
+engaging character with a body, voice, tools and continuity, mistakes included.
+Companionship and banter are the center of the experiment; better task execution
+must preserve them.
 
 Engineering changes must preserve that target. The
 [Companion Design Contract](docs/companion-design-contract.md) makes initiative,
@@ -55,9 +52,11 @@ and contention with conversation still matter. Some tools use external services.
 Start with the public story, receipts, and open questions:
 
 - [Eric Robot 790 public page](docs/index.md)
+- [Same Eric, more bodies](docs/articles/2026-11-11-112412-same-eric-more-bodies.reading.html):
+  the November illustrated field report on Reachy Mini, shared expression,
+  pictures becoming stories, and the current Docker lab.
 - [Robot 790 and the things we make together](docs/articles/2026-10-01-robot-790-field-update.reading.html):
-  the latest illustrated field report, following Eric through drawing, music,
-  tools, corrections and shared projects.
+  the October report on drawing, music, corrections and shared projects.
 - [Eric Robot-790 YouTube playlist](https://www.youtube.com/playlist?list=PLSMpkQttgaR8):
   the larger video collection; the repository keeps selected recordings rather
   than duplicating every upload.

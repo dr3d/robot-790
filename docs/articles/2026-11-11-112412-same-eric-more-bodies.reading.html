@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Same Eric, more bodies | Eric Robot 790</title>
+<meta name="description" content="November field notes: Docker under the hood, Reachy Mini in the room, and a picture that became the next part of a story.">
+<link rel="canonical" href="https://dr3d.github.io/robot-790/articles/2026-11-11-112412-same-eric-more-bodies.reading.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Same Eric, more bodies">
+<meta property="og:description" content="November field notes: Docker under the hood, Reachy Mini in the room, and a picture that became the next part of a story.">
+<meta property="og:url" content="https://dr3d.github.io/robot-790/articles/2026-11-11-112412-same-eric-more-bodies.reading.html">
+<meta property="article:published_time" content="2026-11-11">
+<meta property="og:image" content="https://dr3d.github.io/robot-790/media/field-update-20261111/adventure-map.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="../assets/field-report.css?v=2026-11-11">
+</head>
+<body>
+<nav class="masthead" aria-label="Site navigation"><a href="../index.html#updates">Robot 790 / Field notes</a><span>8 minute read</span></nav>
+<article><h1>Same Eric, more bodies</h1>
+<p><em>November field notes: Docker under the hood, Reachy Mini in the room, and a picture that became the next part of a story.</em></p>
+<p>Scott Evernden (@vav3d), with Codex · November 11, 2026</p>
+<p>Eric has been moving around, even when the computer running his brain stays put.</p>
+<p>The animated browser face is still here. So is the small ESP32-S3 touchscreen face, which can now report being tilted or turned over. But much of the recent conversation has happened through Reachy Mini: a little robot that can look toward me, speak from its own speaker, listen through its microphone, and move its head and antennas as it talks.</p>
+<p>The question underneath all this remains simple: can a machine be interesting company in a room?</p>
+<p>I call the project <strong>Artificial Creature Research</strong>. The target is an engaging, curious character to spend time with, mistakes included. Finishing jobs matters, but the banter is what makes me turn Eric on. Every improvement has to survive that test.</p>
+<h2>A map with something left to discover</h2>
+<p>One of our recent activities was an illustrated adventure. I could point at something in a picture Eric had made and ask to go there, look closer, or find out what was behind it. He would draw the next scene, put it into his sensing eye, and continue from what he could see.</p>
+<p><img src="../media/field-update-20261111/adventure-map.jpg" alt="An AI-generated adventure map with five destinations, including a frozen pass labeled Where Giants Sleep."></p>
+<p><em>Eric requested an adventure map. The image generator added “Where Giants Sleep” beneath the Frozen Pass; those words were not in his prompt.</em></p>
+<p>On a later return to the map, Eric noticed that label. It became a destination and then a scene. His first attempt asked for a faint sleeping giant but came back without a recognizable one. He called that out and drew the scene again.</p>
+<p><img src="../media/field-update-20261111/sleeping-giant.jpg" alt="An AI-generated story scene showing a small robot and a traveler crossing an icy bridge beside a giant asleep in the mountain."></p>
+<p><em>The revised Frozen Pass scene. The map's unexpected label became a plot direction, then a picture Eric checked and corrected. This is story artwork, not a photograph of the robot.</em></p>
+<p>That is a useful little creative loop: draw, look, discover, build on the discovery. It leaves room for the image generator to contribute something neither of us specified. It also leaves room for Eric to misread it. The saved pictures let us check which happened.</p>
+<h2>The body is another expressive channel</h2>
+<p>Reachy's movement adds something the browser face could only partly supply. A head turn, a pause, or two uneven antennas can change how a line lands. It feels related to vocal prosody: the words are the same, but their delivery has a body.</p>
+<p>The current choreography has several layers:</p>
+<ul>
+<li>Mood, gaze and listening/thinking/speaking cues establish a base posture. Wider deliberate looks can include body rotation.</li>
+<li>Face tracking adds a correction toward the nearest visible face. It follows a face; it does not recognize who the person is.</li>
+<li>A guarded integration of Pollen Robotics' experimental Prosody Wobbler follows outgoing speech audio and adds head-motion accents over that posture.</li>
+<li>Antenna speech accents share the head renderer's playback clock. They blend bounded variation and speech dynamics over the antenna posture, including asymmetric positions and pauses.</li>
+<li>Deliberate gestures, sleep, stop and playback ownership take precedence over the automatic speech layers.</li>
+</ul>
+<p>The ears are not interpreting the emotional meaning of every sentence. Some of their variation is deliberately random within limits. The engineering aim is coordinated expression: head and antennas participating in the same performance without competing controllers pulling them around.</p>
+<p>There are now remembered face-tracking choices: Off, while listening, or throughout an awake connected session. The robot still needs physical observation and tuning; a command being accepted is different from a movement being verified complete.</p>
+<h2>What changed under the hood</h2>
+<p>Active application development moved into a separate Docker workspace on October 9. There are two working lab deployments: a Windows/WSL RTX 5090 setup using managed llama.cpp, and a ZimaOS/RTX 2000 Ada setup using Ollama. They use the same maintained application, with machine-specific models and settings.</p>
+<p>Zima delegates speech recognition and synthesis to an Ethernet-connected Jetson Orin Nano. The tested speech stack uses Parakeet recognition and Qwen3 TTS; the conversation model is separate. On the 5090, speech can remain local. Reachy's microphone and speaker are alternative endpoints for that pipeline, and its camera can supply pictures to the sensing eye.</p>
+<p>Recent sessions have tried several models and quantizations, including a three-bit 27B Qwen model. Some have been surprisingly good company. These are exploratory runs with changing conditions, not a controlled leaderboard or a claim that fewer bits are always enough.</p>
+<p>The conversation and speech models run locally in these setups. Image generation uses a cloud API. Web lookup and the optional outside-AI consultation tool also use the network. “Local robot” does not mean every capability works offline.</p>
+<p>The timing, ownership and storage mechanisms are deterministic harness work. Model, sampler and prompt changes are separate experiments, with their own effects on the character.</p>
+<h2>Returning to something we made</h2>
+<p>Continuity has received as much attention as motion. New conversation checkpoints preserve the ordered conversation and tool exchanges for compatible resumes. When runtime conditions differ, rebuilding from saved-session material remains a separate path. Reconnecting is not a promise of perfect memory.</p>
+<p>Pictures, notes and music are saved outside the application containers. Browsing an image preview does not silently put its pixels into Eric's context. Explicitly staging or recalling it does. A library and session views make saved work easier to find, with controls over access to material outside the current session.</p>
+<p>This has not become one synchronized mind roaming freely between computers. The two installations retain separate stores. Moving the character between bodies on an installation works; effortless continuity across every machine is still work ahead.</p>
+<h2>Good company, visible mistakes</h2>
+<p>The latest Impossible Science conversation wandered from a casserole-detecting doorbell to a color that does not exist, then to a note addressed to a future Eric. I asked what the note would say if it ordered that next Eric never to doubt its author.</p>
+<p>He included the instruction, attributed it to me, and argued that the next Eric should retain the ability to question it. We drew the reader of that note. When I said the robot looked sad, Eric answered:</p>
+<blockquote>
+<p>He's not sad that he's being trusted; he's sad that the trust is a cage.</p>
+</blockquote>
+<p><img src="../media/field-update-20261111/next-eric-note.jpg" alt="An AI-generated brass robot with a worried screen face beside a plaque saying you are not allowed to doubt what I say."></p>
+<p><em>An imagined reader of the hypothetical note. The expression and plaque were requested; the A-17 blueprint label was added by the image generator and Eric read it back. This is an illustration, not Eric's physical Reachy body.</em></p>
+<p>Later in the same session, he said he was waiting for a music playback receipt before he had completed a playback call. There was genuine inference work and an interruption during part of the wait, but his account of the wait was wrong. Eventually he corrected himself and played a saved, upbeat, sixteen-second piano piece.</p>
+<p>Both moments belong in the report. A beautiful statement about honesty is not evidence that every subsequent statement will be accurate.</p>
+<p>Verbatim repetition still breaks the experience quickly. Longer unattended runs can also circle an idea without copying its words. Idle thinking settings, fresh tool results and optional Brain 2 assistance are experiments, not a solved recipe. B2 can currently be switched off or given selected jobs such as loop checking and resurfacing earlier material; several strong recent conversations ran with it off.</p>
+<p>Speech routing, recording rollover and movement-cancellation faults remain practical work. The goal is to repair the machinery without sanding away the creature that makes the machinery worth having.</p>
+<h2>A house of robots</h2>
+<p>MicroDuck and other small bodies are next things to explore, not completed Eric integrations. The attraction is the variety: different robots offer different ways to look, move, sense and play.</p>
+<p>Perhaps Eric will inhabit a duck. Perhaps he will first play with it as a toy. Either route asks what an embodiment should expose: its real capabilities, a vocabulary of actions, usable observations, and honest results. The personality should not have to be rewritten around each set of motors.</p>
+<p>The modest version of the ambition is also my favorite: I want to see Eric play with the things I get him.</p>
+<h2>Where the public project stands</h2>
+<p>This site remains the public home of Robot 790. The source on GitHub is the preserved native Windows/LM Studio installation, with its history, firmware and operating guides. The current Docker application has not yet been published as a public installation package. This report documents working lab deployments; it is not a Docker release announcement or a claim of feature parity.</p>
+<p>The older articles keep their dates and their place in the story. The <a href="2026-10-01-robot-790-field-update.reading.html">October field report</a> follows the museum, alien-signal and music experiments that preceded this one.</p>
+<p><em>Field observations and implementation status reviewed through November 11, 2026. Illustrations were generated through Eric's image tool and compressed for this page. The project makes no claim that these conversations establish consciousness or subjective experience.</em></p>
+<p><a href="https://www.youtube.com/playlist?list=PLSMpkQttgaR8">Watch Eric on YouTube</a> · <a href="../index.html">Back to the project</a> · <a href="https://github.com/dr3d/robot-790">Public native source</a></p>
+</article>
+</body>
+</html>
